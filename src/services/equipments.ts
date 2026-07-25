@@ -76,22 +76,18 @@ export const updateEquipment = (id: string, data: Partial<EquipmentRecord>) =>
 export const deleteEquipment = (id: string) => pb.collection('equipments').delete(id)
 
 export const getEquipmentTickets = (equipmentId: string) =>
-  pb
-    .collection('tickets')
-    .getFullList({
-      filter: `equipment = "${equipmentId}"`,
-      sort: '-created',
-      expand: 'company,assigned_to',
-    })
+  pb.collection('tickets').getFullList({
+    filter: `equipment = "${equipmentId}"`,
+    sort: '-created',
+    expand: 'company,assigned_to',
+  })
 
 export const getEquipmentAuditLogs = (equipmentId: string) =>
-  pb
-    .collection('audit_logs')
-    .getFullList({
-      filter: `entity_type = "equipment" && entity_id = "${equipmentId}"`,
-      sort: '-created',
-      expand: 'user',
-    })
+  pb.collection('audit_logs').getFullList({
+    filter: `entity_type = "equipment" && entity_id = "${equipmentId}"`,
+    sort: '-created',
+    expand: 'user',
+  })
 
 export const createAuditLog = (data: {
   user: string

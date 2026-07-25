@@ -2,8 +2,7 @@ migrate(
   (app) => {
     const eqCol = app.findCollectionByNameOrId('equipments')
 
-    const oldStatus = eqCol.fields.getByName('status')
-    if (oldStatus) eqCol.fields.remove(oldStatus)
+    if (eqCol.fields.getByName('status')) eqCol.fields.removeByName('status')
     eqCol.fields.add(
       new SelectField({
         name: 'status',
@@ -124,8 +123,7 @@ migrate(
     })
     try {
       const eqCol = app.findCollectionByNameOrId('equipments')
-      const sf = eqCol.fields.getByName('status')
-      if (sf) eqCol.fields.remove(sf)
+      if (eqCol.fields.getByName('status')) eqCol.fields.removeByName('status')
       eqCol.fields.add(
         new SelectField({
           name: 'status',
@@ -133,8 +131,7 @@ migrate(
           maxSelect: 1,
         }),
       )
-      const df = eqCol.fields.getByName('department')
-      if (df) eqCol.fields.remove(df)
+      if (eqCol.fields.getByName('department')) eqCol.fields.removeByName('department')
       app.save(eqCol)
     } catch (_) {}
   },
