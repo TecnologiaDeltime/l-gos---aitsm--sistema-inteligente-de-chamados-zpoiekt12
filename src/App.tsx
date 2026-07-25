@@ -49,6 +49,12 @@ import AutomationList from '@/pages/automations/AutomationList'
 import AutomationEditor from '@/pages/automations/AutomationEditor'
 import AutomationDashboard from '@/pages/automations/AutomationDashboard'
 import ApprovalCenter from '@/pages/approvals/ApprovalCenter'
+import TechnicalAgenda from '@/pages/visits/TechnicalAgenda'
+import VisitManagerDashboard from '@/pages/visits/VisitManagerDashboard'
+import TechnicianDashboardPage from '@/pages/visits/TechnicianDashboardPage'
+import TravelDashboard from '@/pages/visits/TravelDashboard'
+import ReimbursementDashboard from '@/pages/visits/ReimbursementDashboard'
+import OperationalMap from '@/pages/visits/OperationalMap'
 import { useAuth } from '@/hooks/use-auth'
 
 function RootRedirect() {
@@ -126,6 +132,12 @@ const App = () => (
             <Route path="/automations/dashboard" element={<AutomationDashboard />} />
             <Route path="/automations/:id/edit" element={<AutomationEditor />} />
             <Route path="/approval-center" element={<ApprovalCenter />} />
+            <Route path="/agenda-tecnica" element={<TechnicalAgenda />} />
+            <Route path="/visits/dashboard" element={<VisitManagerDashboard />} />
+            <Route path="/visits/technician-dashboard" element={<TechnicianDashboardPage />} />
+            <Route path="/visits/travel-dashboard" element={<TravelDashboard />} />
+            <Route path="/visits/reimbursement-dashboard" element={<ReimbursementDashboard />} />
+            <Route path="/visits/map" element={<OperationalMap />} />
           </Route>
 
           <Route path="*" element={<NotFound />} />

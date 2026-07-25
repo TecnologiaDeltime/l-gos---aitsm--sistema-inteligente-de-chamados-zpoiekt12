@@ -10,17 +10,21 @@ import {
 } from '@/components/ui/select'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { MapPin, Clock, Play, Square } from 'lucide-react'
+import { MapPin, Clock, Play, Square, Plus, FileText } from 'lucide-react'
 import {
   getVisits,
   updateVisit,
   TechnicalVisitRecord,
   VISIT_STATUSES,
+  generateServiceOrder,
 } from '@/services/technical-visits'
 import { getUsers } from '@/services/users'
 import { usePermissions } from '@/hooks/use-permissions'
 import { useRealtime } from '@/hooks/use-realtime'
 import { useToast } from '@/hooks/use-toast'
+import { VisitCheckInDialog } from '@/components/VisitCheckInDialog'
+import { VisitCheckOutDialog } from '@/components/VisitCheckOutDialog'
+import { VisitScheduleDialog } from '@/components/VisitScheduleDialog'
 
 export default function VisitList() {
   const perms = usePermissions()
@@ -29,6 +33,9 @@ export default function VisitList() {
   const [technicians, setTechnicians] = useState<any[]>([])
   const [statusFilter, setStatusFilter] = useState('all')
   const [techFilter, setTechFilter] = useState('all')
+  const [checkinVisit, setCheckinVisit] = useState<string | null>(null)
+  const [checkoutVisit, setCheckoutVisit] = useState<string | null>(null)
+  const [showSchedule, setShowSchedule] = useState(false)
 
   const loadData = () => {
     getVisits()
@@ -49,16 +56,14 @@ export default function VisitList() {
     return true
   })
 
-  const handleCheckin = async (id: string) => {
-    await updateVisit(id, { status: 'Em Andamento', checkin_at: new Date().toISOString() })
-    loadData()
-    toast({ title: 'Check-in registrado!' })
-  }
-
-  const handleCheckout = async (id: string) => {
-    await updateVisit(id, { status: 'Concluída', checkout_at: new Date().toISOString() })
-    loadData()
-    toast({ title: 'Check-out registrado!' })
+  const handleServiceOrder = async (id: string) => {
+    try {
+      await generateServiceOrder(id)
+      toast({ title: 'Ordem de serviço gerada!' })
+      loadData()
+    } catch {
+      toast({ title: 'Erro ao gerar OS', variant: 'destructive' })
+    }
   }
 
   const statusCls: Record<string, string> = {
@@ -70,10 +75,15 @@ export default function VisitList() {
 
   return (
     <div className="space-y-4">
-      <h2 className="text-lg font-bold">Visitas Técnicas</h2>
+      <div className="flex items-center justify-between">
+        <h2 className="text-lg font-bold">Visitas Técnicas</h2>
+        <Button size="sm" onClick={() => setShowSchedule(true)}>
+          <Plus className="h-4 w-4 mr-1" /> Agendar
+        </Button>
+      </div>
       <div className="flex flex-wrap gap-2">
         <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-40">
+          <SelectTrigger className="w-40 h-8 text-xs">
             <SelectValue placeholder="Status" />
           </SelectTrigger>
           <SelectContent>
@@ -86,7 +96,7 @@ export default function VisitList() {
           </SelectContent>
         </Select>
         <Select value={techFilter} onValueChange={setTechFilter}>
-          <SelectTrigger className="w-48">
+          <SelectTrigger className="w-48 h-8 text-xs">
             <SelectValue placeholder="Técnico" />
           </SelectTrigger>
           <SelectContent>
@@ -113,6 +123,11 @@ export default function VisitList() {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <Badge className={statusCls[v.status] || 'bg-slate-100'}>{v.status}</Badge>
+                    {v.appointment_type && (
+                      <Badge variant="secondary" className="text-[9px]">
+                        {v.appointment_type}
+                      </Badge>
+                    )}
                     {v.expand?.ticket && (
                       <Link
                         to={`/tickets/${v.expand.ticket.id}`}
@@ -124,15 +139,26 @@ export default function VisitList() {
                   </div>
                   <div className="flex gap-1">
                     {v.status === 'Agendada' && perms.isTecnico && (
-                      <Button size="sm" variant="outline" onClick={() => handleCheckin(v.id)}>
+                      <Button size="sm" variant="outline" onClick={() => setCheckinVisit(v.id)}>
                         <Play className="mr-1 h-3 w-3" /> Check-in
                       </Button>
                     )}
                     {v.status === 'Em Andamento' && perms.isTecnico && (
-                      <Button size="sm" variant="outline" onClick={() => handleCheckout(v.id)}>
+                      <Button size="sm" variant="outline" onClick={() => setCheckoutVisit(v.id)}>
                         <Square className="mr-1 h-3 w-3" /> Check-out
                       </Button>
                     )}
+                    {v.status === 'Concluída' &&
+                      !v.service_order_generated &&
+                      (perms.isAdmin || perms.isGestor) && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleServiceOrder(v.id)}
+                        >
+                          <FileText className="mr-1 h-3 w-3" /> OS
+                        </Button>
+                      )}
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-2 text-xs text-slate-600">
@@ -147,23 +173,33 @@ export default function VisitList() {
                     {v.scheduled_time || ''}
                   </div>
                   <div>Técnico: {v.expand?.technician?.name || '-'}</div>
-                  <div>Materiais: {v.materials || '-'}</div>
+                  <div>{v.visit_reason || ''}</div>
                 </div>
-                {v.checkin_at && (
-                  <p className="text-xs text-green-600">
-                    Check-in: {new Date(v.checkin_at).toLocaleString('pt-BR')}
-                  </p>
-                )}
-                {v.checkout_at && (
-                  <p className="text-xs text-slate-500">
-                    Check-out: {new Date(v.checkout_at).toLocaleString('pt-BR')}
-                  </p>
-                )}
+                {v.calculated_mileage ? (
+                  <p className="text-xs text-purple-600">KM: {v.calculated_mileage.toFixed(1)}</p>
+                ) : null}
               </CardContent>
             </Card>
           ))
         )}
       </div>
+      {checkinVisit && (
+        <VisitCheckInDialog
+          visitId={checkinVisit}
+          open={!!checkinVisit}
+          onOpenChange={(v) => !v && setCheckinVisit(null)}
+          onDone={loadData}
+        />
+      )}
+      {checkoutVisit && (
+        <VisitCheckOutDialog
+          visitId={checkoutVisit}
+          open={!!checkoutVisit}
+          onOpenChange={(v) => !v && setCheckoutVisit(null)}
+          onDone={loadData}
+        />
+      )}
+      <VisitScheduleDialog open={showSchedule} onOpenChange={setShowSchedule} onSaved={loadData} />
     </div>
   )
 }

@@ -117,7 +117,33 @@ export default function Layout() {
       show: permissions.canViewReports,
     },
     { label: 'Aprovações', path: '/approvals', icon: FileCheck, show: true },
+    { label: 'Agenda Técnica', path: '/agenda-tecnica', icon: CalendarClock, show: true },
     { label: 'Visitas Técnicas', path: '/visits', icon: MapPin, show: true },
+    {
+      label: 'Dashboard de Visitas',
+      path: '/visits/dashboard',
+      icon: MapPin,
+      show: permissions.canViewReports,
+    },
+    { label: 'Painel do Técnico', path: '/visits/technician-dashboard', icon: Gauge, show: true },
+    {
+      label: 'Deslocamentos',
+      path: '/visits/travel-dashboard',
+      icon: MapPin,
+      show: permissions.canViewReports,
+    },
+    {
+      label: 'Reembolsos',
+      path: '/visits/reimbursement-dashboard',
+      icon: FileCheck,
+      show: permissions.canViewReports,
+    },
+    {
+      label: 'Mapa Operacional',
+      path: '/visits/map',
+      icon: MapPin,
+      show: permissions.isAdmin || permissions.isGestor,
+    },
     {
       label: 'Pesquisa de Satisfação',
       path: '/satisfaction',

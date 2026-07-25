@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-25T20:45:53.527Z",
+  "generatedAt": "2026-07-25T21:09:07.254Z",
   "collections": [
     {
       "name": "users",
@@ -532,6 +532,66 @@
           "required": false,
           "system": false,
           "autodateTriggers": ["onCreate", "onUpdate"]
+        },
+        {
+          "name": "travel_consumes_hours",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "waiting_consumes_hours",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "visit_franchise",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "visit_fixed_value",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "km_charged",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "expenses_charged",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "monthly_visit_limit",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "visit_hour_type",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": [
+            "Contratada",
+            "Excedente",
+            "Projeto",
+            "Interna",
+            "Não Faturável",
+            "Cortesia",
+            "Deslocamento",
+            "Plantão",
+            "Gestão",
+            "Treinamento"
+          ]
         }
       ],
       "indexes": [
@@ -2462,12 +2522,428 @@
           "required": false,
           "system": false,
           "autodateTriggers": ["onCreate", "onUpdate"]
+        },
+        {
+          "name": "visit_reason",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "appointment_type",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": [
+            "Visita Técnica",
+            "Serviço Remoto",
+            "Reunião",
+            "Instalação",
+            "Manutenção Preventiva",
+            "Manutenção Corretiva",
+            "Implantação",
+            "Levantamento Técnico",
+            "Retirada de Equipamento",
+            "Entrega de Equipamento",
+            "Treinamento",
+            "Inspeção",
+            "Plantão",
+            "Atividade Interna",
+            "Deslocamento",
+            "Pausa",
+            "Bloqueio de Agenda"
+          ]
+        },
+        {
+          "name": "priority",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["P1", "P2", "P3", "P4", "P5"]
+        },
+        {
+          "name": "expected_end_time",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "estimated_duration",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "scheduling_responsible",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "client_contact",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "contact_phone",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "required_resources",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "required_equipment",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "team",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "region",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "checkin_lat",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "checkin_lon",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "checkin_photo",
+          "type": "file",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "checkin_distance",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "checkin_justification",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "checkout_lat",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "checkout_lon",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "checkout_photo",
+          "type": "file",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "initial_odometer",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "final_odometer",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "calculated_mileage",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "travel_time_in",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "waiting_time",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "service_time",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "break_time",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "travel_time_out",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "total_time",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "time_classification",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": [
+            "Faturável",
+            "Não Faturável",
+            "Consumível de Contrato",
+            "Reembolsável",
+            "Hora Extra",
+            "Hora Interna"
+          ]
+        },
+        {
+          "name": "result",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "pending_items",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "return_needed",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "activities_performed",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "parts_used",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "evidence_photos",
+          "type": "file",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "cancellation_reason",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": [
+            "Cliente Indisponível",
+            "Técnico Indisponível",
+            "Falta de Aprovação",
+            "Falta de Material",
+            "Problema Resolvido Remotamente",
+            "Condição Climática",
+            "Bloqueio Contratual",
+            "Outro"
+          ]
+        },
+        {
+          "name": "cancellation_responsible",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "cancellation_date",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "cancellation_observation",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "reschedule_history",
+          "type": "json",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "unsuccessful_attempt",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "transport_mode",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": [
+            "Veículo Próprio",
+            "Veículo da Empresa",
+            "Moto",
+            "Transporte Público",
+            "Táxi",
+            "Aplicativo de Transporte",
+            "Avião",
+            "Busca Intercidade",
+            "A Pé",
+            "Outro"
+          ]
+        },
+        {
+          "name": "vehicle_plate",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "tolls",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "parking",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "fuel",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "other_costs",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "reimbursement_status",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": [
+            "Rascunho",
+            "Aguardando Envio",
+            "Aguardando Aprovação",
+            "Aprovado",
+            "Rejeitado",
+            "Parcialmente Aprovado",
+            "Enviado para Financeiro",
+            "Pago",
+            "Cancelado"
+          ]
+        },
+        {
+          "name": "reimbursement_amount",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "approved_amount",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "paid_amount",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "rejection_reason",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "service_order_generated",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "signature_captured",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "technician_status",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": [
+            "Disponível",
+            "Em Deslocamento",
+            "Em Serviço Remoto",
+            "Em Serviço Presencial",
+            "Em Pausa",
+            "Em Reunião",
+            "Indisponível",
+            "Fora do Horário",
+            "Em Treinamento",
+            "Em Plantão",
+            "Finalizando Serviço",
+            "Aguardando Cliente"
+          ]
         }
       ],
       "indexes": [
         "CREATE INDEX idx_visits_ticket ON technical_visits (ticket)",
         "CREATE INDEX idx_visits_equipment ON technical_visits (equipment)",
-        "CREATE INDEX idx_visits_technician ON technical_visits (technician)"
+        "CREATE INDEX idx_visits_technician ON technical_visits (technician)",
+        "CREATE INDEX `idx_visits_date` ON `technical_visits` (scheduled_date)",
+        "CREATE INDEX `idx_visits_technician_status` ON `technical_visits` (technician_status)",
+        "CREATE INDEX `idx_visits_appointment_type` ON `technical_visits` (appointment_type)"
       ]
     },
     {
@@ -2654,6 +3130,48 @@
           "required": false,
           "system": false,
           "autodateTriggers": ["onCreate", "onUpdate"]
+        },
+        {
+          "name": "onsite_visits",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "remote_visits",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "total_travel_time",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "total_service_time",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "total_mileage",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "total_expenses",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "total_reimbursement",
+          "type": "number",
+          "required": false,
+          "system": false
         }
       ],
       "indexes": [
@@ -3750,6 +4268,1378 @@
         }
       ],
       "indexes": ["CREATE INDEX idx_wfaudit_automation ON workflow_audit_logs (automation)"]
+    },
+    {
+      "name": "travel_entries",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != \"\"",
+        "view": "@request.auth.id != \"\"",
+        "create": "@request.auth.id != \"\"",
+        "update": "@request.auth.id != \"\"",
+        "delete": "@request.auth.id != \"\""
+      },
+      "fields": [
+        {
+          "name": "technician",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "ticket",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "tickets"
+        },
+        {
+          "name": "client",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "companies"
+        },
+        {
+          "name": "visit",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "technical_visits"
+        },
+        {
+          "name": "origin_address",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "destination_address",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "travel_date",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "departure_time",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "arrival_time",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "estimated_distance",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "actual_distance",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "transport_mode",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": [
+            "Veículo Próprio",
+            "Veículo da Empresa",
+            "Moto",
+            "Transporte Público",
+            "Táxi",
+            "Aplicativo de Transporte",
+            "Avião",
+            "Busca Intercity",
+            "A Pé",
+            "Outro"
+          ]
+        },
+        {
+          "name": "vehicle",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "license_plate",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "initial_odometer",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "final_odometer",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "odometer_start_photo",
+          "type": "file",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "odometer_end_photo",
+          "type": "file",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "tolls",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "parking",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "fuel",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "ride_sharing",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "other_costs",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "notes",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "evidence",
+          "type": "file",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "divergence",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "divergence_justification",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": [
+        "CREATE INDEX idx_travel_technician ON travel_entries (technician)",
+        "CREATE INDEX idx_travel_date ON travel_entries (travel_date)",
+        "CREATE INDEX idx_travel_visit ON travel_entries (visit)"
+      ]
+    },
+    {
+      "name": "expenses",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != \"\"",
+        "view": "@request.auth.id != \"\"",
+        "create": "@request.auth.id != \"\"",
+        "update": "@request.auth.id != \"\"",
+        "delete": "@request.auth.id != \"\""
+      },
+      "fields": [
+        {
+          "name": "visit",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "technical_visits"
+        },
+        {
+          "name": "travel_entry",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "travel_entries"
+        },
+        {
+          "name": "technician",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "ticket",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "tickets"
+        },
+        {
+          "name": "client",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "companies"
+        },
+        {
+          "name": "expense_type",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": [
+            "Quilometragem",
+            "Combustível",
+            "Pedágio",
+            "Estacionamento",
+            "Aplicativo de Transporte",
+            "Refeição",
+            "Hospedagem",
+            "Passagem",
+            "Materiais Utilizados",
+            "Peças",
+            "Outros Custos"
+          ]
+        },
+        {
+          "name": "value",
+          "type": "number",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "expense_date",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "supplier",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "receipt",
+          "type": "file",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "justification",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "approval_status",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": [
+            "Rascunho",
+            "Aguardando Envio",
+            "Aguardando Aprovação",
+            "Aprovado",
+            "Rejeitado",
+            "Parcialmente Aprovado",
+            "Enviado para Financeiro",
+            "Pago",
+            "Cancelado"
+          ]
+        },
+        {
+          "name": "approved_value",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "paid_value",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "rejection_reason",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "approver",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "approved_at",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": [
+        "CREATE INDEX idx_expenses_technician ON expenses (technician)",
+        "CREATE INDEX idx_expenses_visit ON expenses (visit)",
+        "CREATE INDEX idx_expenses_status ON expenses (approval_status)"
+      ]
+    },
+    {
+      "name": "reimbursements",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != \"\"",
+        "view": "@request.auth.id != \"\"",
+        "create": "@request.auth.id != \"\"",
+        "update": "@request.auth.id != \"\"",
+        "delete": "@request.auth.id != \"\""
+      },
+      "fields": [
+        {
+          "name": "technician",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "visit",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "technical_visits"
+        },
+        {
+          "name": "ticket",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "tickets"
+        },
+        {
+          "name": "client",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "companies"
+        },
+        {
+          "name": "mileage",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "km_rate",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "mileage_amount",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "expense_total",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "total_requested",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "total_approved",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "total_paid",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "status",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": [
+            "Rascunho",
+            "Aguardando Envio",
+            "Aguardando Aprovação",
+            "Aprovado",
+            "Rejeitado",
+            "Parcialmente Aprovado",
+            "Enviado para Financeiro",
+            "Pago",
+            "Cancelado"
+          ]
+        },
+        {
+          "name": "approver",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "finance_approver",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "rejection_reason",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "submitted_at",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "approved_at",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "paid_at",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": [
+        "CREATE INDEX idx_reimb_tech ON reimbursements (technician)",
+        "CREATE INDEX idx_reimb_status ON reimbursements (status)"
+      ]
+    },
+    {
+      "name": "service_orders",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != \"\"",
+        "view": "@request.auth.id != \"\"",
+        "create": "@request.auth.id != \"\"",
+        "update": "@request.auth.id != \"\"",
+        "delete": "@request.auth.id != \"\""
+      },
+      "fields": [
+        {
+          "name": "visit",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "technical_visits"
+        },
+        {
+          "name": "ticket",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "tickets"
+        },
+        {
+          "name": "technician",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "client",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "companies"
+        },
+        {
+          "name": "unit",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "company_units"
+        },
+        {
+          "name": "order_number",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "pdf_file",
+          "type": "file",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "content_json",
+          "type": "json",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "generated_at",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": [
+        "CREATE INDEX idx_so_visit ON service_orders (visit)",
+        "CREATE INDEX idx_so_ticket ON service_orders (ticket)"
+      ]
+    },
+    {
+      "name": "client_signatures",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != \"\"",
+        "view": "@request.auth.id != \"\"",
+        "create": "@request.auth.id != \"\"",
+        "update": "@request.auth.id != \"\"",
+        "delete": "@request.auth.id != \"\""
+      },
+      "fields": [
+        {
+          "name": "visit",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "technical_visits"
+        },
+        {
+          "name": "ticket",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "tickets"
+        },
+        {
+          "name": "signer_name",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "signer_document",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "signature_image",
+          "type": "file",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "signature_method",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["Tela", "Link Seguro", "Portal", "Código E-mail", "Código SMS"]
+        },
+        {
+          "name": "signed_at",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "ip_address",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "location",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "acceptance_statement",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "token",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": ["CREATE INDEX idx_sig_visit ON client_signatures (visit)"]
+    },
+    {
+      "name": "visit_checklists",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != \"\"",
+        "view": "@request.auth.id != \"\"",
+        "create": "@request.auth.id != \"\"",
+        "update": "@request.auth.id != \"\"",
+        "delete": "@request.auth.id != \"\""
+      },
+      "fields": [
+        {
+          "name": "visit",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "technical_visits"
+        },
+        {
+          "name": "ticket",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "tickets"
+        },
+        {
+          "name": "category",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "tkt_categories"
+        },
+        {
+          "name": "name",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "all_required",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": ["CREATE INDEX idx_checklist_visit ON visit_checklists (visit)"]
+    },
+    {
+      "name": "visit_checklist_items",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != \"\"",
+        "view": "@request.auth.id != \"\"",
+        "create": "@request.auth.id != \"\"",
+        "update": "@request.auth.id != \"\"",
+        "delete": "@request.auth.id != \"\""
+      },
+      "fields": [
+        {
+          "name": "checklist",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "visit_checklists"
+        },
+        {
+          "name": "visit",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "technical_visits"
+        },
+        {
+          "name": "description",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "status",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["Pendente", "Concluído", "Não Aplicável"]
+        },
+        {
+          "name": "required",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "photo_evidence",
+          "type": "file",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "completed_at",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "order",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": [
+        "CREATE INDEX idx_chkitems_checklist ON visit_checklist_items (checklist)",
+        "CREATE INDEX idx_chkitems_visit ON visit_checklist_items (visit)"
+      ]
+    },
+    {
+      "name": "technician_locations",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != \"\"",
+        "view": "@request.auth.id != \"\"",
+        "create": "@request.auth.id != \"\"",
+        "update": "@request.auth.id != \"\"",
+        "delete": "@request.auth.id != \"\""
+      },
+      "fields": [
+        {
+          "name": "technician",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "lat",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "lon",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "status",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": [
+            "Disponível",
+            "Em Deslocamento",
+            "Em Serviço",
+            "Indisponível",
+            "Fora do Horário"
+          ]
+        },
+        {
+          "name": "current_ticket",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "tickets"
+        },
+        {
+          "name": "current_client",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "companies"
+        },
+        {
+          "name": "updated_at_location",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "consent_given",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "purpose",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": ["CREATE INDEX idx_techloc_tech ON technician_locations (technician)"]
+    },
+    {
+      "name": "km_rates",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != \"\"",
+        "view": "@request.auth.id != \"\"",
+        "create": "@request.auth.id != \"\"",
+        "update": "@request.auth.id != \"\"",
+        "delete": "@request.auth.id != \"\""
+      },
+      "fields": [
+        {
+          "name": "rate_per_km",
+          "type": "number",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "vehicle_type",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["Veículo Próprio", "Veículo da Empresa", "Moto", "Outro"]
+        },
+        {
+          "name": "technician",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "client",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "companies"
+        },
+        {
+          "name": "contract",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "contracts"
+        },
+        {
+          "name": "min_distance",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "max_distance",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "effective_date",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "active",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": ["CREATE INDEX idx_kmrates_active ON km_rates (active)"]
+    },
+    {
+      "name": "visit_time_entries",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != \"\"",
+        "view": "@request.auth.id != \"\"",
+        "create": "@request.auth.id != \"\"",
+        "update": "@request.auth.id != \"\"",
+        "delete": "@request.auth.id != \"\""
+      },
+      "fields": [
+        {
+          "name": "visit",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "technical_visits"
+        },
+        {
+          "name": "ticket",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "tickets"
+        },
+        {
+          "name": "technician",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "time_type",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": [
+            "Deslocamento Ida",
+            "Espera",
+            "Atendimento",
+            "Pausa",
+            "Deslocamento Volta"
+          ]
+        },
+        {
+          "name": "classification",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": [
+            "Faturável",
+            "Não Faturável",
+            "Consumível de Contrato",
+            "Reembolsável",
+            "Hora Extra",
+            "Hora Interna"
+          ]
+        },
+        {
+          "name": "start_time",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "end_time",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "duration_minutes",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": [
+        "CREATE INDEX idx_vte_visit ON visit_time_entries (visit)",
+        "CREATE INDEX idx_vte_tech ON visit_time_entries (technician)"
+      ]
+    },
+    {
+      "name": "recurring_visit_templates",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != \"\"",
+        "view": "@request.auth.id != \"\"",
+        "create": "@request.auth.id != \"\"",
+        "update": "@request.auth.id != \"\"",
+        "delete": "@request.auth.id != \"\""
+      },
+      "fields": [
+        {
+          "name": "frequency",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": [
+            "Diário",
+            "Semanal",
+            "Quinzenal",
+            "Mensal",
+            "Trimestral",
+            "Semestral",
+            "Anual",
+            "Personalizado"
+          ]
+        },
+        {
+          "name": "technician",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "client",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "companies"
+        },
+        {
+          "name": "unit",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "company_units"
+        },
+        {
+          "name": "ticket",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "tickets"
+        },
+        {
+          "name": "day_of_week",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "day_of_month",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "scheduled_time",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "estimated_duration",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "visit_reason",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "appointment_type",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "active",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "next_run",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": ["CREATE INDEX idx_recurring_active ON recurring_visit_templates (active)"]
+    },
+    {
+      "name": "technician_availability",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != \"\"",
+        "view": "@request.auth.id != \"\"",
+        "create": "@request.auth.id != \"\"",
+        "update": "@request.auth.id != \"\"",
+        "delete": "@request.auth.id != \"\""
+      },
+      "fields": [
+        {
+          "name": "technician",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "date",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "shift_start",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "shift_end",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "lunch_start",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "lunch_end",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "day_off",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "vacation",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "on_duty",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "region",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "specialty",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "status",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": [
+            "Disponível",
+            "Em Deslocamento",
+            "Em Serviço Remoto",
+            "Em Serviço Presencial",
+            "Em Pausa",
+            "Em Reunião",
+            "Indisponível",
+            "Fora do Horário",
+            "Em Treinamento",
+            "Em Plantão",
+            "Finalizando Serviço",
+            "Aguardando Cliente"
+          ]
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": [
+        "CREATE INDEX idx_techavail_tech_date ON technician_availability (technician, date)"
+      ]
     }
   ]
 }
