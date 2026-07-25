@@ -34,3 +34,13 @@ export const getCompanyUnits = (companyId: string) =>
 
 export const getCompanyDepartments = (companyId: string) =>
   pb.collection('company_departments').getFullList({ filter: `company = "${companyId}"` })
+
+export const createCompanyAuditLog = (data: {
+  user: string
+  action: string
+  entity_type: string
+  entity_id: string
+  description?: string
+  old_values?: Record<string, unknown>
+  new_values?: Record<string, unknown>
+}) => pb.collection('audit_logs').create(data)
