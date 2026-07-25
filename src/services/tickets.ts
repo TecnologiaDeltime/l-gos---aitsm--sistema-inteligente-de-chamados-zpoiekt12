@@ -72,6 +72,10 @@ export const createInteraction = (data: {
   author: string
   type: string
   content: string
+  duration_minutes?: number
+  hour_type?: string
+  billing_status?: string
+  origin?: string
 }) => pb.collection('ticket_interactions').create(data)
 
 export const getTicketHistory = (ticketId: string) =>

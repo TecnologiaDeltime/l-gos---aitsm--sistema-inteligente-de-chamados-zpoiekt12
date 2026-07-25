@@ -32,6 +32,10 @@ import {
   createSlaPause,
   TicketRecord,
 } from '@/services/tickets'
+import { HOUR_TYPES, BILLING_STATUSES } from '@/services/ticket-interactions'
+import { getErrorMessage } from '@/lib/pocketbase/errors'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { getActiveContracts, ContractRecord } from '@/services/contracts'
 import { calculateSlaDeadlines } from '@/lib/sla-utils'
 import { getTicketVisits } from '@/services/technical-visits'
@@ -55,6 +59,11 @@ export default function TicketDetail() {
   const [visits, setVisits] = useState<any[]>([])
   const [comment, setComment] = useState('')
   const [isInternal, setIsInternal] = useState(false)
+  const [timeSpent, setTimeSpent] = useState('')
+  const [timeError, setTimeError] = useState('')
+  const [hourType, setHourType] = useState('Contratada')
+  const [billingStatus, setBillingStatus] = useState('Faturável')
+  const [sending, setSending] = useState(false)
   const [showApproval, setShowApproval] = useState(false)
   const [showVisit, setShowVisit] = useState(false)
   const [contracts, setContracts] = useState<ContractRecord[]>([])
@@ -83,17 +92,60 @@ export default function TicketDetail() {
   useRealtime('ticket_interactions', () => loadData())
   useRealtime('technical_visits', () => loadData())
 
+  const validateTimeSpent = (value: string): string => {
+    if (!value.trim()) return ''
+    const match = value.trim().match(/^(\d{1,2}):(\d{2})$/)
+    if (!match) return 'Formato inválido. Use hh:mm.'
+    const mins = parseInt(match[2], 10)
+    if (mins > 59) return 'Formato inválido. Use hh:mm.'
+    return ''
+  }
+
+  const parseTimeToMinutes = (value: string): number => {
+    const match = value.trim().match(/^(\d{1,2}):(\d{2})$/)
+    if (!match) return 0
+    return parseInt(match[1], 10) * 60 + parseInt(match[2], 10)
+  }
+
   const handleSendComment = async () => {
     if (!comment.trim() || !id || !user) return
-    await createInteraction({
-      ticket: id,
-      author: user.id,
-      type: isInternal ? 'Interno' : 'Público',
-      content: comment,
-    })
-    setComment('')
-    loadData()
-    toast({ title: 'Interação adicionada!' })
+    const timeValidationError = validateTimeSpent(timeSpent)
+    if (timeValidationError) {
+      setTimeError(timeValidationError)
+      return
+    }
+    setSending(true)
+    try {
+      const durationMinutes = parseTimeToMinutes(timeSpent)
+      await createInteraction({
+        ticket: id,
+        author: user.id,
+        type: isInternal ? 'Interno' : 'Público',
+        content: comment,
+        duration_minutes: durationMinutes,
+        hour_type: hourType,
+        billing_status: billingStatus,
+        origin: 'Manual',
+      })
+      setComment('')
+      setTimeSpent('')
+      setHourType('Contratada')
+      setBillingStatus('Faturável')
+      loadData()
+      if (durationMinutes > 0 && hourType === 'Contratada') {
+        toast({ title: 'Interação salva e horas debitadas do contrato' })
+      } else {
+        toast({ title: 'Interação adicionada!' })
+      }
+    } catch (err) {
+      toast({
+        title: 'Erro ao salvar interação',
+        description: getErrorMessage(err),
+        variant: 'destructive',
+      })
+    } finally {
+      setSending(false)
+    }
   }
 
   const handleStatusChange = async (newStatus: string) => {
@@ -240,17 +292,75 @@ export default function TicketDetail() {
                     </span>
                   </div>
                   <p className="text-slate-700">{i.content}</p>
+                  {i.duration_minutes > 0 && (
+                    <div className="flex items-center gap-2 pt-1 text-slate-500">
+                      <Clock className="h-3 w-3" />
+                      <span>
+                        {Math.floor(i.duration_minutes / 60)}h {i.duration_minutes % 60}min
+                      </span>
+                      {i.hour_type && (
+                        <Badge variant="outline" className="text-[10px]">
+                          {i.hour_type}
+                        </Badge>
+                      )}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
-            <div className="rounded-lg border bg-white p-4 space-y-3">
+            <div className="rounded-lg border bg-white p-4 space-y-3 dark:bg-slate-900">
               <Textarea
                 placeholder="Escreva uma resposta ou nota interna..."
                 value={comment}
                 onChange={(e) => setComment(e.target.value)}
               />
+              <div className="grid gap-3 sm:grid-cols-3">
+                <div className="space-y-1">
+                  <Label className="text-xs text-slate-600 dark:text-slate-400">Tempo Gasto</Label>
+                  <Input
+                    placeholder="hh:mm"
+                    value={timeSpent}
+                    onChange={(e) => {
+                      setTimeSpent(e.target.value)
+                      setTimeError(validateTimeSpent(e.target.value))
+                    }}
+                    className="h-8 text-sm"
+                  />
+                  {timeError && <p className="text-xs text-red-500">{timeError}</p>}
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs text-slate-600 dark:text-slate-400">Tipo de Hora</Label>
+                  <Select value={hourType} onValueChange={setHourType}>
+                    <SelectTrigger className="h-8 text-sm">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {HOUR_TYPES.map((t) => (
+                        <SelectItem key={t} value={t}>
+                          {t}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs text-slate-600 dark:text-slate-400">Faturamento</Label>
+                  <Select value={billingStatus} onValueChange={setBillingStatus}>
+                    <SelectTrigger className="h-8 text-sm">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {BILLING_STATUSES.map((s) => (
+                        <SelectItem key={s} value={s}>
+                          {s}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
               <div className="flex justify-between items-center">
-                <label className="text-xs text-slate-600 flex items-center gap-2 cursor-pointer">
+                <label className="text-xs text-slate-600 flex items-center gap-2 cursor-pointer dark:text-slate-400">
                   <input
                     type="checkbox"
                     checked={isInternal}
@@ -262,6 +372,7 @@ export default function TicketDetail() {
                   onClick={handleSendComment}
                   className="bg-blue-600 hover:bg-blue-700"
                   size="sm"
+                  disabled={sending}
                 >
                   <Send className="mr-1.5 h-3.5 w-3.5" /> Enviar
                 </Button>
