@@ -13,6 +13,9 @@ import {
   MapPin,
   FileText,
   Timer,
+  Trash2,
+  Pencil,
+  Loader2,
 } from 'lucide-react'
 import { Skeleton } from '@/components/ui/skeleton'
 import { RequesterInfo } from '@/components/RequesterInfo'
@@ -20,6 +23,18 @@ import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Badge } from '@/components/ui/badge'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
+import { InteractionEditDialog } from '@/components/InteractionEditDialog'
+import { deleteInteractionWithReversal } from '@/services/ticket-interactions'
 import {
   Select,
   SelectContent,
@@ -73,6 +88,10 @@ export default function TicketDetail() {
   const [timerRunning, setTimerRunning] = useState(false)
   const [timerStart, setTimerStart] = useState<Date | null>(null)
   const [timerDisplay, setTimerDisplay] = useState('00:00')
+  const [deleteTarget, setDeleteTarget] = useState<any | null>(null)
+  const [deleting, setDeleting] = useState(false)
+  const [editTarget, setEditTarget] = useState<any | null>(null)
+  const [editOpen, setEditOpen] = useState(false)
 
   const loadData = () => {
     if (!id) return
@@ -225,6 +244,30 @@ export default function TicketDetail() {
     toast({ title: 'SLA Retomado' })
   }
 
+  const handleConfirmDelete = async () => {
+    if (!deleteTarget) return
+    setDeleting(true)
+    try {
+      await deleteInteractionWithReversal(deleteTarget.id)
+      toast({ title: 'Interação excluída e horas estornadas!' })
+      setDeleteTarget(null)
+      loadData()
+    } catch (err) {
+      toast({
+        title: 'Erro ao excluir interação',
+        description: getErrorMessage(err),
+        variant: 'destructive',
+      })
+    } finally {
+      setDeleting(false)
+    }
+  }
+
+  const handleEditInteraction = (interaction: any) => {
+    setEditTarget(interaction)
+    setEditOpen(true)
+  }
+
   const handleContractChange = async (newContractId: string) => {
     if (!id) return
     const actualId = newContractId === '_none' ? '' : newContractId
@@ -347,14 +390,34 @@ export default function TicketDetail() {
                     <span className="font-bold text-slate-800">
                       {i.expand?.author?.name || 'Usuário'}
                     </span>
-                    {i.type === 'Interno' && (
-                      <Badge variant="outline" className="text-[10px]">
-                        Interno
-                      </Badge>
-                    )}
-                    <span className="text-slate-400">
-                      {new Date(i.created).toLocaleString('pt-BR')}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      {i.type === 'Interno' && (
+                        <Badge variant="outline" className="text-[10px]">
+                          Interno
+                        </Badge>
+                      )}
+                      <span className="text-slate-400">
+                        {new Date(i.created).toLocaleString('pt-BR')}
+                      </span>
+                      {(perms.isTecnico || perms.isAdmin || perms.isGestor) && (
+                        <>
+                          <button
+                            onClick={() => handleEditInteraction(i)}
+                            className="text-slate-400 hover:text-blue-600 transition-colors"
+                            title="Editar interação"
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                          </button>
+                          <button
+                            onClick={() => setDeleteTarget(i)}
+                            className="text-slate-400 hover:text-red-600 transition-colors"
+                            title="Excluir interação"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        </>
+                      )}
+                    </div>
                   </div>
                   <p className="text-slate-700">{i.content}</p>
                   {i.duration_minutes > 0 && (
@@ -574,6 +637,33 @@ export default function TicketDetail() {
         companyId={ticket.company}
         open={showVisit}
         onOpenChange={setShowVisit}
+        onSaved={loadData}
+      />
+      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir Interação</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir esta interação? As horas serão estornadas do contrato.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmDelete}
+              disabled={deleting}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              {deleting && <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />}
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      <InteractionEditDialog
+        interaction={editTarget}
+        open={editOpen}
+        onOpenChange={setEditOpen}
         onSaved={loadData}
       />
     </div>

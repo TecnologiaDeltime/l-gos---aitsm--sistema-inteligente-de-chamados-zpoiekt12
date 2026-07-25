@@ -64,3 +64,21 @@ export const createInteraction = (data: Partial<TicketInteractionRecord>) =>
 
 export const updateInteraction = (id: string, data: Partial<TicketInteractionRecord>) =>
   pb.collection('ticket_interactions').update<TicketInteractionRecord>(id, data)
+
+export const deleteInteractionWithReversal = (id: string) =>
+  pb.send(`/backend/v1/interactions/${id}/delete`, { method: 'DELETE' })
+
+export const editInteractionWithRecalculation = (
+  id: string,
+  data: {
+    content?: string
+    duration_minutes?: number
+    hour_type?: string
+    billing_status?: string
+  },
+) =>
+  pb.send(`/backend/v1/interactions/${id}/edit`, {
+    method: 'PUT',
+    body: JSON.stringify(data),
+    headers: { 'Content-Type': 'application/json' },
+  })
