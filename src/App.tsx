@@ -16,6 +16,7 @@ import ClientList from '@/pages/clients/ClientList'
 import ClientDetail from '@/pages/clients/ClientDetail'
 import ContractList from '@/pages/contracts/ContractList'
 import ContractDetail from '@/pages/contracts/ContractDetail'
+import ContractEdit from '@/pages/contracts/ContractEdit'
 import TeamList from '@/pages/team/TeamList'
 import TeamDetail from '@/pages/team/TeamDetail'
 import QueueManagement from '@/pages/queues/QueueManagement'
@@ -66,6 +67,7 @@ const App = () => (
             <Route path="/clients/new" element={<ClientDetail />} />
             <Route path="/contracts" element={<ContractList />} />
             <Route path="/contracts/new" element={<ContractDetail />} />
+            <Route path="/contracts/:id/edit" element={<ContractEdit />} />
             <Route path="/team" element={<TeamList />} />
             <Route path="/team/new" element={<TeamDetail />} />
             <Route path="/queues" element={<QueueManagement />} />

@@ -9,13 +9,45 @@ export interface ContractRecord {
   start_date?: string
   end_date?: string
   monthly_hours?: number
+  accumulative_hours?: boolean
+  overtime_hour_value?: number
+  monthly_hour_limit?: number
+  service_hours_start?: string
+  service_hours_end?: string
+  service_days?: string
+  on_duty_coverage?: boolean
   sla_response_time?: number
   sla_solution_time?: number
+  sla_update_time?: number
+  sla_field_service_time?: number
   priorities_available?: string[]
+  included_services?: string
+  excluded_services?: string
+  overtime_policy?: string
+  travel_policy?: string
+  technical_visit_policy?: string
+  notes?: string
   created: string
   updated: string
   expand?: any
 }
+
+export const CONTRACT_TYPES = [
+  'Pacote Mensal',
+  'Por Chamado',
+  'Ilimitado',
+  'Banco de Horas',
+  'Projeto',
+  'Sustentação Mensal',
+  'Atendimento Avulso',
+  'Híbrido',
+]
+
+export const CONTRACT_STATUSES = ['Ativo', 'Expirado', 'Cancelado']
+
+export const SERVICE_DAYS = ['Seg-Sex', 'Seg-Sáb', 'Todos', 'Personalizado']
+
+export const PRIORITY_OPTIONS = ['P1', 'P2', 'P3', 'P4', 'P5']
 
 export const getContracts = (filter?: string) =>
   pb
