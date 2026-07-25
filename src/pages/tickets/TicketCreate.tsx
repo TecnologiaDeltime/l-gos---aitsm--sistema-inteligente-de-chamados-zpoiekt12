@@ -114,7 +114,7 @@ export default function TicketCreate() {
       const [comps, cats, conts] = await Promise.all([
         getCompanies(),
         getCategories(),
-        getContracts({ expand: 'company' } as never).catch(() => []),
+        getContracts().catch(() => []),
       ])
       setCompanies(comps)
       setCategories(cats)
