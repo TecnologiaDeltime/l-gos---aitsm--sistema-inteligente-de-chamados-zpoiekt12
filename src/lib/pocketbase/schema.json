@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-25T17:59:42.551Z",
+  "generatedAt": "2026-07-25T18:05:00.381Z",
   "collections": [
     {
       "name": "users",
@@ -29,25 +29,1835 @@
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": [
-            "onCreate"
-          ]
+          "autodateTriggers": ["onCreate"]
         },
         {
           "name": "updated",
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": [
-            "onCreate",
-            "onUpdate"
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        },
+        {
+          "name": "role",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": [
+            "admin",
+            "gestor",
+            "tecnico",
+            "cliente_gestor",
+            "cliente_solicitante",
+            "auditor"
           ]
+        },
+        {
+          "name": "company",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "companies"
+        },
+        {
+          "name": "phone",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "position",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "active",
+          "type": "bool",
+          "required": false,
+          "system": false
         }
       ],
       "indexes": [
         "CREATE UNIQUE INDEX `idx_tokenKey__pb_users_auth_` ON `users` (`tokenKey`)",
         "CREATE UNIQUE INDEX `idx_email__pb_users_auth_` ON `users` (`email`) WHERE `email` != ''"
       ]
+    },
+    {
+      "name": "companies",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != ''",
+        "view": "@request.auth.id != ''",
+        "create": "@request.auth.id != ''",
+        "update": "@request.auth.id != ''",
+        "delete": "@request.auth.id != ''"
+      },
+      "fields": [
+        {
+          "name": "code",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "legal_name",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "trade_name",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "document",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "address_street",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "address_number",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "address_neighborhood",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "address_city",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "address_state",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "address_zipcode",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "phone",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "email",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "status",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["Ativo", "Inativo"]
+        },
+        {
+          "name": "notes",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": [
+        "CREATE INDEX idx_companies_code ON companies (code)",
+        "CREATE INDEX idx_companies_status ON companies (status)"
+      ]
+    },
+    {
+      "name": "company_units",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != ''",
+        "view": "@request.auth.id != ''",
+        "create": "@request.auth.id != ''",
+        "update": "@request.auth.id != ''",
+        "delete": "@request.auth.id != ''"
+      },
+      "fields": [
+        {
+          "name": "company",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "companies"
+        },
+        {
+          "name": "name",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "address_street",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "address_number",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "address_neighborhood",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "address_city",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "address_state",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "address_zipcode",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "phone",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "manager_name",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": ["CREATE INDEX idx_units_company ON company_units (company)"]
+    },
+    {
+      "name": "company_departments",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != ''",
+        "view": "@request.auth.id != ''",
+        "create": "@request.auth.id != ''",
+        "update": "@request.auth.id != ''",
+        "delete": "@request.auth.id != ''"
+      },
+      "fields": [
+        {
+          "name": "company",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "companies"
+        },
+        {
+          "name": "unit",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "company_units"
+        },
+        {
+          "name": "name",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": ["CREATE INDEX idx_depts_company ON company_departments (company)"]
+    },
+    {
+      "name": "contracts",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != ''",
+        "view": "@request.auth.id != ''",
+        "create": "@request.auth.id != ''",
+        "update": "@request.auth.id != ''",
+        "delete": "@request.auth.id != ''"
+      },
+      "fields": [
+        {
+          "name": "company",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "companies"
+        },
+        {
+          "name": "number",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "start_date",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "end_date",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "status",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["Ativo", "Expirado", "Cancelado"]
+        },
+        {
+          "name": "type",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": [
+            "Pacote Mensal",
+            "Por Chamado",
+            "Ilimitado",
+            "Banco de Horas",
+            "Projeto",
+            "Sustentação Mensal",
+            "Atendimento Avulso",
+            "Híbrido"
+          ]
+        },
+        {
+          "name": "monthly_hours",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "accumulative_hours",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "overtime_hour_value",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "monthly_hour_limit",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "service_hours_start",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "service_hours_end",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "service_days",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["Seg-Sex", "Seg-Sáb", "Todos", "Personalizado"]
+        },
+        {
+          "name": "on_duty_coverage",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "sla_response_time",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "sla_solution_time",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "sla_update_time",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "sla_field_service_time",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "priorities_available",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["P1", "P2", "P3", "P4", "P5"]
+        },
+        {
+          "name": "included_services",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "excluded_services",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "overtime_policy",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "travel_policy",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "technical_visit_policy",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "notes",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": [
+        "CREATE INDEX idx_contracts_company ON contracts (company)",
+        "CREATE INDEX idx_contracts_status ON contracts (status)"
+      ]
+    },
+    {
+      "name": "tkt_categories",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != ''",
+        "view": "@request.auth.id != ''",
+        "create": "@request.auth.id != ''",
+        "update": "@request.auth.id != ''",
+        "delete": "@request.auth.id != ''"
+      },
+      "fields": [
+        {
+          "name": "name",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "description",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "active",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        },
+        {
+          "name": "parent",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "tkt_categories"
+        }
+      ],
+      "indexes": ["CREATE INDEX idx_categories_active ON tkt_categories (active)"]
+    },
+    {
+      "name": "queues",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != ''",
+        "view": "@request.auth.id != ''",
+        "create": "@request.auth.id != ''",
+        "update": "@request.auth.id != ''",
+        "delete": "@request.auth.id != ''"
+      },
+      "fields": [
+        {
+          "name": "name",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "description",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "members",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "categories",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "tkt_categories"
+        },
+        {
+          "name": "distribution_rule",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["Disponibilidade", "Menor Carga", "Rodízio", "Especialidade"]
+        },
+        {
+          "name": "priority",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "active",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": ["CREATE INDEX idx_queues_active ON queues (active)"]
+    },
+    {
+      "name": "equipments",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != ''",
+        "view": "@request.auth.id != ''",
+        "create": "@request.auth.id != ''",
+        "update": "@request.auth.id != ''",
+        "delete": "@request.auth.id != ''"
+      },
+      "fields": [
+        {
+          "name": "company",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "companies"
+        },
+        {
+          "name": "unit",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "company_units"
+        },
+        {
+          "name": "type",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "manufacturer",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "model",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "serial_number",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "patrimony_number",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "ip_address",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "name",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "operating_system",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "responsible_user",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "warranty_until",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "supplier",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "acquisition_date",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "status",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["Ativo", "Inativo", "Em Manutenção", "Descartado"]
+        },
+        {
+          "name": "location",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "notes",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": [
+        "CREATE INDEX idx_equipments_company ON equipments (company)",
+        "CREATE INDEX idx_equipments_status ON equipments (status)"
+      ]
+    },
+    {
+      "name": "tickets",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != ''",
+        "view": "@request.auth.id != ''",
+        "create": "@request.auth.id != ''",
+        "update": "@request.auth.id != ''",
+        "delete": "@request.auth.id != ''"
+      },
+      "fields": [
+        {
+          "name": "number",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "company",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "companies"
+        },
+        {
+          "name": "unit",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "company_units"
+        },
+        {
+          "name": "department",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "company_departments"
+        },
+        {
+          "name": "requester_name",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "requester_email",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "requester_phone",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "contract",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "contracts"
+        },
+        {
+          "name": "type",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": [
+            "Incidente",
+            "Requisição de Serviço",
+            "Problema",
+            "Mudança",
+            "Projeto",
+            "Tarefa Interna",
+            "Visita Técnica",
+            "Dúvida"
+          ]
+        },
+        {
+          "name": "category",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "tkt_categories"
+        },
+        {
+          "name": "subcategory",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "tkt_categories"
+        },
+        {
+          "name": "service",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "equipment",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "equipments"
+        },
+        {
+          "name": "title",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "description",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "source",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["Portal", "E-mail", "Manual", "API"]
+        },
+        {
+          "name": "impact",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["Alto", "Médio", "Baixo"]
+        },
+        {
+          "name": "urgency",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["Alta", "Média", "Baixa"]
+        },
+        {
+          "name": "priority",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["P1", "P2", "P3", "P4", "P5"]
+        },
+        {
+          "name": "status",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": [
+            "Novo",
+            "Em Triagem",
+            "Aguardando Atribuição",
+            "Atribuído",
+            "Em Atendimento",
+            "Aguardando Cliente",
+            "Aguardando Aprovação",
+            "Aguardando Terceiro",
+            "Agendado",
+            "Escalonado",
+            "Resolvido",
+            "Aguardando Validação",
+            "Encerrado",
+            "Cancelado",
+            "Reaberto"
+          ]
+        },
+        {
+          "name": "queue",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "queues"
+        },
+        {
+          "name": "assigned_to",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "participants",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "sla_response_deadline",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "sla_solution_deadline",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "sla_response_at",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "sla_solution_at",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "resolution_date",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "closure_date",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "reopen_count",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "solution",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "root_cause",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "work_hours",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "billable_hours",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "non_billable_hours",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "sla_paused",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "sla_pause_total_minutes",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "sla_status",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["Dentro do Prazo", "Atenção", "Risco", "Crítico", "Violado", "Pausado"]
+        },
+        {
+          "name": "satisfaction_score",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "needs_technical_visit",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "availability_info",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "closed_by",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": [
+        "CREATE INDEX idx_tickets_number ON tickets (number)",
+        "CREATE INDEX idx_tickets_company ON tickets (company)",
+        "CREATE INDEX idx_tickets_assigned ON tickets (assigned_to)",
+        "CREATE INDEX idx_tickets_status ON tickets (status)",
+        "CREATE INDEX idx_tickets_priority ON tickets (priority)",
+        "CREATE INDEX idx_tickets_sla_status ON tickets (sla_status)"
+      ]
+    },
+    {
+      "name": "ticket_interactions",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != ''",
+        "view": "@request.auth.id != ''",
+        "create": "@request.auth.id != ''",
+        "update": "@request.auth.id != ''",
+        "delete": "@request.auth.id != ''"
+      },
+      "fields": [
+        {
+          "name": "ticket",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "tickets"
+        },
+        {
+          "name": "author",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "type",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["Público", "Interno"]
+        },
+        {
+          "name": "content",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "mentioned_users",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": ["CREATE INDEX idx_interactions_ticket ON ticket_interactions (ticket)"]
+    },
+    {
+      "name": "ticket_attachments",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != ''",
+        "view": "@request.auth.id != ''",
+        "create": "@request.auth.id != ''",
+        "update": "@request.auth.id != ''",
+        "delete": "@request.auth.id != ''"
+      },
+      "fields": [
+        {
+          "name": "ticket",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "tickets"
+        },
+        {
+          "name": "interaction",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "ticket_interactions"
+        },
+        {
+          "name": "file",
+          "type": "file",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "file_name",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "file_size",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "file_type",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "uploaded_by",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": ["CREATE INDEX idx_attachments_ticket ON ticket_attachments (ticket)"]
+    },
+    {
+      "name": "ticket_history",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != ''",
+        "view": "@request.auth.id != ''",
+        "create": "@request.auth.id != ''",
+        "update": "@request.auth.id != ''",
+        "delete": "@request.auth.id != ''"
+      },
+      "fields": [
+        {
+          "name": "ticket",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "tickets"
+        },
+        {
+          "name": "user",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "action",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "field",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "old_value",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "new_value",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "ip_address",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": ["CREATE INDEX idx_history_ticket ON ticket_history (ticket)"]
+    },
+    {
+      "name": "sla_pauses",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != ''",
+        "view": "@request.auth.id != ''",
+        "create": "@request.auth.id != ''",
+        "update": "@request.auth.id != ''",
+        "delete": "@request.auth.id != ''"
+      },
+      "fields": [
+        {
+          "name": "ticket",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "tickets"
+        },
+        {
+          "name": "reason",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": [
+            "Aguardando Cliente",
+            "Aguardando Aprovação",
+            "Aguardando Terceiro",
+            "Aguardando Fornecedor",
+            "Aguardando Peça",
+            "Aguardando Janela de Manutenção",
+            "Chamado Agendado",
+            "Cliente Indisponível"
+          ]
+        },
+        {
+          "name": "justification",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "paused_by",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "resumed_by",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "paused_at",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "resumed_at",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "expected_resume_at",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "duration_minutes",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": ["CREATE INDEX idx_slapauses_ticket ON sla_pauses (ticket)"]
+    },
+    {
+      "name": "time_entries",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != ''",
+        "view": "@request.auth.id != ''",
+        "create": "@request.auth.id != ''",
+        "update": "@request.auth.id != ''",
+        "delete": "@request.auth.id != ''"
+      },
+      "fields": [
+        {
+          "name": "ticket",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "tickets"
+        },
+        {
+          "name": "technician",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "entry_date",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "start_time",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "end_time",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "duration_minutes",
+          "type": "number",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "activity_type",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": [
+            "Atendimento Remoto",
+            "Atendimento Presencial",
+            "Análise",
+            "Desenvolvimento",
+            "Reunião",
+            "Gestão",
+            "Deslocamento",
+            "Projeto",
+            "Plantão",
+            "Hora Adicional"
+          ]
+        },
+        {
+          "name": "billable",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "description",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "approved",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "approved_by",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": ["CREATE INDEX idx_timeentries_ticket ON time_entries (ticket)"]
+    },
+    {
+      "name": "notifications",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != ''",
+        "view": "@request.auth.id != ''",
+        "create": "@request.auth.id != ''",
+        "update": "@request.auth.id != ''",
+        "delete": "@request.auth.id != ''"
+      },
+      "fields": [
+        {
+          "name": "user",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "ticket",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "tickets"
+        },
+        {
+          "name": "title",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "message",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "type",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["SLA", "Atribuição", "Interação", "Aprovação", "Sistema", "Alerta"]
+        },
+        {
+          "name": "read",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "read_at",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": ["CREATE INDEX idx_notifications_user ON notifications (user)"]
+    },
+    {
+      "name": "satisfaction_surveys",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != ''",
+        "view": "@request.auth.id != ''",
+        "create": "@request.auth.id != ''",
+        "update": "@request.auth.id != ''",
+        "delete": "@request.auth.id != ''"
+      },
+      "fields": [
+        {
+          "name": "ticket",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "tickets"
+        },
+        {
+          "name": "company",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "companies"
+        },
+        {
+          "name": "respondent",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "quality_score",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "time_score",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "communication_score",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "technical_score",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "solution_score",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "overall_score",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "comment",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "responded_at",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": ["CREATE INDEX idx_surveys_ticket ON satisfaction_surveys (ticket)"]
+    },
+    {
+      "name": "audit_logs",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != ''",
+        "view": "@request.auth.id != ''",
+        "create": "@request.auth.id != ''",
+        "update": "@request.auth.id != ''",
+        "delete": "@request.auth.id != ''"
+      },
+      "fields": [
+        {
+          "name": "user",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "action",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "entity_type",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "entity_id",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "description",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "old_values",
+          "type": "json",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "new_values",
+          "type": "json",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "ip_address",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "user_agent",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": ["CREATE INDEX idx_audit_user ON audit_logs (user)"]
+    },
+    {
+      "name": "knowledge_articles",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != ''",
+        "view": "@request.auth.id != ''",
+        "create": "@request.auth.id != ''",
+        "update": "@request.auth.id != ''",
+        "delete": "@request.auth.id != ''"
+      },
+      "fields": [
+        {
+          "name": "title",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "category",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "tkt_categories"
+        },
+        {
+          "name": "summary",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "content",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "tags",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "author",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "views",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": ["CREATE INDEX idx_kb_category ON knowledge_articles (category)"]
     }
   ]
 }

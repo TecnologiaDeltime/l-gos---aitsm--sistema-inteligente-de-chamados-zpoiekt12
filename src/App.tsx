@@ -1,28 +1,71 @@
-/* Main App Component - Handles routing (using react-router-dom), query client and other providers - use this file to add all routes */
-import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { Toaster } from '@/components/ui/toaster'
 import { Toaster as Sonner } from '@/components/ui/sonner'
 import { TooltipProvider } from '@/components/ui/tooltip'
-import Index from './pages/Index'
-import NotFound from './pages/NotFound'
-import Layout from './components/Layout'
+import { AuthProvider } from '@/hooks/use-auth'
+import { ProtectedRoute } from '@/components/ProtectedRoute'
+import Layout from '@/components/Layout'
 
-// ONLY IMPORT AND RENDER WORKING PAGES, NEVER ADD PLACEHOLDER COMPONENTS OR PAGES IN THIS FILE
-// AVOID REMOVING ANY CONTEXT PROVIDERS FROM THIS FILE (e.g. TooltipProvider, Toaster, Sonner)
+import Login from '@/pages/Login'
+import RecoverPassword from '@/pages/RecoverPassword'
+import Dashboard from '@/pages/Dashboard'
+import TicketList from '@/pages/tickets/TicketList'
+import TicketDetail from '@/pages/tickets/TicketDetail'
+import TicketCreate from '@/pages/tickets/TicketCreate'
+import ClientList from '@/pages/clients/ClientList'
+import ClientDetail from '@/pages/clients/ClientDetail'
+import ContractList from '@/pages/contracts/ContractList'
+import ContractDetail from '@/pages/contracts/ContractDetail'
+import TeamList from '@/pages/team/TeamList'
+import TeamDetail from '@/pages/team/TeamDetail'
+import QueueManagement from '@/pages/queues/QueueManagement'
+import CategoryManagement from '@/pages/categories/CategoryManagement'
+import ReportsPage from '@/pages/reports/ReportsPage'
+import KnowledgeBase from '@/pages/knowledge/KnowledgeBase'
+import SettingsPage from '@/pages/settings/SettingsPage'
+import NotFound from '@/pages/NotFound'
 
 const App = () => (
   <BrowserRouter>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <Routes>
-        <Route element={<Layout />}>
-          <Route path="/" element={<Index />} />
-          {/* ADD ALL CUSTOM ROUTES MUST BE ADDED HERE */}
-        </Route>
-        <Route path="*" element={<NotFound />} />
-      </Routes>
-    </TooltipProvider>
+    <AuthProvider>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <Routes>
+          {/* Public Auth Routes */}
+          <Route path="/login" element={<Login />} />
+          <Route path="/recuperar-senha" element={<RecoverPassword />} />
+
+          {/* Protected Routes inside Layout */}
+          <Route
+            element={
+              <ProtectedRoute>
+                <Layout />
+              </ProtectedRoute>
+            }
+          >
+            <Route path="/" element={<Navigate to="/dashboard" replace />} />
+            <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/tickets" element={<TicketList />} />
+            <Route path="/tickets/new" element={<TicketCreate />} />
+            <Route path="/tickets/:id" element={<TicketDetail />} />
+            <Route path="/clients" element={<ClientList />} />
+            <Route path="/clients/new" element={<ClientDetail />} />
+            <Route path="/contracts" element={<ContractList />} />
+            <Route path="/contracts/new" element={<ContractDetail />} />
+            <Route path="/team" element={<TeamList />} />
+            <Route path="/team/new" element={<TeamDetail />} />
+            <Route path="/queues" element={<QueueManagement />} />
+            <Route path="/categories" element={<CategoryManagement />} />
+            <Route path="/reports" element={<ReportsPage />} />
+            <Route path="/knowledge-base" element={<KnowledgeBase />} />
+            <Route path="/settings" element={<SettingsPage />} />
+          </Route>
+
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </TooltipProvider>
+    </AuthProvider>
   </BrowserRouter>
 )
 
