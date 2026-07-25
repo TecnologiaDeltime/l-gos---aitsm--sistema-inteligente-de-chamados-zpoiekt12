@@ -23,6 +23,11 @@ import CategoryManagement from '@/pages/categories/CategoryManagement'
 import ReportsPage from '@/pages/reports/ReportsPage'
 import KnowledgeBase from '@/pages/knowledge/KnowledgeBase'
 import SettingsPage from '@/pages/settings/SettingsPage'
+import CmdbDashboard from '@/pages/cmdb/CmdbDashboard'
+import CiList from '@/pages/cmdb/CiList'
+import CiDetail from '@/pages/cmdb/CiDetail'
+import CiImport from '@/pages/cmdb/CiImport'
+import CiTypes from '@/pages/cmdb/CiTypes'
 import NotFound from '@/pages/NotFound'
 
 const App = () => (

@@ -19,6 +19,9 @@ export function usePermissions() {
   const canAssignTicket = isTecnico
   const canPauseSla = isTecnico
   const canResolveTicket = isTecnico
+  const canViewCmdb = isTecnico
+  const canManageCmdb = isAdmin || isGestor
+  const canManageCiTypes = isAdmin
 
   return {
     role,
@@ -36,5 +39,8 @@ export function usePermissions() {
     canAssignTicket,
     canPauseSla,
     canResolveTicket,
+    canViewCmdb,
+    canManageCmdb,
+    canManageCiTypes,
   }
 }

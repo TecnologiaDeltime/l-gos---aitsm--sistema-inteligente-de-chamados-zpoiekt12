@@ -11,6 +11,8 @@ import {
   Tags,
   BarChart3,
   BookOpen,
+  Boxes,
+  Server,
   Settings,
   Bell,
   LogOut,
@@ -80,6 +82,8 @@ export default function Layout() {
     { label: 'Filas', path: '/queues', icon: Inbox, show: permissions.canManageQueues },
     { label: 'Categorias', path: '/categories', icon: Tags, show: permissions.canManageCategories },
     { label: 'Relatórios', path: '/reports', icon: BarChart3, show: permissions.canViewReports },
+    { label: 'CMDB', path: '/cmdb', icon: Boxes, show: permissions.canViewCmdb },
+    { label: 'Ativos', path: '/cmdb/assets', icon: Server, show: permissions.canViewCmdb },
     { label: 'Base de Conhecimento', path: '/knowledge-base', icon: BookOpen, show: true },
     { label: 'Configurações', path: '/settings', icon: Settings, show: permissions.isAdmin },
   ]
