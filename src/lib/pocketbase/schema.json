@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-25T20:03:55.860Z",
+  "generatedAt": "2026-07-25T20:16:48.928Z",
   "collections": [
     {
       "name": "users",
@@ -2929,6 +2929,81 @@
         }
       ],
       "indexes": ["CREATE INDEX idx_continuity_contract ON continuity_decisions (contract)"]
+    },
+    {
+      "name": "client_contacts",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != ''",
+        "view": "@request.auth.id != ''",
+        "create": "@request.auth.id != ''",
+        "update": "@request.auth.id != ''",
+        "delete": "@request.auth.id != ''"
+      },
+      "fields": [
+        {
+          "name": "client",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "companies"
+        },
+        {
+          "name": "full_name",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "email",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "phone",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "cell_phone",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "has_whatsapp",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "departments",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "company_departments"
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": [
+        "CREATE INDEX idx_client_contacts_client ON client_contacts (client)",
+        "CREATE INDEX idx_client_contacts_departments ON client_contacts (departments)"
+      ]
     }
   ]
 }

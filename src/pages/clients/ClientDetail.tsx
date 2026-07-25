@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { createCompany } from '@/services/companies'
+import { CollaboratorSection } from '@/components/clients/CollaboratorSection'
+import { BranchSection } from '@/components/clients/BranchSection'
 import { useToast } from '@/hooks/use-toast'
 
 export default function ClientDetail() {
@@ -19,18 +21,22 @@ export default function ClientDetail() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    await createCompany({
-      code,
-      trade_name: tradeName,
-      legal_name: legalName,
-      document,
-      email,
-      phone,
-      address_city: city,
-      status: 'Ativo',
-    })
-    toast({ title: 'Cliente cadastrado com sucesso!' })
-    navigate('/clients')
+    try {
+      const created = await createCompany({
+        code,
+        trade_name: tradeName,
+        legal_name: legalName,
+        document,
+        email,
+        phone,
+        address_city: city,
+        status: 'Ativo',
+      })
+      toast({ title: 'Cliente cadastrado com sucesso!' })
+      navigate(`/clients/${created.id}/edit`)
+    } catch {
+      toast({ title: 'Erro ao cadastrar cliente', variant: 'destructive' })
+    }
   }
 
   return (
@@ -105,6 +111,8 @@ export default function ClientDetail() {
           </Button>
         </form>
       </div>
+      <CollaboratorSection />
+      <BranchSection />
     </div>
   )
 }

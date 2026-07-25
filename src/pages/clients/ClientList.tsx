@@ -5,16 +5,34 @@ import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Badge } from '@/components/ui/badge'
 import { getCompanies, CompanyRecord } from '@/services/companies'
+import { getAllClientContacts } from '@/services/client-contacts'
+import { getAllCompanyUnits } from '@/services/company-units'
 import { useRealtime } from '@/hooks/use-realtime'
 
 export default function ClientList() {
   const [companies, setCompanies] = useState<CompanyRecord[]>([])
+  const [contactCounts, setContactCounts] = useState<Record<string, number>>({})
+  const [branchCounts, setBranchCounts] = useState<Record<string, number>>({})
   const [loading, setLoading] = useState(true)
 
   const loadData = useCallback(async () => {
     try {
-      const data = await getCompanies()
+      const [data, contacts, units] = await Promise.all([
+        getCompanies(),
+        getAllClientContacts(),
+        getAllCompanyUnits(),
+      ])
       setCompanies(data)
+      const cc: Record<string, number> = {}
+      contacts.forEach((c) => {
+        cc[c.client] = (cc[c.client] || 0) + 1
+      })
+      setContactCounts(cc)
+      const bc: Record<string, number> = {}
+      units.forEach((u) => {
+        bc[u.company] = (bc[u.company] || 0) + 1
+      })
+      setBranchCounts(bc)
     } catch {
       /* ignore */
     } finally {
@@ -27,6 +45,14 @@ export default function ClientList() {
   }, [loadData])
 
   useRealtime('companies', () => {
+    loadData()
+  })
+
+  useRealtime('client_contacts', () => {
+    loadData()
+  })
+
+  useRealtime('company_units', () => {
     loadData()
   })
 
@@ -86,6 +112,11 @@ export default function ClientList() {
                 <p>Razão Social: {c.legal_name}</p>
                 <p>Cidade: {c.address_city || 'N/A'}</p>
                 <p>E-mail: {c.email || 'N/A'}</p>
+              </div>
+
+              <div className="flex gap-4 pt-2 text-xs text-slate-500">
+                <span>Colaboradores: {contactCounts[c.id] || 0}</span>
+                <span>Filiais: {branchCounts[c.id] || 0}</span>
               </div>
 
               <div className="pt-1">
