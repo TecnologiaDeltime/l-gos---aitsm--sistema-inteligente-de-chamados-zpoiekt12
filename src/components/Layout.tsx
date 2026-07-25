@@ -28,6 +28,8 @@ import {
   Gauge,
   ShieldOff,
   TrendingUp,
+  Workflow,
+  FileCheck,
 } from 'lucide-react'
 import { useAuth } from '@/hooks/use-auth'
 import { usePermissions } from '@/hooks/use-permissions'
@@ -134,6 +136,19 @@ export default function Layout() {
       icon: ShieldOff,
       show: permissions.isAdmin,
     },
+    {
+      label: 'Central de Automações',
+      path: '/automations',
+      icon: Workflow,
+      show: permissions.canManageAutomations,
+    },
+    {
+      label: 'Dashboard de Automações',
+      path: '/automations/dashboard',
+      icon: Workflow,
+      show: permissions.canViewAutomations,
+    },
+    { label: 'Central de Aprovações', path: '/approval-center', icon: FileCheck, show: true },
     { label: 'Configurações', path: '/settings', icon: Settings, show: permissions.isAdmin },
   ]
 

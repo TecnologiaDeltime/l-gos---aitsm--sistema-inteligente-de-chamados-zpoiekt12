@@ -45,6 +45,10 @@ import BlockingManagement from '@/pages/blocking/BlockingManagement'
 import NotFound from '@/pages/NotFound'
 import PortalPage from '@/pages/portal/PortalPage'
 import UnitReportsPage from '@/pages/reports/UnitReportsPage'
+import AutomationList from '@/pages/automations/AutomationList'
+import AutomationEditor from '@/pages/automations/AutomationEditor'
+import AutomationDashboard from '@/pages/automations/AutomationDashboard'
+import ApprovalCenter from '@/pages/approvals/ApprovalCenter'
 import { useAuth } from '@/hooks/use-auth'
 
 function RootRedirect() {
@@ -118,6 +122,10 @@ const App = () => (
             <Route path="/manager-dashboard" element={<ManagerDashboard />} />
             <Route path="/contracts/consumption" element={<ContractConsumptionDashboard />} />
             <Route path="/blocking" element={<BlockingManagement />} />
+            <Route path="/automations" element={<AutomationList />} />
+            <Route path="/automations/dashboard" element={<AutomationDashboard />} />
+            <Route path="/automations/:id/edit" element={<AutomationEditor />} />
+            <Route path="/approval-center" element={<ApprovalCenter />} />
           </Route>
 
           <Route path="*" element={<NotFound />} />
