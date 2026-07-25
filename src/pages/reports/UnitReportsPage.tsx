@@ -15,7 +15,7 @@ import {
 import { getCompanies, CompanyRecord } from '@/services/companies'
 import { getCompanyUnitsByCompany, CompanyUnitRecord } from '@/services/company-units'
 import { getTickets, TicketRecord } from '@/services/tickets'
-import { getTimeEntriesByFilter, TimeEntryRecord } from '@/services/time-entries'
+import { getTimeEntriesByFilter, type TimeEntryRecord } from '@/services/time_entries'
 
 export default function UnitReportsPage() {
   const permissions = usePermissions()

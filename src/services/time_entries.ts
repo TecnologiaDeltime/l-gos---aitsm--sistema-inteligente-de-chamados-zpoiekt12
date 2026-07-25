@@ -22,3 +22,10 @@ export const getTimeEntries = (ticketId: string) =>
 
 export const createTimeEntry = (data: Partial<TimeEntryRecord>) =>
   pb.collection('time_entries').create<TimeEntryRecord>(data)
+
+export const getTimeEntriesByFilter = (filter: string) =>
+  pb.collection('time_entries').getFullList<TimeEntryRecord>({
+    filter,
+    sort: '-entry_date',
+    expand: 'technician',
+  })
