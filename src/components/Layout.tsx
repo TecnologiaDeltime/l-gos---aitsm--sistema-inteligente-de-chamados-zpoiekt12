@@ -20,6 +20,7 @@ import {
   Shield,
   User,
   CheckCheck,
+  Upload,
 } from 'lucide-react'
 import { useAuth } from '@/hooks/use-auth'
 import { usePermissions } from '@/hooks/use-permissions'
@@ -84,6 +85,8 @@ export default function Layout() {
     { label: 'Relatórios', path: '/reports', icon: BarChart3, show: permissions.canViewReports },
     { label: 'CMDB', path: '/cmdb', icon: Boxes, show: permissions.canViewCmdb },
     { label: 'Ativos', path: '/cmdb/assets', icon: Server, show: permissions.canViewCmdb },
+    { label: 'Importar Ativos', path: '/cmdb/import', icon: Upload, show: permissions.canViewCmdb },
+    { label: 'Tipos de Ativo', path: '/cmdb/types', icon: Tags, show: permissions.canManageCmdb },
     { label: 'Base de Conhecimento', path: '/knowledge-base', icon: BookOpen, show: true },
     { label: 'Configurações', path: '/settings', icon: Settings, show: permissions.isAdmin },
   ]

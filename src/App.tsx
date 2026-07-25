@@ -64,6 +64,11 @@ const App = () => (
             <Route path="/categories" element={<CategoryManagement />} />
             <Route path="/reports" element={<ReportsPage />} />
             <Route path="/knowledge-base" element={<KnowledgeBase />} />
+            <Route path="/cmdb" element={<CmdbDashboard />} />
+            <Route path="/cmdb/assets" element={<CiList />} />
+            <Route path="/cmdb/assets/:id" element={<CiDetail />} />
+            <Route path="/cmdb/import" element={<CiImport />} />
+            <Route path="/cmdb/types" element={<CiTypes />} />
             <Route path="/settings" element={<SettingsPage />} />
           </Route>
 
