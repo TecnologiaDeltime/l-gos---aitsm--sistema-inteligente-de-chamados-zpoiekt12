@@ -12,6 +12,7 @@ import {
   FileCheck,
   MapPin,
   FileText,
+  Timer,
 } from 'lucide-react'
 import { Skeleton } from '@/components/ui/skeleton'
 import { RequesterInfo } from '@/components/RequesterInfo'
@@ -69,6 +70,9 @@ export default function TicketDetail() {
   const [showApproval, setShowApproval] = useState(false)
   const [showVisit, setShowVisit] = useState(false)
   const [contracts, setContracts] = useState<ContractRecord[]>([])
+  const [timerRunning, setTimerRunning] = useState(false)
+  const [timerStart, setTimerStart] = useState<Date | null>(null)
+  const [timerDisplay, setTimerDisplay] = useState('00:00')
 
   const loadData = () => {
     if (!id) return
@@ -93,6 +97,38 @@ export default function TicketDetail() {
   useRealtime('tickets', () => loadData())
   useRealtime('ticket_interactions', () => loadData())
   useRealtime('technical_visits', () => loadData())
+
+  useEffect(() => {
+    if (!timerRunning || !timerStart) return
+    const interval = setInterval(() => {
+      const elapsed = Math.floor((Date.now() - timerStart.getTime()) / 1000)
+      const h = String(Math.floor(elapsed / 3600)).padStart(2, '0')
+      const m = String(Math.floor((elapsed % 3600) / 60)).padStart(2, '0')
+      setTimerDisplay(`${h}:${m}`)
+    }, 1000)
+    return () => clearInterval(interval)
+  }, [timerRunning, timerStart])
+
+  const totalMinutes = interactions.reduce((sum, i) => sum + (i.duration_minutes || 0), 0)
+  const totalHoursDisplay = `${String(Math.floor(totalMinutes / 60)).padStart(2, '0')}:${String(totalMinutes % 60).padStart(2, '0')}`
+
+  const handleStartTimer = () => {
+    setTimerStart(new Date())
+    setTimerRunning(true)
+    setTimerDisplay('00:00')
+  }
+
+  const handleStopTimer = () => {
+    if (!timerStart) return
+    const elapsed = Math.floor((Date.now() - timerStart.getTime()) / 60000)
+    const h = String(Math.floor(elapsed / 60)).padStart(2, '0')
+    const m = String(elapsed % 60).padStart(2, '0')
+    setTimeSpent(`${h}:${m}`)
+    setTimerRunning(false)
+    setTimerStart(null)
+    setTimerDisplay('00:00')
+    setTimeError('')
+  }
 
   const validateTimeSpent = (value: string): string => {
     if (!value.trim()) return ''
@@ -133,6 +169,9 @@ export default function TicketDetail() {
       setTimeSpent('')
       setHourType('Contratada')
       setBillingStatus('Faturável')
+      setTimerRunning(false)
+      setTimerStart(null)
+      setTimerDisplay('00:00')
       loadData()
       if (durationMinutes > 0 && hourType === 'Contratada') {
         toast({ title: 'Interação salva e horas debitadas do contrato' })
@@ -290,6 +329,14 @@ export default function TicketDetail() {
             <TabsTrigger value="visits">Visitas ({visits.length})</TabsTrigger>
           </TabsList>
           <TabsContent value="interactions" className="pt-4 space-y-4">
+            <div className="flex items-center justify-between rounded-lg bg-slate-50 px-4 py-2 dark:bg-slate-800">
+              <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">
+                Total de Horas
+              </span>
+              <span className="text-sm font-bold tabular-nums text-slate-900 dark:text-slate-100">
+                Total: {totalHoursDisplay}
+              </span>
+            </div>
             <div className="space-y-3">
               {interactions.map((i) => (
                 <div
@@ -335,15 +382,40 @@ export default function TicketDetail() {
               <div className="grid gap-3 sm:grid-cols-3">
                 <div className="space-y-1">
                   <Label className="text-xs text-slate-600 dark:text-slate-400">Tempo Gasto</Label>
-                  <Input
-                    placeholder="hh:mm"
-                    value={timeSpent}
-                    onChange={(e) => {
-                      setTimeSpent(e.target.value)
-                      setTimeError(validateTimeSpent(e.target.value))
-                    }}
-                    className="h-8 text-sm"
-                  />
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="hh:mm"
+                      value={timeSpent}
+                      onChange={(e) => {
+                        setTimeSpent(e.target.value)
+                        setTimeError(validateTimeSpent(e.target.value))
+                      }}
+                      className="h-8 text-sm"
+                    />
+                    {timerRunning ? (
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="destructive"
+                        className="h-8 shrink-0 whitespace-nowrap"
+                        onClick={handleStopTimer}
+                      >
+                        <Timer className="mr-1 h-3.5 w-3.5" />
+                        Parar {timerDisplay}
+                      </Button>
+                    ) : (
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        className="h-8 shrink-0"
+                        onClick={handleStartTimer}
+                      >
+                        <Timer className="mr-1 h-3.5 w-3.5" />
+                        Iniciar
+                      </Button>
+                    )}
+                  </div>
                   {timeError && <p className="text-xs text-red-500">{timeError}</p>}
                 </div>
                 <div className="space-y-1">
@@ -448,6 +520,9 @@ export default function TicketDetail() {
             </div>
             <div className="flex items-center gap-2 text-slate-600">
               <Clock className="h-4 w-4 text-slate-400" /> Horas: {ticket.work_hours || 0}h
+            </div>
+            <div className="flex items-center gap-2 text-slate-600">
+              <Timer className="h-4 w-4 text-slate-400" /> Total: {totalHoursDisplay}
             </div>
             {ticket.equipment && ticket.expand?.equipment && (
               <div className="flex items-center gap-2 text-slate-600">
