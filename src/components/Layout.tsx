@@ -25,6 +25,9 @@ import {
   MapPin,
   Star,
   CalendarClock,
+  Gauge,
+  ShieldOff,
+  TrendingUp,
 } from 'lucide-react'
 import { useAuth } from '@/hooks/use-auth'
 import { usePermissions } from '@/hooks/use-permissions'
@@ -74,6 +77,7 @@ export default function Layout() {
 
   const navItems = [
     { label: 'Dashboard', path: '/dashboard', icon: LayoutDashboard, show: true },
+    { label: 'Meu Painel', path: '/operator-dashboard', icon: Gauge, show: true },
     { label: 'Chamados', path: '/tickets', icon: Ticket, show: true },
     { label: 'Abrir Chamado', path: '/tickets/new', icon: PlusCircle, show: true },
     { label: 'Clientes', path: '/clients', icon: Building2, show: permissions.canManageClients },
@@ -89,10 +93,22 @@ export default function Layout() {
       icon: CalendarClock,
       show: permissions.canManageContracts,
     },
+    {
+      label: 'Consumo de Contratos',
+      path: '/contracts/consumption',
+      icon: Gauge,
+      show: permissions.canManageContracts,
+    },
     { label: 'Equipe', path: '/team', icon: Users, show: permissions.canManageTeam },
     { label: 'Filas', path: '/queues', icon: Inbox, show: permissions.canManageQueues },
     { label: 'Categorias', path: '/categories', icon: Tags, show: permissions.canManageCategories },
     { label: 'Relatórios', path: '/reports', icon: BarChart3, show: permissions.canViewReports },
+    {
+      label: 'Painel Gerencial',
+      path: '/manager-dashboard',
+      icon: TrendingUp,
+      show: permissions.canViewReports,
+    },
     { label: 'Aprovações', path: '/approvals', icon: FileCheck, show: true },
     { label: 'Visitas Técnicas', path: '/visits', icon: MapPin, show: true },
     {
@@ -106,6 +122,12 @@ export default function Layout() {
     { label: 'Importar Ativos', path: '/cmdb/import', icon: Upload, show: permissions.canViewCmdb },
     { label: 'Tipos de Ativo', path: '/cmdb/types', icon: Tags, show: permissions.canManageCmdb },
     { label: 'Base de Conhecimento', path: '/knowledge-base', icon: BookOpen, show: true },
+    {
+      label: 'Bloqueio de Clientes',
+      path: '/blocking',
+      icon: ShieldOff,
+      show: permissions.isAdmin,
+    },
     { label: 'Configurações', path: '/settings', icon: Settings, show: permissions.isAdmin },
   ]
 

@@ -37,6 +37,10 @@ import ApprovalPublic from '@/pages/approvals/ApprovalPublic'
 import VisitList from '@/pages/visits/VisitList'
 import SatisfactionDashboard from '@/pages/satisfaction/SatisfactionDashboard'
 import SurveyPublic from '@/pages/satisfaction/SurveyPublic'
+import OperatorDashboard from '@/pages/dashboard/OperatorDashboard'
+import ManagerDashboard from '@/pages/dashboard/ManagerDashboard'
+import ContractConsumptionDashboard from '@/pages/contracts/ContractConsumptionDashboard'
+import BlockingManagement from '@/pages/blocking/BlockingManagement'
 import NotFound from '@/pages/NotFound'
 
 const App = () => (
@@ -88,6 +92,10 @@ const App = () => (
             <Route path="/visits" element={<VisitList />} />
             <Route path="/satisfaction" element={<SatisfactionDashboard />} />
             <Route path="/settings" element={<SettingsPage />} />
+            <Route path="/operator-dashboard" element={<OperatorDashboard />} />
+            <Route path="/manager-dashboard" element={<ManagerDashboard />} />
+            <Route path="/contracts/consumption" element={<ContractConsumptionDashboard />} />
+            <Route path="/blocking" element={<BlockingManagement />} />
           </Route>
 
           <Route path="*" element={<NotFound />} />
