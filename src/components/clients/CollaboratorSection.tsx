@@ -11,12 +11,22 @@ import {
   AlertDialogCancel,
   AlertDialogAction,
 } from '@/components/ui/alert-dialog'
-import { Plus, Pencil, Trash2, MessageCircle, Mail, Phone, Smartphone } from 'lucide-react'
+import {
+  Plus,
+  Pencil,
+  Trash2,
+  MessageCircle,
+  Mail,
+  Phone,
+  Smartphone,
+  Building2,
+} from 'lucide-react'
 import {
   getClientContacts,
   deleteClientContact,
   type ClientContactRecord,
 } from '@/services/client-contacts'
+import { getCompanyUnitsByCompany, type CompanyUnitRecord } from '@/services/company-units'
 import { getCompanyDepartments, createCompanyAuditLog } from '@/services/companies'
 import { useRealtime } from '@/hooks/use-realtime'
 import { useAuth } from '@/hooks/use-auth'
@@ -33,6 +43,7 @@ export function CollaboratorSection({ clientId }: { clientId?: string }) {
   const { toast } = useToast()
   const [contacts, setContacts] = useState<ClientContactRecord[]>([])
   const [departments, setDepartments] = useState<Department[]>([])
+  const [branches, setBranches] = useState<CompanyUnitRecord[]>([])
   const [loading, setLoading] = useState(false)
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editing, setEditing] = useState<ClientContactRecord | null>(null)
@@ -42,12 +53,14 @@ export function CollaboratorSection({ clientId }: { clientId?: string }) {
     if (!clientId) return
     setLoading(true)
     try {
-      const [c, d] = await Promise.all([
+      const [c, d, b] = await Promise.all([
         getClientContacts(clientId),
         getCompanyDepartments(clientId),
+        getCompanyUnitsByCompany(clientId),
       ])
       setContacts(c)
       setDepartments(d as unknown as Department[])
+      setBranches(b)
     } catch {
       /* ignore */
     } finally {
@@ -68,6 +81,14 @@ export function CollaboratorSection({ clientId }: { clientId?: string }) {
     })
     return m
   }, [departments])
+
+  const branchMap = useMemo(() => {
+    const m: Record<string, string> = {}
+    branches.forEach((b) => {
+      m[b.id] = b.name
+    })
+    return m
+  }, [branches])
 
   const handleDelete = async () => {
     if (!deleteId || !user?.id) return
@@ -154,6 +175,10 @@ export function CollaboratorSection({ clientId }: { clientId?: string }) {
                     )}
                   </p>
                 )}
+                <p className="text-xs text-slate-400 flex items-center gap-1">
+                  <Building2 className="h-3 w-3" />
+                  {c.unit ? branchMap[c.unit] || '—' : '—'}
+                </p>
                 {c.departments && c.departments.length > 0 && (
                   <p className="text-xs text-slate-400">
                     {c.departments.map((d) => deptMap[d] || d).join(', ')}
@@ -191,6 +216,7 @@ export function CollaboratorSection({ clientId }: { clientId?: string }) {
         onOpenChange={setDialogOpen}
         clientId={clientId}
         departments={departments}
+        branches={branches}
         contact={editing}
         onSaved={loadData}
       />

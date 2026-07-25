@@ -11,12 +11,20 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Checkbox } from '@/components/ui/checkbox'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { Loader2 } from 'lucide-react'
 import {
   createClientContact,
   updateClientContact,
   type ClientContactRecord,
 } from '@/services/client-contacts'
+import { getCompanyUnitsByCompany, type CompanyUnitRecord } from '@/services/company-units'
 import { createCompanyAuditLog } from '@/services/companies'
 import { useAuth } from '@/hooks/use-auth'
 import { useToast } from '@/hooks/use-toast'
@@ -32,6 +40,7 @@ interface Props {
   onOpenChange: (v: boolean) => void
   clientId: string
   departments: Department[]
+  branches?: CompanyUnitRecord[]
   contact?: ClientContactRecord | null
   onSaved: () => void
 }
@@ -43,6 +52,7 @@ const EMPTY = {
   cell_phone: '',
   has_whatsapp: false,
   departments: [] as string[],
+  unit: '' as string,
 }
 
 export function CollaboratorDialog({
@@ -50,6 +60,7 @@ export function CollaboratorDialog({
   onOpenChange,
   clientId,
   departments,
+  branches = [],
   contact,
   onSaved,
 }: Props) {
@@ -71,6 +82,7 @@ export function CollaboratorDialog({
               cell_phone: contact.cell_phone || '',
               has_whatsapp: contact.has_whatsapp || false,
               departments: contact.departments || [],
+              unit: contact.unit || '',
             }
           : EMPTY,
       )
@@ -111,7 +123,11 @@ export function CollaboratorDialog({
     setSaving(true)
     setErrors({})
     try {
-      const payload = { ...form, client: clientId }
+      const payload = {
+        ...form,
+        client: clientId,
+        unit: form.unit || undefined,
+      }
       if (contact) {
         await updateClientContact(contact.id, payload)
         if (user?.id)
@@ -200,6 +216,29 @@ export function CollaboratorDialog({
                   ))}
                 </div>
               </ScrollArea>
+            )}
+          </div>
+          <div className="space-y-1">
+            <Label className="text-xs">Filial</Label>
+            {branches.length === 0 ? (
+              <p className="text-xs text-slate-400">Nenhuma filial cadastrada</p>
+            ) : (
+              <Select
+                value={form.unit || 'none'}
+                onValueChange={(v) => set('unit', v === 'none' ? '' : v)}
+              >
+                <SelectTrigger className="h-9 text-sm">
+                  <SelectValue placeholder="Selecione uma filial" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">— Nenhuma —</SelectItem>
+                  {branches.map((b) => (
+                    <SelectItem key={b.id} value={b.id}>
+                      {b.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             )}
           </div>
         </div>

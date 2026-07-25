@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-25T20:16:48.928Z",
+  "generatedAt": "2026-07-25T20:21:56.704Z",
   "collections": [
     {
       "name": "users",
@@ -2998,11 +2998,19 @@
           "required": false,
           "system": false,
           "autodateTriggers": ["onCreate", "onUpdate"]
+        },
+        {
+          "name": "unit",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "company_units"
         }
       ],
       "indexes": [
         "CREATE INDEX idx_client_contacts_client ON client_contacts (client)",
-        "CREATE INDEX idx_client_contacts_departments ON client_contacts (departments)"
+        "CREATE INDEX idx_client_contacts_departments ON client_contacts (departments)",
+        "CREATE INDEX `idx_client_contacts_unit` ON `client_contacts` (unit)"
       ]
     }
   ]

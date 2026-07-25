@@ -9,6 +9,7 @@ export interface ClientContactRecord {
   cell_phone?: string
   has_whatsapp?: boolean
   departments?: string[]
+  unit?: string
   created: string
   updated: string
 }
