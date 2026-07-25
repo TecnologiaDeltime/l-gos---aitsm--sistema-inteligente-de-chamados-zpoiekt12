@@ -1,6 +1,15 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { PlusCircle, FileText, Pencil, Calendar, Clock, ShieldCheck } from 'lucide-react'
+import {
+  PlusCircle,
+  FileText,
+  Pencil,
+  Calendar,
+  Clock,
+  ShieldCheck,
+  Eye,
+  BarChart3,
+} from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { getContracts, ContractRecord } from '@/services/contracts'
@@ -42,11 +51,18 @@ export default function ContractList() {
           </h2>
           <p className="text-sm text-slate-500 mt-0.5">Gerencie contratos, SLAs e serviços</p>
         </div>
-        <Link to="/contracts/new">
-          <Button className="bg-blue-600 hover:bg-blue-700">
-            <PlusCircle className="mr-2 h-4 w-4" /> Novo Contrato
-          </Button>
-        </Link>
+        <div className="flex gap-2">
+          <Link to="/contracts/dashboard">
+            <Button variant="outline">
+              <BarChart3 className="mr-2 h-4 w-4" /> Dashboard
+            </Button>
+          </Link>
+          <Link to="/contracts/new">
+            <Button className="bg-blue-600 hover:bg-blue-700">
+              <PlusCircle className="mr-2 h-4 w-4" /> Novo Contrato
+            </Button>
+          </Link>
+        </div>
       </div>
 
       {contracts.length === 0 ? (
@@ -107,7 +123,12 @@ export default function ContractList() {
                 )}
               </div>
 
-              <div className="flex justify-end pt-2 border-t">
+              <div className="flex justify-end gap-2 pt-2 border-t">
+                <Link to={`/contracts/${ct.id}`}>
+                  <Button variant="outline" size="sm">
+                    <Eye className="mr-1.5 h-3.5 w-3.5" /> Visualizar
+                  </Button>
+                </Link>
                 <Link to={`/contracts/${ct.id}/edit`}>
                   <Button variant="outline" size="sm" className="text-blue-600 hover:text-blue-700">
                     <Pencil className="mr-1.5 h-3.5 w-3.5" /> Editar

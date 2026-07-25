@@ -14,6 +14,8 @@ import { createTicket } from '@/services/tickets'
 import { getCompanies, CompanyRecord } from '@/services/companies'
 import { getCategories, CategoryRecord } from '@/services/categories'
 import { getEquipments, EquipmentRecord } from '@/services/equipments'
+import { getActiveContracts, ContractRecord } from '@/services/contracts'
+import { calculateSlaDeadlines } from '@/lib/sla-utils'
 import { useToast } from '@/hooks/use-toast'
 
 export default function TicketCreate() {
@@ -30,6 +32,8 @@ export default function TicketCreate() {
   const [requesterEmail, setRequesterEmail] = useState('')
   const [equipments, setEquipments] = useState<EquipmentRecord[]>([])
   const [equipment, setEquipment] = useState('')
+  const [contracts, setContracts] = useState<ContractRecord[]>([])
+  const [contract, setContract] = useState('')
 
   const navigate = useNavigate()
   const { toast } = useToast()
@@ -40,6 +44,9 @@ export default function TicketCreate() {
       .catch(() => {})
     getCategories()
       .then(setCategories)
+      .catch(() => {})
+    getActiveContracts()
+      .then(setContracts)
       .catch(() => {})
   }, [])
 
@@ -61,6 +68,8 @@ export default function TicketCreate() {
     }
 
     const num = `2024-${Math.floor(10000 + Math.random() * 90000)}`
+    const selectedContract = contracts.find((c) => c.id === contract)
+    const slaDeadlines = selectedContract ? calculateSlaDeadlines(selectedContract) : {}
     await createTicket({
       number: num,
       company,
@@ -69,6 +78,7 @@ export default function TicketCreate() {
       type,
       category,
       equipment: equipment || undefined,
+      contract: contract || undefined,
       impact,
       urgency,
       priority: impact === 'Alto' && urgency === 'Alta' ? 'P1' : 'P3',
@@ -77,6 +87,8 @@ export default function TicketCreate() {
       requester_email: requesterEmail,
       source: 'Portal',
       sla_status: 'Dentro do Prazo',
+      sla_response_deadline: slaDeadlines.sla_response_deadline,
+      sla_solution_deadline: slaDeadlines.sla_solution_deadline,
     })
 
     toast({ title: 'Chamado aberto com sucesso!' })
@@ -176,7 +188,23 @@ export default function TicketCreate() {
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1">
-              <label className="text-xs font-semibold">Impacto</label>
+              <label className="text-xs font-semibold">Contrato</label>
+              <Select value={contract} onValueChange={setContract}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione o contrato (opcional)" />
+                </SelectTrigger>
+                <SelectContent>
+                  {contracts.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>
+                      {c.number} — {c.expand?.company?.trade_name || 'N/A'}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-xs font-semibold">Impacto</label>{' '}
               <Select value={impact} onValueChange={setImpact}>
                 <SelectTrigger>
                   <SelectValue />

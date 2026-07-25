@@ -62,3 +62,19 @@ export const createContract = (data: Partial<ContractRecord>) =>
 
 export const updateContract = (id: string, data: Partial<ContractRecord>) =>
   pb.collection('contracts').update<ContractRecord>(id, data)
+
+export const deleteContract = (id: string) => pb.collection('contracts').delete(id)
+
+export const getActiveContracts = () =>
+  pb.collection('contracts').getFullList<ContractRecord>({
+    filter: 'status = "Ativo"',
+    sort: '-created',
+    expand: 'company',
+  })
+
+export const getContractTickets = (contractId: string) =>
+  pb.collection('tickets').getFullList({
+    filter: `contract = "${contractId}"`,
+    sort: '-created',
+    expand: 'assigned_to,company',
+  })

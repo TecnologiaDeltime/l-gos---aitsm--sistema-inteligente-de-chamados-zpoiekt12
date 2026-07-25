@@ -46,7 +46,7 @@ export const getTickets = (filter?: string, sort: string = '-created') =>
 export const getTicket = (id: string) =>
   pb.collection('tickets').getOne<TicketRecord>(id, {
     expand:
-      'company,unit,department,contract,category,subcategory,equipment,queue,assigned_to,closed_by',
+      'company,unit,department,contract,contract.company,category,subcategory,equipment,queue,assigned_to,closed_by',
   })
 
 export const createTicket = (data: Partial<TicketRecord>) =>

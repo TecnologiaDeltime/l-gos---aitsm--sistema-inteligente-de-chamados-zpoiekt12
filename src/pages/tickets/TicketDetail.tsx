@@ -11,11 +11,19 @@ import {
   Server,
   FileCheck,
   MapPin,
+  FileText,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Badge } from '@/components/ui/badge'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import {
   getTicket,
   getTicketInteractions,
@@ -24,6 +32,8 @@ import {
   createSlaPause,
   TicketRecord,
 } from '@/services/tickets'
+import { getActiveContracts, ContractRecord } from '@/services/contracts'
+import { calculateSlaDeadlines } from '@/lib/sla-utils'
 import { getTicketVisits } from '@/services/technical-visits'
 import { PriorityBadge } from '@/components/PriorityBadge'
 import { StatusBadge } from '@/components/StatusBadge'
@@ -47,6 +57,7 @@ export default function TicketDetail() {
   const [isInternal, setIsInternal] = useState(false)
   const [showApproval, setShowApproval] = useState(false)
   const [showVisit, setShowVisit] = useState(false)
+  const [contracts, setContracts] = useState<ContractRecord[]>([])
 
   const loadData = () => {
     if (!id) return
@@ -63,6 +74,11 @@ export default function TicketDetail() {
   useEffect(() => {
     loadData()
   }, [id])
+  useEffect(() => {
+    getActiveContracts()
+      .then(setContracts)
+      .catch(() => {})
+  }, [])
   useRealtime('tickets', () => loadData())
   useRealtime('ticket_interactions', () => loadData())
   useRealtime('technical_visits', () => loadData())
@@ -114,6 +130,16 @@ export default function TicketDetail() {
     })
     loadData()
     toast({ title: 'SLA Retomado' })
+  }
+
+  const handleContractChange = async (newContractId: string) => {
+    if (!id) return
+    const actualId = newContractId === '_none' ? '' : newContractId
+    const selected = contracts.find((c) => c.id === actualId)
+    const sla = selected ? calculateSlaDeadlines(selected) : {}
+    await updateTicket(id, { contract: actualId || null, ...sla } as any)
+    loadData()
+    toast({ title: 'Contrato atualizado!' })
   }
 
   if (!ticket)
@@ -305,6 +331,36 @@ export default function TicketDetail() {
               </div>
             )}
           </div>
+        </div>
+        <div className="rounded-xl border bg-white p-4 shadow-sm space-y-3 dark:bg-slate-900">
+          <h3 className="font-semibold text-sm border-b pb-2">Contrato Vinculado</h3>
+          {ticket.contract && ticket.expand?.contract ? (
+            <Link
+              to={`/contracts/${ticket.contract}`}
+              className="flex items-center gap-2 text-xs text-blue-600 hover:underline"
+            >
+              <FileText className="h-4 w-4" />
+              {ticket.expand.contract.number}
+              {ticket.expand.contract.expand?.company?.trade_name
+                ? ` — ${ticket.expand.contract.expand.company.trade_name}`
+                : ''}
+            </Link>
+          ) : (
+            <p className="text-xs text-slate-500">Nenhum contrato vinculado.</p>
+          )}
+          <Select value={ticket.contract || '_none'} onValueChange={handleContractChange}>
+            <SelectTrigger className="h-8 text-xs">
+              <SelectValue placeholder="Alterar contrato" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="_none">Sem contrato</SelectItem>
+              {contracts.map((c) => (
+                <SelectItem key={c.id} value={c.id}>
+                  {c.number} — {c.expand?.company?.trade_name || 'N/A'}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
       </div>
       <ApprovalDialog ticketId={id!} open={showApproval} onOpenChange={setShowApproval} />

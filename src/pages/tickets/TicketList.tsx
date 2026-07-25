@@ -19,6 +19,7 @@ export default function TicketList() {
   const [tickets, setTickets] = useState<TicketRecord[]>([])
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
+  const [contractSearch, setContractSearch] = useState('')
 
   useEffect(() => {
     getTickets()
@@ -34,7 +35,12 @@ export default function TicketList() {
 
     const matchesStatus = statusFilter === 'all' || t.status === statusFilter
 
-    return matchesSearch && matchesStatus
+    const matchesContract =
+      contractSearch === '' ||
+      (t.expand?.contract?.number || '').toLowerCase().includes(contractSearch.toLowerCase()) ||
+      (t.expand?.company?.trade_name || '').toLowerCase().includes(contractSearch.toLowerCase())
+
+    return matchesSearch && matchesStatus && matchesContract
   })
 
   return (
@@ -48,6 +54,16 @@ export default function TicketList() {
               placeholder="Buscar por nº, título ou solicitante..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
+              className="pl-9"
+            />
+          </div>
+
+          <div className="relative w-40">
+            <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+            <Input
+              placeholder="Contrato..."
+              value={contractSearch}
+              onChange={(e) => setContractSearch(e.target.value)}
               className="pl-9"
             />
           </div>

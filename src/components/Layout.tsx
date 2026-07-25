@@ -24,6 +24,7 @@ import {
   FileCheck,
   MapPin,
   Star,
+  CalendarClock,
 } from 'lucide-react'
 import { useAuth } from '@/hooks/use-auth'
 import { usePermissions } from '@/hooks/use-permissions'
@@ -80,6 +81,12 @@ export default function Layout() {
       label: 'Contratos',
       path: '/contracts',
       icon: FileText,
+      show: permissions.canManageContracts,
+    },
+    {
+      label: 'Dashboard de Contratos',
+      path: '/contracts/dashboard',
+      icon: CalendarClock,
       show: permissions.canManageContracts,
     },
     { label: 'Equipe', path: '/team', icon: Users, show: permissions.canManageTeam },
