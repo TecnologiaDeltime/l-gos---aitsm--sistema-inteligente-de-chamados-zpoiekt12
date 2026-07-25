@@ -55,6 +55,7 @@ import TechnicianDashboardPage from '@/pages/visits/TechnicianDashboardPage'
 import TravelDashboard from '@/pages/visits/TravelDashboard'
 import ReimbursementDashboard from '@/pages/visits/ReimbursementDashboard'
 import OperationalMap from '@/pages/visits/OperationalMap'
+import { GlobalNotifications } from '@/components/GlobalNotifications'
 import { useAuth } from '@/hooks/use-auth'
 
 function RootRedirect() {
@@ -69,6 +70,7 @@ const App = () => (
       <TooltipProvider>
         <Toaster />
         <Sonner />
+        <GlobalNotifications />
         <Routes>
           {/* Public Auth Routes */}
           <Route path="/login" element={<Login />} />
