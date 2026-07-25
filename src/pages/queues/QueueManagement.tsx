@@ -1,14 +1,19 @@
 import { useEffect, useState } from 'react'
-import { Inbox, Plus } from 'lucide-react'
+import { Inbox, Plus, Pencil } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Badge } from '@/components/ui/badge'
 import { getQueues, createQueue, QueueRecord } from '@/services/queues'
 import { useToast } from '@/hooks/use-toast'
+import { useRealtime } from '@/hooks/use-realtime'
+import { QueueEditDialog } from '@/components/queues/QueueEditDialog'
 
 export default function QueueManagement() {
   const [queues, setQueues] = useState<QueueRecord[]>([])
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
+  const [editingQueue, setEditingQueue] = useState<QueueRecord | null>(null)
+  const [editOpen, setEditOpen] = useState(false)
   const { toast } = useToast()
 
   const loadData = () => {
@@ -21,14 +26,27 @@ export default function QueueManagement() {
     loadData()
   }, [])
 
+  useRealtime('queues', () => {
+    loadData()
+  })
+
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!name) return
-    await createQueue({ name, description, active: true, distribution_rule: 'Disponibilidade' })
-    setName('')
-    setDescription('')
-    toast({ title: 'Fila criada com sucesso!' })
-    loadData()
+    try {
+      await createQueue({ name, description, active: true, distribution_rule: 'Disponibilidade' })
+      setName('')
+      setDescription('')
+      toast({ title: 'Fila criada com sucesso!' })
+      loadData()
+    } catch {
+      toast({ title: 'Erro ao criar fila', variant: 'destructive' })
+    }
+  }
+
+  const handleEdit = (q: QueueRecord) => {
+    setEditingQueue(q)
+    setEditOpen(true)
   }
 
   return (
@@ -64,27 +82,60 @@ export default function QueueManagement() {
         </div>
 
         <div className="space-y-3 md:col-span-2">
+          {queues.length === 0 && (
+            <div className="rounded-xl border bg-white p-8 shadow-sm text-center text-sm text-slate-400 dark:bg-slate-900">
+              Nenhuma fila cadastrada.
+            </div>
+          )}
           {queues.map((q) => (
             <div
               key={q.id}
               className="rounded-xl border bg-white p-4 shadow-sm flex items-center justify-between dark:bg-slate-900"
             >
               <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-blue-50 text-blue-600">
+                <div
+                  className={
+                    q.active
+                      ? 'p-2 rounded-lg bg-blue-50 text-blue-600'
+                      : 'p-2 rounded-lg bg-slate-100 text-slate-400'
+                  }
+                >
                   <Inbox className="h-5 w-5" />
                 </div>
                 <div>
-                  <p className="font-bold text-sm text-slate-900 dark:text-slate-100">{q.name}</p>
+                  <div className="flex items-center gap-2">
+                    <p className="font-bold text-sm text-slate-900 dark:text-slate-100">{q.name}</p>
+                    {!q.active && (
+                      <Badge variant="outline" className="text-xs">
+                        Inativa
+                      </Badge>
+                    )}
+                  </div>
                   <p className="text-xs text-slate-500">{q.description || 'Sem descrição'}</p>
                 </div>
               </div>
-              <span className="text-xs font-medium text-blue-600 bg-blue-50 px-2.5 py-1 rounded-full">
-                {q.distribution_rule || 'Disponibilidade'}
-              </span>
+              <div className="flex items-center gap-2">
+                {q.priority != null && (
+                  <span className="text-xs text-slate-400">P: {q.priority}</span>
+                )}
+                <span className="text-xs font-medium text-blue-600 bg-blue-50 px-2.5 py-1 rounded-full">
+                  {q.distribution_rule || 'Disponibilidade'}
+                </span>
+                <Button variant="ghost" size="sm" onClick={() => handleEdit(q)}>
+                  <Pencil className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
           ))}
         </div>
       </div>
+
+      <QueueEditDialog
+        queue={editingQueue}
+        open={editOpen}
+        onOpenChange={setEditOpen}
+        onSaved={loadData}
+      />
     </div>
   )
 }
