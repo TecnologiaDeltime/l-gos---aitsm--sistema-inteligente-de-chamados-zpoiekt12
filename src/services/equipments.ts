@@ -4,6 +4,14 @@ export interface EquipmentRecord {
   id: string
   name: string
   type?: string
+  hostname?: string
+  device_type?: string
+  processor?: string
+  processor_cores?: string
+  owner?: string
+  storage?: string
+  storage_type?: string
+  ram_total?: string
   manufacturer?: string
   model?: string
   serial_number?: string
@@ -31,6 +39,9 @@ export interface EquipmentFilters {
   type?: string
   status?: string
   manufacturer?: string
+  hostname?: string
+  device_type?: string
+  owner?: string
   search?: string
 }
 
@@ -44,6 +55,23 @@ export const CI_STATUSES = [
   'Emprestado',
 ]
 
+export const STORAGE_TYPES = ['HDD', 'SSD', 'NVMe', 'Híbrido', 'SAN', 'NAS']
+
+export const DEVICE_TYPES = [
+  'Servidor',
+  'Desktop',
+  'Notebook',
+  'Switch',
+  'Roteador',
+  'Firewall',
+  'Impressora',
+  'Storage',
+  'Servidor de Rack',
+  'Servidor Blade',
+  'Dispositivo de Rede',
+  'Outro',
+]
+
 export const getEquipments = (filters?: EquipmentFilters) => {
   const parts: string[] = []
   if (filters?.company && filters.company !== 'all') parts.push(`company = "${filters.company}"`)
@@ -52,10 +80,15 @@ export const getEquipments = (filters?: EquipmentFilters) => {
   if (filters?.status && filters.status !== 'all') parts.push(`status = "${filters.status}"`)
   if (filters?.manufacturer && filters.manufacturer !== 'all')
     parts.push(`manufacturer = "${filters.manufacturer}"`)
+  if (filters?.hostname && filters.hostname !== 'all')
+    parts.push(`hostname = "${filters.hostname}"`)
+  if (filters?.device_type && filters.device_type !== 'all')
+    parts.push(`device_type = "${filters.device_type}"`)
+  if (filters?.owner && filters.owner !== 'all') parts.push(`owner = "${filters.owner}"`)
   if (filters?.search) {
     const s = filters.search.replace(/"/g, '')
     parts.push(
-      `(name ~ "${s}" || serial_number ~ "${s}" || patrimony_number ~ "${s}" || ip_address ~ "${s}")`,
+      `(name ~ "${s}" || serial_number ~ "${s}" || patrimony_number ~ "${s}" || ip_address ~ "${s}" || hostname ~ "${s}")`,
     )
   }
   const filter = parts.join(' && ')

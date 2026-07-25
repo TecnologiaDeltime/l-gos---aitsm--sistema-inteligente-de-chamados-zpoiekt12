@@ -15,6 +15,8 @@ import { useToast } from '@/hooks/use-toast'
 
 const TEMPLATE_HEADERS = [
   'name',
+  'hostname',
+  'device_type',
   'type',
   'manufacturer',
   'model',
@@ -22,6 +24,12 @@ const TEMPLATE_HEADERS = [
   'patrimony_number',
   'ip_address',
   'operating_system',
+  'processor',
+  'processor_cores',
+  'ram_total',
+  'storage',
+  'storage_type',
+  'owner',
   'location',
   'responsible_user',
   'supplier',
@@ -89,6 +97,8 @@ export default function CiImport() {
   const downloadTemplate = () => {
     const sample = [
       'Servidor DB-01',
+      'db-01',
+      'Servidor',
       'Servidor',
       'Dell',
       'PowerEdge R750',
@@ -96,6 +106,12 @@ export default function CiImport() {
       'PAT001',
       '192.168.1.10',
       'Linux Ubuntu 22.04',
+      'Intel Xeon Silver 4310',
+      '12',
+      '64GB',
+      '2TB',
+      'SSD',
+      'TI / Infraestrutura',
       'Data Center',
       'João Silva',
       'Dell Brasil',

@@ -8,7 +8,15 @@ onRecordAfterUpdateSuccess((e) => {
 
   const fieldsToCheck = [
     'name',
+    'hostname',
+    'device_type',
     'type',
+    'processor',
+    'processor_cores',
+    'ram_total',
+    'storage',
+    'storage_type',
+    'owner',
     'manufacturer',
     'model',
     'serial_number',

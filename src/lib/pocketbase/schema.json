@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-25T18:33:00.036Z",
+  "generatedAt": "2026-07-25T18:50:06.590Z",
   "collections": [
     {
       "name": "users",
@@ -801,11 +801,61 @@
           "required": false,
           "system": false,
           "collectionRef": "company_departments"
+        },
+        {
+          "name": "hostname",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "device_type",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "processor",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "processor_cores",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "owner",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "storage",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "storage_type",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "ram_total",
+          "type": "text",
+          "required": false,
+          "system": false
         }
       ],
       "indexes": [
         "CREATE INDEX idx_equipments_company ON equipments (company)",
-        "CREATE INDEX idx_equipments_status ON equipments (status)"
+        "CREATE INDEX idx_equipments_status ON equipments (status)",
+        "CREATE INDEX `idx_equipments_hostname` ON `equipments` (hostname)",
+        "CREATE INDEX `idx_equipments_device_type` ON `equipments` (device_type)"
       ]
     },
     {

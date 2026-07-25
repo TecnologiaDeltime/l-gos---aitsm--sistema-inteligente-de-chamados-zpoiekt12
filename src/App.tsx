@@ -25,6 +25,7 @@ import KnowledgeBase from '@/pages/knowledge/KnowledgeBase'
 import SettingsPage from '@/pages/settings/SettingsPage'
 import CmdbDashboard from '@/pages/cmdb/CmdbDashboard'
 import CiList from '@/pages/cmdb/CiList'
+import CiCreate from '@/pages/cmdb/CiCreate'
 import CiDetail from '@/pages/cmdb/CiDetail'
 import CiImport from '@/pages/cmdb/CiImport'
 import CiTypes from '@/pages/cmdb/CiTypes'
@@ -66,6 +67,7 @@ const App = () => (
             <Route path="/knowledge-base" element={<KnowledgeBase />} />
             <Route path="/cmdb" element={<CmdbDashboard />} />
             <Route path="/cmdb/assets" element={<CiList />} />
+            <Route path="/cmdb/assets/new" element={<CiCreate />} />
             <Route path="/cmdb/assets/:id" element={<CiDetail />} />
             <Route path="/cmdb/import" element={<CiImport />} />
             <Route path="/cmdb/types" element={<CiTypes />} />

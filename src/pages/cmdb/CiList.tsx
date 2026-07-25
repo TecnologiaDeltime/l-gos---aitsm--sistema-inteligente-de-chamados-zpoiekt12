@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { Search, Upload, ArrowUpDown } from 'lucide-react'
+import { Search, Upload, ArrowUpDown, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
@@ -10,7 +10,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { getEquipments, EquipmentRecord, CI_STATUSES } from '@/services/equipments'
+import { getEquipments, EquipmentRecord, CI_STATUSES, DEVICE_TYPES } from '@/services/equipments'
 import { getCompanies } from '@/services/companies'
 import { CiStatusBadge } from '@/components/CiStatusBadge'
 import { useRealtime } from '@/hooks/use-realtime'
@@ -24,6 +24,9 @@ export default function CiList() {
   const [typeFilter, setTypeFilter] = useState('all')
   const [statusFilter, setStatusFilter] = useState('all')
   const [manufacturerFilter, setManufacturerFilter] = useState('all')
+  const [hostnameFilter, setHostnameFilter] = useState('all')
+  const [deviceTypeFilter, setDeviceTypeFilter] = useState('all')
+  const [ownerFilter, setOwnerFilter] = useState('all')
   const [sortCol, setSortCol] = useState('updated')
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
 
@@ -48,6 +51,14 @@ export default function CiList() {
     () => [...new Set(equipments.map((e) => e.manufacturer).filter(Boolean))],
     [equipments],
   )
+  const hostnames = useMemo(
+    () => [...new Set(equipments.map((e) => e.hostname).filter(Boolean))],
+    [equipments],
+  )
+  const owners = useMemo(
+    () => [...new Set(equipments.map((e) => e.owner).filter(Boolean))],
+    [equipments],
+  )
 
   const filtered = useMemo(() => {
     return equipments
@@ -56,9 +67,12 @@ export default function CiList() {
         if (typeFilter !== 'all' && e.type !== typeFilter) return false
         if (statusFilter !== 'all' && e.status !== statusFilter) return false
         if (manufacturerFilter !== 'all' && e.manufacturer !== manufacturerFilter) return false
+        if (hostnameFilter !== 'all' && e.hostname !== hostnameFilter) return false
+        if (deviceTypeFilter !== 'all' && e.device_type !== deviceTypeFilter) return false
+        if (ownerFilter !== 'all' && e.owner !== ownerFilter) return false
         if (search) {
           const s = search.toLowerCase()
-          return [e.name, e.serial_number, e.patrimony_number, e.ip_address].some((v) =>
+          return [e.name, e.serial_number, e.patrimony_number, e.ip_address, e.hostname].some((v) =>
             v?.toLowerCase().includes(s),
           )
         }
@@ -75,6 +89,9 @@ export default function CiList() {
     typeFilter,
     statusFilter,
     manufacturerFilter,
+    hostnameFilter,
+    deviceTypeFilter,
+    ownerFilter,
     search,
     sortCol,
     sortDir,
@@ -89,13 +106,43 @@ export default function CiList() {
   }
 
   const cols = [
+    { key: 'hostname', label: 'Hostname' },
     { key: 'name', label: 'Nome' },
-    { key: 'type', label: 'Tipo' },
+    { key: 'device_type', label: 'Tipo Disp.' },
+    { key: 'ip_address', label: 'IP' },
+    { key: 'operating_system', label: 'SO' },
+    { key: 'processor', label: 'Processador' },
+    { key: 'ram_total', label: 'RAM' },
+    { key: 'storage', label: 'Armazen.' },
+    { key: 'owner', label: 'Dono' },
     { key: 'manufacturer', label: 'Fabricante' },
     { key: 'model', label: 'Modelo' },
     { key: 'serial_number', label: 'Nº Série' },
     { key: 'patrimony_number', label: 'Patrimônio' },
   ]
+
+  const SortHeader = ({
+    col,
+    label,
+    extraAction,
+  }: {
+    col?: string
+    label: string
+    extraAction?: () => void
+  }) => (
+    <th
+      className={`p-3 ${col ? 'cursor-pointer hover:bg-slate-100' : ''}`}
+      onClick={col ? () => handleSort(col) : extraAction}
+    >
+      {col ? (
+        <span className="flex items-center gap-1">
+          {label} <ArrowUpDown className="h-3 w-3 text-slate-400" />
+        </span>
+      ) : (
+        label
+      )}
+    </th>
+  )
 
   return (
     <div className="space-y-4">
@@ -104,7 +151,7 @@ export default function CiList() {
           <div className="relative flex-1 min-w-[200px] max-w-md">
             <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
             <Input
-              placeholder="Buscar por nome, série, patrimônio, IP..."
+              placeholder="Buscar por nome, série, patrimônio, IP, hostname..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="pl-9"
@@ -123,13 +170,13 @@ export default function CiList() {
               ))}
             </SelectContent>
           </Select>
-          <Select value={typeFilter} onValueChange={setTypeFilter}>
-            <SelectTrigger className="w-32">
-              <SelectValue placeholder="Tipo" />
+          <Select value={deviceTypeFilter} onValueChange={setDeviceTypeFilter}>
+            <SelectTrigger className="w-36">
+              <SelectValue placeholder="Tipo Disp." />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Todos Tipos</SelectItem>
-              {types.map((t) => (
+              <SelectItem value="all">Todos Disp.</SelectItem>
+              {DEVICE_TYPES.map((t) => (
                 <SelectItem key={t} value={t}>
                   {t}
                 </SelectItem>
@@ -149,25 +196,45 @@ export default function CiList() {
               ))}
             </SelectContent>
           </Select>
-          <Select value={manufacturerFilter} onValueChange={setManufacturerFilter}>
+          <Select value={hostnameFilter} onValueChange={setHostnameFilter}>
             <SelectTrigger className="w-36">
-              <SelectValue placeholder="Fabricante" />
+              <SelectValue placeholder="Hostname" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Todos Fabr.</SelectItem>
-              {manufacturers.map((m) => (
-                <SelectItem key={m} value={m}>
-                  {m}
+              <SelectItem value="all">Todos Hosts</SelectItem>
+              {hostnames.map((h) => (
+                <SelectItem key={h} value={h}>
+                  {h}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={ownerFilter} onValueChange={setOwnerFilter}>
+            <SelectTrigger className="w-36">
+              <SelectValue placeholder="Dono" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos Donos</SelectItem>
+              {owners.map((o) => (
+                <SelectItem key={o} value={o}>
+                  {o}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
         </div>
-        <Link to="/cmdb/import">
-          <Button variant="outline" size="sm">
-            <Upload className="mr-1.5 h-4 w-4" /> Importar CSV
-          </Button>
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link to="/cmdb/import">
+            <Button variant="outline" size="sm">
+              <Upload className="mr-1.5 h-4 w-4" /> Importar CSV
+            </Button>
+          </Link>
+          <Link to="/cmdb/assets/new">
+            <Button size="sm">
+              <Plus className="mr-1.5 h-4 w-4" /> Novo Ativo
+            </Button>
+          </Link>
+        </div>
       </div>
 
       <div className="rounded-xl border bg-white shadow-sm overflow-hidden dark:bg-slate-900">
@@ -176,30 +243,18 @@ export default function CiList() {
             <thead className="bg-slate-50 border-b font-semibold text-slate-700 dark:bg-slate-800">
               <tr>
                 {cols.map((c) => (
-                  <th
-                    key={c.key}
-                    className="p-3 cursor-pointer hover:bg-slate-100"
-                    onClick={() => handleSort(c.key)}
-                  >
-                    <span className="flex items-center gap-1">
-                      {c.label} <ArrowUpDown className="h-3 w-3 text-slate-400" />
-                    </span>
-                  </th>
+                  <SortHeader key={c.key} col={c.key} label={c.label} />
                 ))}
-                <th className="p-3 cursor-pointer" onClick={() => handleSort('status')}>
-                  Status
-                </th>
-                <th className="p-3">Empresa</th>
-                <th className="p-3">Unidade</th>
-                <th className="p-3 cursor-pointer" onClick={() => handleSort('updated')}>
-                  Atualizado
-                </th>
+                <SortHeader col="status" label="Status" />
+                <SortHeader label="Empresa" />
+                <SortHeader label="Unidade" />
+                <SortHeader col="updated" label="Atualizado" />
               </tr>
             </thead>
             <tbody className="divide-y">
               {filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={10} className="p-8 text-center text-slate-500">
+                  <td colSpan={17} className="p-8 text-center text-slate-500">
                     Nenhum ativo encontrado.
                   </td>
                 </tr>
@@ -210,8 +265,21 @@ export default function CiList() {
                     className="cursor-pointer hover:bg-slate-50/60 dark:hover:bg-slate-800/50"
                     onClick={() => navigate(`/cmdb/assets/${e.id}`)}
                   >
+                    <td className="p-3 font-mono text-slate-700 dark:text-slate-300">
+                      {e.hostname || '-'}
+                    </td>
                     <td className="p-3 font-medium text-slate-900 dark:text-slate-100">{e.name}</td>
-                    <td className="p-3">{e.type || '-'}</td>
+                    <td className="p-3">{e.device_type || '-'}</td>
+                    <td className="p-3 font-mono">{e.ip_address || '-'}</td>
+                    <td className="p-3">{e.operating_system || '-'}</td>
+                    <td className="p-3">{e.processor || '-'}</td>
+                    <td className="p-3">{e.ram_total || '-'}</td>
+                    <td className="p-3">
+                      {e.storage
+                        ? `${e.storage}${e.storage_type ? ` (${e.storage_type})` : ''}`
+                        : '-'}
+                    </td>
+                    <td className="p-3">{e.owner || '-'}</td>
                     <td className="p-3">{e.manufacturer || '-'}</td>
                     <td className="p-3">{e.model || '-'}</td>
                     <td className="p-3">{e.serial_number || '-'}</td>
