@@ -429,7 +429,7 @@ export default function TicketDetail() {
         </Tabs>
       </div>
       <div className="space-y-4">
-        <RequesterInfo ticket={ticket} />
+        <RequesterInfo ticket={ticket} onUpdated={loadData} />
         <div className="rounded-xl border bg-white p-4 shadow-sm space-y-4 dark:bg-slate-900">
           <h3 className="font-semibold text-sm border-b pb-2">Controle de SLA</h3>
           <SlaProgressBar
