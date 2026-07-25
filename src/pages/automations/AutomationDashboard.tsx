@@ -32,15 +32,11 @@ export default function AutomationDashboard() {
         setOverdueApprovals(
           approvals.filter((a) => a.deadline && new Date(a.deadline) < now).length,
         )
-        const byAutomation: Record<string, number> = {}
-        execStats as any
         setTopWorkflows(
-          autos
-            .slice(0, 5)
-            .map((a) => ({
-              name: a.name.substring(0, 20),
-              execuções: Math.floor(Math.random() * 50) + 1,
-            })),
+          autos.slice(0, 5).map((a) => ({
+            name: a.name.substring(0, 20),
+            execuções: Math.floor(Math.random() * 50) + 1,
+          })),
         )
       })
       .catch(() => {})

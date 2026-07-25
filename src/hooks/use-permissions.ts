@@ -24,6 +24,8 @@ export function usePermissions() {
   const canManageCiTypes = isAdmin
   const isClienteSolicitante = role === 'cliente_solicitante'
   const canAccessUnitReports = isAdmin || isGestor || role === 'auditor'
+  const isClienteSolicitante = role === 'cliente_solicitante'
+  const canAccessUnitReports = isAdmin || isGestor || role === 'auditor'
   const canManageAutomations = isAdmin || isGestor
   const canPublishAutomations = isAdmin
   const canViewAutomations = isAdmin || isGestor || role === 'auditor'

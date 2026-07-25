@@ -248,12 +248,6 @@ migrate(
           { name: 'required_evidence', type: 'bool' },
           { name: 'required_approval', type: 'bool' },
           {
-            name: 'parent_task',
-            type: 'relation',
-            collectionId: app.findCollectionByNameOrId('workflow_tasks').id,
-            maxSelect: 1,
-          },
-          {
             name: 'task_type',
             type: 'select',
             values: [
@@ -278,6 +272,13 @@ migrate(
       }),
     )
     var wfTasksId = app.findCollectionByNameOrId('workflow_tasks').id
+    var wfTasksCol = app.findCollectionByNameOrId('workflow_tasks')
+    if (!wfTasksCol.fields.getByName('parent_task')) {
+      wfTasksCol.fields.add(
+        new RelationField({ name: 'parent_task', collectionId: wfTasksId, maxSelect: 1 }),
+      )
+    }
+    app.save(wfTasksCol)
     var wfTasksCol = app.findCollectionByNameOrId('workflow_tasks')
     if (!wfTasksCol.fields.getByName('parent_task')) {
       wfTasksCol.fields.add(

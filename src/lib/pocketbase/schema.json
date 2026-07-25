@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-25T20:36:28.661Z",
+  "generatedAt": "2026-07-25T20:45:53.527Z",
   "collections": [
     {
       "name": "users",
@@ -1185,6 +1185,13 @@
           "required": false,
           "system": false,
           "autodateTriggers": ["onCreate", "onUpdate"]
+        },
+        {
+          "name": "parent",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "tickets"
         }
       ],
       "indexes": [
@@ -2329,6 +2336,13 @@
           "required": false,
           "system": false,
           "autodateTriggers": ["onCreate", "onUpdate"]
+        },
+        {
+          "name": "workflow_execution",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "workflow_executions"
         }
       ],
       "indexes": [
@@ -3026,6 +3040,716 @@
         "CREATE INDEX idx_client_contacts_departments ON client_contacts (departments)",
         "CREATE INDEX `idx_client_contacts_unit` ON `client_contacts` (unit)"
       ]
+    },
+    {
+      "name": "automations",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != \"\"",
+        "view": "@request.auth.id != \"\"",
+        "create": "@request.auth.id != \"\"",
+        "update": "@request.auth.id != \"\"",
+        "delete": "@request.auth.id != \"\""
+      },
+      "fields": [
+        {
+          "name": "name",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "code",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "description",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "client",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "companies"
+        },
+        {
+          "name": "catalog",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "tkt_categories"
+        },
+        {
+          "name": "service",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "ticket_type",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": [
+            "Incidente",
+            "Requisição de Serviço",
+            "Problema",
+            "Mudança",
+            "Projeto",
+            "Tarefa Interna",
+            "Visita Técnica",
+            "Dúvida"
+          ]
+        },
+        {
+          "name": "current_version",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "status",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["Rascunho", "Ativa", "Inativa", "Arquivada"]
+        },
+        {
+          "name": "execution_priority",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "validity_start",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "validity_end",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "responsible",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "is_template",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "template_category",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "schedule_cron",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": [
+        "CREATE INDEX idx_automations_status ON automations (status)",
+        "CREATE UNIQUE INDEX idx_automations_code ON automations (code)"
+      ]
+    },
+    {
+      "name": "workflow_versions",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != \"\"",
+        "view": "@request.auth.id != \"\"",
+        "create": "@request.auth.id != \"\"",
+        "update": "@request.auth.id != \"\"",
+        "delete": "@request.auth.id != \"\""
+      },
+      "fields": [
+        {
+          "name": "automation",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "automations"
+        },
+        {
+          "name": "version_number",
+          "type": "number",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "status",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["Rascunho", "Publicado", "Arquivado", "Restaurado"]
+        },
+        {
+          "name": "published_by",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "published_at",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "changes",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "reason",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "definition",
+          "type": "json",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": ["CREATE INDEX idx_wfversions_automation ON workflow_versions (automation)"]
+    },
+    {
+      "name": "workflow_executions",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != \"\"",
+        "view": "@request.auth.id != \"\"",
+        "create": "@request.auth.id != \"\"",
+        "update": "@request.auth.id != \"\"",
+        "delete": "@request.auth.id != \"\""
+      },
+      "fields": [
+        {
+          "name": "automation",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "automations"
+        },
+        {
+          "name": "version",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "workflow_versions"
+        },
+        {
+          "name": "ticket",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "tickets"
+        },
+        {
+          "name": "status",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": [
+            "Em Execução",
+            "Aguardando Aprovação",
+            "Aguardando",
+            "Concluído",
+            "Erro",
+            "Cancelado"
+          ]
+        },
+        {
+          "name": "started_at",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "completed_at",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "error",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "current_block",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": [
+        "CREATE INDEX idx_wfexec_automation ON workflow_executions (automation)",
+        "CREATE INDEX idx_wfexec_ticket ON workflow_executions (ticket)"
+      ]
+    },
+    {
+      "name": "workflow_execution_logs",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != \"\"",
+        "view": "@request.auth.id != \"\"",
+        "create": "@request.auth.id != \"\"",
+        "update": "@request.auth.id != \"\"",
+        "delete": "@request.auth.id != \"\""
+      },
+      "fields": [
+        {
+          "name": "execution",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "workflow_executions"
+        },
+        {
+          "name": "block_id",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "block_type",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "block_label",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "timestamp",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "result",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "input",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "output",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "error",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "retries",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "next_action",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": ["CREATE INDEX idx_wflogs_execution ON workflow_execution_logs (execution)"]
+    },
+    {
+      "name": "workflow_tasks",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != \"\"",
+        "view": "@request.auth.id != \"\"",
+        "create": "@request.auth.id != \"\"",
+        "update": "@request.auth.id != \"\"",
+        "delete": "@request.auth.id != \"\""
+      },
+      "fields": [
+        {
+          "name": "ticket",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "tickets"
+        },
+        {
+          "name": "automation",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "automations"
+        },
+        {
+          "name": "execution",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "workflow_executions"
+        },
+        {
+          "name": "title",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "description",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "responsible",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "queue",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "queues"
+        },
+        {
+          "name": "deadline",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "priority",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["P1", "P2", "P3", "P4", "P5"]
+        },
+        {
+          "name": "status",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["Pendente", "Em Andamento", "Concluída", "Cancelada"]
+        },
+        {
+          "name": "checklist",
+          "type": "json",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "estimated_time",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "hour_type",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": [
+            "Contratada",
+            "Excedente",
+            "Projeto",
+            "Interna",
+            "Não Faturável",
+            "Cortesia",
+            "Deslocamento",
+            "Plantão",
+            "Gestão",
+            "Treinamento"
+          ]
+        },
+        {
+          "name": "required_evidence",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "required_approval",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "task_type",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": [
+            "Sequencial",
+            "Paralela",
+            "Independente",
+            "Dependente",
+            "Obrigatória",
+            "Opcional"
+          ]
+        },
+        {
+          "name": "completed_at",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "completed_by",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        },
+        {
+          "name": "parent_task",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "workflow_tasks"
+        }
+      ],
+      "indexes": [
+        "CREATE INDEX idx_wftasks_ticket ON workflow_tasks (ticket)",
+        "CREATE INDEX idx_wftasks_responsible ON workflow_tasks (responsible)"
+      ]
+    },
+    {
+      "name": "workflow_form_definitions",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != \"\"",
+        "view": "@request.auth.id != \"\"",
+        "create": "@request.auth.id != \"\"",
+        "update": "@request.auth.id != \"\"",
+        "delete": "@request.auth.id != \"\""
+      },
+      "fields": [
+        {
+          "name": "automation",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "automations"
+        },
+        {
+          "name": "name",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "description",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "fields",
+          "type": "json",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": ["CREATE INDEX idx_wfforms_automation ON workflow_form_definitions (automation)"]
+    },
+    {
+      "name": "workflow_audit_logs",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != \"\"",
+        "view": "@request.auth.id != \"\"",
+        "create": "@request.auth.id != \"\"",
+        "update": null,
+        "delete": null
+      },
+      "fields": [
+        {
+          "name": "automation",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "automations"
+        },
+        {
+          "name": "user",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "action",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "entity_type",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "entity_id",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "description",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "old_values",
+          "type": "json",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "new_values",
+          "type": "json",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": ["CREATE INDEX idx_wfaudit_automation ON workflow_audit_logs (automation)"]
     }
   ]
 }
