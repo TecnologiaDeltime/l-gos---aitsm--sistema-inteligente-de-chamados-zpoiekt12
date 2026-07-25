@@ -9,6 +9,7 @@ export interface ContractPeriodRecord {
   consumed_hours?: number
   status?: string
   cycle_number?: number
+  last_notified_pct?: number
   created: string
   updated: string
   expand?: any

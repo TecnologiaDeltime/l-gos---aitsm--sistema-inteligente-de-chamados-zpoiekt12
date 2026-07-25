@@ -104,6 +104,12 @@ export default function Layout() {
     { label: 'Categorias', path: '/categories', icon: Tags, show: permissions.canManageCategories },
     { label: 'Relatórios', path: '/reports', icon: BarChart3, show: permissions.canViewReports },
     {
+      label: 'Relatórios por Filial',
+      path: '/reports/unit',
+      icon: BarChart3,
+      show: permissions.canAccessUnitReports,
+    },
+    {
       label: 'Painel Gerencial',
       path: '/manager-dashboard',
       icon: TrendingUp,

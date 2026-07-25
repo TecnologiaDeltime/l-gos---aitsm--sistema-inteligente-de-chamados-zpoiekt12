@@ -9,6 +9,7 @@ export interface UserItem {
   position?: string
   company?: string
   active?: boolean
+  unit?: string
   created: string
   expand?: any
 }

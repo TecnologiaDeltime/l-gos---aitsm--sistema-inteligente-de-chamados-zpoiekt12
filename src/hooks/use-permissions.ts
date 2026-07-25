@@ -22,6 +22,8 @@ export function usePermissions() {
   const canViewCmdb = isTecnico
   const canManageCmdb = isAdmin || isGestor
   const canManageCiTypes = isAdmin
+  const isClienteSolicitante = role === 'cliente_solicitante'
+  const canAccessUnitReports = isAdmin || isGestor || role === 'auditor'
 
   return {
     role,
@@ -42,5 +44,7 @@ export function usePermissions() {
     canViewCmdb,
     canManageCmdb,
     canManageCiTypes,
+    isClienteSolicitante,
+    canAccessUnitReports,
   }
 }

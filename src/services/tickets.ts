@@ -26,6 +26,9 @@ export interface TicketRecord {
   assigned_to?: string
   sla_response_deadline?: string
   sla_solution_deadline?: string
+  sla_response_at?: string
+  sla_solution_at?: string
+  resolution_date?: string
   sla_status?: string
   sla_paused?: boolean
   work_hours?: number

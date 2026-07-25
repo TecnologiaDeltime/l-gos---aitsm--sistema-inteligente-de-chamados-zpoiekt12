@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-25T20:21:56.704Z",
+  "generatedAt": "2026-07-25T20:33:32.665Z",
   "collections": [
     {
       "name": "users",
@@ -76,11 +76,19 @@
           "type": "bool",
           "required": false,
           "system": false
+        },
+        {
+          "name": "unit",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "company_units"
         }
       ],
       "indexes": [
         "CREATE UNIQUE INDEX `idx_tokenKey__pb_users_auth_` ON `users` (`tokenKey`)",
-        "CREATE UNIQUE INDEX `idx_email__pb_users_auth_` ON `users` (`email`) WHERE `email` != ''"
+        "CREATE UNIQUE INDEX `idx_email__pb_users_auth_` ON `users` (`email`) WHERE `email` != ''",
+        "CREATE INDEX `idx_users_unit` ON `users` (unit)"
       ]
     },
     {
@@ -2516,6 +2524,12 @@
           "required": false,
           "system": false,
           "autodateTriggers": ["onCreate", "onUpdate"]
+        },
+        {
+          "name": "last_notified_pct",
+          "type": "number",
+          "required": false,
+          "system": false
         }
       ],
       "indexes": [

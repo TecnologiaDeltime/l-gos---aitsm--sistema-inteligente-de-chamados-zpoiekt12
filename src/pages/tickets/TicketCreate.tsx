@@ -15,13 +15,19 @@ import { getCompanies, CompanyRecord } from '@/services/companies'
 import { getCategories, CategoryRecord } from '@/services/categories'
 import { getEquipments, EquipmentRecord } from '@/services/equipments'
 import { getActiveContracts, ContractRecord } from '@/services/contracts'
+import { getClientContacts, ClientContactRecord } from '@/services/client-contacts'
+import { getCompanyUnitsByCompany, CompanyUnitRecord } from '@/services/company-units'
 import { calculateSlaDeadlines } from '@/lib/sla-utils'
 import { useToast } from '@/hooks/use-toast'
 
 export default function TicketCreate() {
   const [companies, setCompanies] = useState<CompanyRecord[]>([])
   const [categories, setCategories] = useState<CategoryRecord[]>([])
+  const [contacts, setContacts] = useState<ClientContactRecord[]>([])
+  const [units, setUnits] = useState<CompanyUnitRecord[]>([])
   const [company, setCompany] = useState('')
+  const [selectedContact, setSelectedContact] = useState('')
+  const [unit, setUnit] = useState('')
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [type, setType] = useState('Incidente')
@@ -30,6 +36,7 @@ export default function TicketCreate() {
   const [urgency, setUrgency] = useState('Média')
   const [requesterName, setRequesterName] = useState('')
   const [requesterEmail, setRequesterEmail] = useState('')
+  const [requesterPhone, setRequesterPhone] = useState('')
   const [equipments, setEquipments] = useState<EquipmentRecord[]>([])
   const [equipment, setEquipment] = useState('')
   const [contracts, setContracts] = useState<ContractRecord[]>([])
@@ -52,13 +59,38 @@ export default function TicketCreate() {
 
   useEffect(() => {
     if (company) {
+      getClientContacts(company)
+        .then(setContacts)
+        .catch(() => {})
+      getCompanyUnitsByCompany(company)
+        .then(setUnits)
+        .catch(() => {})
       getEquipments({ company })
         .then(setEquipments)
         .catch(() => {})
     } else {
+      setContacts([])
+      setUnits([])
       setEquipments([])
     }
+    setSelectedContact('')
+    setUnit('')
   }, [company])
+
+  const handleContactChange = (contactId: string) => {
+    setSelectedContact(contactId)
+    const c = contacts.find((x) => x.id === contactId)
+    if (c) {
+      setRequesterName(c.full_name)
+      setRequesterEmail(c.email || '')
+      setRequesterPhone(c.phone || c.cell_phone || '')
+      if (c.unit) setUnit(c.unit)
+    } else {
+      setRequesterName('')
+      setRequesterEmail('')
+      setRequesterPhone('')
+    }
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -66,17 +98,22 @@ export default function TicketCreate() {
       toast({ title: 'Selecione uma empresa', variant: 'destructive' })
       return
     }
+    if (units.length > 0 && !selectedContact && !unit) {
+      toast({ title: 'Selecione um solicitante ou filial', variant: 'destructive' })
+      return
+    }
 
-    const num = `2024-${Math.floor(10000 + Math.random() * 90000)}`
-    const selectedContract = contracts.find((c) => c.id === contract)
-    const slaDeadlines = selectedContract ? calculateSlaDeadlines(selectedContract) : {}
+    const num = `2026-${Math.floor(10000 + Math.random() * 90000)}`
+    const sc = contracts.find((c) => c.id === contract)
+    const sla = sc ? calculateSlaDeadlines(sc) : {}
     await createTicket({
       number: num,
       company,
+      unit: unit || undefined,
       title,
       description,
       type,
-      category,
+      category: category || undefined,
       equipment: equipment || undefined,
       contract: contract || undefined,
       impact,
@@ -85,10 +122,11 @@ export default function TicketCreate() {
       status: 'Novo',
       requester_name: requesterName || 'Solicitante',
       requester_email: requesterEmail,
+      requester_phone: requesterPhone,
       source: 'Portal',
       sla_status: 'Dentro do Prazo',
-      sla_response_deadline: slaDeadlines.sla_response_deadline,
-      sla_solution_deadline: slaDeadlines.sla_solution_deadline,
+      sla_response_deadline: sla.sla_response_deadline,
+      sla_solution_deadline: sla.sla_solution_deadline,
     })
 
     toast({ title: 'Chamado aberto com sucesso!' })
@@ -115,6 +153,39 @@ export default function TicketCreate() {
                 ))}
               </SelectContent>
             </Select>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1">
+              <label className="text-xs font-semibold">Solicitante</label>
+              <Select value={selectedContact} onValueChange={handleContactChange}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione o solicitante" />
+                </SelectTrigger>
+                <SelectContent>
+                  {contacts.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>
+                      {c.full_name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-semibold">Filial</label>
+              <Select value={unit} onValueChange={setUnit}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione a filial" />
+                </SelectTrigger>
+                <SelectContent>
+                  {units.map((u) => (
+                    <SelectItem key={u.id} value={u.id}>
+                      {u.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
@@ -152,7 +223,6 @@ export default function TicketCreate() {
                 </SelectContent>
               </Select>
             </div>
-
             <div className="space-y-1">
               <label className="text-xs font-semibold">Categoria</label>
               <Select value={category} onValueChange={setCategory}>
@@ -202,9 +272,8 @@ export default function TicketCreate() {
                 </SelectContent>
               </Select>
             </div>
-
             <div className="space-y-1">
-              <label className="text-xs font-semibold">Impacto</label>{' '}
+              <label className="text-xs font-semibold">Impacto</label>
               <Select value={impact} onValueChange={setImpact}>
                 <SelectTrigger>
                   <SelectValue />
@@ -216,7 +285,6 @@ export default function TicketCreate() {
                 </SelectContent>
               </Select>
             </div>
-
             <div className="space-y-1">
               <label className="text-xs font-semibold">Urgência</label>
               <Select value={urgency} onValueChange={setUrgency}>

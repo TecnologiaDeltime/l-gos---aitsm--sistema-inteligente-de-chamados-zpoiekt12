@@ -11,6 +11,7 @@ export interface UserRecord {
   position?: string
   avatar?: string
   active?: boolean
+  unit?: string
 }
 
 interface AuthContextType {

@@ -43,6 +43,15 @@ import ManagerDashboard from '@/pages/dashboard/ManagerDashboard'
 import ContractConsumptionDashboard from '@/pages/contracts/ContractConsumptionDashboard'
 import BlockingManagement from '@/pages/blocking/BlockingManagement'
 import NotFound from '@/pages/NotFound'
+import PortalPage from '@/pages/portal/PortalPage'
+import UnitReportsPage from '@/pages/reports/UnitReportsPage'
+import { useAuth } from '@/hooks/use-auth'
+
+function RootRedirect() {
+  const { user } = useAuth()
+  const target = user?.role === 'cliente_solicitante' ? '/portal' : '/dashboard'
+  return <Navigate to={target} replace />
+}
 
 const App = () => (
   <BrowserRouter>
@@ -57,6 +66,16 @@ const App = () => (
           <Route path="/approval/:token" element={<ApprovalPublic />} />
           <Route path="/survey/:token" element={<SurveyPublic />} />
 
+          {/* Portal Route (protected, separate layout) */}
+          <Route
+            path="/portal"
+            element={
+              <ProtectedRoute>
+                <PortalPage />
+              </ProtectedRoute>
+            }
+          />
+
           {/* Protected Routes inside Layout */}
           <Route
             element={
@@ -65,7 +84,7 @@ const App = () => (
               </ProtectedRoute>
             }
           >
-            <Route path="/" element={<Navigate to="/dashboard" replace />} />
+            <Route path="/" element={<RootRedirect />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/tickets" element={<TicketList />} />
             <Route path="/tickets/new" element={<TicketCreate />} />
@@ -83,6 +102,7 @@ const App = () => (
             <Route path="/queues" element={<QueueManagement />} />
             <Route path="/categories" element={<CategoryManagement />} />
             <Route path="/reports" element={<ReportsPage />} />
+            <Route path="/reports/unit" element={<UnitReportsPage />} />
             <Route path="/knowledge-base" element={<KnowledgeBase />} />
             <Route path="/cmdb" element={<CmdbDashboard />} />
             <Route path="/cmdb/assets" element={<CiList />} />
