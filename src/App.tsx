@@ -29,6 +29,11 @@ import CiCreate from '@/pages/cmdb/CiCreate'
 import CiDetail from '@/pages/cmdb/CiDetail'
 import CiImport from '@/pages/cmdb/CiImport'
 import CiTypes from '@/pages/cmdb/CiTypes'
+import ApprovalList from '@/pages/approvals/ApprovalList'
+import ApprovalPublic from '@/pages/approvals/ApprovalPublic'
+import VisitList from '@/pages/visits/VisitList'
+import SatisfactionDashboard from '@/pages/satisfaction/SatisfactionDashboard'
+import SurveyPublic from '@/pages/satisfaction/SurveyPublic'
 import NotFound from '@/pages/NotFound'
 
 const App = () => (
@@ -41,6 +46,8 @@ const App = () => (
           {/* Public Auth Routes */}
           <Route path="/login" element={<Login />} />
           <Route path="/recuperar-senha" element={<RecoverPassword />} />
+          <Route path="/approval/:token" element={<ApprovalPublic />} />
+          <Route path="/survey/:token" element={<SurveyPublic />} />
 
           {/* Protected Routes inside Layout */}
           <Route
@@ -71,6 +78,9 @@ const App = () => (
             <Route path="/cmdb/assets/:id" element={<CiDetail />} />
             <Route path="/cmdb/import" element={<CiImport />} />
             <Route path="/cmdb/types" element={<CiTypes />} />
+            <Route path="/approvals" element={<ApprovalList />} />
+            <Route path="/visits" element={<VisitList />} />
+            <Route path="/satisfaction" element={<SatisfactionDashboard />} />
             <Route path="/settings" element={<SettingsPage />} />
           </Route>
 

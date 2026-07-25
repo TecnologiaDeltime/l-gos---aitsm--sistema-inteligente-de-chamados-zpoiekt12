@@ -13,6 +13,7 @@ import {
 import { createTicket } from '@/services/tickets'
 import { getCompanies, CompanyRecord } from '@/services/companies'
 import { getCategories, CategoryRecord } from '@/services/categories'
+import { getEquipments, EquipmentRecord } from '@/services/equipments'
 import { useToast } from '@/hooks/use-toast'
 
 export default function TicketCreate() {
@@ -27,6 +28,8 @@ export default function TicketCreate() {
   const [urgency, setUrgency] = useState('Média')
   const [requesterName, setRequesterName] = useState('')
   const [requesterEmail, setRequesterEmail] = useState('')
+  const [equipments, setEquipments] = useState<EquipmentRecord[]>([])
+  const [equipment, setEquipment] = useState('')
 
   const navigate = useNavigate()
   const { toast } = useToast()
@@ -39,6 +42,16 @@ export default function TicketCreate() {
       .then(setCategories)
       .catch(() => {})
   }, [])
+
+  useEffect(() => {
+    if (company) {
+      getEquipments({ company })
+        .then(setEquipments)
+        .catch(() => {})
+    } else {
+      setEquipments([])
+    }
+  }, [company])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -55,6 +68,7 @@ export default function TicketCreate() {
       description,
       type,
       category,
+      equipment: equipment || undefined,
       impact,
       urgency,
       priority: impact === 'Alto' && urgency === 'Alta' ? 'P1' : 'P3',
@@ -142,6 +156,22 @@ export default function TicketCreate() {
                 </SelectContent>
               </Select>
             </div>
+          </div>
+
+          <div className="space-y-1">
+            <label className="text-xs font-semibold">Ativo / Equipamento</label>
+            <Select value={equipment} onValueChange={setEquipment}>
+              <SelectTrigger>
+                <SelectValue placeholder="Selecione o equipamento (opcional)" />
+              </SelectTrigger>
+              <SelectContent>
+                {equipments.map((eq) => (
+                  <SelectItem key={eq.id} value={eq.id}>
+                    {eq.name} {eq.hostname ? `(${eq.hostname})` : ''}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="grid grid-cols-2 gap-4">

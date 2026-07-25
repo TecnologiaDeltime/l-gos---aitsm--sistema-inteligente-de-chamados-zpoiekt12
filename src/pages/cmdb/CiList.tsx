@@ -12,6 +12,7 @@ import {
 } from '@/components/ui/select'
 import { getEquipments, EquipmentRecord, CI_STATUSES, DEVICE_TYPES } from '@/services/equipments'
 import { getCompanies } from '@/services/companies'
+import { getTickets } from '@/services/tickets'
 import { CiStatusBadge } from '@/components/CiStatusBadge'
 import { useRealtime } from '@/hooks/use-realtime'
 
@@ -19,6 +20,7 @@ export default function CiList() {
   const navigate = useNavigate()
   const [equipments, setEquipments] = useState<EquipmentRecord[]>([])
   const [companies, setCompanies] = useState<any[]>([])
+  const [ticketCounts, setTicketCounts] = useState<Record<string, number>>({})
   const [search, setSearch] = useState('')
   const [companyFilter, setCompanyFilter] = useState('all')
   const [typeFilter, setTypeFilter] = useState('all')
@@ -36,6 +38,15 @@ export default function CiList() {
       .catch(() => {})
     getCompanies()
       .then(setCompanies)
+      .catch(() => {})
+    getTickets()
+      .then((tkts) => {
+        const counts: Record<string, number> = {}
+        tkts.forEach((t) => {
+          if (t.equipment) counts[t.equipment] = (counts[t.equipment] || 0) + 1
+        })
+        setTicketCounts(counts)
+      })
       .catch(() => {})
   }
   useEffect(() => {
@@ -246,6 +257,7 @@ export default function CiList() {
                   <SortHeader key={c.key} col={c.key} label={c.label} />
                 ))}
                 <SortHeader col="status" label="Status" />
+                <SortHeader label="Chamados" />
                 <SortHeader label="Empresa" />
                 <SortHeader label="Unidade" />
                 <SortHeader col="updated" label="Atualizado" />
@@ -254,7 +266,7 @@ export default function CiList() {
             <tbody className="divide-y">
               {filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={17} className="p-8 text-center text-slate-500">
+                  <td colSpan={18} className="p-8 text-center text-slate-500">
                     Nenhum ativo encontrado.
                   </td>
                 </tr>
@@ -286,6 +298,13 @@ export default function CiList() {
                     <td className="p-3">{e.patrimony_number || '-'}</td>
                     <td className="p-3">
                       <CiStatusBadge status={e.status} />
+                    </td>
+                    <td className="p-3">
+                      <span
+                        className={`inline-flex items-center justify-center rounded-full px-2 py-0.5 text-xs font-medium ${(ticketCounts[e.id] || 0) > 0 ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-400'}`}
+                      >
+                        {ticketCounts[e.id] || 0}
+                      </span>
                     </td>
                     <td className="p-3">{e.expand?.company?.trade_name || '-'}</td>
                     <td className="p-3">{e.expand?.unit?.name || '-'}</td>

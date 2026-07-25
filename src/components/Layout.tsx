@@ -21,6 +21,9 @@ import {
   User,
   CheckCheck,
   Upload,
+  FileCheck,
+  MapPin,
+  Star,
 } from 'lucide-react'
 import { useAuth } from '@/hooks/use-auth'
 import { usePermissions } from '@/hooks/use-permissions'
@@ -83,6 +86,14 @@ export default function Layout() {
     { label: 'Filas', path: '/queues', icon: Inbox, show: permissions.canManageQueues },
     { label: 'Categorias', path: '/categories', icon: Tags, show: permissions.canManageCategories },
     { label: 'Relatórios', path: '/reports', icon: BarChart3, show: permissions.canViewReports },
+    { label: 'Aprovações', path: '/approvals', icon: FileCheck, show: true },
+    { label: 'Visitas Técnicas', path: '/visits', icon: MapPin, show: true },
+    {
+      label: 'Pesquisa de Satisfação',
+      path: '/satisfaction',
+      icon: Star,
+      show: permissions.canViewReports,
+    },
     { label: 'CMDB', path: '/cmdb', icon: Boxes, show: permissions.canViewCmdb },
     { label: 'Ativos', path: '/cmdb/assets', icon: Server, show: permissions.canViewCmdb },
     { label: 'Importar Ativos', path: '/cmdb/import', icon: Upload, show: permissions.canViewCmdb },

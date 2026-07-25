@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-25T18:50:06.590Z",
+  "generatedAt": "2026-07-25T19:06:21.700Z",
   "collections": [
     {
       "name": "users",
@@ -1765,9 +1765,19 @@
           "required": false,
           "system": false,
           "autodateTriggers": ["onCreate", "onUpdate"]
+        },
+        {
+          "name": "token",
+          "type": "text",
+          "required": false,
+          "system": false
         }
       ],
-      "indexes": ["CREATE INDEX idx_surveys_ticket ON satisfaction_surveys (ticket)"]
+      "indexes": [
+        "CREATE INDEX idx_surveys_ticket ON satisfaction_surveys (ticket)",
+        "CREATE INDEX `idx_surveys_company` ON `satisfaction_surveys` (company)",
+        "CREATE INDEX `idx_surveys_respondent` ON `satisfaction_surveys` (respondent)"
+      ]
     },
     {
       "name": "audit_logs",
@@ -2119,6 +2129,251 @@
         }
       ],
       "indexes": ["CREATE INDEX idx_cidocs_equipment ON ci_documents (equipment)"]
+    },
+    {
+      "name": "approvals",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != ''",
+        "view": "@request.auth.id != ''",
+        "create": "@request.auth.id != ''",
+        "update": "@request.auth.id != ''",
+        "delete": "@request.auth.id != ''"
+      },
+      "fields": [
+        {
+          "name": "ticket",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "tickets"
+        },
+        {
+          "name": "requester",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "approver",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "type",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": [
+            "Horas Adicionais",
+            "Compra de Equipamento",
+            "Visita Técnica",
+            "Mudança",
+            "Reinicialização de Servidor",
+            "Criação de Usuário",
+            "Liberação de Acesso",
+            "Instalação de Software",
+            "Fora do Horário",
+            "Outros"
+          ]
+        },
+        {
+          "name": "justification",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "estimated_hours",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "estimated_cost",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "deadline",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "status",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["Pendente", "Aprovado", "Reprovado"]
+        },
+        {
+          "name": "approved_at",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "rejected_at",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "approver_comment",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "token",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": [
+        "CREATE INDEX idx_approvals_ticket ON approvals (ticket)",
+        "CREATE INDEX idx_approvals_status ON approvals (status)"
+      ]
+    },
+    {
+      "name": "technical_visits",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != ''",
+        "view": "@request.auth.id != ''",
+        "create": "@request.auth.id != ''",
+        "update": "@request.auth.id != ''",
+        "delete": "@request.auth.id != ''"
+      },
+      "fields": [
+        {
+          "name": "ticket",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "tickets"
+        },
+        {
+          "name": "equipment",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "equipments"
+        },
+        {
+          "name": "technician",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "client_address",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "scheduled_date",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "scheduled_time",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "checkin_at",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "checkout_at",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "checkin_location",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "checkout_location",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "materials",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "distance_km",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "status",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["Agendada", "Em Andamento", "Concluída", "Cancelada"]
+        },
+        {
+          "name": "notes",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": [
+        "CREATE INDEX idx_visits_ticket ON technical_visits (ticket)",
+        "CREATE INDEX idx_visits_equipment ON technical_visits (equipment)",
+        "CREATE INDEX idx_visits_technician ON technical_visits (technician)"
+      ]
     }
   ]
 }
