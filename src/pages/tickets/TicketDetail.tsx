@@ -13,6 +13,8 @@ import {
   MapPin,
   FileText,
 } from 'lucide-react'
+import { Skeleton } from '@/components/ui/skeleton'
+import { RequesterInfo } from '@/components/RequesterInfo'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -195,7 +197,23 @@ export default function TicketDetail() {
   }
 
   if (!ticket)
-    return <div className="p-8 text-center text-slate-500">Carregando detalhes do chamado...</div>
+    return (
+      <div className="grid gap-6 lg:grid-cols-3">
+        <div className="space-y-6 lg:col-span-2">
+          <div className="rounded-xl border bg-white p-6 shadow-sm space-y-4 dark:bg-slate-900">
+            <Skeleton className="h-6 w-2/3" />
+            <Skeleton className="h-4 w-1/3" />
+            <Skeleton className="h-20 w-full" />
+          </div>
+          <Skeleton className="h-64 w-full rounded-xl" />
+        </div>
+        <div className="space-y-4">
+          <RequesterInfo ticket={null} />
+          <Skeleton className="h-48 w-full rounded-xl" />
+          <Skeleton className="h-32 w-full rounded-xl" />
+        </div>
+      </div>
+    )
 
   return (
     <div className="grid gap-6 lg:grid-cols-3">
@@ -411,6 +429,7 @@ export default function TicketDetail() {
         </Tabs>
       </div>
       <div className="space-y-4">
+        <RequesterInfo ticket={ticket} />
         <div className="rounded-xl border bg-white p-4 shadow-sm space-y-4 dark:bg-slate-900">
           <h3 className="font-semibold text-sm border-b pb-2">Controle de SLA</h3>
           <SlaProgressBar
