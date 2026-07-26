@@ -33,6 +33,7 @@ import ScheduledReportsPage from '@/pages/reports/ScheduledReportsPage'
 import KnowledgeBase from '@/pages/knowledge/KnowledgeBase'
 import SettingsPage from '@/pages/settings/SettingsPage'
 import SlaSettings from '@/pages/settings/SlaSettings'
+import TicketTemplates from '@/pages/settings/TicketTemplates'
 import CmdbDashboard from '@/pages/cmdb/CmdbDashboard'
 import CiList from '@/pages/cmdb/CiList'
 import CiCreate from '@/pages/cmdb/CiCreate'
@@ -138,6 +139,7 @@ const App = () => (
             <Route path="/satisfaction" element={<SatisfactionDashboard />} />
             <Route path="/settings" element={<SettingsPage />} />
             <Route path="/settings/sla" element={<SlaSettings />} />
+            <Route path="/settings/ticket-templates" element={<TicketTemplates />} />
             <Route path="/operator-dashboard" element={<OperatorDashboard />} />
             <Route path="/manager-dashboard" element={<ManagerDashboard />} />
             <Route path="/contracts/consumption" element={<ContractConsumptionDashboard />} />

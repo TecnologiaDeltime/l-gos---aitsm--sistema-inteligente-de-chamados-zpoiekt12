@@ -6,6 +6,8 @@ import { Button } from '@/components/ui/button'
 import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
 import { useToast } from '@/hooks/use-toast'
+import { Link } from 'react-router-dom'
+import { FileText } from 'lucide-react'
 import {
   getVoiceAlertsEnabled,
   setVoiceAlertsEnabled,
@@ -92,6 +94,22 @@ export default function SettingsPage() {
               className="w-32"
             />
           </div>
+        </CardContent>
+      </Card>
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Modelos de Chamados</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <p className="text-xs text-slate-500">
+            Gerencie modelos de resolução e comentários para agilizar o atendimento de chamados.
+          </p>
+          <Link to="/settings/ticket-templates">
+            <Button variant="outline" size="sm">
+              <FileText className="mr-1.5 h-4 w-4" />
+              Gerenciar Modelos
+            </Button>
+          </Link>
         </CardContent>
       </Card>
     </div>

@@ -109,6 +109,7 @@ export const createInteraction = (data: {
   hour_type?: string
   billing_status?: string
   origin?: string
+  template?: string
 }) => pb.collection('ticket_interactions').create(data)
 
 export const getTicketHistory = (ticketId: string) =>

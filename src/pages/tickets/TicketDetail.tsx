@@ -37,6 +37,8 @@ import {
 } from '@/components/ui/alert-dialog'
 import { InteractionEditDialog } from '@/components/InteractionEditDialog'
 import { DelegateDialog } from '@/components/DelegateDialog'
+import { ResolveTicketDialog } from '@/components/ResolveTicketDialog'
+import { getActiveTemplates, TicketTemplateRecord } from '@/services/ticket-templates'
 import { deleteInteractionWithReversal } from '@/services/ticket-interactions'
 import {
   Select,
@@ -103,6 +105,10 @@ export default function TicketDetail() {
   const [editOpen, setEditOpen] = useState(false)
   const [showDelegate, setShowDelegate] = useState(false)
   const [categoryData, setCategoryData] = useState<CategoryRecord | null>(null)
+  const [showResolve, setShowResolve] = useState(false)
+  const [commentTemplates, setCommentTemplates] = useState<TicketTemplateRecord[]>([])
+  const [selectedCommentTemplate, setSelectedCommentTemplate] =
+    useState<TicketTemplateRecord | null>(null)
 
   const loadData = () => {
     if (!id) return
@@ -134,6 +140,9 @@ export default function TicketDetail() {
   useEffect(() => {
     getActiveContracts()
       .then(setContracts)
+      .catch(() => {})
+    getActiveTemplates('Comentário')
+      .then(setCommentTemplates)
       .catch(() => {})
   }, [])
   useRealtime('tickets', () => loadData())
@@ -207,11 +216,13 @@ export default function TicketDetail() {
         hour_type: hourType,
         billing_status: billingStatus,
         origin: 'Manual',
+        template: selectedCommentTemplate?.id || undefined,
       })
       setComment('')
       setTimeSpent('')
       setHourType('Contratada')
       setBillingStatus('Faturável')
+      setSelectedCommentTemplate(null)
       setTimerRunning(false)
       setTimerStart(null)
       setTimerDisplay('00:00')
@@ -415,7 +426,7 @@ export default function TicketDetail() {
               <Button
                 size="sm"
                 className="bg-emerald-600 hover:bg-emerald-700"
-                onClick={() => handleStatusChange('Resolvido')}
+                onClick={() => setShowResolve(true)}
               >
                 <CheckCircle2 className="mr-1.5 h-4 w-4" /> Resolver
               </Button>
@@ -581,6 +592,35 @@ export default function TicketDetail() {
                     </SelectContent>
                   </Select>
                 </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <FileText className="h-3.5 w-3.5 text-slate-400" />
+                {commentTemplates.length > 0 ? (
+                  <Select
+                    onValueChange={(val) => {
+                      const tmpl = commentTemplates.find((t) => t.id === val)
+                      if (tmpl) {
+                        setSelectedCommentTemplate(tmpl)
+                        setComment(tmpl.content)
+                      }
+                    }}
+                  >
+                    <SelectTrigger className="h-7 text-xs w-auto">
+                      <SelectValue placeholder="Usar modelo..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {commentTemplates.map((t) => (
+                        <SelectItem key={t.id} value={t.id}>
+                          {t.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <span className="text-xs text-slate-400">
+                    Nenhum modelo disponível. Crie um em Configurações de Modelos.
+                  </span>
+                )}
               </div>
               <div className="flex justify-between items-center">
                 <label className="text-xs text-slate-600 flex items-center gap-2 cursor-pointer dark:text-slate-400">
@@ -829,6 +869,12 @@ export default function TicketDetail() {
         open={showDelegate}
         onOpenChange={setShowDelegate}
         onDelegated={loadData}
+      />
+      <ResolveTicketDialog
+        ticketId={id!}
+        open={showResolve}
+        onOpenChange={setShowResolve}
+        onResolved={loadData}
       />
     </div>
   )
