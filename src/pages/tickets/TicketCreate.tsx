@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Check, ChevronLeft, ChevronRight, ClipboardList, Tag, User } from 'lucide-react'
+import { Check, ChevronLeft, ChevronRight, ClipboardList, Loader2, Tag, User } from 'lucide-react'
 import {
   Select,
   SelectContent,
@@ -14,7 +14,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { useToast } from '@/hooks/use-toast'
 import { cn } from '@/lib/utils'
-import { getCompanies, type CompanyRecord } from '@/services/companies'
+import { getCompanies, getCompanyDepartments, type CompanyRecord } from '@/services/companies'
 import { getContracts, type ContractRecord } from '@/services/contracts'
 import { getCategories, type CategoryRecord } from '@/services/categories'
 import { getEquipments, type EquipmentRecord } from '@/services/equipments'
@@ -24,6 +24,7 @@ import { createTicket } from '@/services/tickets'
 import { calculateSlaFromMinutes } from '@/lib/sla-utils'
 import { computePriority } from '@/lib/itil-matrix'
 import { PriorityBadge } from '@/components/PriorityBadge'
+import { resolveDepartment, type DepartmentOption } from '@/lib/department-resolver'
 
 const STEPS = [
   { id: 0, label: 'Solicitante', icon: User },
@@ -110,6 +111,9 @@ export default function TicketCreate() {
   const [contract, setContract] = useState('')
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
+  const [department, setDepartment] = useState('')
+  const [departments, setDepartments] = useState<DepartmentOption[]>([])
+  const [deptLoading, setDeptLoading] = useState(false)
 
   const [currentStep, setCurrentStep] = useState(0)
   const [submitting, setSubmitting] = useState(false)
@@ -162,6 +166,44 @@ export default function TicketCreate() {
     }
     load()
   }, [company])
+
+  useEffect(() => {
+    if (!company) {
+      setDepartments([])
+      setDepartment('')
+      setDeptLoading(false)
+      return
+    }
+    let cancelled = false
+    setDeptLoading(true)
+    const resolve = async () => {
+      try {
+        const depts = await getCompanyDepartments(company).catch(() => [])
+        if (cancelled) return
+        setDepartments(depts as DepartmentOption[])
+        const resolved = await resolveDepartment({
+          companyId: company,
+          requesterEmail: requesterEmail || undefined,
+          unitId: unit || undefined,
+        })
+        if (cancelled) return
+        setDepartment(resolved?.id || '')
+      } catch {
+        if (!cancelled) {
+          toast({
+            title: 'Erro ao buscar setores. Selecione manualmente.',
+            variant: 'destructive',
+          })
+        }
+      } finally {
+        if (!cancelled) setDeptLoading(false)
+      }
+    }
+    resolve()
+    return () => {
+      cancelled = true
+    }
+  }, [company, requesterEmail, unit, toast])
 
   const handleContactChange = useCallback(
     (contactId: string) => {
@@ -250,6 +292,7 @@ export default function TicketCreate() {
         number: num,
         company,
         unit: unit || undefined,
+        department: department && department !== 'none' ? department : undefined,
         title,
         description,
         type,
@@ -350,6 +393,31 @@ export default function TicketCreate() {
                   </SelectContent>
                 </Select>
               </div>
+            </div>
+            <div className="space-y-2">
+              <FieldLabel>Setor</FieldLabel>
+              {deptLoading ? (
+                <div className="flex items-center gap-2 h-9 px-3 rounded-lg border bg-slate-50 dark:bg-slate-800">
+                  <Loader2 className="h-3.5 w-3.5 animate-spin text-slate-400" />
+                  <span className="text-sm text-slate-400">Buscando setores...</span>
+                </div>
+              ) : (
+                <Select value={department} onValueChange={setDepartment} disabled={!company}>
+                  <SelectTrigger className="rounded-lg">
+                    <SelectValue
+                      placeholder={company ? 'Selecione o setor' : 'Selecione uma empresa primeiro'}
+                    />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">— Nenhum —</SelectItem>
+                    {departments.map((d) => (
+                      <SelectItem key={d.id} value={d.id}>
+                        {d.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">

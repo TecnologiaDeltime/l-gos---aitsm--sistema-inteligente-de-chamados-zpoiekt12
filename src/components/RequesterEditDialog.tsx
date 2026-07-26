@@ -19,6 +19,7 @@ import {
 import { Loader2 } from 'lucide-react'
 import { updateTicket, type TicketRecord } from '@/services/tickets'
 import { getCompanyDepartments } from '@/services/companies'
+import { resolveDepartment } from '@/lib/department-resolver'
 import { getCompanyUnitsByCompany, type CompanyUnitRecord } from '@/services/company-units'
 import { useToast } from '@/hooks/use-toast'
 import { getErrorMessage } from '@/lib/pocketbase/errors'
@@ -50,6 +51,7 @@ export function RequesterEditDialog({ ticket, open, onOpenChange, onSaved }: Pro
     if (open) {
       setName(ticket.requester_name || '')
       setPhone(ticket.requester_phone || '')
+      const hasDept = !!ticket.department
       setDepartment(ticket.department || 'none')
       setUnit(ticket.unit || 'none')
       if (ticket.company) {
@@ -58,9 +60,23 @@ export function RequesterEditDialog({ ticket, open, onOpenChange, onSaved }: Pro
           getCompanyDepartments(ticket.company).catch(() => []),
           getCompanyUnitsByCompany(ticket.company).catch(() => []),
         ])
-          .then(([depts, unts]) => {
+          .then(async ([depts, unts]) => {
             setDepartments(depts as Department[])
             setUnits(unts as CompanyUnitRecord[])
+            if (!hasDept) {
+              try {
+                const resolved = await resolveDepartment({
+                  companyId: ticket.company,
+                  requesterEmail: ticket.requester_email || undefined,
+                  unitId: ticket.unit || undefined,
+                })
+                if (resolved) {
+                  setDepartment(resolved.id)
+                }
+              } catch {
+                // Silent — user can select manually
+              }
+            }
           })
           .finally(() => setLoading(false))
       }

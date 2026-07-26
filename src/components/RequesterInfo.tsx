@@ -1,11 +1,13 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { User, Phone, Building2, Network, Pencil, History, Eye } from 'lucide-react'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
 import type { TicketRecord } from '@/services/tickets'
 import { RequesterEditDialog } from '@/components/RequesterEditDialog'
 import { RequesterHistoryDialog } from '@/components/RequesterHistoryDialog'
 import { RequesterProfileDialog } from '@/components/RequesterProfileDialog'
+import { resolveDepartment } from '@/lib/department-resolver'
 
 interface RequesterInfoProps {
   ticket: TicketRecord | null
@@ -56,6 +58,33 @@ export function RequesterInfo({ ticket, onUpdated }: RequesterInfoProps) {
   const [showEdit, setShowEdit] = useState(false)
   const [showHistory, setShowHistory] = useState(false)
   const [showProfile, setShowProfile] = useState(false)
+  const [inferredDept, setInferredDept] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (ticket?.department) {
+      setInferredDept(null)
+      return
+    }
+    if (!ticket?.company) {
+      setInferredDept(null)
+      return
+    }
+    let cancelled = false
+    resolveDepartment({
+      companyId: ticket.company,
+      requesterEmail: ticket.requester_email || undefined,
+      unitId: ticket.unit || undefined,
+    })
+      .then((dept) => {
+        if (!cancelled) setInferredDept(dept?.name || null)
+      })
+      .catch(() => {
+        if (!cancelled) setInferredDept(null)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [ticket?.department, ticket?.company, ticket?.requester_email, ticket?.unit])
 
   if (!ticket) {
     return (
@@ -95,7 +124,26 @@ export function RequesterInfo({ ticket, onUpdated }: RequesterInfoProps) {
         <div className="space-y-2.5">
           <InfoRow icon={User} label="Nome" value={ticket.requester_name} />
           <InfoRow icon={Phone} label="Telefone" value={ticket.requester_phone} href={telHref} />
-          <InfoRow icon={Building2} label="Setor" value={departmentName} />
+          {departmentName ? (
+            <InfoRow icon={Building2} label="Setor" value={departmentName} />
+          ) : inferredDept ? (
+            <div className="flex items-start gap-2 text-xs">
+              <Building2 className="h-4 w-4 mt-0.5 text-slate-400 shrink-0" />
+              <div className="min-w-0">
+                <span className="text-slate-400 block">Setor</span>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-slate-700 dark:text-slate-200 font-medium italic break-words">
+                    {inferredDept}
+                  </span>
+                  <Badge variant="secondary" className="text-[9px] px-1 py-0 h-4">
+                    automático
+                  </Badge>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <InfoRow icon={Building2} label="Setor" value={null} />
+          )}
           <InfoRow icon={Network} label="Filial" value={unitName} />
         </div>
         <div className="flex flex-col gap-1.5 pt-2 border-t">
