@@ -33,6 +33,7 @@ import {
   Clock,
   Sun,
   Moon,
+  Hourglass,
 } from 'lucide-react'
 import { useAuth } from '@/hooks/use-auth'
 import { useTheme } from '@/hooks/use-theme'
@@ -105,6 +106,12 @@ export default function Layout() {
       label: 'Consumo de Contratos',
       path: '/contracts/consumption',
       icon: Gauge,
+      show: permissions.canManageContracts,
+    },
+    {
+      label: 'Horas Clientes',
+      path: '/horas-clientes',
+      icon: Hourglass,
       show: permissions.canManageContracts,
     },
     { label: 'Equipe', path: '/team', icon: Users, show: permissions.canManageTeam },
