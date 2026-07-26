@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { PlusCircle, Search, Filter, LayoutGrid, List } from 'lucide-react'
+import { PlusCircle, Search, Filter, LayoutGrid, List, Settings2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -18,6 +18,10 @@ import { SlaProgressBar } from '@/components/SlaProgressBar'
 import { KanbanBoard } from '@/components/KanbanBoard'
 import { useRealtime } from '@/hooks/use-realtime'
 import { usePermissions } from '@/hooks/use-permissions'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { Checkbox } from '@/components/ui/checkbox'
+import { KANBAN_COLUMNS } from '@/lib/kanban-constants'
+import { getHiddenColumns, setHiddenColumns } from '@/lib/kanban-columns'
 import { useToast } from '@/hooks/use-toast'
 
 export default function TicketList() {
@@ -27,6 +31,7 @@ export default function TicketList() {
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
   const [contractSearch, setContractSearch] = useState('')
+  const [hiddenColumns, setHiddenColumnsState] = useState<string[]>([])
   const { canResolveTicket } = usePermissions()
   const { toast } = useToast()
 
@@ -41,11 +46,21 @@ export default function TicketList() {
   }
 
   useEffect(() => {
+    setHiddenColumnsState(getHiddenColumns())
     loadData()
   }, [])
   useRealtime('tickets', () => {
     loadData()
   })
+
+  const toggleColumn = (status: string) => {
+    const newHidden = hiddenColumns.includes(status)
+      ? hiddenColumns.filter((s) => s !== status)
+      : [...hiddenColumns, status]
+    if (newHidden.length >= KANBAN_COLUMNS.length) return
+    setHiddenColumns(newHidden)
+    setHiddenColumnsState(newHidden)
+  }
 
   const handleKanbanStatusChange = async (
     ticketId: string,
@@ -142,6 +157,36 @@ export default function TicketList() {
           >
             <List className="mr-1.5 h-4 w-4" /> Tabela
           </Button>
+          {view === 'kanban' && (
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" size="sm">
+                  <Settings2 className="mr-1.5 h-4 w-4" /> Colunas
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-56" align="end">
+                <div className="space-y-2">
+                  <p className="text-xs font-semibold text-slate-700">Personalizar Colunas</p>
+                  {KANBAN_COLUMNS.map((status) => (
+                    <div key={status} className="flex items-center space-x-2">
+                      <Checkbox
+                        id={`col-${status}`}
+                        checked={!hiddenColumns.includes(status)}
+                        onCheckedChange={() => toggleColumn(status)}
+                        disabled={
+                          !hiddenColumns.includes(status) &&
+                          hiddenColumns.length >= KANBAN_COLUMNS.length - 1
+                        }
+                      />
+                      <label htmlFor={`col-${status}`} className="text-xs cursor-pointer">
+                        {status}
+                      </label>
+                    </div>
+                  ))}
+                </div>
+              </PopoverContent>
+            </Popover>
+          )}
           <Link to="/tickets/new">
             <Button className="bg-blue-600 hover:bg-blue-700 w-full sm:w-auto">
               <PlusCircle className="mr-2 h-4 w-4" /> Abrir Chamado
@@ -155,6 +200,7 @@ export default function TicketList() {
           tickets={filtered}
           canEdit={canResolveTicket}
           onStatusChange={handleKanbanStatusChange}
+          hiddenColumns={hiddenColumns}
         />
       ) : (
         <div className="rounded-xl border bg-white shadow-sm overflow-hidden dark:bg-slate-900">

@@ -28,6 +28,8 @@ import ActivityCatalog from '@/pages/ActivityCatalog'
 import ReportsPage from '@/pages/reports/ReportsPage'
 import SlaDashboard from '@/pages/reports/SlaDashboard'
 import RecurrentActivities from '@/pages/reports/RecurrentActivities'
+import SlaGoalsPage from '@/pages/reports/SlaGoalsPage'
+import ScheduledReportsPage from '@/pages/reports/ScheduledReportsPage'
 import KnowledgeBase from '@/pages/knowledge/KnowledgeBase'
 import SettingsPage from '@/pages/settings/SettingsPage'
 import CmdbDashboard from '@/pages/cmdb/CmdbDashboard'
@@ -120,6 +122,8 @@ const App = () => (
             <Route path="/sla-dashboard" element={<SlaDashboard />} />
             <Route path="/recurrent-activities" element={<RecurrentActivities />} />
             <Route path="/reports" element={<ReportsPage />} />
+            <Route path="/sla-goals" element={<SlaGoalsPage />} />
+            <Route path="/scheduled-reports" element={<ScheduledReportsPage />} />
             <Route path="/reports/unit" element={<UnitReportsPage />} />
             <Route path="/knowledge-base" element={<KnowledgeBase />} />
             <Route path="/cmdb" element={<CmdbDashboard />} />

@@ -9,9 +9,15 @@ interface KanbanBoardProps {
   tickets: TicketRecord[]
   canEdit: boolean
   onStatusChange: (ticketId: string, newStatus: string, oldStatus: string) => Promise<void>
+  hiddenColumns?: string[]
 }
 
-export function KanbanBoard({ tickets, canEdit, onStatusChange }: KanbanBoardProps) {
+export function KanbanBoard({
+  tickets,
+  canEdit,
+  onStatusChange,
+  hiddenColumns = [],
+}: KanbanBoardProps) {
   const isMobile = useIsMobile()
   const [draggingId, setDraggingId] = useState<string | null>(null)
   const [dragOverColumn, setDragOverColumn] = useState<string | null>(null)
@@ -118,7 +124,7 @@ export function KanbanBoard({ tickets, canEdit, onStatusChange }: KanbanBoardPro
     <div
       className={cn('flex gap-3 overflow-x-auto pb-4', isMobile && 'flex-col overflow-x-visible')}
     >
-      {KANBAN_COLUMNS.map((status) => {
+      {KANBAN_COLUMNS.filter((status) => !hiddenColumns.includes(status)).map((status) => {
         const columnTickets = tickets.filter((t) => t.status === status)
         const isOver = dragOverColumn === status
         return (

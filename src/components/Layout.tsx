@@ -32,6 +32,8 @@ import {
   ListTree,
   Timer,
   Repeat,
+  Target,
+  Mail,
 } from 'lucide-react'
 import { useAuth } from '@/hooks/use-auth'
 import { usePermissions } from '@/hooks/use-permissions'

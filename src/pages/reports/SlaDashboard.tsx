@@ -1,5 +1,6 @@
 import { useEffect, useState, useMemo } from 'react'
-import { RefreshCw, Timer } from 'lucide-react'
+import { Link } from 'react-router-dom'
+import { RefreshCw, Timer, Target } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -26,6 +27,7 @@ import { getTickets } from '@/services/tickets'
 import { getUsers } from '@/services/users'
 import { getCategories } from '@/services/categories'
 import { getCompanies } from '@/services/companies'
+import { getSlaGoals } from '@/services/sla-goals'
 import { useRealtime } from '@/hooks/use-realtime'
 import {
   buildDateFilter,
@@ -45,6 +47,7 @@ export default function SlaDashboard() {
   const [tickets, setTickets] = useState<any[]>([])
   const [users, setUsers] = useState<any[]>([])
   const [categories, setCategories] = useState<any[]>([])
+  const [goals, setGoals] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
 
   const loadData = async () => {
@@ -53,16 +56,18 @@ export default function SlaDashboard() {
       const sd = startDate || formatDate(new Date(Date.now() - 30 * 86400000))
       const ed = endDate || formatDate(new Date())
       const filter = buildDateFilter(sd, ed, companyId)
-      const [t, u, c, comps] = await Promise.all([
+      const [t, u, c, comps, g] = await Promise.all([
         getTickets(filter),
         getUsers(),
         getCategories(),
         getCompanies(),
+        getSlaGoals(),
       ])
       setTickets(t)
       setUsers(u)
       setCategories(c)
       setCompanies(comps)
+      setGoals(g)
     } catch (err) {
       toast({
         title: 'Erro ao carregar dados',
@@ -91,15 +96,39 @@ export default function SlaDashboard() {
     <Skeleton key={i} className="h-8 w-full" />
   ))
 
+  const renderGoalCell = (techId: string, slaType: string, actualPct: number) => {
+    const goal = goals.find(
+      (g) => g.technician === techId && g.sla_type === slaType,
+    )?.target_percentage
+    if (goal === undefined || goal === null) {
+      return <TableCell className="text-xs text-center text-slate-400">—</TableCell>
+    }
+    const met = actualPct >= goal
+    return (
+      <TableCell
+        className={`text-xs text-center ${met ? 'bg-green-50 font-semibold text-green-700' : 'bg-red-50 font-semibold text-red-700'}`}
+      >
+        {goal}%
+      </TableCell>
+    )
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-bold flex items-center gap-2">
           <Timer className="h-5 w-5 text-blue-600" /> Dashboard SLA
         </h2>
-        <Button size="sm" onClick={loadData} disabled={loading}>
-          <RefreshCw className={`h-4 w-4 mr-1.5 ${loading ? 'animate-spin' : ''}`} /> Atualizar
-        </Button>
+        <div className="flex items-center gap-2">
+          <Link to="/sla-goals">
+            <Button size="sm" variant="outline">
+              <Target className="h-4 w-4 mr-1.5" /> Gerenciar Metas
+            </Button>
+          </Link>
+          <Button size="sm" onClick={loadData} disabled={loading}>
+            <RefreshCw className={`h-4 w-4 mr-1.5 ${loading ? 'animate-spin' : ''}`} /> Atualizar
+          </Button>
+        </div>
       </div>
 
       <Card>
@@ -162,7 +191,9 @@ export default function SlaDashboard() {
                     <TableHead className="text-xs">Técnico</TableHead>
                     <TableHead className="text-xs text-center">Total</TableHead>
                     <TableHead className="text-xs text-center">SLA Resposta</TableHead>
+                    <TableHead className="text-xs text-center">Meta Resp.</TableHead>
                     <TableHead className="text-xs text-center">SLA Solução</TableHead>
+                    <TableHead className="text-xs text-center">Meta Sol.</TableHead>
                     <TableHead className="text-xs text-center">Tempo Resp. (min)</TableHead>
                     <TableHead className="text-xs text-center">Tempo Sol. (min)</TableHead>
                   </TableRow>
@@ -175,9 +206,11 @@ export default function SlaDashboard() {
                       <TableCell className={`text-xs text-center ${slaPctColor(r.responsePct)}`}>
                         {r.responseMet}/{r.total} ({r.responsePct.toFixed(1)}%)
                       </TableCell>
+                      {renderGoalCell(r.techId, 'Resposta', r.responsePct)}
                       <TableCell className={`text-xs text-center ${slaPctColor(r.solutionPct)}`}>
                         {r.solutionMet}/{r.total} ({r.solutionPct.toFixed(1)}%)
                       </TableCell>
+                      {renderGoalCell(r.techId, 'Solução', r.solutionPct)}
                       <TableCell className="text-xs text-center">
                         {r.avgResponseMin || '-'}
                       </TableCell>

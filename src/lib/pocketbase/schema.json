@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-26T01:28:55.654Z",
+  "generatedAt": "2026-07-26T01:44:07.766Z",
   "collections": [
     {
       "name": "users",
@@ -5679,6 +5679,125 @@
       "indexes": [
         "CREATE INDEX idx_techavail_tech_date ON technician_availability (technician, date)"
       ]
+    },
+    {
+      "name": "sla_goals",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != \"\"",
+        "view": "@request.auth.id != \"\"",
+        "create": "@request.auth.role = \"admin\" || @request.auth.role = \"gestor\"",
+        "update": "@request.auth.role = \"admin\" || @request.auth.role = \"gestor\"",
+        "delete": "@request.auth.role = \"admin\" || @request.auth.role = \"gestor\""
+      },
+      "fields": [
+        {
+          "name": "technician",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "sla_type",
+          "type": "select",
+          "required": true,
+          "system": false,
+          "selectValues": ["Resposta", "Solução"]
+        },
+        {
+          "name": "target_percentage",
+          "type": "number",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": ["CREATE INDEX idx_sla_goals_tech ON sla_goals (technician)"]
+    },
+    {
+      "name": "scheduled_reports",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != \"\"",
+        "view": "@request.auth.id != \"\"",
+        "create": "@request.auth.role = \"admin\"",
+        "update": "@request.auth.role = \"admin\"",
+        "delete": "@request.auth.role = \"admin\""
+      },
+      "fields": [
+        {
+          "name": "name",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "report_types",
+          "type": "select",
+          "required": true,
+          "system": false,
+          "selectValues": ["sla", "atividades_recorrentes"]
+        },
+        {
+          "name": "recipient_emails",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "day_of_month",
+          "type": "number",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "last_sent",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "next_run",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "active",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": ["CREATE INDEX idx_scheduled_reports_active ON scheduled_reports (active)"]
     }
   ]
 }
