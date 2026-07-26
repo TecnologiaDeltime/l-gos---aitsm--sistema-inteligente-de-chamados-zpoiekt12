@@ -26,7 +26,8 @@ import {
 import { getTickets, updateTicket, TicketRecord } from '@/services/tickets'
 import { PriorityBadge } from '@/components/PriorityBadge'
 import { StatusBadge } from '@/components/StatusBadge'
-import { SlaProgressBar } from '@/components/SlaProgressBar'
+import { SlaStatusBadge } from '@/components/SlaStatusBadge'
+import { computeSlaResponseStatus, computeSlaSolutionStatus } from '@/lib/sla-status'
 import { KanbanBoard } from '@/components/KanbanBoard'
 import { BatchDelegateDialog } from '@/components/BatchDelegateDialog'
 import { useRealtime } from '@/hooks/use-realtime'
@@ -291,13 +292,14 @@ export default function TicketList() {
                   <th className="p-3.5">Prioridade</th>
                   <th className="p-3.5">Status</th>
                   <th className="p-3.5">Responsável</th>
-                  <th className="p-3.5">SLA</th>
+                  <th className="p-3.5">SLA Resp.</th>
+                  <th className="p-3.5">SLA Sol.</th>
                 </tr>
               </thead>
               <tbody className="divide-y">
                 {filtered.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="p-8 text-center text-slate-500">
+                    <td colSpan={9} className="p-8 text-center text-slate-500">
                       Nenhum chamado encontrado.
                     </td>
                   </tr>
@@ -326,8 +328,21 @@ export default function TicketList() {
                         <StatusBadge status={t.status} />
                       </td>
                       <td className="p-3.5">{t.expand?.assigned_to?.name || 'Não atribuído'}</td>
-                      <td className="p-3.5 w-36">
-                        <SlaProgressBar slaStatus={t.sla_status} paused={t.sla_paused} />
+                      <td className="p-3.5">
+                        <SlaStatusBadge
+                          type="response"
+                          status={computeSlaResponseStatus(t)}
+                          deadline={t.sla_response_deadline}
+                          completedAt={t.sla_response_at}
+                        />
+                      </td>
+                      <td className="p-3.5">
+                        <SlaStatusBadge
+                          type="solution"
+                          status={computeSlaSolutionStatus(t)}
+                          deadline={t.sla_solution_deadline}
+                          completedAt={t.sla_solution_at}
+                        />
                       </td>
                     </tr>
                   ))

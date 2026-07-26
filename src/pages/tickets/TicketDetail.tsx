@@ -65,7 +65,8 @@ import { calculateSlaDeadlines } from '@/lib/sla-utils'
 import { getTicketVisits } from '@/services/technical-visits'
 import { PriorityBadge } from '@/components/PriorityBadge'
 import { StatusBadge } from '@/components/StatusBadge'
-import { SlaProgressBar } from '@/components/SlaProgressBar'
+import { SlaDetailBlock } from '@/components/SlaDetailBlock'
+import { computeSlaResponseStatus, computeSlaSolutionStatus } from '@/lib/sla-status'
 import { ApprovalDialog } from '@/components/ApprovalDialog'
 import { VisitDialog } from '@/components/VisitDialog'
 import { useAuth } from '@/hooks/use-auth'
@@ -668,10 +669,17 @@ export default function TicketDetail() {
         <RequesterInfo ticket={ticket} onUpdated={loadData} />
         <div className="rounded-xl border bg-white p-4 shadow-sm space-y-4 dark:bg-slate-900">
           <h3 className="font-semibold text-sm border-b pb-2">Controle de SLA</h3>
-          <SlaProgressBar
-            slaStatus={ticket.sla_status}
-            paused={ticket.sla_paused}
+          <SlaDetailBlock
+            type="response"
+            status={computeSlaResponseStatus(ticket)}
+            deadline={ticket.sla_response_deadline}
+            completedAt={ticket.sla_response_at}
+          />
+          <SlaDetailBlock
+            type="solution"
+            status={computeSlaSolutionStatus(ticket)}
             deadline={ticket.sla_solution_deadline}
+            completedAt={ticket.sla_solution_at}
           />
           <div className="pt-2 border-t space-y-2 text-xs">
             <div className="flex items-center gap-2 text-slate-600">
