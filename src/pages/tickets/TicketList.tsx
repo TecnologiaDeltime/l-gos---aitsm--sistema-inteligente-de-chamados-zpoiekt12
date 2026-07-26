@@ -1,6 +1,16 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { PlusCircle, Search, Filter, LayoutGrid, List, Settings2 } from 'lucide-react'
+import {
+  PlusCircle,
+  Search,
+  Filter,
+  LayoutGrid,
+  List,
+  Settings2,
+  Volume2,
+  VolumeX,
+  WifiOff,
+} from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -23,6 +33,8 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { KANBAN_COLUMNS } from '@/lib/kanban-constants'
 import { getHiddenColumns, setHiddenColumns } from '@/lib/kanban-columns'
 import { useToast } from '@/hooks/use-toast'
+import { isSoundEnabled, setSoundEnabled } from '@/lib/ticket-alerts'
+import { usePbHealth } from '@/hooks/use-pb-health'
 
 export default function TicketList() {
   const [tickets, setTickets] = useState<TicketRecord[]>([])
@@ -32,8 +44,10 @@ export default function TicketList() {
   const [statusFilter, setStatusFilter] = useState('all')
   const [contractSearch, setContractSearch] = useState('')
   const [hiddenColumns, setHiddenColumnsState] = useState<string[]>([])
+  const [soundOn, setSoundOn] = useState(isSoundEnabled())
   const { canResolveTicket } = usePermissions()
   const { toast } = useToast()
+  const pbConnected = usePbHealth()
 
   const loadData = async () => {
     try {
@@ -52,6 +66,12 @@ export default function TicketList() {
   useRealtime('tickets', () => {
     loadData()
   })
+
+  const toggleSound = () => {
+    const next = !soundOn
+    setSoundOn(next)
+    setSoundEnabled(next)
+  }
 
   const toggleColumn = (status: string) => {
     const newHidden = hiddenColumns.includes(status)
@@ -144,6 +164,14 @@ export default function TicketList() {
         </div>
         <div className="flex items-center gap-2">
           <Button
+            variant="ghost"
+            size="icon"
+            onClick={toggleSound}
+            title={soundOn ? 'Desativar som de notificação' : 'Ativar som de notificação'}
+          >
+            {soundOn ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
+          </Button>
+          <Button
             variant={view === 'kanban' ? 'default' : 'outline'}
             size="sm"
             onClick={() => setView('kanban')}
@@ -195,6 +223,12 @@ export default function TicketList() {
         </div>
       </div>
 
+      {!pbConnected && (
+        <div className="flex items-center gap-2 rounded-lg border border-amber-300 bg-amber-50 px-4 py-2 text-sm text-amber-800 dark:bg-amber-950 dark:text-amber-200">
+          <WifiOff className="h-4 w-4" />
+          <span>Tempo real desconectado — as atualizações automáticas estão pausadas.</span>
+        </div>
+      )}
       {view === 'kanban' ? (
         <KanbanBoard
           tickets={filtered}

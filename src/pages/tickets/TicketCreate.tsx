@@ -21,6 +21,8 @@ import { getEquipments, type EquipmentRecord } from '@/services/equipments'
 import { getClientContacts, type ClientContactRecord } from '@/services/client-contacts'
 import { getCompanyUnitsByCompany, type CompanyUnitRecord } from '@/services/company-units'
 import { createTicket } from '@/services/tickets'
+import { getUsers, type UserItem } from '@/services/users'
+import { markTicketAsSelfCreated } from '@/lib/ticket-alerts'
 import { calculateSlaFromMinutes } from '@/lib/sla-utils'
 import { computePriority } from '@/lib/itil-matrix'
 import { PriorityBadge } from '@/components/PriorityBadge'
@@ -114,6 +116,8 @@ export default function TicketCreate() {
   const [department, setDepartment] = useState('')
   const [departments, setDepartments] = useState<DepartmentOption[]>([])
   const [deptLoading, setDeptLoading] = useState(false)
+  const [technicians, setTechnicians] = useState<UserItem[]>([])
+  const [assignedTo, setAssignedTo] = useState('')
 
   const [currentStep, setCurrentStep] = useState(0)
   const [submitting, setSubmitting] = useState(false)
@@ -129,14 +133,16 @@ export default function TicketCreate() {
 
   useEffect(() => {
     const load = async () => {
-      const [comps, cats, conts] = await Promise.all([
+      const [comps, cats, conts, techs] = await Promise.all([
         getCompanies(),
         getCategories(),
         getContracts().catch(() => []),
+        getUsers("role='tecnico' || role='gestor' || role='admin'").catch(() => []),
       ])
       setCompanies(comps)
       setCategories(cats)
       setContracts(conts as ContractRecord[])
+      setTechnicians(techs as UserItem[])
     }
     load()
   }, [])
@@ -257,6 +263,10 @@ export default function TicketCreate() {
         toast({ title: 'Selecione uma atividade', variant: 'destructive' })
         return false
       }
+      if (!assignedTo) {
+        toast({ title: 'Selecione um operador', variant: 'destructive' })
+        return false
+      }
     }
     if (step === 2) {
       if (!title.trim() || !description.trim()) {
@@ -288,7 +298,7 @@ export default function TicketCreate() {
       const sla = sub
         ? calculateSlaFromMinutes(sub.sla_response_minutes, sub.sla_solution_minutes)
         : {}
-      await createTicket({
+      const created = await createTicket({
         number: num,
         company,
         unit: unit || undefined,
@@ -304,6 +314,7 @@ export default function TicketCreate() {
         urgency: autoUrgency || 'Média',
         priority: autoPriority || 'Média',
         status: 'Novo',
+        assigned_to: assignedTo,
         requester_name: requesterName || 'Solicitante',
         requester_email: requesterEmail,
         requester_phone: requesterPhone,
@@ -312,6 +323,7 @@ export default function TicketCreate() {
         sla_response_deadline: sla.sla_response_deadline,
         sla_solution_deadline: sla.sla_solution_deadline,
       })
+      markTicketAsSelfCreated(created.id)
       toast({ title: 'Chamado aberto com sucesso!' })
       navigate('/tickets')
     } catch {
@@ -562,6 +574,21 @@ export default function TicketCreate() {
                     {contracts.map((c) => (
                       <SelectItem key={c.id} value={c.id}>
                         {c.number} — {c.expand?.company?.trade_name || 'N/A'}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <FieldLabel>Operador / Técnico *</FieldLabel>
+                <Select value={assignedTo} onValueChange={setAssignedTo}>
+                  <SelectTrigger className="rounded-lg">
+                    <SelectValue placeholder="Selecione o operador" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {technicians.map((t) => (
+                      <SelectItem key={t.id} value={t.id}>
+                        {t.name}
                       </SelectItem>
                     ))}
                   </SelectContent>

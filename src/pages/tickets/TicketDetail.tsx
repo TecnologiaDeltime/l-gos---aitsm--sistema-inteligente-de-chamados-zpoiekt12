@@ -55,6 +55,7 @@ import { HOUR_TYPES, BILLING_STATUSES } from '@/services/ticket-interactions'
 import { getErrorMessage } from '@/lib/pocketbase/errors'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { getActiveContracts, ContractRecord } from '@/services/contracts'
 import { calculateSlaDeadlines } from '@/lib/sla-utils'
 import { getTicketVisits } from '@/services/technical-visits'
@@ -332,6 +333,26 @@ export default function TicketDetail() {
           </p>
           <div className="rounded-lg bg-slate-50 p-4 text-sm text-slate-800 border dark:bg-slate-800 dark:text-slate-200">
             {ticket.description}
+          </div>
+          <div className="flex items-center gap-3 rounded-lg border bg-white p-3 dark:bg-slate-900">
+            <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+              Operador
+            </span>
+            <div className="flex items-center gap-2">
+              <Avatar className="h-7 w-7">
+                {ticket.expand?.assigned_to?.avatar && (
+                  <AvatarImage
+                    src={`${import.meta.env.VITE_POCKETBASE_URL}/api/files/users/${ticket.expand.assigned_to.id}/${ticket.expand.assigned_to.avatar}`}
+                  />
+                )}
+                <AvatarFallback className="bg-blue-600 text-[10px] text-white">
+                  {ticket.expand?.assigned_to?.name?.substring(0, 2).toUpperCase() || '?'}
+                </AvatarFallback>
+              </Avatar>
+              <span className="text-sm font-medium text-slate-900 dark:text-slate-100">
+                {ticket.expand?.assigned_to?.name || 'Não atribuído'}
+              </span>
+            </div>
           </div>
           {ticket.equipment && ticket.expand?.equipment && (
             <div className="flex items-center gap-2 text-xs">

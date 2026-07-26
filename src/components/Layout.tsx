@@ -55,6 +55,7 @@ import {
   NotificationRecord,
 } from '@/services/notifications'
 import { AiAssistantDrawer } from '@/components/AiAssistantDrawer'
+import { NewTicketToast } from '@/components/NewTicketToast'
 
 export default function Layout() {
   const { user, signOut } = useAuth()
@@ -341,6 +342,7 @@ export default function Layout() {
       </div>
 
       <AiAssistantDrawer />
+      <NewTicketToast />
     </div>
   )
 }
