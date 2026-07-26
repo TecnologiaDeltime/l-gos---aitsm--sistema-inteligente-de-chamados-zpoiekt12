@@ -61,6 +61,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { getActiveContracts, ContractRecord } from '@/services/contracts'
+import { getCategoryById, CategoryRecord } from '@/services/categories'
 import { calculateSlaDeadlines } from '@/lib/sla-utils'
 import { getTicketVisits } from '@/services/technical-visits'
 import { PriorityBadge } from '@/components/PriorityBadge'
@@ -101,11 +102,21 @@ export default function TicketDetail() {
   const [editTarget, setEditTarget] = useState<any | null>(null)
   const [editOpen, setEditOpen] = useState(false)
   const [showDelegate, setShowDelegate] = useState(false)
+  const [categoryData, setCategoryData] = useState<CategoryRecord | null>(null)
 
   const loadData = () => {
     if (!id) return
     getTicket(id)
-      .then(setTicket)
+      .then((t) => {
+        setTicket(t)
+        if (t.expand?.category) {
+          setCategoryData(t.expand.category)
+        } else if (t.category) {
+          getCategoryById(t.category)
+            .then(setCategoryData)
+            .catch(() => {})
+        }
+      })
       .catch(() => {})
     getTicketInteractions(id)
       .then(setInteractions)
@@ -669,15 +680,47 @@ export default function TicketDetail() {
         <RequesterInfo ticket={ticket} onUpdated={loadData} />
         <div className="rounded-xl border bg-white p-4 shadow-sm space-y-4 dark:bg-slate-900">
           <h3 className="font-semibold text-sm border-b pb-2">Controle de SLA</h3>
+          {categoryData && (
+            <div className="flex items-center justify-between text-xs pb-2 border-b">
+              <span className="text-slate-500">
+                Categoria:{' '}
+                <span className="font-medium text-slate-700 dark:text-slate-300">
+                  {categoryData.name}
+                </span>
+              </span>
+              <div className="flex gap-3">
+                <span className="text-slate-500">
+                  Resp:{' '}
+                  {categoryData.sla_response_minutes
+                    ? `${categoryData.sla_response_minutes}min`
+                    : 'Não definido'}
+                </span>
+                <span className="text-slate-500">
+                  Sol:{' '}
+                  {categoryData.sla_solution_minutes
+                    ? `${categoryData.sla_solution_minutes}min`
+                    : 'Não definido'}
+                </span>
+              </div>
+            </div>
+          )}
           <SlaDetailBlock
             type="response"
-            status={computeSlaResponseStatus(ticket)}
+            status={
+              categoryData && !categoryData.sla_response_minutes
+                ? 'Não definido'
+                : computeSlaResponseStatus(ticket)
+            }
             deadline={ticket.sla_response_deadline}
             completedAt={ticket.sla_response_at}
           />
           <SlaDetailBlock
             type="solution"
-            status={computeSlaSolutionStatus(ticket)}
+            status={
+              categoryData && !categoryData.sla_solution_minutes
+                ? 'Não definido'
+                : computeSlaSolutionStatus(ticket)
+            }
             deadline={ticket.sla_solution_deadline}
             completedAt={ticket.sla_solution_at}
           />

@@ -34,6 +34,7 @@ import {
   Repeat,
   Target,
   Mail,
+  Clock,
 } from 'lucide-react'
 import { useAuth } from '@/hooks/use-auth'
 import { usePermissions } from '@/hooks/use-permissions'
@@ -186,6 +187,12 @@ export default function Layout() {
       show: permissions.canViewAutomations,
     },
     { label: 'Central de Aprovações', path: '/approval-center', icon: FileCheck, show: true },
+    {
+      label: 'Configurações de SLA',
+      path: '/settings/sla',
+      icon: Clock,
+      show: permissions.isAdmin,
+    },
     { label: 'Configurações', path: '/settings', icon: Settings, show: permissions.isAdmin },
   ]
 

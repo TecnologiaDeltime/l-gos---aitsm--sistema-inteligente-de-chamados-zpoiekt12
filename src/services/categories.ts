@@ -9,13 +9,16 @@ export interface CategoryRecord {
   impact?: string
   urgency?: string
   priority?: string
-  sla_response_minutes?: number
-  sla_solution_minutes?: number
+  sla_response_minutes?: number | null
+  sla_solution_minutes?: number | null
   expand?: any
 }
 
 export const getCategories = () =>
   pb.collection('tkt_categories').getFullList<CategoryRecord>({ sort: 'name', expand: 'parent' })
+
+export const getCategoryById = (id: string) =>
+  pb.collection('tkt_categories').getOne<CategoryRecord>(id)
 
 export const createCategory = (data: Partial<CategoryRecord>) =>
   pb.collection('tkt_categories').create<CategoryRecord>(data)
