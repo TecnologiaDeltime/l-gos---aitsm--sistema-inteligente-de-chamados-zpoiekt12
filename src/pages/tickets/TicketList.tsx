@@ -216,7 +216,7 @@ export default function TicketList() {
               variant="default"
               size="sm"
               onClick={() => setShowBatchDelegate(true)}
-              className="bg-amber-500 hover:bg-amber-400 text-slate-900"
+              className="bg-primary hover:bg-primary/90 text-primary-foreground"
             >
               <Forward className="mr-1.5 h-4 w-4" /> Delegar em lote ({selectedIds.size})
             </Button>
@@ -252,7 +252,7 @@ export default function TicketList() {
             </Popover>
           )}
           <Link to="/tickets/new">
-            <Button className="bg-amber-500 hover:bg-amber-400 text-slate-900 w-full sm:w-auto">
+            <Button className="bg-primary hover:bg-primary/90 text-primary-foreground w-full sm:w-auto">
               <PlusCircle className="mr-2 h-4 w-4" /> Abrir Chamado
             </Button>
           </Link>
@@ -275,7 +275,7 @@ export default function TicketList() {
       ) : (
         <div className="itsm-table-container shadow-sm">
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs text-slate-600 dark:text-slate-400">
+            <table className="w-full text-left text-xs text-muted-foreground">
               <thead className="itsm-table-header">
                 <tr>
                   <th className="px-4 py-3 w-10">
@@ -315,17 +315,17 @@ export default function TicketList() {
                           onCheckedChange={() => toggleSelectOne(t.id)}
                         />
                       </td>
-                      <td className="px-4 py-3 font-bold text-amber-500">
+                      <td className="px-4 py-3 font-bold text-primary">
                         <Link to={`/tickets/${t.id}`} className="hover:underline">
                           #{t.number}
                         </Link>
                       </td>
-                      <td className="px-4 py-3 font-medium text-slate-200 max-w-sm truncate">
+                      <td className="px-4 py-3 font-medium text-foreground max-w-sm truncate">
                         <Link to={`/tickets/${t.id}`} className="hover:underline">
                           {t.title}
                         </Link>
                       </td>
-                      <td className="px-4 py-3 text-slate-400">
+                      <td className="px-4 py-3 text-muted-foreground">
                         {t.expand?.company?.trade_name || 'Geral'}
                       </td>
                       <td className="px-4 py-3">
@@ -334,7 +334,7 @@ export default function TicketList() {
                       <td className="px-4 py-3">
                         <StatusBadge status={t.status} />
                       </td>
-                      <td className="px-4 py-3 text-slate-400">
+                      <td className="px-4 py-3 text-muted-foreground">
                         {t.expand?.assigned_to?.name || 'Não atribuído'}
                       </td>
                       <td className="px-4 py-3">

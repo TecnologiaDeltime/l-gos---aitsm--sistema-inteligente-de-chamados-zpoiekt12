@@ -43,56 +43,56 @@ export default function Dashboard() {
       label: 'Chamados Novos',
       value: totalNovos,
       icon: Inbox,
-      color: 'text-amber-400',
-      bg: 'bg-amber-500/10',
+      color: 'text-slate-600 dark:text-amber-400',
+      bg: 'bg-slate-500/10 dark:bg-amber-500/10',
     },
     {
       label: 'Em Atendimento',
       value: totalEmAtendimento,
       icon: Clock,
-      color: 'text-orange-400',
+      color: 'text-orange-600 dark:text-orange-400',
       bg: 'bg-orange-500/10',
     },
     {
       label: 'Aguardando Cliente',
       value: totalAguardando,
       icon: PauseCircle,
-      color: 'text-yellow-400',
-      bg: 'bg-yellow-500/10',
+      color: 'text-slate-600 dark:text-yellow-400',
+      bg: 'bg-slate-500/10 dark:bg-yellow-500/10',
     },
     {
       label: 'SLA Violado',
       value: totalSlaViolado,
       icon: AlertTriangle,
-      color: 'text-red-400',
+      color: 'text-red-600 dark:text-red-400',
       bg: 'bg-red-500/10',
     },
     {
       label: 'Críticos (P1)',
       value: totalP1,
       icon: Flame,
-      color: 'text-red-500',
+      color: 'text-red-600 dark:text-red-500',
       bg: 'bg-red-500/15',
     },
     {
       label: 'SLA em Risco',
       value: totalEmRisco,
       icon: AlertCircle,
-      color: 'text-amber-500',
-      bg: 'bg-amber-500/15',
+      color: 'text-slate-600 dark:text-amber-500',
+      bg: 'bg-slate-500/15 dark:bg-amber-500/15',
     },
     {
       label: 'Resolvidos',
       value: totalResolvidos,
       icon: Calendar,
-      color: 'text-emerald-400',
+      color: 'text-emerald-600 dark:text-emerald-400',
       bg: 'bg-emerald-500/10',
     },
     {
       label: 'Backlog Total',
       value: tickets.length,
       icon: Layers,
-      color: 'text-purple-400',
+      color: 'text-purple-600 dark:text-purple-400',
       bg: 'bg-purple-500/10',
     },
   ]
@@ -101,8 +101,8 @@ export default function Dashboard() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-xl font-bold text-slate-100">Painel Geral</h2>
-          <p className="text-sm text-slate-400 mt-0.5">Visão geral dos chamados e SLAs</p>
+          <h2 className="text-xl font-bold text-foreground">Painel Geral</h2>
+          <p className="text-sm text-muted-foreground mt-0.5">Visão geral dos chamados e SLAs</p>
         </div>
       </div>
 
@@ -121,8 +121,8 @@ export default function Dashboard() {
                   </div>
                 </div>
                 <div className="mt-3">
-                  <p className="text-2xl font-bold text-amber-400 tabular-nums">{kpi.value}</p>
-                  <p className="text-xs font-medium text-slate-400 mt-0.5">{kpi.label}</p>
+                  <p className="text-2xl font-bold text-foreground tabular-nums">{kpi.value}</p>
+                  <p className="text-xs font-medium text-muted-foreground mt-0.5">{kpi.label}</p>
                 </div>
               </CardContent>
             </Card>
@@ -131,13 +131,13 @@ export default function Dashboard() {
       </div>
 
       <Card className="itsm-card">
-        <CardHeader className="flex flex-row items-center justify-between border-b border-slate-200 pb-3 dark:border-slate-800">
-          <CardTitle className="text-base font-semibold text-slate-900 dark:text-slate-100">
+        <CardHeader className="flex flex-row items-center justify-between border-b border-border pb-3">
+          <CardTitle className="text-base font-semibold text-foreground">
             Chamados Recentes
           </CardTitle>
           <Link
             to="/tickets"
-            className="text-xs font-medium text-amber-500 hover:text-amber-400 hover:underline flex items-center transition-colors duration-150"
+            className="text-xs font-medium text-primary hover:text-primary/80 hover:underline flex items-center transition-colors duration-150"
           >
             Ver Todos <ArrowUpRight className="h-3 w-3 ml-0.5" />
           </Link>
@@ -161,15 +161,15 @@ export default function Dashboard() {
                     key={t.id}
                     className={`itsm-table-row itsm-table-row-hover ${idx % 2 === 1 ? 'itsm-table-row-alt' : ''}`}
                   >
-                    <td className="px-4 py-3 font-semibold text-amber-500">
+                    <td className="px-4 py-3 font-semibold text-primary">
                       <Link to={`/tickets/${t.id}`} className="hover:underline">
                         #{t.number}
                       </Link>
                     </td>
-                    <td className="px-4 py-3 font-medium text-slate-200 max-w-xs truncate">
+                    <td className="px-4 py-3 font-medium text-foreground max-w-xs truncate">
                       {t.title}
                     </td>
-                    <td className="px-4 py-3 text-slate-400">
+                    <td className="px-4 py-3 text-muted-foreground">
                       {t.expand?.company?.trade_name || 'N/A'}
                     </td>
                     <td className="px-4 py-3">

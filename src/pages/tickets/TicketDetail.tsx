@@ -355,7 +355,7 @@ export default function TicketDetail() {
       <div className="space-y-6 lg:col-span-2">
         <div className="itsm-card p-6 space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <h2 className="text-xl font-bold text-slate-100">
+            <h2 className="text-xl font-bold text-foreground">
               #{ticket.number} - {ticket.title}
             </h2>
             <div className="flex items-center gap-2">
@@ -363,15 +363,16 @@ export default function TicketDetail() {
               <StatusBadge status={ticket.status} />
             </div>
           </div>
-          <p className="text-xs text-slate-400">
-            Aberto por <span className="font-semibold text-slate-300">{ticket.requester_name}</span>{' '}
-            em {new Date(ticket.created).toLocaleString('pt-BR')}
+          <p className="text-xs text-muted-foreground">
+            Aberto por{' '}
+            <span className="font-semibold text-foreground">{ticket.requester_name}</span> em{' '}
+            {new Date(ticket.created).toLocaleString('pt-BR')}
           </p>
-          <div className="rounded-lg bg-slate-800/50 p-4 text-sm text-slate-300 border border-slate-700/50">
+          <div className="rounded-lg bg-muted p-4 text-sm text-muted-foreground border border-border">
             {ticket.description}
           </div>
-          <div className="flex items-center gap-3 rounded-lg border border-slate-700/50 bg-slate-800/50 p-3">
-            <span className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+          <div className="flex items-center gap-3 rounded-lg border border-border bg-muted p-3">
+            <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
               Operador
             </span>
             <div className="flex items-center gap-2">
@@ -381,11 +382,11 @@ export default function TicketDetail() {
                     src={`${import.meta.env.VITE_POCKETBASE_URL}/api/files/users/${ticket.expand.assigned_to.id}/${ticket.expand.assigned_to.avatar}`}
                   />
                 )}
-                <AvatarFallback className="bg-amber-500 text-[10px] text-slate-900">
+                <AvatarFallback className="bg-primary text-[10px] text-primary-foreground">
                   {ticket.expand?.assigned_to?.name?.substring(0, 2).toUpperCase() || '?'}
                 </AvatarFallback>
               </Avatar>
-              <span className="text-sm font-medium text-slate-200">
+              <span className="text-sm font-medium text-foreground">
                 {ticket.expand?.assigned_to?.name || 'Não atribuído'}
               </span>
             </div>
@@ -396,7 +397,7 @@ export default function TicketDetail() {
               <span>Ativo: </span>
               <Link
                 to={`/cmdb/assets/${ticket.equipment}`}
-                className="text-amber-500 hover:underline font-medium"
+                className="text-primary hover:underline font-medium"
               >
                 {ticket.expand.equipment.name} ({ticket.expand.equipment.hostname || 'sem hostname'}
                 )
@@ -411,7 +412,7 @@ export default function TicketDetail() {
                 <Button
                   size="sm"
                   onClick={handleStartService}
-                  className="bg-amber-500 hover:bg-amber-400 text-slate-900"
+                  className="bg-primary hover:bg-primary/90 text-primary-foreground"
                 >
                   <PlayCircle className="mr-1.5 h-4 w-4" /> Iniciar Atendimento
                 </Button>
@@ -456,9 +457,9 @@ export default function TicketDetail() {
             <TabsTrigger value="history">Histórico</TabsTrigger>
           </TabsList>
           <TabsContent value="interactions" className="pt-4 space-y-4">
-            <div className="flex items-center justify-between rounded-lg border border-slate-700/50 bg-slate-800/50 px-4 py-2">
-              <span className="text-sm font-semibold text-slate-300">Total de Horas</span>
-              <span className="text-sm font-bold tabular-nums text-amber-400">
+            <div className="flex items-center justify-between rounded-lg border border-border bg-muted px-4 py-2">
+              <span className="text-sm font-semibold text-foreground">Total de Horas</span>
+              <span className="text-sm font-bold tabular-nums text-primary">
                 Total: {totalHoursDisplay}
               </span>
             </div>
@@ -466,10 +467,10 @@ export default function TicketDetail() {
               {interactions.map((i) => (
                 <div
                   key={i.id}
-                  className="rounded-lg border border-slate-700/50 p-4 text-xs space-y-1 bg-slate-900"
+                  className="rounded-lg border border-border p-4 text-xs space-y-1 bg-card"
                 >
                   <div className="flex justify-between items-center">
-                    <span className="font-bold text-slate-200">
+                    <span className="font-bold text-foreground">
                       {i.expand?.author?.name || 'Usuário'}
                     </span>
                     <div className="flex items-center gap-2">
@@ -501,7 +502,7 @@ export default function TicketDetail() {
                       )}
                     </div>
                   </div>
-                  <p className="text-slate-300">{i.content}</p>
+                  <p className="text-muted-foreground">{i.content}</p>
                   {i.duration_minutes > 0 && (
                     <div className="flex items-center gap-2 pt-1 text-slate-500">
                       <Clock className="h-3 w-3" />
@@ -518,7 +519,7 @@ export default function TicketDetail() {
                 </div>
               ))}
             </div>
-            <div className="rounded-lg border border-slate-700/50 bg-slate-900 p-4 space-y-3">
+            <div className="rounded-lg border border-border bg-card p-4 space-y-3">
               <Textarea
                 placeholder="Escreva uma resposta ou nota interna..."
                 value={comment}
@@ -526,7 +527,7 @@ export default function TicketDetail() {
               />
               <div className="grid gap-3 sm:grid-cols-3">
                 <div className="space-y-1">
-                  <Label className="text-xs text-slate-600 dark:text-slate-400">Tempo Gasto</Label>
+                  <Label className="text-xs text-muted-foreground">Tempo Gasto</Label>
                   <div className="flex gap-2">
                     <Input
                       placeholder="hh:mm"
@@ -564,7 +565,7 @@ export default function TicketDetail() {
                   {timeError && <p className="text-xs text-red-500">{timeError}</p>}
                 </div>
                 <div className="space-y-1">
-                  <Label className="text-xs text-slate-600 dark:text-slate-400">Tipo de Hora</Label>
+                  <Label className="text-xs text-muted-foreground">Tipo de Hora</Label>
                   <Select value={hourType} onValueChange={setHourType}>
                     <SelectTrigger className="h-8 text-sm">
                       <SelectValue />
@@ -579,7 +580,7 @@ export default function TicketDetail() {
                   </Select>
                 </div>
                 <div className="space-y-1">
-                  <Label className="text-xs text-slate-600 dark:text-slate-400">Faturamento</Label>
+                  <Label className="text-xs text-muted-foreground">Faturamento</Label>
                   <Select value={billingStatus} onValueChange={setBillingStatus}>
                     <SelectTrigger className="h-8 text-sm">
                       <SelectValue />
@@ -624,7 +625,7 @@ export default function TicketDetail() {
                 )}
               </div>
               <div className="flex justify-between items-center">
-                <label className="text-xs text-slate-600 flex items-center gap-2 cursor-pointer dark:text-slate-400">
+                <label className="text-xs text-muted-foreground flex items-center gap-2 cursor-pointer">
                   <input
                     type="checkbox"
                     checked={isInternal}
@@ -652,7 +653,7 @@ export default function TicketDetail() {
               visits.map((v) => (
                 <div
                   key={v.id}
-                  className="rounded-lg border border-slate-700/50 p-4 text-xs space-y-1 bg-slate-900"
+                  className="rounded-lg border border-border p-4 text-xs space-y-1 bg-card"
                 >
                   <div className="flex justify-between items-center">
                     <Badge variant="outline">{v.status}</Badge>
@@ -664,11 +665,13 @@ export default function TicketDetail() {
                       {v.scheduled_time || ''}
                     </span>
                   </div>
-                  <p className="text-slate-400">
+                  <p className="text-muted-foreground">
                     <MapPin className="inline h-3 w-3" /> {v.client_address || '-'}
                   </p>
-                  <p className="text-slate-400">Técnico: {v.expand?.technician?.name || '-'}</p>
-                  {v.materials && <p className="text-slate-400">Materiais: {v.materials}</p>}
+                  <p className="text-muted-foreground">
+                    Técnico: {v.expand?.technician?.name || '-'}
+                  </p>
+                  {v.materials && <p className="text-muted-foreground">Materiais: {v.materials}</p>}
                 </div>
               ))
             )}
@@ -686,10 +689,11 @@ export default function TicketDetail() {
                 return (
                   <div
                     key={h.id}
-                    className="rounded-lg border border-slate-700/50 p-4 text-xs space-y-1 bg-slate-900"
+                    className="rounded-lg border border-border p-4 text-xs space-y-1 bg-card"
                   >
                     <div className="flex justify-between items-center">
-                      <span className="font-semibold text-slate-200 flex items-center gap-1.5">
+                      <span className="font-semibold text-foreground flex items-center gap-1.5">
+                        {' '}
                         <History className="h-3.5 w-3.5 text-slate-400" />
                         {h.action}
                       </span>
@@ -698,19 +702,21 @@ export default function TicketDetail() {
                       </span>
                     </div>
                     {isDelegation ? (
-                      <p className="text-slate-600">
+                      <p className="text-muted-foreground">
                         De &ldquo;{h.old_value || 'Ninguém'}&rdquo; para &ldquo;{cleanNew}&rdquo;
                         {reason && (
                           <span className="text-slate-500 italic"> (Motivo: {reason})</span>
                         )}
                       </p>
                     ) : (
-                      <p className="text-slate-400">
+                      <p className="text-muted-foreground">
                         {h.field && <span className="font-medium">{h.field}: </span>}
                         {h.old_value || '—'} → {h.new_value || '—'}
                       </p>
                     )}
-                    {h.expand?.user && <p className="text-slate-400">Por: {h.expand.user.name}</p>}
+                    {h.expand?.user && (
+                      <p className="text-muted-foreground">Por: {h.expand.user.name}</p>
+                    )}
                   </div>
                 )
               })
@@ -721,25 +727,25 @@ export default function TicketDetail() {
       <div className="space-y-4">
         <RequesterInfo ticket={ticket} onUpdated={loadData} />
         <div className="itsm-card p-4 space-y-4">
-          <h3 className="font-semibold text-sm text-slate-900 dark:text-slate-100 border-b border-slate-200 dark:border-slate-800 pb-2">
+          <h3 className="font-semibold text-sm text-foreground border-b border-border pb-2">
             Controle de SLA
           </h3>
           {categoryData && (
             <div className="flex items-center justify-between text-xs pb-2 border-b">
-              <span className="text-slate-500">
+              <span className="text-muted-foreground">
                 Categoria:{' '}
                 <span className="font-medium text-slate-700 dark:text-slate-300">
                   {categoryData.name}
                 </span>
               </span>
               <div className="flex gap-3">
-                <span className="text-slate-500">
+                <span className="text-muted-foreground">
                   Resp:{' '}
                   {categoryData.sla_response_minutes
                     ? `${categoryData.sla_response_minutes}min`
                     : 'Não definido'}
                 </span>
-                <span className="text-slate-500">
+                <span className="text-muted-foreground">
                   Sol:{' '}
                   {categoryData.sla_solution_minutes
                     ? `${categoryData.sla_solution_minutes}min`
@@ -769,32 +775,32 @@ export default function TicketDetail() {
             completedAt={ticket.sla_solution_at}
           />
           <div className="pt-2 border-t space-y-2 text-xs">
-            <div className="flex items-center gap-2 text-slate-600">
-              <Building2 className="h-4 w-4 text-slate-400" /> Cliente:{' '}
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <Building2 className="h-4 w-4 text-muted-foreground" /> Cliente:{' '}
               {ticket.expand?.company?.trade_name || 'N/A'}
             </div>
-            <div className="flex items-center gap-2 text-slate-600">
-              <User className="h-4 w-4 text-slate-400" /> Técnico:{' '}
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <User className="h-4 w-4 text-muted-foreground" /> Técnico:{' '}
               {ticket.expand?.assigned_to?.name || 'Não atribuído'}
             </div>
-            <div className="flex items-center gap-2 text-slate-600">
-              <Clock className="h-4 w-4 text-slate-400" /> Horas: {ticket.work_hours || 0}h
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <Clock className="h-4 w-4 text-muted-foreground" /> Horas: {ticket.work_hours || 0}h
             </div>
-            <div className="flex items-center gap-2 text-slate-600">
-              <Timer className="h-4 w-4 text-slate-400" /> Total: {totalHoursDisplay}
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <Timer className="h-4 w-4 text-muted-foreground" /> Total: {totalHoursDisplay}
             </div>
             {ticket.sla_response_start && (
-              <div className="flex items-center gap-2 text-slate-600">
-                <PlayCircle className="h-4 w-4 text-slate-400" /> Início Atend.:{' '}
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <PlayCircle className="h-4 w-4 text-muted-foreground" /> Início Atend.:{' '}
                 {new Date(ticket.sla_response_start).toLocaleString('pt-BR')}
               </div>
             )}
             {ticket.equipment && ticket.expand?.equipment && (
-              <div className="flex items-center gap-2 text-slate-600">
-                <Server className="h-4 w-4 text-slate-400" /> Ativo:{' '}
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <Server className="h-4 w-4 text-muted-foreground" /> Ativo:{' '}
                 <Link
                   to={`/cmdb/assets/${ticket.equipment}`}
-                  className="text-amber-500 hover:underline"
+                  className="text-primary hover:underline"
                 >
                   {ticket.expand.equipment.name}
                 </Link>
@@ -803,13 +809,13 @@ export default function TicketDetail() {
           </div>
         </div>
         <div className="itsm-card p-4 space-y-3">
-          <h3 className="font-semibold text-sm text-slate-900 dark:text-slate-100 border-b border-slate-200 dark:border-slate-800 pb-2">
+          <h3 className="font-semibold text-sm text-foreground border-b border-border pb-2">
             Contrato Vinculado
           </h3>
           {ticket.contract && ticket.expand?.contract ? (
             <Link
               to={`/contracts/${ticket.contract}`}
-              className="flex items-center gap-2 text-xs text-amber-500 hover:underline"
+              className="flex items-center gap-2 text-xs text-primary hover:underline"
             >
               <FileText className="h-4 w-4" />
               {ticket.expand.contract.number}
@@ -818,7 +824,7 @@ export default function TicketDetail() {
                 : ''}
             </Link>
           ) : (
-            <p className="text-xs text-slate-500">Nenhum contrato vinculado.</p>
+            <p className="text-xs text-muted-foreground">Nenhum contrato vinculado.</p>
           )}
           <Select value={ticket.contract || '_none'} onValueChange={handleContractChange}>
             <SelectTrigger className="h-8 text-xs">

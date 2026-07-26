@@ -85,7 +85,7 @@ export function SlaPauseDialog({ open, onOpenChange, onConfirm }: SlaPauseDialog
       <DialogContent className="sm:max-w-[480px]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <PauseCircle className="h-5 w-5 text-amber-600" />
+            <PauseCircle className="h-5 w-5 text-primary" />
             Pausar SLA
           </DialogTitle>
         </DialogHeader>
@@ -136,8 +136,9 @@ export function SlaPauseDialog({ open, onOpenChange, onConfirm }: SlaPauseDialog
           <Button
             onClick={handleConfirm}
             disabled={loading || !reason || justification.trim().length < 5}
-            className="bg-amber-500 hover:bg-amber-400 text-slate-900"
+            className="bg-primary hover:bg-primary/90 text-primary-foreground"
           >
+            {' '}
             {loading && <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />}
             Pausar SLA
           </Button>

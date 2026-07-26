@@ -20,8 +20,8 @@ const STATUS_CONFIG: Record<
   },
   Atenção: {
     percent: 65,
-    barColor: 'bg-amber-500',
-    text: 'text-amber-600',
+    barColor: 'bg-slate-500 dark:bg-amber-500',
+    text: 'text-slate-600 dark:text-amber-600',
     Icon: Clock,
   },
   Risco: {
@@ -44,7 +44,7 @@ const STATUS_CONFIG: Record<
   },
   Pausado: {
     percent: 0,
-    barColor: 'bg-amber-400 opacity-60',
+    barColor: 'bg-slate-400 dark:bg-amber-400 opacity-60',
     text: 'text-slate-500',
     Icon: PauseCircle,
   },

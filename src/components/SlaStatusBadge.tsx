@@ -21,10 +21,10 @@ const STATUS_CONFIG: Record<
     Icon: CheckCircle2,
   },
   Atenção: {
-    dot: 'bg-amber-500',
-    text: 'text-amber-700 dark:text-amber-400',
-    bg: 'bg-amber-100 dark:bg-amber-500/15',
-    border: 'border-amber-200 dark:border-amber-500/30',
+    dot: 'bg-slate-500',
+    text: 'text-slate-700 dark:text-amber-400',
+    bg: 'bg-slate-100 dark:bg-amber-500/15',
+    border: 'border-slate-300 dark:border-amber-500/30',
     Icon: Clock,
   },
   Risco: {

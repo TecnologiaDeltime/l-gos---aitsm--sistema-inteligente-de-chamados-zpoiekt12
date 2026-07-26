@@ -16,7 +16,7 @@ export function SlaProgressBar({
 
   if (slaStatus === 'Atenção') {
     percent = 65
-    color = 'bg-amber-500'
+    color = 'bg-slate-500 dark:bg-amber-500'
   } else if (slaStatus === 'Risco') {
     percent = 82
     color = 'bg-orange-500'
@@ -29,7 +29,7 @@ export function SlaProgressBar({
   }
 
   if (paused) {
-    color = 'bg-amber-400 opacity-60'
+    color = 'bg-slate-400 dark:bg-amber-400 opacity-60'
   }
 
   return (
@@ -37,7 +37,7 @@ export function SlaProgressBar({
       <div className="flex items-center justify-between text-xs font-medium text-slate-600">
         <span className="flex items-center gap-1">
           {paused ? (
-            <PauseCircle className="h-3.5 w-3.5 text-amber-600" />
+            <PauseCircle className="h-3.5 w-3.5 text-slate-600 dark:text-amber-600" />
           ) : slaStatus === 'Violado' || slaStatus === 'Crítico' ? (
             <AlertTriangle className="h-3.5 w-3.5 text-red-600" />
           ) : (
