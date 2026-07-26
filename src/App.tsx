@@ -26,6 +26,8 @@ import QueueManagement from '@/pages/queues/QueueManagement'
 import CategoryManagement from '@/pages/categories/CategoryManagement'
 import ActivityCatalog from '@/pages/ActivityCatalog'
 import ReportsPage from '@/pages/reports/ReportsPage'
+import SlaDashboard from '@/pages/reports/SlaDashboard'
+import RecurrentActivities from '@/pages/reports/RecurrentActivities'
 import KnowledgeBase from '@/pages/knowledge/KnowledgeBase'
 import SettingsPage from '@/pages/settings/SettingsPage'
 import CmdbDashboard from '@/pages/cmdb/CmdbDashboard'
@@ -115,6 +117,8 @@ const App = () => (
             <Route path="/queues" element={<QueueManagement />} />
             <Route path="/categories" element={<CategoryManagement />} />
             <Route path="/activity-catalog" element={<ActivityCatalog />} />
+            <Route path="/sla-dashboard" element={<SlaDashboard />} />
+            <Route path="/recurrent-activities" element={<RecurrentActivities />} />
             <Route path="/reports" element={<ReportsPage />} />
             <Route path="/reports/unit" element={<UnitReportsPage />} />
             <Route path="/knowledge-base" element={<KnowledgeBase />} />

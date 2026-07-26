@@ -44,7 +44,7 @@ export const getTickets = (filter?: string, sort: string = '-created') =>
   pb.collection('tickets').getFullList<TicketRecord>({
     filter,
     sort,
-    expand: 'company,category,assigned_to,queue,contract,equipment',
+    expand: 'company,category,subcategory,assigned_to,queue,contract,equipment',
   })
 
 export const getTicket = (id: string) =>
