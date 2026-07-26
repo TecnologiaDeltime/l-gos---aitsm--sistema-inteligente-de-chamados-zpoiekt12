@@ -1,10 +1,5 @@
-// Escalation threshold in minutes.
-// Administrators can adjust this constant to change how long a ticket
-// can remain in "Aguardando Atribuição" before being automatically escalated.
-var ESCALATION_THRESHOLD_MINUTES = 30
-
 cronAdd('ticket_escalation', '* * * * *', function () {
-  var threshold = ESCALATION_THRESHOLD_MINUTES
+  var threshold = 30
   var now = new Date()
   var cutoff = new Date(now.getTime() - threshold * 60000).toISOString()
 
