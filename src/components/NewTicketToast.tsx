@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 import { useRealtime } from '@/hooks/use-realtime'
 import { useAuth } from '@/hooks/use-auth'
-import { playTicketChime, isSelfCreatedTicket } from '@/lib/ticket-alerts'
+import { playTicketChime, isSelfCreatedTicket, initAudio } from '@/lib/ticket-alerts'
 import { PriorityBadge } from '@/components/PriorityBadge'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { getTicket } from '@/services/tickets'
@@ -13,6 +13,12 @@ export function NewTicketToast() {
   const { user } = useAuth()
   const knownTicketIds = useRef<Set<string>>(new Set())
   const initialized = useRef(false)
+  const navigateRef = useRef(navigate)
+  navigateRef.current = navigate
+
+  useEffect(() => {
+    initAudio()
+  }, [])
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -21,7 +27,36 @@ export function NewTicketToast() {
     return () => clearTimeout(timer)
   }, [])
 
+  useEffect(() => {
+    if (typeof Notification !== 'undefined' && Notification.permission === 'default') {
+      Notification.requestPermission().catch(() => {})
+    }
+  }, [])
+
   const isOperator = ['tecnico', 'gestor', 'admin'].includes(user?.role || '')
+
+  const showPushNotification = (ticket: any) => {
+    if (typeof Notification === 'undefined') return
+    if (Notification.permission !== 'granted') return
+
+    const title = `Novo Chamado #${ticket.number} - ${ticket.title}`
+    const body = `Solicitante: ${ticket.requester_name} | Prioridade: ${ticket.priority}`
+
+    try {
+      const notif = new Notification(title, {
+        body,
+        icon: '/favicon.ico',
+        tag: `ticket-${ticket.id}`,
+      })
+      notif.onclick = () => {
+        window.focus()
+        navigateRef.current(`/tickets/${ticket.id}`)
+        notif.close()
+      }
+    } catch {
+      // graceful degradation
+    }
+  }
 
   const showToast = (ticket: any) => {
     const operator = ticket.expand?.assigned_to
@@ -82,11 +117,18 @@ export function NewTicketToast() {
     if (knownTicketIds.current.has(e.record.id)) return
     knownTicketIds.current.add(e.record.id)
 
-    playTicketChime()
+    const priority = (e.record as any).priority || 'Média'
+    playTicketChime(priority)
 
     getTicket(e.record.id)
-      .then((ticket) => showToast(ticket))
-      .catch(() => showToast(e.record as any))
+      .then((ticket) => {
+        showToast(ticket)
+        showPushNotification(ticket)
+      })
+      .catch(() => {
+        showToast(e.record as any)
+        showPushNotification(e.record as any)
+      })
   })
 
   return null
