@@ -136,7 +136,7 @@ export function SlaPauseDialog({ open, onOpenChange, onConfirm }: SlaPauseDialog
           <Button
             onClick={handleConfirm}
             disabled={loading || !reason || justification.trim().length < 5}
-            className="bg-amber-600 hover:bg-amber-700"
+            className="bg-amber-500 hover:bg-amber-400 text-slate-900"
           >
             {loading && <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />}
             Pausar SLA

@@ -8,6 +8,12 @@
     <meta name="description" content="Projeto gerado usando Skip (https://goskip.dev)" />
     <meta name="author" content="Skip (https://goskip.dev)" />
     <meta property="og:image" content="/og-image.png" />
+    <script>
+      (function () {
+        var theme = localStorage.getItem('itsm-theme') || 'dark';
+        if (theme === 'dark') document.documentElement.classList.add('dark');
+      })();
+    </script>
   </head>
 
   <body>

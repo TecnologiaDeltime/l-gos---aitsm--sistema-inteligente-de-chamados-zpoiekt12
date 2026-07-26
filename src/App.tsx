@@ -3,6 +3,7 @@ import { Toaster } from '@/components/ui/toaster'
 import { Toaster as Sonner } from '@/components/ui/sonner'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { AuthProvider } from '@/hooks/use-auth'
+import { ThemeProvider } from '@/hooks/use-theme'
 import { ProtectedRoute } from '@/components/ProtectedRoute'
 import Layout from '@/components/Layout'
 
@@ -73,93 +74,95 @@ function RootRedirect() {
 
 const App = () => (
   <BrowserRouter>
-    <AuthProvider>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <GlobalNotifications />
-        <Routes>
-          {/* Public Auth Routes */}
-          <Route path="/login" element={<Login />} />
-          <Route path="/recuperar-senha" element={<RecoverPassword />} />
-          <Route path="/approval/:token" element={<ApprovalPublic />} />
-          <Route path="/survey/:token" element={<SurveyPublic />} />
+    <ThemeProvider>
+      <AuthProvider>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <GlobalNotifications />
+          <Routes>
+            {/* Public Auth Routes */}
+            <Route path="/login" element={<Login />} />
+            <Route path="/recuperar-senha" element={<RecoverPassword />} />
+            <Route path="/approval/:token" element={<ApprovalPublic />} />
+            <Route path="/survey/:token" element={<SurveyPublic />} />
 
-          {/* Portal Route (protected, separate layout) */}
-          <Route
-            path="/portal"
-            element={
-              <ProtectedRoute>
-                <PortalPage />
-              </ProtectedRoute>
-            }
-          />
+            {/* Portal Route (protected, separate layout) */}
+            <Route
+              path="/portal"
+              element={
+                <ProtectedRoute>
+                  <PortalPage />
+                </ProtectedRoute>
+              }
+            />
 
-          {/* Protected Routes inside Layout */}
-          <Route
-            element={
-              <ProtectedRoute>
-                <Layout />
-              </ProtectedRoute>
-            }
-          >
-            <Route path="/" element={<RootRedirect />} />
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/tickets" element={<TicketList />} />
-            <Route path="/tickets/new" element={<TicketCreate />} />
-            <Route path="/tickets/:id" element={<TicketDetail />} />
-            <Route path="/clients" element={<ClientList />} />
-            <Route path="/clients/new" element={<ClientDetail />} />
-            <Route path="/clients/:id/edit" element={<ClientEdit />} />
-            <Route path="/contracts" element={<ContractList />} />
-            <Route path="/contracts/dashboard" element={<ContractsDashboard />} />
-            <Route path="/contracts/new" element={<ContractDetail />} />
-            <Route path="/contracts/:id" element={<ContractView />} />
-            <Route path="/contracts/:id/edit" element={<ContractEdit />} />
-            <Route path="/team" element={<TeamList />} />
-            <Route path="/team/new" element={<TeamDetail />} />
-            <Route path="/queues" element={<QueueManagement />} />
-            <Route path="/categories" element={<CategoryManagement />} />
-            <Route path="/activity-catalog" element={<ActivityCatalog />} />
-            <Route path="/sla-dashboard" element={<SlaDashboard />} />
-            <Route path="/recurrent-activities" element={<RecurrentActivities />} />
-            <Route path="/reports" element={<ReportsPage />} />
-            <Route path="/sla-goals" element={<SlaGoalsPage />} />
-            <Route path="/scheduled-reports" element={<ScheduledReportsPage />} />
-            <Route path="/reports/unit" element={<UnitReportsPage />} />
-            <Route path="/knowledge-base" element={<KnowledgeBase />} />
-            <Route path="/cmdb" element={<CmdbDashboard />} />
-            <Route path="/cmdb/assets" element={<CiList />} />
-            <Route path="/cmdb/assets/new" element={<CiCreate />} />
-            <Route path="/cmdb/assets/:id" element={<CiDetail />} />
-            <Route path="/cmdb/import" element={<CiImport />} />
-            <Route path="/cmdb/types" element={<CiTypes />} />
-            <Route path="/approvals" element={<ApprovalList />} />
-            <Route path="/visits" element={<VisitList />} />
-            <Route path="/satisfaction" element={<SatisfactionDashboard />} />
-            <Route path="/settings" element={<SettingsPage />} />
-            <Route path="/settings/sla" element={<SlaSettings />} />
-            <Route path="/settings/ticket-templates" element={<TicketTemplates />} />
-            <Route path="/operator-dashboard" element={<OperatorDashboard />} />
-            <Route path="/manager-dashboard" element={<ManagerDashboard />} />
-            <Route path="/contracts/consumption" element={<ContractConsumptionDashboard />} />
-            <Route path="/blocking" element={<BlockingManagement />} />
-            <Route path="/automations" element={<AutomationList />} />
-            <Route path="/automations/dashboard" element={<AutomationDashboard />} />
-            <Route path="/automations/:id/edit" element={<AutomationEditor />} />
-            <Route path="/approval-center" element={<ApprovalCenter />} />
-            <Route path="/agenda-tecnica" element={<TechnicalAgenda />} />
-            <Route path="/visits/dashboard" element={<VisitManagerDashboard />} />
-            <Route path="/visits/technician-dashboard" element={<TechnicianDashboardPage />} />
-            <Route path="/visits/travel-dashboard" element={<TravelDashboard />} />
-            <Route path="/visits/reimbursement-dashboard" element={<ReimbursementDashboard />} />
-            <Route path="/visits/map" element={<OperationalMap />} />
-          </Route>
+            {/* Protected Routes inside Layout */}
+            <Route
+              element={
+                <ProtectedRoute>
+                  <Layout />
+                </ProtectedRoute>
+              }
+            >
+              <Route path="/" element={<RootRedirect />} />
+              <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/tickets" element={<TicketList />} />
+              <Route path="/tickets/new" element={<TicketCreate />} />
+              <Route path="/tickets/:id" element={<TicketDetail />} />
+              <Route path="/clients" element={<ClientList />} />
+              <Route path="/clients/new" element={<ClientDetail />} />
+              <Route path="/clients/:id/edit" element={<ClientEdit />} />
+              <Route path="/contracts" element={<ContractList />} />
+              <Route path="/contracts/dashboard" element={<ContractsDashboard />} />
+              <Route path="/contracts/new" element={<ContractDetail />} />
+              <Route path="/contracts/:id" element={<ContractView />} />
+              <Route path="/contracts/:id/edit" element={<ContractEdit />} />
+              <Route path="/team" element={<TeamList />} />
+              <Route path="/team/new" element={<TeamDetail />} />
+              <Route path="/queues" element={<QueueManagement />} />
+              <Route path="/categories" element={<CategoryManagement />} />
+              <Route path="/activity-catalog" element={<ActivityCatalog />} />
+              <Route path="/sla-dashboard" element={<SlaDashboard />} />
+              <Route path="/recurrent-activities" element={<RecurrentActivities />} />
+              <Route path="/reports" element={<ReportsPage />} />
+              <Route path="/sla-goals" element={<SlaGoalsPage />} />
+              <Route path="/scheduled-reports" element={<ScheduledReportsPage />} />
+              <Route path="/reports/unit" element={<UnitReportsPage />} />
+              <Route path="/knowledge-base" element={<KnowledgeBase />} />
+              <Route path="/cmdb" element={<CmdbDashboard />} />
+              <Route path="/cmdb/assets" element={<CiList />} />
+              <Route path="/cmdb/assets/new" element={<CiCreate />} />
+              <Route path="/cmdb/assets/:id" element={<CiDetail />} />
+              <Route path="/cmdb/import" element={<CiImport />} />
+              <Route path="/cmdb/types" element={<CiTypes />} />
+              <Route path="/approvals" element={<ApprovalList />} />
+              <Route path="/visits" element={<VisitList />} />
+              <Route path="/satisfaction" element={<SatisfactionDashboard />} />
+              <Route path="/settings" element={<SettingsPage />} />
+              <Route path="/settings/sla" element={<SlaSettings />} />
+              <Route path="/settings/ticket-templates" element={<TicketTemplates />} />
+              <Route path="/operator-dashboard" element={<OperatorDashboard />} />
+              <Route path="/manager-dashboard" element={<ManagerDashboard />} />
+              <Route path="/contracts/consumption" element={<ContractConsumptionDashboard />} />
+              <Route path="/blocking" element={<BlockingManagement />} />
+              <Route path="/automations" element={<AutomationList />} />
+              <Route path="/automations/dashboard" element={<AutomationDashboard />} />
+              <Route path="/automations/:id/edit" element={<AutomationEditor />} />
+              <Route path="/approval-center" element={<ApprovalCenter />} />
+              <Route path="/agenda-tecnica" element={<TechnicalAgenda />} />
+              <Route path="/visits/dashboard" element={<VisitManagerDashboard />} />
+              <Route path="/visits/technician-dashboard" element={<TechnicianDashboardPage />} />
+              <Route path="/visits/travel-dashboard" element={<TravelDashboard />} />
+              <Route path="/visits/reimbursement-dashboard" element={<ReimbursementDashboard />} />
+              <Route path="/visits/map" element={<OperationalMap />} />
+            </Route>
 
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </TooltipProvider>
-    </AuthProvider>
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </TooltipProvider>
+      </AuthProvider>
+    </ThemeProvider>
   </BrowserRouter>
 )
 

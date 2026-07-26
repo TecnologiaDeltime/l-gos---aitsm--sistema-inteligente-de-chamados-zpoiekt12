@@ -120,7 +120,7 @@ export function DelegateDialog({ ticketId, open, onOpenChange, onDelegated }: De
                         <span className="text-sm font-medium">{u.name || 'Sem nome'}</span>
                         <span className="text-xs text-slate-500">{u.email}</span>
                       </div>
-                      {selectedId === u.id && <Check className="h-4 w-4 text-blue-600" />}
+                      {selectedId === u.id && <Check className="h-4 w-4 text-amber-500" />}
                     </div>
                   </CommandItem>
                 ))}
@@ -136,7 +136,7 @@ export function DelegateDialog({ ticketId, open, onOpenChange, onDelegated }: De
                           <span className="text-xs text-slate-500">{q.description}</span>
                         )}
                       </div>
-                      {selectedId === q.id && <Check className="h-4 w-4 text-blue-600" />}
+                      {selectedId === q.id && <Check className="h-4 w-4 text-amber-500" />}
                     </div>
                   </CommandItem>
                 ))}
@@ -162,7 +162,7 @@ export function DelegateDialog({ ticketId, open, onOpenChange, onDelegated }: De
           <Button
             onClick={handleConfirm}
             disabled={!selectedId || loading}
-            className="bg-blue-600 hover:bg-blue-700"
+            className="bg-amber-500 hover:bg-amber-400 text-slate-900"
           >
             Confirmar
           </Button>

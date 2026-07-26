@@ -7,36 +7,36 @@ interface PriorityBadgeProps {
 const PRIORITY_CONFIG: Record<string, { label: string; dot: string; className: string }> = {
   Crítica: {
     label: 'Crítica',
-    dot: 'bg-red-600',
+    dot: 'bg-red-500',
     className:
-      'bg-red-50 text-red-700 border-red-200 dark:bg-red-950/40 dark:text-red-300 dark:border-red-900',
+      'bg-red-100 text-red-700 border-red-200 dark:bg-red-500/15 dark:text-red-400 dark:border-red-500/30',
   },
   Alta: {
     label: 'Alta',
-    dot: 'bg-orange-500',
+    dot: 'bg-amber-500',
     className:
-      'bg-orange-50 text-orange-700 border-orange-200 dark:bg-orange-950/40 dark:text-orange-300 dark:border-orange-900',
+      'bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-500/15 dark:text-amber-400 dark:border-amber-500/30',
   },
   Média: {
     label: 'Média',
-    dot: 'bg-amber-400',
+    dot: 'bg-yellow-500',
     className:
-      'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-900',
+      'bg-yellow-100 text-yellow-700 border-yellow-200 dark:bg-yellow-500/10 dark:text-yellow-400 dark:border-yellow-500/20',
   },
   Baixa: {
     label: 'Baixa',
-    dot: 'bg-blue-500',
+    dot: 'bg-slate-500',
     className:
-      'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/40 dark:text-blue-300 dark:border-blue-900',
+      'bg-slate-100 text-slate-600 border-slate-200 dark:bg-slate-500/10 dark:text-slate-400 dark:border-slate-500/20',
   },
 }
 
 export function PriorityBadge({ priority }: PriorityBadgeProps) {
   const config = PRIORITY_CONFIG[priority] || {
     label: priority || 'Média',
-    dot: 'bg-slate-400',
+    dot: 'bg-slate-500',
     className:
-      'bg-slate-50 text-slate-700 border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700',
+      'bg-slate-100 text-slate-600 border-slate-200 dark:bg-slate-500/10 dark:text-slate-400 dark:border-slate-500/20',
   }
 
   return (

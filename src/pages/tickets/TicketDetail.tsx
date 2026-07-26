@@ -355,7 +355,7 @@ export default function TicketDetail() {
       <div className="space-y-6 lg:col-span-2">
         <div className="itsm-card p-6 space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100">
+            <h2 className="text-xl font-bold text-slate-100">
               #{ticket.number} - {ticket.title}
             </h2>
             <div className="flex items-center gap-2">
@@ -363,15 +363,15 @@ export default function TicketDetail() {
               <StatusBadge status={ticket.status} />
             </div>
           </div>
-          <p className="text-xs text-slate-500">
-            Aberto por <span className="font-semibold text-slate-700">{ticket.requester_name}</span>{' '}
+          <p className="text-xs text-slate-400">
+            Aberto por <span className="font-semibold text-slate-300">{ticket.requester_name}</span>{' '}
             em {new Date(ticket.created).toLocaleString('pt-BR')}
           </p>
-          <div className="rounded-lg bg-slate-50 p-4 text-sm text-slate-700 border border-slate-200 dark:bg-slate-800/50 dark:text-slate-300 dark:border-slate-700">
+          <div className="rounded-lg bg-slate-800/50 p-4 text-sm text-slate-300 border border-slate-700/50">
             {ticket.description}
           </div>
-          <div className="flex items-center gap-3 rounded-lg border border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-900">
-            <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+          <div className="flex items-center gap-3 rounded-lg border border-slate-700/50 bg-slate-800/50 p-3">
+            <span className="text-xs font-semibold uppercase tracking-wide text-slate-400">
               Operador
             </span>
             <div className="flex items-center gap-2">
@@ -381,11 +381,11 @@ export default function TicketDetail() {
                     src={`${import.meta.env.VITE_POCKETBASE_URL}/api/files/users/${ticket.expand.assigned_to.id}/${ticket.expand.assigned_to.avatar}`}
                   />
                 )}
-                <AvatarFallback className="bg-blue-600 text-[10px] text-white">
+                <AvatarFallback className="bg-amber-500 text-[10px] text-slate-900">
                   {ticket.expand?.assigned_to?.name?.substring(0, 2).toUpperCase() || '?'}
                 </AvatarFallback>
               </Avatar>
-              <span className="text-sm font-medium text-slate-900 dark:text-slate-100">
+              <span className="text-sm font-medium text-slate-200">
                 {ticket.expand?.assigned_to?.name || 'Não atribuído'}
               </span>
             </div>
@@ -396,7 +396,7 @@ export default function TicketDetail() {
               <span>Ativo: </span>
               <Link
                 to={`/cmdb/assets/${ticket.equipment}`}
-                className="text-blue-600 hover:underline font-medium"
+                className="text-amber-500 hover:underline font-medium"
               >
                 {ticket.expand.equipment.name} ({ticket.expand.equipment.hostname || 'sem hostname'}
                 )
@@ -411,7 +411,7 @@ export default function TicketDetail() {
                 <Button
                   size="sm"
                   onClick={handleStartService}
-                  className="bg-blue-600 hover:bg-blue-700"
+                  className="bg-amber-500 hover:bg-amber-400 text-slate-900"
                 >
                   <PlayCircle className="mr-1.5 h-4 w-4" /> Iniciar Atendimento
                 </Button>
@@ -456,11 +456,9 @@ export default function TicketDetail() {
             <TabsTrigger value="history">Histórico</TabsTrigger>
           </TabsList>
           <TabsContent value="interactions" className="pt-4 space-y-4">
-            <div className="flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50 px-4 py-2 dark:bg-slate-800/50 dark:border-slate-700">
-              <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">
-                Total de Horas
-              </span>
-              <span className="text-sm font-bold tabular-nums text-slate-900 dark:text-slate-100">
+            <div className="flex items-center justify-between rounded-lg border border-slate-700/50 bg-slate-800/50 px-4 py-2">
+              <span className="text-sm font-semibold text-slate-300">Total de Horas</span>
+              <span className="text-sm font-bold tabular-nums text-amber-400">
                 Total: {totalHoursDisplay}
               </span>
             </div>
@@ -468,10 +466,10 @@ export default function TicketDetail() {
               {interactions.map((i) => (
                 <div
                   key={i.id}
-                  className="rounded-lg border p-4 text-xs space-y-1 bg-white dark:bg-slate-900"
+                  className="rounded-lg border border-slate-700/50 p-4 text-xs space-y-1 bg-slate-900"
                 >
                   <div className="flex justify-between items-center">
-                    <span className="font-bold text-slate-800">
+                    <span className="font-bold text-slate-200">
                       {i.expand?.author?.name || 'Usuário'}
                     </span>
                     <div className="flex items-center gap-2">
@@ -503,7 +501,7 @@ export default function TicketDetail() {
                       )}
                     </div>
                   </div>
-                  <p className="text-slate-700">{i.content}</p>
+                  <p className="text-slate-300">{i.content}</p>
                   {i.duration_minutes > 0 && (
                     <div className="flex items-center gap-2 pt-1 text-slate-500">
                       <Clock className="h-3 w-3" />
@@ -520,7 +518,7 @@ export default function TicketDetail() {
                 </div>
               ))}
             </div>
-            <div className="rounded-lg border border-slate-200 bg-white p-4 space-y-3 dark:border-slate-800 dark:bg-slate-900">
+            <div className="rounded-lg border border-slate-700/50 bg-slate-900 p-4 space-y-3">
               <Textarea
                 placeholder="Escreva uma resposta ou nota interna..."
                 value={comment}
@@ -654,22 +652,23 @@ export default function TicketDetail() {
               visits.map((v) => (
                 <div
                   key={v.id}
-                  className="rounded-lg border border-slate-200 p-4 text-xs space-y-1 bg-white dark:bg-slate-900 dark:border-slate-800"
+                  className="rounded-lg border border-slate-700/50 p-4 text-xs space-y-1 bg-slate-900"
                 >
                   <div className="flex justify-between items-center">
                     <Badge variant="outline">{v.status}</Badge>
                     <span className="text-slate-400">
+                      {' '}
                       {v.scheduled_date
                         ? new Date(v.scheduled_date).toLocaleDateString('pt-BR')
                         : ''}{' '}
                       {v.scheduled_time || ''}
                     </span>
                   </div>
-                  <p className="text-slate-600">
+                  <p className="text-slate-400">
                     <MapPin className="inline h-3 w-3" /> {v.client_address || '-'}
                   </p>
-                  <p className="text-slate-600">Técnico: {v.expand?.technician?.name || '-'}</p>
-                  {v.materials && <p className="text-slate-600">Materiais: {v.materials}</p>}
+                  <p className="text-slate-400">Técnico: {v.expand?.technician?.name || '-'}</p>
+                  {v.materials && <p className="text-slate-400">Materiais: {v.materials}</p>}
                 </div>
               ))
             )}
@@ -687,10 +686,10 @@ export default function TicketDetail() {
                 return (
                   <div
                     key={h.id}
-                    className="rounded-lg border border-slate-200 p-4 text-xs space-y-1 bg-white dark:bg-slate-900 dark:border-slate-800"
+                    className="rounded-lg border border-slate-700/50 p-4 text-xs space-y-1 bg-slate-900"
                   >
                     <div className="flex justify-between items-center">
-                      <span className="font-semibold text-slate-800 flex items-center gap-1.5">
+                      <span className="font-semibold text-slate-200 flex items-center gap-1.5">
                         <History className="h-3.5 w-3.5 text-slate-400" />
                         {h.action}
                       </span>
@@ -706,7 +705,7 @@ export default function TicketDetail() {
                         )}
                       </p>
                     ) : (
-                      <p className="text-slate-600">
+                      <p className="text-slate-400">
                         {h.field && <span className="font-medium">{h.field}: </span>}
                         {h.old_value || '—'} → {h.new_value || '—'}
                       </p>
@@ -795,7 +794,7 @@ export default function TicketDetail() {
                 <Server className="h-4 w-4 text-slate-400" /> Ativo:{' '}
                 <Link
                   to={`/cmdb/assets/${ticket.equipment}`}
-                  className="text-blue-600 hover:underline"
+                  className="text-amber-500 hover:underline"
                 >
                   {ticket.expand.equipment.name}
                 </Link>
@@ -810,7 +809,7 @@ export default function TicketDetail() {
           {ticket.contract && ticket.expand?.contract ? (
             <Link
               to={`/contracts/${ticket.contract}`}
-              className="flex items-center gap-2 text-xs text-blue-600 hover:underline"
+              className="flex items-center gap-2 text-xs text-amber-500 hover:underline"
             >
               <FileText className="h-4 w-4" />
               {ticket.expand.contract.number}
