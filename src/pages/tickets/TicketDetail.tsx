@@ -72,6 +72,7 @@ import { SlaDetailBlock } from '@/components/SlaDetailBlock'
 import { computeSlaResponseStatus, computeSlaSolutionStatus } from '@/lib/sla-status'
 import { ApprovalDialog } from '@/components/ApprovalDialog'
 import { VisitDialog } from '@/components/VisitDialog'
+import { SlaPauseDialog, STATUS_BY_REASON } from '@/components/SlaPauseDialog'
 import { useAuth } from '@/hooks/use-auth'
 import { usePermissions } from '@/hooks/use-permissions'
 import { useRealtime } from '@/hooks/use-realtime'
@@ -106,6 +107,7 @@ export default function TicketDetail() {
   const [showDelegate, setShowDelegate] = useState(false)
   const [categoryData, setCategoryData] = useState<CategoryRecord | null>(null)
   const [showResolve, setShowResolve] = useState(false)
+  const [showSlaPause, setShowSlaPause] = useState(false)
   const [commentTemplates, setCommentTemplates] = useState<TicketTemplateRecord[]>([])
   const [selectedCommentTemplate, setSelectedCommentTemplate] =
     useState<TicketTemplateRecord | null>(null)
@@ -250,22 +252,23 @@ export default function TicketDetail() {
     toast({ title: `Status alterado para: ${newStatus}` })
   }
 
-  const handlePauseSla = async () => {
+  const handlePauseSla = async (reason: string, justification: string) => {
     if (!id || !user) return
+    const newStatus = STATUS_BY_REASON[reason] || 'Aguardando Cliente'
     await createSlaPause({
       ticket: id,
-      reason: 'Aguardando Cliente',
-      justification: 'Aguardando envio de logs',
+      reason,
+      justification,
       paused_by: user.id,
       paused_at: new Date().toISOString(),
     })
     await updateTicket(id, {
       sla_paused: true,
       sla_status: 'Pausado',
-      status: 'Aguardando Cliente',
+      status: newStatus,
     })
     loadData()
-    toast({ title: 'SLA Pausado' })
+    toast({ title: `SLA Pausado — Motivo: ${reason}` })
   }
 
   const handleResumeSla = async () => {
@@ -418,7 +421,7 @@ export default function TicketDetail() {
                 <PlayCircle className="mr-1.5 h-4 w-4 text-green-600" /> Retomar SLA
               </Button>
             ) : (
-              <Button size="sm" variant="outline" onClick={handlePauseSla}>
+              <Button size="sm" variant="outline" onClick={() => setShowSlaPause(true)}>
                 <PauseCircle className="mr-1.5 h-4 w-4 text-amber-600" /> Pausar SLA
               </Button>
             )}
@@ -875,6 +878,11 @@ export default function TicketDetail() {
         open={showResolve}
         onOpenChange={setShowResolve}
         onResolved={loadData}
+      />
+      <SlaPauseDialog
+        open={showSlaPause}
+        onOpenChange={setShowSlaPause}
+        onConfirm={handlePauseSla}
       />
     </div>
   )
