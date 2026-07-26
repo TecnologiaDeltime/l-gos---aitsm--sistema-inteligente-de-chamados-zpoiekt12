@@ -61,10 +61,32 @@ export const updateTicket = (id: string, data: Partial<TicketRecord>) =>
 
 export const deleteTicket = (id: string) => pb.collection('tickets').delete(id)
 
-export const delegateTicket = (ticketId: string, type: 'technician' | 'queue', targetId: string) =>
+export const delegateTicket = (
+  ticketId: string,
+  type: 'technician' | 'queue',
+  targetId: string,
+  reason?: string,
+) =>
   pb.send(`/backend/v1/tickets/${ticketId}/delegate`, {
     method: 'POST',
-    body: JSON.stringify({ type, target_id: targetId }),
+    body: JSON.stringify({ type, target_id: targetId, reason: reason || '' }),
+    headers: { 'Content-Type': 'application/json' },
+  })
+
+export const batchDelegateTickets = (
+  ticketIds: string[],
+  type: 'technician' | 'queue',
+  targetId: string,
+  reason?: string,
+) =>
+  pb.send(`/backend/v1/tickets/batch-delegate`, {
+    method: 'POST',
+    body: JSON.stringify({
+      ticket_ids: ticketIds,
+      type,
+      target_id: targetId,
+      reason: reason || '',
+    }),
     headers: { 'Content-Type': 'application/json' },
   })
 

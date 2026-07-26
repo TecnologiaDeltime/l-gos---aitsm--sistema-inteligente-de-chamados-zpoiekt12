@@ -17,6 +17,7 @@ import {
   Pencil,
   Loader2,
   Forward,
+  History,
 } from 'lucide-react'
 import { Skeleton } from '@/components/ui/skeleton'
 import { RequesterInfo } from '@/components/RequesterInfo'
@@ -51,6 +52,7 @@ import {
   updateTicket,
   createSlaPause,
   startService,
+  getTicketHistory,
   TicketRecord,
 } from '@/services/tickets'
 import { HOUR_TYPES, BILLING_STATUSES } from '@/services/ticket-interactions'
@@ -79,6 +81,7 @@ export default function TicketDetail() {
   const [ticket, setTicket] = useState<TicketRecord | null>(null)
   const [interactions, setInteractions] = useState<any[]>([])
   const [visits, setVisits] = useState<any[]>([])
+  const [history, setHistory] = useState<any[]>([])
   const [comment, setComment] = useState('')
   const [isInternal, setIsInternal] = useState(false)
   const [timeSpent, setTimeSpent] = useState('')
@@ -109,6 +112,9 @@ export default function TicketDetail() {
     getTicketVisits(id)
       .then(setVisits)
       .catch(() => {})
+    getTicketHistory(id)
+      .then(setHistory)
+      .catch(() => {})
   }
   useEffect(() => {
     loadData()
@@ -121,6 +127,7 @@ export default function TicketDetail() {
   useRealtime('tickets', () => loadData())
   useRealtime('ticket_interactions', () => loadData())
   useRealtime('technical_visits', () => loadData())
+  useRealtime('ticket_history', () => loadData())
 
   useEffect(() => {
     if (!timerRunning || !timerStart) return
@@ -420,6 +427,7 @@ export default function TicketDetail() {
           <TabsList className="w-full justify-start border-b rounded-none p-0 bg-transparent">
             <TabsTrigger value="interactions">Interações ({interactions.length})</TabsTrigger>
             <TabsTrigger value="visits">Visitas ({visits.length})</TabsTrigger>
+            <TabsTrigger value="history">Histórico</TabsTrigger>
           </TabsList>
           <TabsContent value="interactions" className="pt-4 space-y-4">
             <div className="flex items-center justify-between rounded-lg bg-slate-50 px-4 py-2 dark:bg-slate-800">
@@ -609,6 +617,49 @@ export default function TicketDetail() {
                   {v.materials && <p className="text-slate-600">Materiais: {v.materials}</p>}
                 </div>
               ))
+            )}
+          </TabsContent>
+          <TabsContent value="history" className="pt-4 space-y-3">
+            {history.length === 0 ? (
+              <p className="text-center text-sm text-slate-500 p-4">Nenhum histórico registrado.</p>
+            ) : (
+              history.map((h) => {
+                const isDelegation = h.action === 'Delegação' || h.action === 'Delegação em lote'
+                const rawNew = h.new_value || ''
+                const reasonMatch = rawNew.match(/\s*\|\s*Motivo:\s*(.+)$/)
+                const reason = reasonMatch ? reasonMatch[1] : ''
+                const cleanNew = rawNew.replace(/\s*\|\s*Motivo:\s*.+$/, '')
+                return (
+                  <div
+                    key={h.id}
+                    className="rounded-lg border p-4 text-xs space-y-1 bg-white dark:bg-slate-900"
+                  >
+                    <div className="flex justify-between items-center">
+                      <span className="font-semibold text-slate-800 flex items-center gap-1.5">
+                        <History className="h-3.5 w-3.5 text-slate-400" />
+                        {h.action}
+                      </span>
+                      <span className="text-slate-400">
+                        {new Date(h.created).toLocaleString('pt-BR')}
+                      </span>
+                    </div>
+                    {isDelegation ? (
+                      <p className="text-slate-600">
+                        De &ldquo;{h.old_value || 'Ninguém'}&rdquo; para &ldquo;{cleanNew}&rdquo;
+                        {reason && (
+                          <span className="text-slate-500 italic"> (Motivo: {reason})</span>
+                        )}
+                      </p>
+                    ) : (
+                      <p className="text-slate-600">
+                        {h.field && <span className="font-medium">{h.field}: </span>}
+                        {h.old_value || '—'} → {h.new_value || '—'}
+                      </p>
+                    )}
+                    {h.expand?.user && <p className="text-slate-400">Por: {h.expand.user.name}</p>}
+                  </div>
+                )
+              })
             )}
           </TabsContent>
         </Tabs>

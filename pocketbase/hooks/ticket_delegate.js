@@ -6,6 +6,7 @@ routerAdd(
     const body = e.requestInfo().body || {}
     const type = body.type
     const targetId = body.target_id
+    const reason = body.reason || ''
     const delegatorId = e.auth ? e.auth.id : ''
 
     if (!ticketId || !type || !targetId || !delegatorId) {
@@ -45,7 +46,7 @@ routerAdd(
         history.set('action', 'Delegação')
         history.set('field', 'assigned_to')
         history.set('old_value', oldAssignedName)
-        history.set('new_value', newTechName)
+        history.set('new_value', reason ? newTechName + ' | Motivo: ' + reason : newTechName)
         $app.save(history)
 
         const notifCol = $app.findCollectionByNameOrId('notifications')
@@ -143,7 +144,7 @@ routerAdd(
         history2.set('action', 'Delegação')
         history2.set('field', 'queue')
         history2.set('old_value', oldQueueName)
-        history2.set('new_value', newQueueName)
+        history2.set('new_value', reason ? newQueueName + ' | Motivo: ' + reason : newQueueName)
         $app.save(history2)
 
         var recipients = []

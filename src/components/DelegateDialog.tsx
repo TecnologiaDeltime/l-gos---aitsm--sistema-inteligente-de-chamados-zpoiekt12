@@ -8,6 +8,8 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import {
   Command,
   CommandEmpty,
@@ -22,7 +24,6 @@ import { getQueues, QueueRecord } from '@/services/queues'
 import { delegateTicket } from '@/services/tickets'
 import { useToast } from '@/hooks/use-toast'
 import { getErrorMessage } from '@/lib/pocketbase/errors'
-import { cn } from '@/lib/utils'
 
 interface DelegateDialogProps {
   ticketId: string
@@ -37,11 +38,13 @@ export function DelegateDialog({ ticketId, open, onOpenChange, onDelegated }: De
   const [users, setUsers] = useState<UserItem[]>([])
   const [queues, setQueues] = useState<QueueRecord[]>([])
   const [selectedId, setSelectedId] = useState<string>('')
+  const [reason, setReason] = useState('')
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
     if (!open) return
     setSelectedId('')
+    setReason('')
     getUsers("(role = 'tecnico' || role = 'gestor' || role = 'admin') && active = true")
       .then(setUsers)
       .catch(() => {})
@@ -54,7 +57,7 @@ export function DelegateDialog({ ticketId, open, onOpenChange, onDelegated }: De
     if (!selectedId) return
     setLoading(true)
     try {
-      await delegateTicket(ticketId, mode, selectedId)
+      await delegateTicket(ticketId, mode, selectedId, reason || undefined)
       toast({
         title:
           mode === 'technician'
@@ -63,6 +66,7 @@ export function DelegateDialog({ ticketId, open, onOpenChange, onDelegated }: De
       })
       onOpenChange(false)
       setSelectedId('')
+      setReason('')
       onDelegated()
     } catch (err) {
       toast({
@@ -140,6 +144,17 @@ export function DelegateDialog({ ticketId, open, onOpenChange, onDelegated }: De
             )}
           </CommandList>
         </Command>
+        <div className="space-y-1.5">
+          <Label className="text-xs text-slate-600 dark:text-slate-400">
+            Motivo da delegação (opcional)
+          </Label>
+          <Input
+            placeholder="ex: sobrecarga, especialidade técnica"
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
+            className="h-9 text-sm"
+          />
+        </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>
             Cancelar

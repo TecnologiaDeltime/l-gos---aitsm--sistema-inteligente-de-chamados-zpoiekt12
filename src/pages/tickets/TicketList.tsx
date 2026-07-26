@@ -10,10 +10,12 @@ import {
   Volume2,
   VolumeX,
   WifiOff,
+  Forward,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Checkbox } from '@/components/ui/checkbox'
 import {
   Select,
   SelectContent,
@@ -26,10 +28,10 @@ import { PriorityBadge } from '@/components/PriorityBadge'
 import { StatusBadge } from '@/components/StatusBadge'
 import { SlaProgressBar } from '@/components/SlaProgressBar'
 import { KanbanBoard } from '@/components/KanbanBoard'
+import { BatchDelegateDialog } from '@/components/BatchDelegateDialog'
 import { useRealtime } from '@/hooks/use-realtime'
 import { usePermissions } from '@/hooks/use-permissions'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
-import { Checkbox } from '@/components/ui/checkbox'
 import { KANBAN_COLUMNS } from '@/lib/kanban-constants'
 import { getHiddenColumns, setHiddenColumns } from '@/lib/kanban-columns'
 import { useToast } from '@/hooks/use-toast'
@@ -45,6 +47,8 @@ export default function TicketList() {
   const [contractSearch, setContractSearch] = useState('')
   const [hiddenColumns, setHiddenColumnsState] = useState<string[]>([])
   const [soundOn, setSoundOn] = useState(isSoundEnabled())
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [showBatchDelegate, setShowBatchDelegate] = useState(false)
   const { canResolveTicket } = usePermissions()
   const { toast } = useToast()
   const pbConnected = usePbHealth()
@@ -112,6 +116,27 @@ export default function TicketList() {
       (t.expand?.company?.trade_name || '').toLowerCase().includes(contractSearch.toLowerCase())
     return ms && mSt && mC
   })
+
+  const allFilteredSelected = filtered.length > 0 && filtered.every((t) => selectedIds.has(t.id))
+  const someFilteredSelected = filtered.some((t) => selectedIds.has(t.id)) && !allFilteredSelected
+
+  const toggleSelectAll = () => {
+    if (allFilteredSelected) {
+      setSelectedIds(new Set())
+    } else {
+      setSelectedIds(new Set(filtered.map((t) => t.id)))
+    }
+  }
+
+  const toggleSelectOne = (id: string) => {
+    const next = new Set(selectedIds)
+    if (next.has(id)) {
+      next.delete(id)
+    } else {
+      next.add(id)
+    }
+    setSelectedIds(next)
+  }
 
   if (loading) {
     return (
@@ -185,6 +210,16 @@ export default function TicketList() {
           >
             <List className="mr-1.5 h-4 w-4" /> Tabela
           </Button>
+          {view === 'table' && selectedIds.size > 0 && (
+            <Button
+              variant="default"
+              size="sm"
+              onClick={() => setShowBatchDelegate(true)}
+              className="bg-indigo-600 hover:bg-indigo-700"
+            >
+              <Forward className="mr-1.5 h-4 w-4" /> Delegar em lote ({selectedIds.size})
+            </Button>
+          )}
           {view === 'kanban' && (
             <Popover>
               <PopoverTrigger asChild>
@@ -242,6 +277,14 @@ export default function TicketList() {
             <table className="w-full text-left text-xs text-slate-600">
               <thead className="bg-slate-50 border-b font-semibold text-slate-700 dark:bg-slate-800">
                 <tr>
+                  <th className="p-3.5 w-10">
+                    <Checkbox
+                      checked={
+                        allFilteredSelected ? true : someFilteredSelected ? 'indeterminate' : false
+                      }
+                      onCheckedChange={toggleSelectAll}
+                    />
+                  </th>
                   <th className="p-3.5">Nº</th>
                   <th className="p-3.5">Título</th>
                   <th className="p-3.5">Cliente</th>
@@ -254,13 +297,19 @@ export default function TicketList() {
               <tbody className="divide-y">
                 {filtered.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="p-8 text-center text-slate-500">
+                    <td colSpan={8} className="p-8 text-center text-slate-500">
                       Nenhum chamado encontrado.
                     </td>
                   </tr>
                 ) : (
                   filtered.map((t) => (
                     <tr key={t.id} className="hover:bg-slate-50/60 dark:hover:bg-slate-800/50">
+                      <td className="p-3.5 w-10">
+                        <Checkbox
+                          checked={selectedIds.has(t.id)}
+                          onCheckedChange={() => toggleSelectOne(t.id)}
+                        />
+                      </td>
                       <td className="p-3.5 font-bold text-blue-600">
                         <Link to={`/tickets/${t.id}`}>#{t.number}</Link>
                       </td>
@@ -288,6 +337,15 @@ export default function TicketList() {
           </div>
         </div>
       )}
+      <BatchDelegateDialog
+        ticketIds={Array.from(selectedIds)}
+        open={showBatchDelegate}
+        onOpenChange={setShowBatchDelegate}
+        onDelegated={() => {
+          setSelectedIds(new Set())
+          loadData()
+        }}
+      />
     </div>
   )
 }
