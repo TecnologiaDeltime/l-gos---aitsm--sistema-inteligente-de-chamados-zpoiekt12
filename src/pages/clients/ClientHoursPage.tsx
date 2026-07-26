@@ -3,9 +3,10 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Button } from '@/components/ui/button'
 import { ClientHoursBreakdownDialog } from '@/components/ClientHoursBreakdownDialog'
+import { ClientHoursHistoryDialog } from '@/components/ClientHoursHistoryDialog'
 import { getClientHoursData, type ClientHoursData } from '@/services/client-hours'
 import { useRealtime } from '@/hooks/use-realtime'
-import { AlertCircle, RefreshCw, ChevronRight, Building2 } from 'lucide-react'
+import { AlertCircle, RefreshCw, ChevronRight, Building2, History } from 'lucide-react'
 
 function getColorClass(pct: number) {
   if (pct >= 100) return 'text-red-500'
@@ -18,6 +19,7 @@ export default function ClientHoursPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [selectedClient, setSelectedClient] = useState<{ id: string; name: string } | null>(null)
+  const [historyClient, setHistoryClient] = useState<{ id: string; name: string } | null>(null)
 
   const loadData = useCallback(async () => {
     setLoading(true)
@@ -95,6 +97,9 @@ export default function ClientHoursPage() {
                       <th className="text-center p-4 text-xs font-medium text-muted-foreground">
                         % Consumo
                       </th>
+                      <th className="text-center p-4 text-xs font-medium text-muted-foreground">
+                        Histórico
+                      </th>
                       <th className="w-10" />
                     </tr>
                   </thead>
@@ -119,6 +124,23 @@ export default function ClientHoursPage() {
                           <span className={`text-3xl font-bold ${getColorClass(item.percentage)}`}>
                             {item.percentage.toFixed(0)}%
                           </span>
+                        </td>
+                        <td className="p-4 text-center">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-7 text-xs"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              setHistoryClient({
+                                id: item.company.id,
+                                name: item.company.trade_name || item.company.legal_name,
+                              })
+                            }}
+                          >
+                            <History className="h-3.5 w-3.5 mr-1" />
+                            Ver Histórico
+                          </Button>
                         </td>
                         <td className="p-4">
                           <ChevronRight className="h-4 w-4 text-muted-foreground" />
@@ -156,6 +178,20 @@ export default function ClientHoursPage() {
                     <span>Contratado: {item.contractedHours.toFixed(1)}h</span>
                     <span>Consumido: {item.consumedHours.toFixed(1)}h</span>
                   </div>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="w-full"
+                    onClick={() =>
+                      setHistoryClient({
+                        id: item.company.id,
+                        name: item.company.trade_name || item.company.legal_name,
+                      })
+                    }
+                  >
+                    <History className="h-3.5 w-3.5 mr-1" />
+                    Ver Histórico
+                  </Button>
                 </CardContent>
               </Card>
             ))}
@@ -168,6 +204,13 @@ export default function ClientHoursPage() {
         onClose={() => setSelectedClient(null)}
         companyId={selectedClient?.id || ''}
         clientName={selectedClient?.name || ''}
+      />
+
+      <ClientHoursHistoryDialog
+        open={!!historyClient}
+        onClose={() => setHistoryClient(null)}
+        companyId={historyClient?.id || ''}
+        clientName={historyClient?.name || ''}
       />
     </div>
   )
