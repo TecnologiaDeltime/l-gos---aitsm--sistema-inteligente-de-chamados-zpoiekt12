@@ -273,12 +273,12 @@ export default function TicketList() {
           hiddenColumns={hiddenColumns}
         />
       ) : (
-        <div className="rounded-xl border bg-white shadow-sm overflow-hidden dark:bg-slate-900">
+        <div className="itsm-table-container shadow-sm">
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs text-slate-600">
-              <thead className="bg-slate-50 border-b font-semibold text-slate-700 dark:bg-slate-800">
+            <table className="w-full text-left text-xs text-slate-600 dark:text-slate-400">
+              <thead className="itsm-table-header">
                 <tr>
-                  <th className="p-3.5 w-10">
+                  <th className="px-4 py-3 w-10">
                     <Checkbox
                       checked={
                         allFilteredSelected ? true : someFilteredSelected ? 'indeterminate' : false
@@ -286,14 +286,14 @@ export default function TicketList() {
                       onCheckedChange={toggleSelectAll}
                     />
                   </th>
-                  <th className="p-3.5">Nº</th>
-                  <th className="p-3.5">Título</th>
-                  <th className="p-3.5">Cliente</th>
-                  <th className="p-3.5">Prioridade</th>
-                  <th className="p-3.5">Status</th>
-                  <th className="p-3.5">Responsável</th>
-                  <th className="p-3.5">SLA Resp.</th>
-                  <th className="p-3.5">SLA Sol.</th>
+                  <th className="px-4 py-3">Nº</th>
+                  <th className="px-4 py-3">Título</th>
+                  <th className="px-4 py-3">Cliente</th>
+                  <th className="px-4 py-3">Prioridade</th>
+                  <th className="px-4 py-3">Status</th>
+                  <th className="px-4 py-3">Responsável</th>
+                  <th className="px-4 py-3">SLA Resp.</th>
+                  <th className="px-4 py-3">SLA Sol.</th>
                 </tr>
               </thead>
               <tbody className="divide-y">
@@ -304,31 +304,40 @@ export default function TicketList() {
                     </td>
                   </tr>
                 ) : (
-                  filtered.map((t) => (
-                    <tr key={t.id} className="hover:bg-slate-50/60 dark:hover:bg-slate-800/50">
-                      <td className="p-3.5 w-10">
+                  filtered.map((t, idx) => (
+                    <tr
+                      key={t.id}
+                      className={`itsm-table-row itsm-table-row-hover ${idx % 2 === 1 ? 'itsm-table-row-alt' : ''}`}
+                    >
+                      <td className="px-4 py-3 w-10">
                         <Checkbox
                           checked={selectedIds.has(t.id)}
                           onCheckedChange={() => toggleSelectOne(t.id)}
                         />
                       </td>
-                      <td className="p-3.5 font-bold text-blue-600">
-                        <Link to={`/tickets/${t.id}`}>#{t.number}</Link>
+                      <td className="px-4 py-3 font-bold text-blue-600">
+                        <Link to={`/tickets/${t.id}`} className="hover:underline">
+                          #{t.number}
+                        </Link>
                       </td>
-                      <td className="p-3.5 font-medium text-slate-900 max-w-sm truncate dark:text-slate-100">
+                      <td className="px-4 py-3 font-medium text-slate-900 max-w-sm truncate dark:text-slate-100">
                         <Link to={`/tickets/${t.id}`} className="hover:underline">
                           {t.title}
                         </Link>
                       </td>
-                      <td className="p-3.5">{t.expand?.company?.trade_name || 'Geral'}</td>
-                      <td className="p-3.5">
+                      <td className="px-4 py-3 text-slate-600 dark:text-slate-400">
+                        {t.expand?.company?.trade_name || 'Geral'}
+                      </td>
+                      <td className="px-4 py-3">
                         <PriorityBadge priority={t.priority} />
                       </td>
-                      <td className="p-3.5">
+                      <td className="px-4 py-3">
                         <StatusBadge status={t.status} />
                       </td>
-                      <td className="p-3.5">{t.expand?.assigned_to?.name || 'Não atribuído'}</td>
-                      <td className="p-3.5">
+                      <td className="px-4 py-3 text-slate-600 dark:text-slate-400">
+                        {t.expand?.assigned_to?.name || 'Não atribuído'}
+                      </td>
+                      <td className="px-4 py-3">
                         <SlaStatusBadge
                           type="response"
                           status={computeSlaResponseStatus(t)}
@@ -336,7 +345,7 @@ export default function TicketList() {
                           completedAt={t.sla_response_at}
                         />
                       </td>
-                      <td className="p-3.5">
+                      <td className="px-4 py-3">
                         <SlaStatusBadge
                           type="solution"
                           status={computeSlaSolutionStatus(t)}
@@ -346,7 +355,7 @@ export default function TicketList() {
                       </td>
                     </tr>
                   ))
-                )}
+                )}{' '}
               </tbody>
             </table>
           </div>

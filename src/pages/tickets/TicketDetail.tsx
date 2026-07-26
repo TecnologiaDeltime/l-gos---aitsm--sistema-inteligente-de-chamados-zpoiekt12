@@ -353,7 +353,7 @@ export default function TicketDetail() {
   return (
     <div className="grid gap-6 lg:grid-cols-3">
       <div className="space-y-6 lg:col-span-2">
-        <div className="rounded-xl border bg-white p-6 shadow-sm space-y-4 dark:bg-slate-900">
+        <div className="itsm-card p-6 space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100">
               #{ticket.number} - {ticket.title}
@@ -367,10 +367,10 @@ export default function TicketDetail() {
             Aberto por <span className="font-semibold text-slate-700">{ticket.requester_name}</span>{' '}
             em {new Date(ticket.created).toLocaleString('pt-BR')}
           </p>
-          <div className="rounded-lg bg-slate-50 p-4 text-sm text-slate-800 border dark:bg-slate-800 dark:text-slate-200">
+          <div className="rounded-lg bg-slate-50 p-4 text-sm text-slate-700 border border-slate-200 dark:bg-slate-800/50 dark:text-slate-300 dark:border-slate-700">
             {ticket.description}
           </div>
-          <div className="flex items-center gap-3 rounded-lg border bg-white p-3 dark:bg-slate-900">
+          <div className="flex items-center gap-3 rounded-lg border border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-900">
             <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
               Operador
             </span>
@@ -456,7 +456,7 @@ export default function TicketDetail() {
             <TabsTrigger value="history">Histórico</TabsTrigger>
           </TabsList>
           <TabsContent value="interactions" className="pt-4 space-y-4">
-            <div className="flex items-center justify-between rounded-lg bg-slate-50 px-4 py-2 dark:bg-slate-800">
+            <div className="flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50 px-4 py-2 dark:bg-slate-800/50 dark:border-slate-700">
               <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">
                 Total de Horas
               </span>
@@ -520,7 +520,7 @@ export default function TicketDetail() {
                 </div>
               ))}
             </div>
-            <div className="rounded-lg border bg-white p-4 space-y-3 dark:bg-slate-900">
+            <div className="rounded-lg border border-slate-200 bg-white p-4 space-y-3 dark:border-slate-800 dark:bg-slate-900">
               <Textarea
                 placeholder="Escreva uma resposta ou nota interna..."
                 value={comment}
@@ -654,7 +654,7 @@ export default function TicketDetail() {
               visits.map((v) => (
                 <div
                   key={v.id}
-                  className="rounded-lg border p-4 text-xs space-y-1 bg-white dark:bg-slate-900"
+                  className="rounded-lg border border-slate-200 p-4 text-xs space-y-1 bg-white dark:bg-slate-900 dark:border-slate-800"
                 >
                   <div className="flex justify-between items-center">
                     <Badge variant="outline">{v.status}</Badge>
@@ -687,7 +687,7 @@ export default function TicketDetail() {
                 return (
                   <div
                     key={h.id}
-                    className="rounded-lg border p-4 text-xs space-y-1 bg-white dark:bg-slate-900"
+                    className="rounded-lg border border-slate-200 p-4 text-xs space-y-1 bg-white dark:bg-slate-900 dark:border-slate-800"
                   >
                     <div className="flex justify-between items-center">
                       <span className="font-semibold text-slate-800 flex items-center gap-1.5">
@@ -721,8 +721,10 @@ export default function TicketDetail() {
       </div>
       <div className="space-y-4">
         <RequesterInfo ticket={ticket} onUpdated={loadData} />
-        <div className="rounded-xl border bg-white p-4 shadow-sm space-y-4 dark:bg-slate-900">
-          <h3 className="font-semibold text-sm border-b pb-2">Controle de SLA</h3>
+        <div className="itsm-card p-4 space-y-4">
+          <h3 className="font-semibold text-sm text-slate-900 dark:text-slate-100 border-b border-slate-200 dark:border-slate-800 pb-2">
+            Controle de SLA
+          </h3>
           {categoryData && (
             <div className="flex items-center justify-between text-xs pb-2 border-b">
               <span className="text-slate-500">
@@ -801,8 +803,10 @@ export default function TicketDetail() {
             )}
           </div>
         </div>
-        <div className="rounded-xl border bg-white p-4 shadow-sm space-y-3 dark:bg-slate-900">
-          <h3 className="font-semibold text-sm border-b pb-2">Contrato Vinculado</h3>
+        <div className="itsm-card p-4 space-y-3">
+          <h3 className="font-semibold text-sm text-slate-900 dark:text-slate-100 border-b border-slate-200 dark:border-slate-800 pb-2">
+            Contrato Vinculado
+          </h3>
           {ticket.contract && ticket.expand?.contract ? (
             <Link
               to={`/contracts/${ticket.contract}`}

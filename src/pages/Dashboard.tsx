@@ -99,19 +99,32 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-6">
-      {/* KPI Cards */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100">Painel Geral</h2>
+          <p className="text-sm text-slate-500 mt-0.5">Visão geral dos chamados e SLAs</p>
+        </div>
+      </div>
+
       <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
         {kpis.map((kpi, idx) => {
           const Icon = kpi.icon
           return (
-            <Card key={idx} className="border border-slate-200">
-              <CardContent className="p-4 flex items-center justify-between">
-                <div>
-                  <p className="text-xs font-medium text-slate-500">{kpi.label}</p>
-                  <p className="text-2xl font-bold text-slate-900 mt-1">{kpi.value}</p>
+            <Card
+              key={idx}
+              className="itsm-card itsm-card-hover cursor-default transition-all duration-200"
+            >
+              <CardContent className="p-4">
+                <div className="flex items-start justify-between">
+                  <div className={`p-2.5 rounded-lg ${kpi.bg}`}>
+                    <Icon className={`h-5 w-5 ${kpi.color}`} />
+                  </div>
                 </div>
-                <div className={`p-3 rounded-xl ${kpi.bg}`}>
-                  <Icon className={`h-5 w-5 ${kpi.color}`} />
+                <div className="mt-3">
+                  <p className="text-2xl font-bold text-slate-900 dark:text-slate-100 tabular-nums">
+                    {kpi.value}
+                  </p>
+                  <p className="text-xs font-medium text-slate-500 mt-0.5">{kpi.label}</p>
                 </div>
               </CardContent>
             </Card>
@@ -119,42 +132,55 @@ export default function Dashboard() {
         })}
       </div>
 
-      {/* Recent Tickets Table */}
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between pb-2">
-          <CardTitle className="text-base font-semibold">Chamados Recentes</CardTitle>
-          <Link to="/tickets" className="text-xs text-blue-600 hover:underline flex items-center">
-            Ver Todos <ArrowUpRight className="h-3 w-3 ml-1" />
+      <Card className="itsm-card">
+        <CardHeader className="flex flex-row items-center justify-between border-b border-slate-200 pb-3 dark:border-slate-800">
+          <CardTitle className="text-base font-semibold text-slate-900 dark:text-slate-100">
+            Chamados Recentes
+          </CardTitle>
+          <Link
+            to="/tickets"
+            className="text-xs font-medium text-blue-600 hover:text-blue-700 hover:underline flex items-center transition-colors duration-150"
+          >
+            Ver Todos <ArrowUpRight className="h-3 w-3 ml-0.5" />
           </Link>
         </CardHeader>
         <CardContent className="p-0">
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs text-slate-600">
-              <thead className="bg-slate-50 border-y text-slate-700">
+            <table className="w-full text-left text-xs">
+              <thead className="itsm-table-header">
                 <tr>
-                  <th className="p-3">Nº</th>
-                  <th className="p-3">Título</th>
-                  <th className="p-3">Cliente</th>
-                  <th className="p-3">Prioridade</th>
-                  <th className="p-3">Status</th>
-                  <th className="p-3">SLA</th>
+                  <th className="px-4 py-3">Nº</th>
+                  <th className="px-4 py-3">Título</th>
+                  <th className="px-4 py-3">Cliente</th>
+                  <th className="px-4 py-3">Prioridade</th>
+                  <th className="px-4 py-3">Status</th>
+                  <th className="px-4 py-3">SLA</th>
                 </tr>
               </thead>
-              <tbody className="divide-y">
-                {tickets.slice(0, 6).map((t) => (
-                  <tr key={t.id} className="hover:bg-slate-50/50">
-                    <td className="p-3 font-semibold text-blue-600">
-                      <Link to={`/tickets/${t.id}`}>#{t.number}</Link>
+              <tbody>
+                {tickets.slice(0, 6).map((t, idx) => (
+                  <tr
+                    key={t.id}
+                    className={`itsm-table-row itsm-table-row-hover ${idx % 2 === 1 ? 'bg-slate-50/50 dark:bg-slate-800/20' : ''}`}
+                  >
+                    <td className="px-4 py-3 font-semibold text-blue-600">
+                      <Link to={`/tickets/${t.id}`} className="hover:underline">
+                        #{t.number}
+                      </Link>
                     </td>
-                    <td className="p-3 font-medium text-slate-800 max-w-xs truncate">{t.title}</td>
-                    <td className="p-3">{t.expand?.company?.trade_name || 'N/A'}</td>
-                    <td className="p-3">
+                    <td className="px-4 py-3 font-medium text-slate-800 dark:text-slate-200 max-w-xs truncate">
+                      {t.title}
+                    </td>
+                    <td className="px-4 py-3 text-slate-600 dark:text-slate-400">
+                      {t.expand?.company?.trade_name || 'N/A'}
+                    </td>
+                    <td className="px-4 py-3">
                       <PriorityBadge priority={t.priority} />
                     </td>
-                    <td className="p-3">
+                    <td className="px-4 py-3">
                       <StatusBadge status={t.status} />
                     </td>
-                    <td className="p-3 w-36">
+                    <td className="px-4 py-3 w-36">
                       <SlaProgressBar slaStatus={t.sla_status} paused={t.sla_paused} />
                     </td>
                   </tr>
