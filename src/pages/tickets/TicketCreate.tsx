@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Check, ChevronLeft, ChevronRight, ClipboardList, Tag, User } from 'lucide-react'
 import {
@@ -11,6 +11,7 @@ import {
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
 import { useToast } from '@/hooks/use-toast'
 import { cn } from '@/lib/utils'
 import { getCompanies, type CompanyRecord } from '@/services/companies'
@@ -20,7 +21,9 @@ import { getEquipments, type EquipmentRecord } from '@/services/equipments'
 import { getClientContacts, type ClientContactRecord } from '@/services/client-contacts'
 import { getCompanyUnitsByCompany, type CompanyUnitRecord } from '@/services/company-units'
 import { createTicket } from '@/services/tickets'
-import { calculateSlaDeadlines } from '@/lib/sla-utils'
+import { calculateSlaFromMinutes } from '@/lib/sla-utils'
+import { computePriority } from '@/lib/itil-matrix'
+import { PriorityBadge } from '@/components/PriorityBadge'
 
 const STEPS = [
   { id: 0, label: 'Solicitante', icon: User },
@@ -98,16 +101,27 @@ export default function TicketCreate() {
   const [requesterEmail, setRequesterEmail] = useState('')
   const [requesterPhone, setRequesterPhone] = useState('')
   const [type, setType] = useState('Incidente')
-  const [category, setCategory] = useState('')
+  const [mainCategory, setMainCategory] = useState('')
+  const [subActivity, setSubActivity] = useState('')
+  const [autoImpact, setAutoImpact] = useState('')
+  const [autoUrgency, setAutoUrgency] = useState('')
+  const [autoPriority, setAutoPriority] = useState('')
   const [equipment, setEquipment] = useState('')
   const [contract, setContract] = useState('')
-  const [impact, setImpact] = useState('Médio')
-  const [urgency, setUrgency] = useState('Média')
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
 
   const [currentStep, setCurrentStep] = useState(0)
   const [submitting, setSubmitting] = useState(false)
+
+  const mainCategories = useMemo(
+    () => categories.filter((c) => !c.parent && c.active !== false),
+    [categories],
+  )
+  const availableSubActivities = useMemo(
+    () => categories.filter((c) => c.parent === mainCategory && c.active !== false),
+    [categories, mainCategory],
+  )
 
   useEffect(() => {
     const load = async () => {
@@ -167,20 +181,38 @@ export default function TicketCreate() {
     [contacts],
   )
 
+  const handleMainCategoryChange = (id: string) => {
+    setMainCategory(id)
+    setSubActivity('')
+    setAutoImpact('')
+    setAutoUrgency('')
+    setAutoPriority('')
+  }
+
+  const handleSubActivityChange = (id: string) => {
+    setSubActivity(id)
+    const sub = categories.find((c) => c.id === id)
+    if (sub) {
+      setAutoImpact(sub.impact || '')
+      setAutoUrgency(sub.urgency || '')
+      setAutoPriority(sub.priority || computePriority(sub.impact || '', sub.urgency || ''))
+    }
+  }
+
   const validateStep = (step: number): boolean => {
     if (step === 0) {
       if (!company) {
         toast({ title: 'Selecione uma empresa', variant: 'destructive' })
         return false
       }
-      if (units.length > 0 && !selectedContact && !unit) {
-        toast({ title: 'Selecione um solicitante ou filial', variant: 'destructive' })
-        return false
-      }
     }
     if (step === 1) {
       if (!type) {
         toast({ title: 'Selecione o tipo', variant: 'destructive' })
+        return false
+      }
+      if (!subActivity) {
+        toast({ title: 'Selecione uma atividade', variant: 'destructive' })
         return false
       }
     }
@@ -210,8 +242,10 @@ export default function TicketCreate() {
     setSubmitting(true)
     try {
       const num = `2026-${Math.floor(10000 + Math.random() * 90000)}`
-      const sc = contracts.find((c) => c.id === contract)
-      const sla = sc ? calculateSlaDeadlines(sc) : {}
+      const sub = categories.find((c) => c.id === subActivity)
+      const sla = sub
+        ? calculateSlaFromMinutes(sub.sla_response_minutes, sub.sla_solution_minutes)
+        : {}
       await createTicket({
         number: num,
         company,
@@ -219,12 +253,13 @@ export default function TicketCreate() {
         title,
         description,
         type,
-        category: category || undefined,
+        category: mainCategory || undefined,
+        subcategory: subActivity || undefined,
         equipment: equipment || undefined,
         contract: contract || undefined,
-        impact,
-        urgency,
-        priority: impact === 'Alto' && urgency === 'Alta' ? 'P1' : 'P3',
+        impact: autoImpact || 'Médio',
+        urgency: autoUrgency || 'Média',
+        priority: autoPriority || 'Média',
         status: 'Novo',
         requester_name: requesterName || 'Solicitante',
         requester_email: requesterEmail,
@@ -259,7 +294,6 @@ export default function TicketCreate() {
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Step 0 — Solicitante */}
         {currentStep === 0 && (
           <div className="animate-fade-in space-y-5 rounded-2xl bg-white p-6 dark:bg-slate-900 sm:p-8">
             <div className="space-y-1">
@@ -270,7 +304,6 @@ export default function TicketCreate() {
                 Selecione a empresa e o solicitante do chamado
               </p>
             </div>
-
             <div className="space-y-2">
               <FieldLabel>Empresa / Cliente</FieldLabel>
               <Select value={company} onValueChange={setCompany}>
@@ -286,7 +319,6 @@ export default function TicketCreate() {
                 </SelectContent>
               </Select>
             </div>
-
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <FieldLabel>Solicitante</FieldLabel>
@@ -319,7 +351,6 @@ export default function TicketCreate() {
                 </Select>
               </div>
             </div>
-
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <FieldLabel>Nome do Solicitante</FieldLabel>
@@ -342,7 +373,6 @@ export default function TicketCreate() {
                 />
               </div>
             </div>
-
             <div className="space-y-2">
               <FieldLabel>Telefone do Solicitante</FieldLabel>
               <Input
@@ -355,7 +385,6 @@ export default function TicketCreate() {
           </div>
         )}
 
-        {/* Step 1 — Classificação */}
         {currentStep === 1 && (
           <div className="animate-fade-in space-y-5 rounded-2xl bg-white p-6 dark:bg-slate-900 sm:p-8">
             <div className="space-y-1">
@@ -363,41 +392,82 @@ export default function TicketCreate() {
                 Classificação
               </h2>
               <p className="text-sm text-slate-500 dark:text-slate-400">
-                Defina o tipo, categoria e impacto do chamado
+                Selecione a atividade para preencher impacto, urgência e prioridade automaticamente
               </p>
             </div>
-
+            <div className="space-y-2">
+              <FieldLabel>Tipo</FieldLabel>
+              <Select value={type} onValueChange={setType}>
+                <SelectTrigger className="rounded-lg">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Incidente">Incidente</SelectItem>
+                  <SelectItem value="Requisição de Serviço">Requisição de Serviço</SelectItem>
+                  <SelectItem value="Dúvida">Dúvida</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <FieldLabel>Tipo</FieldLabel>
-                <Select value={type} onValueChange={setType}>
-                  <SelectTrigger className="rounded-lg">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Incidente">Incidente</SelectItem>
-                    <SelectItem value="Requisição de Serviço">Requisição de Serviço</SelectItem>
-                    <SelectItem value="Dúvida">Dúvida</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <FieldLabel>Categoria</FieldLabel>
-                <Select value={category} onValueChange={setCategory}>
+                <FieldLabel>Categoria Principal</FieldLabel>
+                <Select value={mainCategory} onValueChange={handleMainCategoryChange}>
                   <SelectTrigger className="rounded-lg">
                     <SelectValue placeholder="Selecione a categoria" />
                   </SelectTrigger>
                   <SelectContent>
-                    {categories.map((cat) => (
-                      <SelectItem key={cat.id} value={cat.id}>
-                        {cat.name}
+                    {mainCategories.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>
+                        {c.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <FieldLabel>Atividade *</FieldLabel>
+                <Select
+                  value={subActivity}
+                  onValueChange={handleSubActivityChange}
+                  disabled={!mainCategory}
+                >
+                  <SelectTrigger className="rounded-lg">
+                    <SelectValue
+                      placeholder={
+                        mainCategory ? 'Selecione a atividade' : 'Primeiro selecione a categoria'
+                      }
+                    />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableSubActivities.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>
+                        {c.name}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
             </div>
-
+            {subActivity && (
+              <div className="grid gap-4 sm:grid-cols-3 rounded-lg bg-slate-50 p-4 dark:bg-slate-800/50">
+                <div className="space-y-1">
+                  <FieldLabel>Impacto</FieldLabel>
+                  <Badge variant="outline" className="text-xs">
+                    {autoImpact}
+                  </Badge>
+                </div>
+                <div className="space-y-1">
+                  <FieldLabel>Urgência</FieldLabel>
+                  <Badge variant="outline" className="text-xs">
+                    {autoUrgency}
+                  </Badge>
+                </div>
+                <div className="space-y-1">
+                  <FieldLabel>Prioridade</FieldLabel>
+                  <PriorityBadge priority={autoPriority} />
+                </div>
+              </div>
+            )}
             <div className="space-y-2">
               <FieldLabel>Ativo / Equipamento</FieldLabel>
               <Select value={equipment} onValueChange={setEquipment}>
@@ -413,7 +483,6 @@ export default function TicketCreate() {
                 </SelectContent>
               </Select>
             </div>
-
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <FieldLabel>Contrato</FieldLabel>
@@ -431,39 +500,9 @@ export default function TicketCreate() {
                 </Select>
               </div>
             </div>
-
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <FieldLabel>Impacto</FieldLabel>
-                <Select value={impact} onValueChange={setImpact}>
-                  <SelectTrigger className="rounded-lg">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Alto">Alto</SelectItem>
-                    <SelectItem value="Médio">Médio</SelectItem>
-                    <SelectItem value="Baixo">Baixo</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <FieldLabel>Urgência</FieldLabel>
-                <Select value={urgency} onValueChange={setUrgency}>
-                  <SelectTrigger className="rounded-lg">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Alta">Alta</SelectItem>
-                    <SelectItem value="Média">Média</SelectItem>
-                    <SelectItem value="Baixa">Baixa</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
           </div>
         )}
 
-        {/* Step 2 — Detalhes */}
         {currentStep === 2 && (
           <div className="animate-fade-in space-y-5 rounded-2xl bg-white p-6 dark:bg-slate-900 sm:p-8">
             <div className="space-y-1">
@@ -474,7 +513,6 @@ export default function TicketCreate() {
                 Descreva o problema ou solicitação
               </p>
             </div>
-
             <div className="space-y-2">
               <FieldLabel>Título do Chamado</FieldLabel>
               <Input
@@ -485,7 +523,6 @@ export default function TicketCreate() {
                 onChange={(e) => setTitle(e.target.value)}
               />
             </div>
-
             <div className="space-y-2">
               <FieldLabel>Descrição detalhada</FieldLabel>
               <Textarea
@@ -497,18 +534,17 @@ export default function TicketCreate() {
                 onChange={(e) => setDescription(e.target.value)}
               />
             </div>
-
             <div className="rounded-xl bg-slate-50 p-4 dark:bg-slate-800/50">
               <p className="text-sm text-slate-600 dark:text-slate-400">
-                <span className="font-medium">Resumo:</span> {type} · {impact}/{urgency}
-                {category && ' · Categoria selecionada'}
+                <span className="font-medium">Resumo:</span> {type} ·{' '}
+                {autoPriority || 'Sem prioridade'}
+                {subActivity && ' · Atividade selecionada'}
                 {contract && ' · Contrato vinculado'}
               </p>
             </div>
           </div>
         )}
 
-        {/* Navigation */}
         <div className="flex items-center justify-between gap-3 pt-2">
           <Button
             type="button"
@@ -517,22 +553,18 @@ export default function TicketCreate() {
             disabled={currentStep === 0}
             className="gap-1.5 rounded-lg"
           >
-            <ChevronLeft className="h-4 w-4" />
-            Voltar
+            <ChevronLeft className="h-4 w-4" /> Voltar
           </Button>
-
           <span className="text-xs font-medium text-slate-400">
             Passo {currentStep + 1} de {STEPS.length}
           </span>
-
           {currentStep < STEPS.length - 1 ? (
             <Button
               type="button"
               onClick={nextStep}
               className="gap-1.5 rounded-lg bg-blue-600 hover:bg-blue-700"
             >
-              Avançar
-              <ChevronRight className="h-4 w-4" />
+              Avançar <ChevronRight className="h-4 w-4" />
             </Button>
           ) : (
             <Button
@@ -540,8 +572,7 @@ export default function TicketCreate() {
               disabled={submitting}
               className="gap-1.5 rounded-lg bg-blue-600 hover:bg-blue-700"
             >
-              {submitting ? 'Abrindo...' : 'Abrir Chamado'}
-              <Check className="h-4 w-4" />
+              {submitting ? 'Abrindo...' : 'Abrir Chamado'} <Check className="h-4 w-4" />
             </Button>
           )}
         </div>

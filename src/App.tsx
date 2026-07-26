@@ -24,6 +24,7 @@ import TeamList from '@/pages/team/TeamList'
 import TeamDetail from '@/pages/team/TeamDetail'
 import QueueManagement from '@/pages/queues/QueueManagement'
 import CategoryManagement from '@/pages/categories/CategoryManagement'
+import ActivityCatalog from '@/pages/ActivityCatalog'
 import ReportsPage from '@/pages/reports/ReportsPage'
 import KnowledgeBase from '@/pages/knowledge/KnowledgeBase'
 import SettingsPage from '@/pages/settings/SettingsPage'
@@ -113,6 +114,7 @@ const App = () => (
             <Route path="/team/new" element={<TeamDetail />} />
             <Route path="/queues" element={<QueueManagement />} />
             <Route path="/categories" element={<CategoryManagement />} />
+            <Route path="/activity-catalog" element={<ActivityCatalog />} />
             <Route path="/reports" element={<ReportsPage />} />
             <Route path="/reports/unit" element={<UnitReportsPage />} />
             <Route path="/knowledge-base" element={<KnowledgeBase />} />

@@ -74,3 +74,19 @@ export function calculateSlaDeadlines(contract: SlaContractData) {
     sla_solution_deadline: calculateSlaDeadline(contract, contract.sla_solution_time || 240),
   }
 }
+
+export function calculateSlaFromMinutes(
+  responseMinutes?: number,
+  solutionMinutes?: number,
+  fromDate: Date = new Date(),
+) {
+  const now = fromDate.getTime()
+  return {
+    sla_response_deadline: responseMinutes
+      ? new Date(now + responseMinutes * 60000).toISOString()
+      : undefined,
+    sla_solution_deadline: solutionMinutes
+      ? new Date(now + solutionMinutes * 60000).toISOString()
+      : undefined,
+  }
+}

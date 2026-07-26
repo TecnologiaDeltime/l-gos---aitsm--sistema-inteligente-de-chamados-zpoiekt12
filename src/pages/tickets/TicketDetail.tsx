@@ -48,6 +48,7 @@ import {
   createInteraction,
   updateTicket,
   createSlaPause,
+  startService,
   TicketRecord,
 } from '@/services/tickets'
 import { HOUR_TYPES, BILLING_STATUSES } from '@/services/ticket-interactions'
@@ -244,6 +245,21 @@ export default function TicketDetail() {
     toast({ title: 'SLA Retomado' })
   }
 
+  const handleStartService = async () => {
+    if (!id) return
+    try {
+      await startService(id)
+      toast({ title: 'Atendimento iniciado! SLA Response em contagem.' })
+      loadData()
+    } catch (err) {
+      toast({
+        title: 'Erro ao iniciar atendimento',
+        description: getErrorMessage(err),
+        variant: 'destructive',
+      })
+    }
+  }
+
   const handleConfirmDelete = async () => {
     if (!deleteTarget) return
     setDeleting(true)
@@ -331,11 +347,18 @@ export default function TicketDetail() {
             </div>
           )}
           <div className="flex flex-wrap items-center gap-2 pt-2 border-t">
-            {ticket.status !== 'Em Atendimento' && (
-              <Button size="sm" onClick={() => handleStatusChange('Em Atendimento')}>
-                <PlayCircle className="mr-1.5 h-4 w-4" /> Iniciar Atendimento
-              </Button>
-            )}
+            {!ticket.sla_response_start &&
+              ticket.status !== 'Resolvido' &&
+              ticket.status !== 'Encerrado' &&
+              ticket.status !== 'Cancelado' && (
+                <Button
+                  size="sm"
+                  onClick={handleStartService}
+                  className="bg-blue-600 hover:bg-blue-700"
+                >
+                  <PlayCircle className="mr-1.5 h-4 w-4" /> Iniciar Atendimento
+                </Button>
+              )}
             {ticket.sla_paused ? (
               <Button size="sm" variant="outline" onClick={handleResumeSla}>
                 <PlayCircle className="mr-1.5 h-4 w-4 text-green-600" /> Retomar SLA
@@ -587,6 +610,12 @@ export default function TicketDetail() {
             <div className="flex items-center gap-2 text-slate-600">
               <Timer className="h-4 w-4 text-slate-400" /> Total: {totalHoursDisplay}
             </div>
+            {ticket.sla_response_start && (
+              <div className="flex items-center gap-2 text-slate-600">
+                <PlayCircle className="h-4 w-4 text-slate-400" /> Início Atend.:{' '}
+                {new Date(ticket.sla_response_start).toLocaleString('pt-BR')}
+              </div>
+            )}
             {ticket.equipment && ticket.expand?.equipment && (
               <div className="flex items-center gap-2 text-slate-600">
                 <Server className="h-4 w-4 text-slate-400" /> Ativo:{' '}

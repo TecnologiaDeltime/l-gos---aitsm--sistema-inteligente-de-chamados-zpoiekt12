@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-25T23:48:12.705Z",
+  "generatedAt": "2026-07-26T00:27:48.488Z",
   "collections": [
     {
       "name": "users",
@@ -477,13 +477,6 @@
           "system": false
         },
         {
-          "name": "priorities_available",
-          "type": "select",
-          "required": false,
-          "system": false,
-          "selectValues": ["P1", "P2", "P3", "P4", "P5"]
-        },
-        {
           "name": "included_services",
           "type": "text",
           "required": false,
@@ -592,6 +585,13 @@
             "Gestão",
             "Treinamento"
           ]
+        },
+        {
+          "name": "priorities_available",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["Crítica", "Alta", "Média", "Baixa"]
         }
       ],
       "indexes": [
@@ -648,6 +648,39 @@
           "required": false,
           "system": false,
           "collectionRef": "tkt_categories"
+        },
+        {
+          "name": "impact",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["Alto", "Médio", "Baixo"]
+        },
+        {
+          "name": "urgency",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["Alta", "Média", "Baixa"]
+        },
+        {
+          "name": "priority",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["Crítica", "Alta", "Média", "Baixa"]
+        },
+        {
+          "name": "sla_response_minutes",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "sla_solution_minutes",
+          "type": "number",
+          "required": false,
+          "system": false
         }
       ],
       "indexes": ["CREATE INDEX idx_categories_active ON tkt_categories (active)"]
@@ -1066,13 +1099,6 @@
           "selectValues": ["Alta", "Média", "Baixa"]
         },
         {
-          "name": "priority",
-          "type": "select",
-          "required": false,
-          "system": false,
-          "selectValues": ["P1", "P2", "P3", "P4", "P5"]
-        },
-        {
           "name": "status",
           "type": "select",
           "required": false,
@@ -1252,6 +1278,19 @@
           "required": false,
           "system": false,
           "collectionRef": "tickets"
+        },
+        {
+          "name": "priority",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["Crítica", "Alta", "Média", "Baixa"]
+        },
+        {
+          "name": "sla_response_start",
+          "type": "date",
+          "required": false,
+          "system": false
         }
       ],
       "indexes": [
@@ -2555,13 +2594,6 @@
           ]
         },
         {
-          "name": "priority",
-          "type": "select",
-          "required": false,
-          "system": false,
-          "selectValues": ["P1", "P2", "P3", "P4", "P5"]
-        },
-        {
           "name": "expected_end_time",
           "type": "text",
           "required": false,
@@ -2935,6 +2967,13 @@
             "Finalizando Serviço",
             "Aguardando Cliente"
           ]
+        },
+        {
+          "name": "priority",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["Crítica", "Alta", "Média", "Baixa"]
         }
       ],
       "indexes": [
@@ -4029,13 +4068,6 @@
           "system": false
         },
         {
-          "name": "priority",
-          "type": "select",
-          "required": false,
-          "system": false,
-          "selectValues": ["P1", "P2", "P3", "P4", "P5"]
-        },
-        {
           "name": "status",
           "type": "select",
           "required": false,
@@ -4131,6 +4163,13 @@
           "required": false,
           "system": false,
           "collectionRef": "workflow_tasks"
+        },
+        {
+          "name": "priority",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["Crítica", "Alta", "Média", "Baixa"]
         }
       ],
       "indexes": [

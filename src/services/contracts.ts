@@ -47,7 +47,7 @@ export const CONTRACT_STATUSES = ['Ativo', 'Expirado', 'Cancelado']
 
 export const SERVICE_DAYS = ['Seg-Sex', 'Seg-Sáb', 'Todos', 'Personalizado']
 
-export const PRIORITY_OPTIONS = ['P1', 'P2', 'P3', 'P4', 'P5']
+export const PRIORITY_OPTIONS = ['Crítica', 'Alta', 'Média', 'Baixa']
 
 export const getContracts = (filter?: string) =>
   pb

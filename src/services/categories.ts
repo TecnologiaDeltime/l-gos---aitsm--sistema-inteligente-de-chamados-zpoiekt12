@@ -6,6 +6,11 @@ export interface CategoryRecord {
   description?: string
   parent?: string
   active?: boolean
+  impact?: string
+  urgency?: string
+  priority?: string
+  sla_response_minutes?: number
+  sla_solution_minutes?: number
   expand?: any
 }
 

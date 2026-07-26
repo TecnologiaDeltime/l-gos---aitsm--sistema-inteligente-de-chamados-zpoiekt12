@@ -29,6 +29,7 @@ import {
   ShieldOff,
   TrendingUp,
   Workflow,
+  ListTree,
 } from 'lucide-react'
 import { useAuth } from '@/hooks/use-auth'
 import { usePermissions } from '@/hooks/use-permissions'
@@ -103,6 +104,12 @@ export default function Layout() {
     { label: 'Equipe', path: '/team', icon: Users, show: permissions.canManageTeam },
     { label: 'Filas', path: '/queues', icon: Inbox, show: permissions.canManageQueues },
     { label: 'Categorias', path: '/categories', icon: Tags, show: permissions.canManageCategories },
+    {
+      label: 'Catálogo de Atividades',
+      path: '/activity-catalog',
+      icon: ListTree,
+      show: permissions.canManageCategories,
+    },
     { label: 'Relatórios', path: '/reports', icon: BarChart3, show: permissions.canViewReports },
     {
       label: 'Relatórios por Filial',

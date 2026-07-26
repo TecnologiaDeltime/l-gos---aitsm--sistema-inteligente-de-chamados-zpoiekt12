@@ -27,6 +27,7 @@ export interface TicketRecord {
   sla_response_deadline?: string
   sla_solution_deadline?: string
   sla_response_at?: string
+  sla_response_start?: string
   sla_solution_at?: string
   resolution_date?: string
   sla_status?: string
@@ -59,6 +60,9 @@ export const updateTicket = (id: string, data: Partial<TicketRecord>) =>
   pb.collection('tickets').update<TicketRecord>(id, data)
 
 export const deleteTicket = (id: string) => pb.collection('tickets').delete(id)
+
+export const startService = (id: string) =>
+  pb.send(`/backend/v1/tickets/${id}/start`, { method: 'POST' })
 
 export const getTicketInteractions = (ticketId: string) =>
   pb.collection('ticket_interactions').getFullList({
