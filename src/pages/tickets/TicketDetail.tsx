@@ -16,6 +16,7 @@ import {
   Trash2,
   Pencil,
   Loader2,
+  Forward,
 } from 'lucide-react'
 import { Skeleton } from '@/components/ui/skeleton'
 import { RequesterInfo } from '@/components/RequesterInfo'
@@ -34,6 +35,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { InteractionEditDialog } from '@/components/InteractionEditDialog'
+import { DelegateDialog } from '@/components/DelegateDialog'
 import { deleteInteractionWithReversal } from '@/services/ticket-interactions'
 import {
   Select,
@@ -94,6 +96,7 @@ export default function TicketDetail() {
   const [deleting, setDeleting] = useState(false)
   const [editTarget, setEditTarget] = useState<any | null>(null)
   const [editOpen, setEditOpen] = useState(false)
+  const [showDelegate, setShowDelegate] = useState(false)
 
   const loadData = () => {
     if (!id) return
@@ -398,6 +401,9 @@ export default function TicketDetail() {
                 <CheckCircle2 className="mr-1.5 h-4 w-4" /> Resolver
               </Button>
             )}
+            <Button size="sm" variant="outline" onClick={() => setShowDelegate(true)}>
+              <Forward className="mr-1.5 h-4 w-4" /> Delegar
+            </Button>
             {(perms.isAdmin || perms.isGestor || perms.isClienteGestor) && (
               <>
                 <Button size="sm" variant="outline" onClick={() => setShowApproval(true)}>
@@ -715,6 +721,12 @@ export default function TicketDetail() {
         open={editOpen}
         onOpenChange={setEditOpen}
         onSaved={loadData}
+      />
+      <DelegateDialog
+        ticketId={id!}
+        open={showDelegate}
+        onOpenChange={setShowDelegate}
+        onDelegated={loadData}
       />
     </div>
   )
