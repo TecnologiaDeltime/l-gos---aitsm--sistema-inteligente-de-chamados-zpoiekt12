@@ -203,7 +203,7 @@ export default function Layout() {
         <span className="font-bold text-lg tracking-wide">Sistema ITSM</span>
       </div>
 
-      <nav className="flex-1 space-y-1 p-4 overflow-y-auto">
+      <nav className="sidebar-scroll flex-1 space-y-1 overflow-y-auto p-4 scroll-smooth">
         {navItems
           .filter((item) => item.show)
           .map((item) => {
@@ -237,7 +237,9 @@ export default function Layout() {
     <div className="flex min-h-screen bg-slate-100 dark:bg-slate-950">
       {/* Desktop Sidebar */}
       {!isMobile && (
-        <aside className="w-64 flex-shrink-0 border-r border-slate-800">{navContent}</aside>
+        <aside className="sticky top-0 h-screen w-64 flex-shrink-0 border-r border-slate-800">
+          {navContent}
+        </aside>
       )}
 
       <div className="flex flex-1 flex-col min-w-0">
