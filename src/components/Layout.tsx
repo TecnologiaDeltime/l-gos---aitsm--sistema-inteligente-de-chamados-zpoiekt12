@@ -251,26 +251,20 @@ export default function Layout() {
         {clientGroupVisible && (
           <div key="cliente-group">
             <div className="flex items-center">
-              <Link
-                to="/clients"
-                onClick={() => setMobileOpen(false)}
+              <button
+                onClick={() => setClientMenuOpen(!clientMenuOpen)}
                 className={`flex flex-1 items-center gap-3 px-4 py-2.5 text-sm font-medium transition-all duration-200 border-l-2 ${
-                  location.pathname === '/clients'
+                  clientSubmenuItems.some((i) => i.show && location.pathname === i.path)
                     ? 'border-primary bg-primary/10 text-primary'
                     : 'border-transparent text-muted-foreground hover:bg-secondary/50 hover:text-foreground'
                 }`}
               >
                 <Building2 className="h-[18px] w-[18px] shrink-0" />
                 <span className="truncate">Cliente</span>
-              </Link>
-              <button
-                onClick={() => setClientMenuOpen(!clientMenuOpen)}
-                className="px-3 py-2.5 text-muted-foreground hover:text-foreground transition-colors duration-200"
-              >
                 {clientMenuOpen ? (
-                  <ChevronDown className="h-4 w-4" />
+                  <ChevronDown className="ml-auto h-4 w-4" />
                 ) : (
-                  <ChevronRight className="h-4 w-4" />
+                  <ChevronRight className="ml-auto h-4 w-4" />
                 )}
               </button>
             </div>
