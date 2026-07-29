@@ -34,6 +34,8 @@ import {
   Sun,
   Moon,
   Hourglass,
+  ChevronDown,
+  ChevronRight,
 } from 'lucide-react'
 import { useAuth } from '@/hooks/use-auth'
 import { useTheme } from '@/hooks/use-theme'
@@ -67,6 +69,7 @@ export default function Layout() {
   const navigate = useNavigate()
   const [notifications, setNotifications] = useState<NotificationRecord[]>([])
   const [mobileOpen, setMobileOpen] = useState(false)
+  const [clientMenuOpen, setClientMenuOpen] = useState(true)
 
   useEffect(() => {
     if (user) {
@@ -203,6 +206,53 @@ export default function Layout() {
     { label: 'Configurações', path: '/settings', icon: Settings, show: permissions.isAdmin },
   ]
 
+  const clientSubmenuItems = [
+    { label: 'Contrato', path: '/contracts', icon: FileText, show: permissions.canManageContracts },
+    {
+      label: 'Horas Clientes',
+      path: '/horas-clientes',
+      icon: Hourglass,
+      show: permissions.canManageContracts,
+    },
+    {
+      label: 'Consumo de Contratos',
+      path: '/consumo-contratos',
+      icon: Gauge,
+      show: permissions.canManageContracts,
+    },
+    {
+      label: 'Dashboard de Contratos',
+      path: '/dashboard-contratos',
+      icon: CalendarClock,
+      show: permissions.canManageContracts,
+    },
+  ]
+
+  const clientGroupVisible = permissions.canManageClients || permissions.canManageContracts
+  const teamIdx = navItems.findIndex((i) => i.path === '/team')
+  const navBeforeClient = navItems.slice(0, teamIdx).filter((i) => i.show)
+  const navAfterClient = navItems.slice(teamIdx).filter((i) => i.show)
+
+  const renderNavItem = (item: any) => {
+    const Icon = item.icon
+    const active = location.pathname === item.path
+    return (
+      <Link
+        key={item.path}
+        to={item.path}
+        onClick={() => setMobileOpen(false)}
+        className={`flex items-center gap-3 px-4 py-2.5 text-sm font-medium transition-all duration-200 border-l-2 ${
+          active
+            ? 'border-primary bg-primary/10 text-primary'
+            : 'border-transparent text-muted-foreground hover:bg-secondary/50 hover:text-foreground'
+        }`}
+      >
+        <Icon className="h-[18px] w-[18px] shrink-0" />
+        <span className="truncate">{item.label}</span>
+      </Link>
+    )
+  }
+
   const navContent = (
     <div className="flex h-full flex-col bg-sidebar border-r border-sidebar-border">
       <div className="flex h-16 items-center gap-2.5 px-5 border-b border-border">
@@ -216,27 +266,58 @@ export default function Layout() {
       </div>
 
       <nav className="sidebar-scroll flex-1 overflow-y-auto py-2 scroll-smooth">
-        {navItems
-          .filter((item) => item.show)
-          .map((item) => {
-            const Icon = item.icon
-            const active = location.pathname === item.path
-            return (
+        {navBeforeClient.map(renderNavItem)}
+        {clientGroupVisible && (
+          <div key="cliente-group">
+            <div className="flex items-center">
               <Link
-                key={item.path}
-                to={item.path}
+                to="/clients"
                 onClick={() => setMobileOpen(false)}
-                className={`flex items-center gap-3 px-4 py-2.5 text-sm font-medium transition-all duration-200 border-l-2 ${
-                  active
+                className={`flex flex-1 items-center gap-3 px-4 py-2.5 text-sm font-medium transition-all duration-200 border-l-2 ${
+                  location.pathname === '/clients'
                     ? 'border-primary bg-primary/10 text-primary'
                     : 'border-transparent text-muted-foreground hover:bg-secondary/50 hover:text-foreground'
                 }`}
               >
-                <Icon className="h-[18px] w-[18px] shrink-0" />
-                <span className="truncate">{item.label}</span>
+                <Building2 className="h-[18px] w-[18px] shrink-0" />
+                <span className="truncate">Cliente</span>
               </Link>
-            )
-          })}
+              <button
+                onClick={() => setClientMenuOpen(!clientMenuOpen)}
+                className="px-3 py-2.5 text-muted-foreground hover:text-foreground transition-colors duration-200"
+              >
+                {clientMenuOpen ? (
+                  <ChevronDown className="h-4 w-4" />
+                ) : (
+                  <ChevronRight className="h-4 w-4" />
+                )}
+              </button>
+            </div>
+            {clientMenuOpen &&
+              clientSubmenuItems
+                .filter((i) => i.show)
+                .map((sub) => {
+                  const SubIcon = sub.icon
+                  const subActive = location.pathname === sub.path
+                  return (
+                    <Link
+                      key={sub.path}
+                      to={sub.path}
+                      onClick={() => setMobileOpen(false)}
+                      className={`flex items-center gap-3 pl-10 pr-4 py-2 text-[13px] font-medium transition-all duration-200 border-l-2 ${
+                        subActive
+                          ? 'border-primary bg-primary/10 text-primary'
+                          : 'border-transparent text-muted-foreground hover:bg-secondary/50 hover:text-foreground'
+                      }`}
+                    >
+                      <SubIcon className="h-4 w-4 shrink-0" />
+                      <span className="truncate">{sub.label}</span>
+                    </Link>
+                  )
+                })}
+          </div>
+        )}
+        {navAfterClient.map(renderNavItem)}
       </nav>
 
       <div className="px-5 py-3 border-t border-border">
@@ -269,7 +350,8 @@ export default function Layout() {
               </Sheet>
             )}
             <h1 className="text-lg font-semibold text-foreground">
-              {navItems.find((i) => i.path === location.pathname)?.label || 'Painel'}
+              {[...navItems, ...clientSubmenuItems].find((i) => i.path === location.pathname)
+                ?.label || 'Painel'}
             </h1>
           </div>
 

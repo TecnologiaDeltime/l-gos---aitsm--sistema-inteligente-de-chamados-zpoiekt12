@@ -49,6 +49,8 @@ import SurveyPublic from '@/pages/satisfaction/SurveyPublic'
 import OperatorDashboard from '@/pages/dashboard/OperatorDashboard'
 import ManagerDashboard from '@/pages/dashboard/ManagerDashboard'
 import ContractConsumptionDashboard from '@/pages/contracts/ContractConsumptionDashboard'
+import ConsumoContratosPlaceholder from '@/pages/contracts/ConsumoContratosPlaceholder'
+import DashboardContratosPlaceholder from '@/pages/contracts/DashboardContratosPlaceholder'
 import ClientHoursPage from '@/pages/clients/ClientHoursPage'
 import BlockingManagement from '@/pages/blocking/BlockingManagement'
 import NotFound from '@/pages/NotFound'
@@ -146,6 +148,8 @@ const App = () => (
               <Route path="/operator-dashboard" element={<OperatorDashboard />} />
               <Route path="/manager-dashboard" element={<ManagerDashboard />} />
               <Route path="/contracts/consumption" element={<ContractConsumptionDashboard />} />
+              <Route path="/consumo-contratos" element={<ConsumoContratosPlaceholder />} />
+              <Route path="/dashboard-contratos" element={<DashboardContratosPlaceholder />} />
               <Route path="/horas-clientes" element={<ClientHoursPage />} />
               <Route path="/blocking" element={<BlockingManagement />} />
               <Route path="/automations" element={<AutomationList />} />
