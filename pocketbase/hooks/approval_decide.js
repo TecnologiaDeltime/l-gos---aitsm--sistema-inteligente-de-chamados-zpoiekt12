@@ -16,6 +16,9 @@ routerAdd('POST', '/backend/v1/approvals/{token}/decide', (e) => {
     const now = new Date().toISOString()
     approval.set('status', body.decision === 'approved' ? 'Aprovado' : 'Reprovado')
     approval.set('approver_comment', body.comment || '')
+    if (e.auth) {
+      approval.set('approver', e.auth.id)
+    }
     if (body.decision === 'approved') {
       approval.set('approved_at', now)
     } else {
@@ -25,10 +28,11 @@ routerAdd('POST', '/backend/v1/approvals/{token}/decide', (e) => {
 
     const ticketId = approval.getString('ticket')
     const ticket = $app.findRecordById('tickets', ticketId)
+    var oldTicketStatus = ticket.getString('status')
     if (body.decision === 'approved') {
-      ticket.set('status', 'Em Atendimento')
+      ticket.set('status', 'Novo')
     } else {
-      ticket.set('status', 'Aguardando Aprovação')
+      ticket.set('status', 'Cancelado')
     }
     $app.save(ticket)
 
@@ -36,10 +40,10 @@ routerAdd('POST', '/backend/v1/approvals/{token}/decide', (e) => {
     const hist = new Record(historyCol)
     hist.set('ticket', ticketId)
     hist.set('user', approval.getString('requester'))
-    hist.set('action', 'Aprovação ' + (body.decision === 'approved' ? 'aprovada' : 'reprovada'))
-    hist.set('field', 'approval')
-    hist.set('old_value', 'Pendente')
-    hist.set('new_value', body.decision === 'approved' ? 'Aprovado' : 'Reprovado')
+    hist.set('action', body.decision === 'approved' ? 'Aprovação aprovada' : 'Reprovação')
+    hist.set('field', 'status')
+    hist.set('old_value', oldTicketStatus)
+    hist.set('new_value', body.decision === 'approved' ? 'Novo' : 'Cancelado')
     $app.save(hist)
 
     const notifsCol = $app.findCollectionByNameOrId('notifications')

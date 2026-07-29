@@ -39,7 +39,7 @@ export const getApprovals = (filter?: string) =>
   pb.collection('approvals').getFullList<ApprovalRecord>({
     filter,
     sort: '-created',
-    expand: 'ticket,requester,approver',
+    expand: 'ticket,ticket.company,ticket.category,ticket.subcategory,requester,approver',
   })
 
 export const getApproval = (id: string) =>

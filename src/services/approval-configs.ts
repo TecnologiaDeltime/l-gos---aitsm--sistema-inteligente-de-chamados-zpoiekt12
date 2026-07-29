@@ -2,7 +2,7 @@ import pb from '@/lib/pocketbase/client'
 
 export interface ApprovalConfigRecord {
   id: string
-  activity: string
+  activity?: string | null
   clients: string[]
   active: boolean
   created: string

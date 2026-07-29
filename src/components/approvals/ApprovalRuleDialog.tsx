@@ -65,17 +65,13 @@ export function ApprovalRuleDialog({
   }))
 
   const handleSave = async () => {
-    if (!activity) {
-      toast({ title: 'Selecione uma atividade', variant: 'destructive' })
-      return
-    }
     if (clients.length === 0) {
       toast({ title: 'Selecione ao menos um cliente', variant: 'destructive' })
       return
     }
     setSaving(true)
     try {
-      const data = { activity, clients, active }
+      const data = { activity: activity || null, clients, active }
       if (editing) {
         await updateApprovalConfig(editing.id, data)
         toast({ title: 'Regra atualizada!' })
@@ -100,12 +96,16 @@ export function ApprovalRuleDialog({
         </DialogHeader>
         <div className="space-y-4">
           <div className="space-y-1">
-            <Label className="text-xs">Atividade *</Label>
-            <Select value={activity} onValueChange={setActivity}>
+            <Label className="text-xs">Atividade</Label>
+            <Select
+              value={activity || '__all__'}
+              onValueChange={(v) => setActivity(v === '__all__' ? '' : v)}
+            >
               <SelectTrigger>
                 <SelectValue placeholder="Selecione uma atividade" />
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value="__all__">Todas as atividades</SelectItem>
                 {categories.map((c) => (
                   <SelectItem key={c.id} value={c.id}>
                     {c.name}

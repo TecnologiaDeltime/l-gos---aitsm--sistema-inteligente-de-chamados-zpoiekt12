@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-29T18:37:58.775Z",
+  "generatedAt": "2026-07-29T18:44:53.058Z",
   "collections": [
     {
       "name": "users",
@@ -5881,13 +5881,6 @@
       },
       "fields": [
         {
-          "name": "activity",
-          "type": "relation",
-          "required": true,
-          "system": false,
-          "collectionRef": "tkt_categories"
-        },
-        {
           "name": "clients",
           "type": "relation",
           "required": true,
@@ -5913,6 +5906,13 @@
           "required": false,
           "system": false,
           "autodateTriggers": ["onCreate", "onUpdate"]
+        },
+        {
+          "name": "activity",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "tkt_categories"
         }
       ],
       "indexes": [
