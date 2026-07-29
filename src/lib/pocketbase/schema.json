@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-29T15:57:04.416Z",
+  "generatedAt": "2026-07-29T18:37:58.775Z",
   "collections": [
     {
       "name": "users",
@@ -5867,6 +5867,57 @@
       "indexes": [
         "CREATE INDEX idx_ticket_templates_type ON ticket_templates (type)",
         "CREATE INDEX idx_ticket_templates_active ON ticket_templates (active)"
+      ]
+    },
+    {
+      "name": "approval_configs",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != \"\"",
+        "view": "@request.auth.id != \"\"",
+        "create": "@request.auth.role = \"admin\" || @request.auth.role = \"gestor\"",
+        "update": "@request.auth.role = \"admin\" || @request.auth.role = \"gestor\"",
+        "delete": "@request.auth.role = \"admin\" || @request.auth.role = \"gestor\""
+      },
+      "fields": [
+        {
+          "name": "activity",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "tkt_categories"
+        },
+        {
+          "name": "clients",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "companies"
+        },
+        {
+          "name": "active",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": [
+        "CREATE INDEX idx_approval_configs_activity ON approval_configs (activity)",
+        "CREATE INDEX idx_approval_configs_clients ON approval_configs (clients)"
       ]
     }
   ]

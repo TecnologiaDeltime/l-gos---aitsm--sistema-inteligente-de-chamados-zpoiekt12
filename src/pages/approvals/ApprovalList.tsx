@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Card, CardContent } from '@/components/ui/card'
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import {
   Select,
   SelectContent,
@@ -16,10 +17,11 @@ import {
   APPROVAL_STATUSES,
 } from '@/services/approvals'
 import { useRealtime } from '@/hooks/use-realtime'
+import { ApprovalRulesTab } from '@/components/approvals/ApprovalRulesTab'
 
 export default function ApprovalList() {
   const [approvals, setApprovals] = useState<ApprovalRecord[]>([])
-  const [statusFilter, setStatusFilter] = useState('all')
+  const [statusFilter, setStatusFilter] = useState('Pendente')
   const [typeFilter, setTypeFilter] = useState('all')
 
   const loadData = () => {
@@ -47,75 +49,86 @@ export default function ApprovalList() {
   return (
     <div className="space-y-4">
       <h2 className="text-lg font-bold">Aprovações</h2>
-      <div className="flex flex-wrap gap-2">
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-40">
-            <SelectValue placeholder="Status" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todos Status</SelectItem>
-            {APPROVAL_STATUSES.map((s) => (
-              <SelectItem key={s} value={s}>
-                {s}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Select value={typeFilter} onValueChange={setTypeFilter}>
-          <SelectTrigger className="w-48">
-            <SelectValue placeholder="Tipo" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todos Tipos</SelectItem>
-            {APPROVAL_TYPES.map((t) => (
-              <SelectItem key={t} value={t}>
-                {t}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-      <div className="grid gap-3">
-        {filtered.length === 0 ? (
-          <Card>
-            <CardContent className="p-8 text-center text-sm text-slate-500">
-              Nenhuma aprovação encontrada.
-            </CardContent>
-          </Card>
-        ) : (
-          filtered.map((a) => (
-            <Card key={a.id}>
-              <CardContent className="p-4 space-y-1">
-                <div className="flex items-center gap-2">
-                  <Badge className={statusCls[a.status] || 'bg-slate-100'}>{a.status}</Badge>
-                  <span className="text-xs font-medium text-slate-500">{a.type}</span>
-                </div>
-                <p className="text-sm font-medium">
-                  {a.expand?.ticket ? (
-                    <Link
-                      to={`/tickets/${a.expand.ticket.id}`}
-                      className="text-blue-600 hover:underline"
-                    >
-                      #{a.expand.ticket.number}
-                    </Link>
-                  ) : (
-                    'N/A'
-                  )}{' '}
-                  - {a.justification}
-                </p>
-                <p className="text-xs text-slate-500">
-                  Solicitado por {a.expand?.requester?.name || 'N/A'} em{' '}
-                  {new Date(a.created).toLocaleDateString('pt-BR')}
-                  {a.estimated_cost ? ` · R$ ${a.estimated_cost}` : ''}
-                  {a.deadline
-                    ? ` · Prazo: ${new Date(a.deadline).toLocaleDateString('pt-BR')}`
-                    : ''}
-                </p>
-              </CardContent>
-            </Card>
-          ))
-        )}
-      </div>
+      <Tabs defaultValue="pending">
+        <TabsList>
+          <TabsTrigger value="pending">Solicitações Pendentes</TabsTrigger>
+          <TabsTrigger value="rules">Regras de Aprovação</TabsTrigger>
+        </TabsList>
+        <TabsContent value="pending" className="space-y-4 mt-4">
+          <div className="flex flex-wrap gap-2">
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-40">
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos Status</SelectItem>
+                {APPROVAL_STATUSES.map((s) => (
+                  <SelectItem key={s} value={s}>
+                    {s}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={typeFilter} onValueChange={setTypeFilter}>
+              <SelectTrigger className="w-48">
+                <SelectValue placeholder="Tipo" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos Tipos</SelectItem>
+                {APPROVAL_TYPES.map((t) => (
+                  <SelectItem key={t} value={t}>
+                    {t}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="grid gap-3">
+            {filtered.length === 0 ? (
+              <Card>
+                <CardContent className="p-8 text-center text-sm text-slate-500">
+                  Nenhuma aprovação encontrada.
+                </CardContent>
+              </Card>
+            ) : (
+              filtered.map((a) => (
+                <Card key={a.id}>
+                  <CardContent className="p-4 space-y-1">
+                    <div className="flex items-center gap-2">
+                      <Badge className={statusCls[a.status] || 'bg-slate-100'}>{a.status}</Badge>
+                      <span className="text-xs font-medium text-slate-500">{a.type}</span>
+                    </div>
+                    <p className="text-sm font-medium">
+                      {a.expand?.ticket ? (
+                        <Link
+                          to={`/tickets/${a.expand.ticket.id}`}
+                          className="text-blue-600 hover:underline"
+                        >
+                          #{a.expand.ticket.number}
+                        </Link>
+                      ) : (
+                        'N/A'
+                      )}{' '}
+                      - {a.justification}
+                    </p>
+                    <p className="text-xs text-slate-500">
+                      Solicitado por {a.expand?.requester?.name || 'N/A'} em{' '}
+                      {new Date(a.created).toLocaleDateString('pt-BR')}
+                      {a.estimated_cost ? ` · R$ ${a.estimated_cost}` : ''}
+                      {a.deadline
+                        ? ` · Prazo: ${new Date(a.deadline).toLocaleDateString('pt-BR')}`
+                        : ''}
+                    </p>
+                  </CardContent>
+                </Card>
+              ))
+            )}
+          </div>
+        </TabsContent>
+        <TabsContent value="rules" className="mt-4">
+          <ApprovalRulesTab />
+        </TabsContent>
+      </Tabs>
     </div>
   )
 }
