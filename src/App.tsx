@@ -113,6 +113,10 @@ const App = () => (
               <Route path="/tickets" element={<TicketList />} />
               <Route path="/tickets/new" element={<TicketCreate />} />
               <Route path="/tickets/:id" element={<TicketDetail />} />
+              <Route path="/chamados/novo" element={<TicketCreate />} />
+              <Route path="/aprovacoes" element={<ApprovalList />} />
+              <Route path="/categorias" element={<CategoryManagement />} />
+              <Route path="/catalogo" element={<ActivityCatalog />} />
               <Route path="/clients" element={<ClientList />} />
               <Route path="/clients/new" element={<ClientDetail />} />
               <Route path="/clients/:id/edit" element={<ClientEdit />} />

@@ -70,6 +70,7 @@ export default function Layout() {
   const [notifications, setNotifications] = useState<NotificationRecord[]>([])
   const [mobileOpen, setMobileOpen] = useState(false)
   const [clientMenuOpen, setClientMenuOpen] = useState(true)
+  const [chamadosMenuOpen, setChamadosMenuOpen] = useState(true)
 
   useEffect(() => {
     if (user) {
@@ -91,16 +92,8 @@ export default function Layout() {
     { label: 'Dashboard', path: '/dashboard', icon: LayoutDashboard, show: true },
     { label: 'Meu Painel', path: '/operator-dashboard', icon: Gauge, show: true },
     { label: 'Chamados', path: '/tickets', icon: Ticket, show: true },
-    { label: 'Abrir Chamado', path: '/tickets/new', icon: PlusCircle, show: true },
     { label: 'Equipe', path: '/team', icon: Users, show: permissions.canManageTeam },
     { label: 'Filas', path: '/queues', icon: Inbox, show: permissions.canManageQueues },
-    { label: 'Categorias', path: '/categories', icon: Tags, show: permissions.canManageCategories },
-    {
-      label: 'Catálogo de Atividades',
-      path: '/activity-catalog',
-      icon: ListTree,
-      show: permissions.canManageCategories,
-    },
     { label: 'Relatórios', path: '/reports', icon: BarChart3, show: permissions.canViewReports },
     {
       label: 'Relatórios por Filial',
@@ -114,7 +107,6 @@ export default function Layout() {
       icon: TrendingUp,
       show: permissions.canViewReports,
     },
-    { label: 'Aprovações', path: '/approvals', icon: FileCheck, show: true },
     { label: 'Agenda Técnica', path: '/agenda-tecnica', icon: CalendarClock, show: true },
     { label: 'Visitas Técnicas', path: '/visits', icon: MapPin, show: true },
     {
@@ -210,6 +202,20 @@ export default function Layout() {
   ]
 
   const clientGroupVisible = permissions.canManageClients || permissions.canManageContracts
+
+  const chamadosSubmenuItems = [
+    { label: 'Abrir Chamado', path: '/chamados/novo', icon: PlusCircle, show: true },
+    { label: 'Aprovações', path: '/aprovacoes', icon: FileCheck, show: true },
+    { label: 'Categorias', path: '/categorias', icon: Tags, show: permissions.canManageCategories },
+    {
+      label: 'Catálogo de Atividades',
+      path: '/catalogo',
+      icon: ListTree,
+      show: permissions.canManageCategories,
+    },
+  ]
+
+  const chamadosGroupVisible = chamadosSubmenuItems.some((i) => i.show)
   const teamIdx = navItems.findIndex((i) => i.path === '/team')
   const navBeforeClient = navItems.slice(0, teamIdx).filter((i) => i.show)
   const navAfterClient = navItems.slice(teamIdx).filter((i) => i.show)
@@ -248,6 +254,50 @@ export default function Layout() {
 
       <nav className="sidebar-scroll flex-1 overflow-y-auto py-2 scroll-smooth">
         {navBeforeClient.map(renderNavItem)}
+        {chamadosGroupVisible && (
+          <div key="chamados-group">
+            <div className="flex items-center">
+              <button
+                onClick={() => setChamadosMenuOpen(!chamadosMenuOpen)}
+                className={`flex flex-1 items-center gap-3 px-4 py-2.5 text-sm font-medium transition-all duration-200 border-l-2 ${
+                  chamadosSubmenuItems.some((i) => i.show && location.pathname === i.path)
+                    ? 'border-primary bg-primary/10 text-primary'
+                    : 'border-transparent text-muted-foreground hover:bg-secondary/50 hover:text-foreground'
+                }`}
+              >
+                <Ticket className="h-[18px] w-[18px] shrink-0" />
+                <span className="truncate">Chamados</span>
+                {chamadosMenuOpen ? (
+                  <ChevronDown className="ml-auto h-4 w-4" />
+                ) : (
+                  <ChevronRight className="ml-auto h-4 w-4" />
+                )}
+              </button>
+            </div>
+            {chamadosMenuOpen &&
+              chamadosSubmenuItems
+                .filter((i) => i.show)
+                .map((sub) => {
+                  const SubIcon = sub.icon
+                  const subActive = location.pathname === sub.path
+                  return (
+                    <Link
+                      key={sub.path}
+                      to={sub.path}
+                      onClick={() => setMobileOpen(false)}
+                      className={`flex items-center gap-3 pl-10 pr-4 py-2 text-[13px] font-medium transition-all duration-200 border-l-2 ${
+                        subActive
+                          ? 'border-primary bg-primary/10 text-primary'
+                          : 'border-transparent text-muted-foreground hover:bg-secondary/50 hover:text-foreground'
+                      }`}
+                    >
+                      <SubIcon className="h-4 w-4 shrink-0" />
+                      <span className="truncate">{sub.label}</span>
+                    </Link>
+                  )
+                })}
+          </div>
+        )}
         {clientGroupVisible && (
           <div key="cliente-group">
             <div className="flex items-center">
@@ -325,8 +375,9 @@ export default function Layout() {
               </Sheet>
             )}
             <h1 className="text-lg font-semibold text-foreground">
-              {[...navItems, ...clientSubmenuItems].find((i) => i.path === location.pathname)
-                ?.label || 'Painel'}
+              {[...navItems, ...clientSubmenuItems, ...chamadosSubmenuItems].find(
+                (i) => i.path === location.pathname,
+              )?.label || 'Painel'}
             </h1>
           </div>
 
