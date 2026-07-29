@@ -355,7 +355,7 @@ export default function TicketList() {
                       </td>
                     </tr>
                   ))
-                )}{' '}
+                )}
               </tbody>
             </table>
           </div>
