@@ -92,7 +92,6 @@ export default function Layout() {
     { label: 'Meu Painel', path: '/operator-dashboard', icon: Gauge, show: true },
     { label: 'Chamados', path: '/tickets', icon: Ticket, show: true },
     { label: 'Abrir Chamado', path: '/tickets/new', icon: PlusCircle, show: true },
-    { label: 'Clientes', path: '/clients', icon: Building2, show: permissions.canManageClients },
     { label: 'Equipe', path: '/team', icon: Users, show: permissions.canManageTeam },
     { label: 'Filas', path: '/queues', icon: Inbox, show: permissions.canManageQueues },
     { label: 'Categorias', path: '/categories', icon: Tags, show: permissions.canManageCategories },
@@ -183,6 +182,12 @@ export default function Layout() {
   ]
 
   const clientSubmenuItems = [
+    {
+      label: 'Cadastro de Clientes',
+      path: '/clients',
+      icon: Building2,
+      show: permissions.canManageClients,
+    },
     { label: 'Contrato', path: '/contracts', icon: FileText, show: permissions.canManageContracts },
     {
       label: 'Horas Clientes',
