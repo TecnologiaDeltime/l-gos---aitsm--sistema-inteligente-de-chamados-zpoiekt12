@@ -73,6 +73,7 @@ import { computeSlaResponseStatus, computeSlaSolutionStatus } from '@/lib/sla-st
 import { ApprovalDialog } from '@/components/ApprovalDialog'
 import { VisitDialog } from '@/components/VisitDialog'
 import { SlaPauseDialog, STATUS_BY_REASON } from '@/components/SlaPauseDialog'
+import { formatMinutes, formatHours } from '@/lib/duration'
 import { useAuth } from '@/hooks/use-auth'
 import { usePermissions } from '@/hooks/use-permissions'
 import { useRealtime } from '@/hooks/use-realtime'
@@ -164,7 +165,7 @@ export default function TicketDetail() {
   }, [timerRunning, timerStart])
 
   const totalMinutes = interactions.reduce((sum, i) => sum + (i.duration_minutes || 0), 0)
-  const totalHoursDisplay = `${String(Math.floor(totalMinutes / 60)).padStart(2, '0')}:${String(totalMinutes % 60).padStart(2, '0')}`
+  const totalHoursDisplay = formatMinutes(totalMinutes)
 
   const handleStartTimer = () => {
     setTimerStart(new Date())
@@ -506,9 +507,7 @@ export default function TicketDetail() {
                   {i.duration_minutes > 0 && (
                     <div className="flex items-center gap-2 pt-1 text-slate-500">
                       <Clock className="h-3 w-3" />
-                      <span>
-                        {Math.floor(i.duration_minutes / 60)}h {i.duration_minutes % 60}min
-                      </span>
+                      <span>{formatMinutes(i.duration_minutes)}</span>
                       {i.hour_type && (
                         <Badge variant="outline" className="text-[10px]">
                           {i.hour_type}
@@ -784,7 +783,8 @@ export default function TicketDetail() {
               {ticket.expand?.assigned_to?.name || 'Não atribuído'}
             </div>
             <div className="flex items-center gap-2 text-muted-foreground">
-              <Clock className="h-4 w-4 text-muted-foreground" /> Horas: {ticket.work_hours || 0}h
+              <Clock className="h-4 w-4 text-muted-foreground" /> Horas:{' '}
+              {formatHours(ticket.work_hours)}
             </div>
             <div className="flex items-center gap-2 text-muted-foreground">
               <Timer className="h-4 w-4 text-muted-foreground" /> Total: {totalHoursDisplay}

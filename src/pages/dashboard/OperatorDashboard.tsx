@@ -20,6 +20,7 @@ import {
   Timer,
   RefreshCw,
 } from 'lucide-react'
+import { formatMinutes } from '@/lib/duration'
 
 type PeriodOption = '7' | '30' | '60' | '90'
 
@@ -117,7 +118,7 @@ export default function OperatorDashboard() {
     },
     {
       label: 'Horas',
-      value: totalHours.toFixed(1) + 'h',
+      value: formatMinutes(totalHours * 60),
       ...trend(totalHours, 0),
       icon: Timer,
       color: 'text-purple-600',
@@ -143,7 +144,7 @@ export default function OperatorDashboard() {
     },
     {
       label: 'Horas/Chamado',
-      value: avgHrs.toFixed(2) + 'h',
+      value: formatMinutes(avgHrs * 60),
       icon: Timer,
       color: 'text-indigo-600',
       bg: 'bg-indigo-50',
@@ -252,7 +253,7 @@ export default function OperatorDashboard() {
               .map(([type, hours]) => (
                 <div key={type} className="flex justify-between text-xs">
                   <span className="text-slate-500">{type}</span>
-                  <span className="font-bold">{hours.toFixed(2)}h</span>
+                  <span className="font-bold">{formatMinutes(hours * 60)}</span>
                 </div>
               ))}
             {interactions.length === 0 && (

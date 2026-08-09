@@ -6,6 +6,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { getContract, getContractTickets, ContractRecord } from '@/services/contracts'
 import { StatusBadge } from '@/components/StatusBadge'
 import { exportContractPdf } from '@/lib/pdf-export'
+import { formatHours, formatMinutes } from '@/lib/duration'
 import { useAuth } from '@/hooks/use-auth'
 import { useRealtime } from '@/hooks/use-realtime'
 
@@ -73,9 +74,9 @@ export default function ContractView() {
       l: 'Término',
       v: contract.end_date ? new Date(contract.end_date).toLocaleDateString('pt-BR') : 'N/A',
     },
-    { l: 'Horas Mensais', v: `${contract.monthly_hours || 0}h` },
-    { l: 'SLA Resposta', v: `${contract.sla_response_time || 0} min` },
-    { l: 'SLA Solução', v: `${contract.sla_solution_time || 0} min` },
+    { l: 'Horas Mensais', v: formatHours(contract.monthly_hours || 0) },
+    { l: 'SLA Resposta', v: formatMinutes(contract.sla_response_time || 0) },
+    { l: 'SLA Solução', v: formatMinutes(contract.sla_solution_time || 0) },
     {
       l: 'Horário',
       v: `${contract.service_hours_start || 'N/A'} - ${contract.service_hours_end || 'N/A'}`,

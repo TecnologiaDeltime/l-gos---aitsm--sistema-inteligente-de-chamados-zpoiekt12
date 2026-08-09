@@ -1,4 +1,5 @@
 import type { ContractRecord } from '@/services/contracts'
+import { formatMinutes } from '@/lib/duration'
 
 function fmt(value: any, fallback = 'N/A'): string {
   if (value === null || value === undefined || value === '') return fallback
@@ -41,10 +42,10 @@ td:first-child{font-weight:bold;width:35%;color:#64748b}
 <h2>2. Horários e SLAs</h2><table>
 <tr><td>Horário de Atendimento</td><td>${fmt(contract.service_hours_start)} - ${fmt(contract.service_hours_end)}</td></tr>
 <tr><td>Dias de Serviço</td><td>${fmt(contract.service_days)}</td></tr>
-<tr><td>SLA Resposta (min)</td><td>${fmt(contract.sla_response_time)}</td></tr>
-<tr><td>SLA Solução (min)</td><td>${fmt(contract.sla_solution_time)}</td></tr>
-<tr><td>SLA Atualização (min)</td><td>${fmt(contract.sla_update_time)}</td></tr>
-<tr><td>SLA Presencial (min)</td><td>${fmt(contract.sla_field_service_time)}</td></tr>
+<tr><td>SLA Resposta</td><td>${formatMinutes(Number(contract.sla_response_time) || 0)}</td></tr>
+<tr><td>SLA Solução</td><td>${formatMinutes(Number(contract.sla_solution_time) || 0)}</td></tr>
+<tr><td>SLA Atualização</td><td>${formatMinutes(Number(contract.sla_update_time) || 0)}</td></tr>
+<tr><td>SLA Presencial</td><td>${formatMinutes(Number(contract.sla_field_service_time) || 0)}</td></tr>
 <tr><td>Prioridades Disponíveis</td><td>${fmtArray(contract.priorities_available)}</td></tr></table>
 <h2>3. Escopo</h2><table>
 <tr><td>Serviços Incluídos</td><td>${fmt(contract.included_services)}</td></tr>
