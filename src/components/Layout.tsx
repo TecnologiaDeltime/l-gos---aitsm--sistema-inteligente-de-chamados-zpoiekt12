@@ -38,6 +38,8 @@ import {
   ChevronRight,
   GitBranch,
   Bug,
+  Search,
+  CheckCircle2,
 } from 'lucide-react'
 import { useAuth } from '@/hooks/use-auth'
 import { useTheme } from '@/hooks/use-theme'

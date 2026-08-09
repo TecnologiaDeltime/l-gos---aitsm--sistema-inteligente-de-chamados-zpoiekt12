@@ -129,13 +129,11 @@ export const createEvaluation = (data: any) =>
   pb.collection('problem_effectiveness_evaluations').create(data)
 
 export const getDefinitiveSolutions = (problemId: string) =>
-  pb
-    .collection('problem_definitive_solutions')
-    .getFullList({
-      filter: `problem = "${problemId}"`,
-      sort: '-created',
-      expand: 'responsible,related_change',
-    })
+  pb.collection('problem_definitive_solutions').getFullList({
+    filter: `problem = "${problemId}"`,
+    sort: '-created',
+    expand: 'responsible,related_change',
+  })
 
 export const createDefinitiveSolution = (data: any) =>
   pb.collection('problem_definitive_solutions').create(data)
