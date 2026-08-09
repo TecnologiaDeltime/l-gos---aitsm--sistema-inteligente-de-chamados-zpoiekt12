@@ -36,6 +36,7 @@ import {
   Hourglass,
   ChevronDown,
   ChevronRight,
+  GitBranch,
 } from 'lucide-react'
 import { useAuth } from '@/hooks/use-auth'
 import { useTheme } from '@/hooks/use-theme'
