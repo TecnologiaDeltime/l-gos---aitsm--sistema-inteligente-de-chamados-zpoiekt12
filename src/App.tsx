@@ -48,6 +48,7 @@ import SatisfactionDashboard from '@/pages/satisfaction/SatisfactionDashboard'
 import SurveyPublic from '@/pages/satisfaction/SurveyPublic'
 import OperatorDashboard from '@/pages/dashboard/OperatorDashboard'
 import ManagerDashboard from '@/pages/dashboard/ManagerDashboard'
+import ExecutiveDashboard from '@/pages/dashboard/ExecutiveDashboard'
 import ContractConsumptionDashboard from '@/pages/contracts/ContractConsumptionDashboard'
 import ConsumoContratosPlaceholder from '@/pages/contracts/ConsumoContratosPlaceholder'
 import DashboardContratosPlaceholder from '@/pages/contracts/DashboardContratosPlaceholder'
@@ -110,6 +111,7 @@ const App = () => (
             >
               <Route path="/" element={<RootRedirect />} />
               <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/dashboard-gerencial" element={<ExecutiveDashboard />} />
               <Route path="/tickets" element={<TicketList />} />
               <Route path="/tickets/new" element={<TicketCreate />} />
               <Route path="/tickets/:id" element={<TicketDetail />} />

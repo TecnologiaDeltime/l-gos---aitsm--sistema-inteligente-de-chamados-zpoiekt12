@@ -89,7 +89,6 @@ export default function Layout() {
   }
 
   const navItems = [
-    { label: 'Dashboard', path: '/dashboard', icon: LayoutDashboard, show: true },
     { label: 'Meu Painel', path: '/operator-dashboard', icon: Gauge, show: true },
     { label: 'Equipe', path: '/team', icon: Users, show: permissions.canManageTeam },
     { label: 'Filas', path: '/queues', icon: Inbox, show: permissions.canManageQueues },
@@ -215,6 +214,16 @@ export default function Layout() {
     },
   ]
 
+  const dashboardSubmenuItems = [
+    {
+      label: 'Dashboard Gerencial',
+      path: '/dashboard-gerencial',
+      icon: LayoutDashboard,
+      show: true,
+    },
+    { label: 'Painel Geral', path: '/dashboard', icon: LayoutDashboard, show: true },
+  ]
+
   const chamadosGroupVisible = chamadosSubmenuItems.some((i) => i.show)
   const teamIdx = navItems.findIndex((i) => i.path === '/team')
   const navBeforeClient = navItems.slice(0, teamIdx).filter((i) => i.show)
@@ -254,6 +263,48 @@ export default function Layout() {
 
       <nav className="sidebar-scroll flex-1 overflow-y-auto py-2 scroll-smooth">
         {navBeforeClient.map(renderNavItem)}
+        {
+          <div key="dashboard-group">
+            <div className="flex items-center">
+              <button
+                onClick={() => setDashboardMenuOpen(!dashboardMenuOpen)}
+                className={`flex flex-1 items-center gap-3 px-4 py-2.5 text-sm font-medium transition-all duration-200 border-l-2 ${
+                  dashboardSubmenuItems.some((i) => location.pathname === i.path)
+                    ? 'border-primary bg-primary/10 text-primary'
+                    : 'border-transparent text-muted-foreground hover:bg-secondary/50 hover:text-foreground'
+                }`}
+              >
+                <LayoutDashboard className="h-[18px] w-[18px] shrink-0" />
+                <span className="truncate">Dashboard</span>
+                {dashboardMenuOpen ? (
+                  <ChevronDown className="ml-auto h-4 w-4" />
+                ) : (
+                  <ChevronRight className="ml-auto h-4 w-4" />
+                )}
+              </button>
+            </div>
+            {dashboardMenuOpen &&
+              dashboardSubmenuItems.map((sub) => {
+                const SubIcon = sub.icon
+                const subActive = location.pathname === sub.path
+                return (
+                  <Link
+                    key={sub.path}
+                    to={sub.path}
+                    onClick={() => setMobileOpen(false)}
+                    className={`flex items-center gap-3 pl-10 pr-4 py-2 text-[13px] font-medium transition-all duration-200 border-l-2 ${
+                      subActive
+                        ? 'border-primary bg-primary/10 text-primary'
+                        : 'border-transparent text-muted-foreground hover:bg-secondary/50 hover:text-foreground'
+                    }`}
+                  >
+                    <SubIcon className="h-4 w-4 shrink-0" />
+                    <span className="truncate">{sub.label}</span>
+                  </Link>
+                )
+              })}
+          </div>
+        }
         {chamadosGroupVisible && (
           <div key="chamados-group">
             <div className="flex items-center">
@@ -375,9 +426,12 @@ export default function Layout() {
               </Sheet>
             )}
             <h1 className="text-lg font-semibold text-foreground">
-              {[...navItems, ...clientSubmenuItems, ...chamadosSubmenuItems].find(
-                (i) => i.path === location.pathname,
-              )?.label || 'Painel'}
+              {[
+                ...navItems,
+                ...dashboardSubmenuItems,
+                ...clientSubmenuItems,
+                ...chamadosSubmenuItems,
+              ].find((i) => i.path === location.pathname)?.label || 'Painel'}
             </h1>
           </div>
 
