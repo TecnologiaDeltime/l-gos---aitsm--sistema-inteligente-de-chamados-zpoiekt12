@@ -37,9 +37,11 @@ export interface ExecutiveKpis {
   closed: number
   pending: number
   contractedHours: number
+  contractedDisplay: string
   consumedMinutes: number
   consumedDisplay: string
   balanceHours: number
+  balanceDisplay: string
   visits: number
 }
 
@@ -54,15 +56,18 @@ export function computeKpis(data: DashboardData): ExecutiveKpis {
     .filter((p) => p.status === 'Ativo')
     .reduce((s, p) => s + (p.contracted_hours || 0), 0)
   const consumedMinutes = data.interactions.reduce((s, i) => s + (i.duration_minutes || 0), 0)
+  const balanceHours = contractedHours - consumedMinutes / 60
   return {
     opened,
     resolved,
     closed,
     pending,
     contractedHours,
+    contractedDisplay: formatHours(contractedHours),
     consumedMinutes,
     consumedDisplay: formatMinutes(consumedMinutes),
-    balanceHours: contractedHours - consumedMinutes / 60,
+    balanceHours,
+    balanceDisplay: formatHours(balanceHours),
     visits: data.visits.length,
   }
 }

@@ -213,7 +213,7 @@ export default function ExecutiveDashboard() {
         />
         <ExecutiveKpiCard
           label="Horas Contratadas"
-          value={`${kpis.contractedHours.toFixed(0)}h`}
+          value={kpis.contractedDisplay}
           icon={Hourglass}
           color="text-indigo-600"
           bg="bg-indigo-50"
@@ -227,7 +227,7 @@ export default function ExecutiveDashboard() {
         />
         <ExecutiveKpiCard
           label="Saldo de Horas"
-          value={`${kpis.balanceHours.toFixed(1)}h`}
+          value={kpis.balanceDisplay}
           icon={Hourglass}
           color={kpis.balanceHours < 0 ? 'text-red-600' : 'text-green-600'}
           bg={kpis.balanceHours < 0 ? 'bg-red-50' : 'bg-green-50'}

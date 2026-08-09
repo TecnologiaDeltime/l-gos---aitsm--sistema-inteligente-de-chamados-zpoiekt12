@@ -1,4 +1,5 @@
 import { Card, CardContent } from '@/components/ui/card'
+import { formatHours } from '@/lib/duration'
 
 interface HoursConsumptionCardProps {
   contractedHours: number
@@ -58,7 +59,7 @@ export function HoursConsumptionCard({
             <p
               className={`text-sm font-bold ${balanceHours < 0 ? 'text-red-600' : 'text-green-600'}`}
             >
-              {balanceHours.toFixed(1)}h
+              {formatHours(balanceHours)}
             </p>
           </div>
         </div>
