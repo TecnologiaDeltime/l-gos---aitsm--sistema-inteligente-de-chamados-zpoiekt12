@@ -91,7 +91,6 @@ export default function Layout() {
   const navItems = [
     { label: 'Dashboard', path: '/dashboard', icon: LayoutDashboard, show: true },
     { label: 'Meu Painel', path: '/operator-dashboard', icon: Gauge, show: true },
-    { label: 'Fila de Tickets', path: '/tickets', icon: Ticket, show: true },
     { label: 'Equipe', path: '/team', icon: Users, show: permissions.canManageTeam },
     { label: 'Filas', path: '/queues', icon: Inbox, show: permissions.canManageQueues },
     { label: 'Relatórios', path: '/reports', icon: BarChart3, show: permissions.canViewReports },
@@ -204,6 +203,7 @@ export default function Layout() {
   const clientGroupVisible = permissions.canManageClients || permissions.canManageContracts
 
   const chamadosSubmenuItems = [
+    { label: 'Fila de Tickets', path: '/tickets', icon: Ticket, show: true },
     { label: 'Abrir Chamado', path: '/chamados/novo', icon: PlusCircle, show: true },
     { label: 'Aprovações', path: '/aprovacoes', icon: FileCheck, show: true },
     { label: 'Categorias', path: '/categorias', icon: Tags, show: permissions.canManageCategories },
