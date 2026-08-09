@@ -101,7 +101,7 @@ export default function Dashboard() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-xl font-bold text-foreground">Painel Geral</h2>
+          <h2 className="text-xl font-bold text-foreground">Painel de Tickets</h2>
           <p className="text-sm text-muted-foreground mt-0.5">Visão geral dos chamados e SLAs</p>
         </div>
       </div>

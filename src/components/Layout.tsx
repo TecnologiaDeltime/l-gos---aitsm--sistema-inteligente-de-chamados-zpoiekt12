@@ -222,7 +222,7 @@ export default function Layout() {
       icon: LayoutDashboard,
       show: true,
     },
-    { label: 'Painel Geral', path: '/dashboard', icon: LayoutDashboard, show: true },
+    { label: 'Painel de Tickets', path: '/dashboard', icon: LayoutDashboard, show: true },
   ]
 
   const chamadosGroupVisible = chamadosSubmenuItems.some((i) => i.show)
