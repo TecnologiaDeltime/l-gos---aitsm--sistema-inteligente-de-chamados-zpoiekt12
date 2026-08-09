@@ -71,6 +71,7 @@ export default function Layout() {
   const [mobileOpen, setMobileOpen] = useState(false)
   const [clientMenuOpen, setClientMenuOpen] = useState(true)
   const [chamadosMenuOpen, setChamadosMenuOpen] = useState(true)
+  const [dashboardMenuOpen, setDashboardMenuOpen] = useState(true)
 
   useEffect(() => {
     if (user) {
