@@ -72,6 +72,7 @@ export default function Layout() {
   const [clientMenuOpen, setClientMenuOpen] = useState(true)
   const [chamadosMenuOpen, setChamadosMenuOpen] = useState(true)
   const [dashboardMenuOpen, setDashboardMenuOpen] = useState(true)
+  const [changesMenuOpen, setChangesMenuOpen] = useState(true)
 
   useEffect(() => {
     if (user) {
@@ -226,6 +227,41 @@ export default function Layout() {
   ]
 
   const chamadosGroupVisible = chamadosSubmenuItems.some((i) => i.show)
+
+  const changesSubmenuItems = [
+    { label: 'Dashboard de Mudanças', path: '/changes', icon: LayoutDashboard, show: true },
+    { label: 'Solicitações de Mudança', path: '/changes/list', icon: FileText, show: true },
+    { label: 'Minhas Mudanças', path: '/changes/my', icon: User, show: true },
+    { label: 'Mudanças Pendentes de Aprovação', path: '/changes/pending', icon: Clock, show: true },
+    { label: 'Calendário de Mudanças', path: '/changes/calendar', icon: CalendarClock, show: true },
+    { label: 'Comitê de Mudanças', path: '/changes/committee', icon: Users, show: true },
+    {
+      label: 'Tipos de Mudança',
+      path: '/changes/types',
+      icon: Tags,
+      show: permissions.isAdmin || permissions.isGestor,
+    },
+    {
+      label: 'Modelos de Mudança',
+      path: '/changes/templates',
+      icon: FileCheck,
+      show: permissions.isAdmin || permissions.isGestor,
+    },
+    {
+      label: 'Relatórios',
+      path: '/changes/reports',
+      icon: BarChart3,
+      show: permissions.canViewReports,
+    },
+    {
+      label: 'Configurações',
+      path: '/changes/settings',
+      icon: Settings,
+      show: permissions.isAdmin,
+    },
+  ]
+  const changesGroupVisible = changesSubmenuItems.some((i) => i.show)
+
   const teamIdx = navItems.findIndex((i) => i.path === '/team')
   const navBeforeClient = navItems.slice(0, teamIdx).filter((i) => i.show)
   const navAfterClient = navItems.slice(teamIdx).filter((i) => i.show)
@@ -372,6 +408,50 @@ export default function Layout() {
             </div>
             {clientMenuOpen &&
               clientSubmenuItems
+                .filter((i) => i.show)
+                .map((sub) => {
+                  const SubIcon = sub.icon
+                  const subActive = location.pathname === sub.path
+                  return (
+                    <Link
+                      key={sub.path}
+                      to={sub.path}
+                      onClick={() => setMobileOpen(false)}
+                      className={`flex items-center gap-3 pl-10 pr-4 py-2 text-[13px] font-medium transition-all duration-200 border-l-2 ${
+                        subActive
+                          ? 'border-primary bg-primary/10 text-primary'
+                          : 'border-transparent text-muted-foreground hover:bg-secondary/50 hover:text-foreground'
+                      }`}
+                    >
+                      <SubIcon className="h-4 w-4 shrink-0" />
+                      <span className="truncate">{sub.label}</span>
+                    </Link>
+                  )
+                })}
+          </div>
+        )}
+        {changesGroupVisible && (
+          <div key="changes-group">
+            <div className="flex items-center">
+              <button
+                onClick={() => setChangesMenuOpen(!changesMenuOpen)}
+                className={`flex flex-1 items-center gap-3 px-4 py-2.5 text-sm font-medium transition-all duration-200 border-l-2 ${
+                  changesSubmenuItems.some((i) => i.show && location.pathname === i.path)
+                    ? 'border-primary bg-primary/10 text-primary'
+                    : 'border-transparent text-muted-foreground hover:bg-secondary/50 hover:text-foreground'
+                }`}
+              >
+                <GitBranch className="h-[18px] w-[18px] shrink-0" />
+                <span className="truncate">Gestão de Mudanças</span>
+                {changesMenuOpen ? (
+                  <ChevronDown className="ml-auto h-4 w-4" />
+                ) : (
+                  <ChevronRight className="ml-auto h-4 w-4" />
+                )}
+              </button>
+            </div>
+            {changesMenuOpen &&
+              changesSubmenuItems
                 .filter((i) => i.show)
                 .map((sub) => {
                   const SubIcon = sub.icon

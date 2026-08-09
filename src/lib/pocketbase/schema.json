@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-09T04:16:53.209Z",
+  "generatedAt": "2026-08-09T05:15:05.814Z",
   "collections": [
     {
       "name": "users",
@@ -5919,6 +5919,724 @@
         "CREATE INDEX idx_approval_configs_activity ON approval_configs (activity)",
         "CREATE INDEX idx_approval_configs_clients ON approval_configs (clients)"
       ]
+    },
+    {
+      "name": "change_types",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != \"\"",
+        "view": "@request.auth.id != \"\"",
+        "create": "@request.auth.id != \"\"",
+        "update": "@request.auth.id != \"\"",
+        "delete": "@request.auth.id != \"\""
+      },
+      "fields": [
+        {
+          "name": "name",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "description",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "risk_level",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["Baixo", "Médio", "Alto", "Crítico"]
+        },
+        {
+          "name": "approval_required",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "committee_approval",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "eligible_for_automation",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "is_standard",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "recurring",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "active",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": [
+        "CREATE INDEX idx_change_types_name ON change_types (name)",
+        "CREATE INDEX idx_change_types_active ON change_types (active)"
+      ]
+    },
+    {
+      "name": "change_templates",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != \"\"",
+        "view": "@request.auth.id != \"\"",
+        "create": "@request.auth.id != \"\"",
+        "update": "@request.auth.id != \"\"",
+        "delete": "@request.auth.id != \"\""
+      },
+      "fields": [
+        {
+          "name": "name",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "change_type",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "change_types"
+        },
+        {
+          "name": "description",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "procedure",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "checklist",
+          "type": "json",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "default_priority",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["Crítica", "Alta", "Média", "Baixa"]
+        },
+        {
+          "name": "default_impact",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["Alto", "Médio", "Baixo"]
+        },
+        {
+          "name": "default_urgency",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["Alta", "Média", "Baixa"]
+        },
+        {
+          "name": "default_risk_level",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["Baixo", "Médio", "Alto", "Crítico"]
+        },
+        {
+          "name": "rollback_procedure",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "validation_criteria",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "active",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": [
+        "CREATE INDEX idx_change_templates_type ON change_templates (change_type)",
+        "CREATE INDEX idx_change_templates_active ON change_templates (active)"
+      ]
+    },
+    {
+      "name": "change_committee",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != \"\"",
+        "view": "@request.auth.id != \"\"",
+        "create": "@request.auth.id != \"\"",
+        "update": "@request.auth.id != \"\"",
+        "delete": "@request.auth.id != \"\""
+      },
+      "fields": [
+        {
+          "name": "name",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "description",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "members",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "chairperson",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "meeting_frequency",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "active",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": ["CREATE INDEX idx_change_committee_active ON change_committee (active)"]
+    },
+    {
+      "name": "changes",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != \"\"",
+        "view": "@request.auth.id != \"\"",
+        "create": "@request.auth.id != \"\"",
+        "update": "@request.auth.id != \"\"",
+        "delete": "@request.auth.id != \"\""
+      },
+      "fields": [
+        {
+          "name": "number",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "title",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "description",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "change_type",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "change_types"
+        },
+        {
+          "name": "template",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "change_templates"
+        },
+        {
+          "name": "status",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": [
+            "Rascunho",
+            "Solicitada",
+            "Em Avaliação",
+            "Aguardando Aprovação",
+            "Aprovada",
+            "Recusada",
+            "Em Planejamento",
+            "Agendada",
+            "Em Execução",
+            "Em Validação",
+            "Concluída",
+            "Cancelada",
+            "Reaberta"
+          ]
+        },
+        {
+          "name": "priority",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["Crítica", "Alta", "Média", "Baixa"]
+        },
+        {
+          "name": "impact",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["Alto", "Médio", "Baixo"]
+        },
+        {
+          "name": "urgency",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["Alta", "Média", "Baixa"]
+        },
+        {
+          "name": "risk_level",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["Baixo", "Médio", "Alto", "Crítico"]
+        },
+        {
+          "name": "risk_assessment",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "requester",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "responsible",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "assigned_to",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "participants",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "company",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "companies"
+        },
+        {
+          "name": "unit",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "company_units"
+        },
+        {
+          "name": "category",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "tkt_categories"
+        },
+        {
+          "name": "ticket",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "tickets"
+        },
+        {
+          "name": "planned_start",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "planned_end",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "actual_start",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "actual_end",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "execution_plan",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "rollback_plan",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "validation_results",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "evidence",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "closure_notes",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "approval_status",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["Não Requerida", "Pendente", "Aprovada", "Recusada"]
+        },
+        {
+          "name": "approved_by",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "approved_at",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "committee_decision",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": [
+        "CREATE INDEX idx_changes_number ON changes (number)",
+        "CREATE INDEX idx_changes_status ON changes (status)",
+        "CREATE INDEX idx_changes_type ON changes (change_type)",
+        "CREATE INDEX idx_changes_requester ON changes (requester)",
+        "CREATE INDEX idx_changes_assigned ON changes (assigned_to)",
+        "CREATE INDEX idx_changes_priority ON changes (priority)",
+        "CREATE INDEX idx_changes_created ON changes (created)"
+      ]
+    },
+    {
+      "name": "change_approvals",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != \"\"",
+        "view": "@request.auth.id != \"\"",
+        "create": "@request.auth.id != \"\"",
+        "update": "@request.auth.id != \"\"",
+        "delete": "@request.auth.id != \"\""
+      },
+      "fields": [
+        {
+          "name": "change",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "changes"
+        },
+        {
+          "name": "approver",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "status",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["Pendente", "Aprovado", "Recusado"]
+        },
+        {
+          "name": "decision",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "decided_at",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": [
+        "CREATE INDEX idx_change_approvals_change ON change_approvals (change)",
+        "CREATE INDEX idx_change_approvals_status ON change_approvals (status)",
+        "CREATE INDEX idx_change_approvals_approver ON change_approvals (approver)"
+      ]
+    },
+    {
+      "name": "change_calendar_entries",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != \"\"",
+        "view": "@request.auth.id != \"\"",
+        "create": "@request.auth.id != \"\"",
+        "update": "@request.auth.id != \"\"",
+        "delete": "@request.auth.id != \"\""
+      },
+      "fields": [
+        {
+          "name": "change",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "changes"
+        },
+        {
+          "name": "scheduled_start",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "scheduled_end",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "title",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "type",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "status",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": [
+        "CREATE INDEX idx_change_calendar_change ON change_calendar_entries (change)",
+        "CREATE INDEX idx_change_calendar_start ON change_calendar_entries (scheduled_start)"
+      ]
+    },
+    {
+      "name": "change_audit_logs",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != \"\"",
+        "view": "@request.auth.id != \"\"",
+        "create": "@request.auth.id != \"\"",
+        "update": "@request.auth.id != \"\"",
+        "delete": "@request.auth.id != \"\""
+      },
+      "fields": [
+        {
+          "name": "change",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "changes"
+        },
+        {
+          "name": "user",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "action",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "field",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "old_value",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "new_value",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": ["CREATE INDEX idx_change_audit_change ON change_audit_logs (change)"]
     }
   ]
 }

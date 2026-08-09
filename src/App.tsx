@@ -67,6 +67,18 @@ import TechnicianDashboardPage from '@/pages/visits/TechnicianDashboardPage'
 import TravelDashboard from '@/pages/visits/TravelDashboard'
 import ReimbursementDashboard from '@/pages/visits/ReimbursementDashboard'
 import OperationalMap from '@/pages/visits/OperationalMap'
+import ChangeDashboard from '@/pages/changes/ChangeDashboard'
+import ChangeList from '@/pages/changes/ChangeList'
+import MyChanges from '@/pages/changes/MyChanges'
+import PendingApprovals from '@/pages/changes/PendingApprovals'
+import ChangeCalendar from '@/pages/changes/ChangeCalendar'
+import ChangeCommittee from '@/pages/changes/ChangeCommittee'
+import ChangeTypes from '@/pages/changes/ChangeTypes'
+import ChangeTemplates from '@/pages/changes/ChangeTemplates'
+import ChangeReports from '@/pages/changes/ChangeReports'
+import ChangeSettings from '@/pages/changes/ChangeSettings'
+import ChangeDetail from '@/pages/changes/ChangeDetail'
+import ChangeCreate from '@/pages/changes/ChangeCreate'
 import { GlobalNotifications } from '@/components/GlobalNotifications'
 import { useAuth } from '@/hooks/use-auth'
 
@@ -168,6 +180,18 @@ const App = () => (
               <Route path="/visits/travel-dashboard" element={<TravelDashboard />} />
               <Route path="/visits/reimbursement-dashboard" element={<ReimbursementDashboard />} />
               <Route path="/visits/map" element={<OperationalMap />} />
+              <Route path="/changes" element={<ChangeDashboard />} />
+              <Route path="/changes/list" element={<ChangeList />} />
+              <Route path="/changes/new" element={<ChangeCreate />} />
+              <Route path="/changes/my" element={<MyChanges />} />
+              <Route path="/changes/pending" element={<PendingApprovals />} />
+              <Route path="/changes/calendar" element={<ChangeCalendar />} />
+              <Route path="/changes/committee" element={<ChangeCommittee />} />
+              <Route path="/changes/types" element={<ChangeTypes />} />
+              <Route path="/changes/templates" element={<ChangeTemplates />} />
+              <Route path="/changes/reports" element={<ChangeReports />} />
+              <Route path="/changes/settings" element={<ChangeSettings />} />
+              <Route path="/changes/:id" element={<ChangeDetail />} />
             </Route>
 
             <Route path="*" element={<NotFound />} />
