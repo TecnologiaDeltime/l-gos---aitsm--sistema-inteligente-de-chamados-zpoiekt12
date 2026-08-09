@@ -1,6 +1,6 @@
 import type { DashboardData } from '@/services/dashboard'
 import type { TicketRecord } from '@/services/tickets'
-import { formatMinutes } from '@/lib/duration'
+import { formatMinutes, formatHours } from '@/lib/duration'
 
 const MONTH_NAMES = [
   'Janeiro',
