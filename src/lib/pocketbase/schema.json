@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-09T05:16:29.625Z",
+  "generatedAt": "2026-08-09T05:29:19.384Z",
   "collections": [
     {
       "name": "users",
@@ -6637,6 +6637,1143 @@
         }
       ],
       "indexes": ["CREATE INDEX idx_change_audit_change ON change_audit_logs (change)"]
+    },
+    {
+      "name": "problems",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != \"\"",
+        "view": "@request.auth.id != \"\"",
+        "create": "@request.auth.id != \"\"",
+        "update": "@request.auth.id != \"\"",
+        "delete": "@request.auth.id != \"\""
+      },
+      "fields": [
+        {
+          "name": "number",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "title",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "description",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "symptom",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "expected_behavior",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "current_behavior",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "impact_description",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "frequency",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["Única ocorrência", "Eventual", "Recorrente", "Frequente", "Contínua"]
+        },
+        {
+          "name": "first_occurrence_date",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "last_occurrence_date",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "origin",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": [
+            "Incidente recorrente",
+            "Incidente grave",
+            "Incidente Major",
+            "Análise preventiva",
+            "Monitoramento",
+            "Auditoria",
+            "Segurança",
+            "Fornecedor",
+            "Capacidade",
+            "Disponibilidade",
+            "Tendência identificada",
+            "Identificação manual",
+            "Outra"
+          ]
+        },
+        {
+          "name": "origin_record_id",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "status",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": [
+            "Novo",
+            "Em Investigação",
+            "Causa Identificada",
+            "Solução de Contorno Planejada",
+            "Solução de Contorno Implantada",
+            "Em Análise de Efetividade",
+            "Análise de Efetividade Pendente",
+            "Avaliação Realizada",
+            "Encerrado",
+            "Reaberto",
+            "Plano de Solução Definitiva"
+          ]
+        },
+        {
+          "name": "priority",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["Baixa", "Média", "Alta", "Crítica"]
+        },
+        {
+          "name": "impact",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["Baixo", "Médio", "Alto", "Crítico"]
+        },
+        {
+          "name": "urgency",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["Baixa", "Média", "Alta", "Crítica"]
+        },
+        {
+          "name": "requester",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "responsible",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "team",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "queues"
+        },
+        {
+          "name": "company",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "companies"
+        },
+        {
+          "name": "contract",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "contracts"
+        },
+        {
+          "name": "service",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "category",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "tkt_categories"
+        },
+        {
+          "name": "subcategory",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "tkt_categories"
+        },
+        {
+          "name": "impact_classification",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["Baixo", "Médio", "Alto", "Crítico"]
+        },
+        {
+          "name": "affected_services",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "affected_clients",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "affected_users_count",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "avg_downtime",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "financial_impact",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "security_impact",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "reputational_impact",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "regulatory_impact",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "investigation_responsible",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "investigation_start_date",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "investigation_evidence",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "investigation_logs",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "investigation_tests",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "investigation_analyses",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "investigation_tools",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "investigation_observations",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "root_cause_identified",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "root_cause_evidence",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "root_cause_method",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "root_cause_responsible",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "root_cause_date",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "root_cause_confidence",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["Baixo", "Médio", "Alto"]
+        },
+        {
+          "name": "five_whys",
+          "type": "json",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "ishikawa",
+          "type": "json",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "is_known_error",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "effectiveness_start_date",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "effectiveness_end_date",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "effectiveness_period_days",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "effectiveness_result",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["Efetiva", "Parcialmente efetiva", "Não efetiva"]
+        },
+        {
+          "name": "incidents_before_count",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "incidents_after_count",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "closure_notes",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "reopened_count",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "reopen_reason",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": [
+        "CREATE INDEX idx_problems_number ON problems (number)",
+        "CREATE INDEX idx_problems_status ON problems (status)",
+        "CREATE INDEX idx_problems_priority ON problems (priority)",
+        "CREATE INDEX idx_problems_company ON problems (company)",
+        "CREATE INDEX idx_problems_responsible ON problems (responsible)",
+        "CREATE INDEX idx_problems_created ON problems (created)"
+      ]
+    },
+    {
+      "name": "problem_incidents",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != \"\"",
+        "view": "@request.auth.id != \"\"",
+        "create": "@request.auth.id != \"\"",
+        "update": "@request.auth.id != \"\"",
+        "delete": "@request.auth.id != \"\""
+      },
+      "fields": [
+        {
+          "name": "problem",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "problems"
+        },
+        {
+          "name": "ticket",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "tickets"
+        },
+        {
+          "name": "relation_type",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": [
+        "CREATE INDEX idx_pi_problem ON problem_incidents (problem)",
+        "CREATE INDEX pi_ticket ON problem_incidents (ticket)"
+      ]
+    },
+    {
+      "name": "problem_hypotheses",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != \"\"",
+        "view": "@request.auth.id != \"\"",
+        "create": "@request.auth.id != \"\"",
+        "update": "@request.auth.id != \"\"",
+        "delete": "@request.auth.id != \"\""
+      },
+      "fields": [
+        {
+          "name": "problem",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "problems"
+        },
+        {
+          "name": "description",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "probability",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["Baixa", "Média", "Alta"]
+        },
+        {
+          "name": "evidence",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "result",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "confirmed",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "discarded",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": ["CREATE INDEX idx_ph_problem ON problem_hypotheses (problem)"]
+    },
+    {
+      "name": "problem_audit_logs",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != \"\"",
+        "view": "@request.auth.id != \"\"",
+        "create": "@request.auth.id != \"\"",
+        "update": "@request.auth.id != \"\"",
+        "delete": "@request.auth.id != \"\""
+      },
+      "fields": [
+        {
+          "name": "problem",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "problems"
+        },
+        {
+          "name": "user",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "action",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "field",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "old_value",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "new_value",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "comment",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": ["CREATE INDEX idx_pal_problem ON problem_audit_logs (problem)"]
+    },
+    {
+      "name": "problem_workarounds",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != \"\"",
+        "view": "@request.auth.id != \"\"",
+        "create": "@request.auth.id != \"\"",
+        "update": "@request.auth.id != \"\"",
+        "delete": "@request.auth.id != \"\""
+      },
+      "fields": [
+        {
+          "name": "problem",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "problems"
+        },
+        {
+          "name": "description",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "procedure",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "responsible",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "deployment_date",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "review_date",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "evidence",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "restrictions",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "risks",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "impacts",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "service_desk_instructions",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": ["CREATE INDEX idx_pw_problem ON problem_workarounds (problem)"]
+    },
+    {
+      "name": "problem_effectiveness_evaluations",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != \"\"",
+        "view": "@request.auth.id != \"\"",
+        "create": "@request.auth.id != \"\"",
+        "update": "@request.auth.id != \"\"",
+        "delete": "@request.auth.id != \"\""
+      },
+      "fields": [
+        {
+          "name": "problem",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "problems"
+        },
+        {
+          "name": "was_effective",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["Sim", "Parcialmente", "Não"]
+        },
+        {
+          "name": "had_new_incidents",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["Sim", "Não"]
+        },
+        {
+          "name": "new_incidents_count",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "impact_reduced",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["Sim", "Parcialmente", "Não"]
+        },
+        {
+          "name": "service_stable",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["Sim", "Não"]
+        },
+        {
+          "name": "root_cause_exists",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["Sim", "Não", "Parcialmente"]
+        },
+        {
+          "name": "needs_definitive_solution",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["Sim", "Não"]
+        },
+        {
+          "name": "observations",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "evaluated_by",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": ["CREATE INDEX idx_pe_problem ON problem_effectiveness_evaluations (problem)"]
+    },
+    {
+      "name": "problem_definitive_solutions",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != \"\"",
+        "view": "@request.auth.id != \"\"",
+        "create": "@request.auth.id != \"\"",
+        "update": "@request.auth.id != \"\"",
+        "delete": "@request.auth.id != \"\""
+      },
+      "fields": [
+        {
+          "name": "problem",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "problems"
+        },
+        {
+          "name": "description",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "objective",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "responsible",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "planned_date",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "actual_date",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "dependencies",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "risks",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "evidence",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "result",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "related_change",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "changes"
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": ["CREATE INDEX idx_pds_problem ON problem_definitive_solutions (problem)"]
+    },
+    {
+      "name": "problem_extensions",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != \"\"",
+        "view": "@request.auth.id != \"\"",
+        "create": "@request.auth.id != \"\"",
+        "update": "@request.auth.id != \"\"",
+        "delete": "@request.auth.id != \"\""
+      },
+      "fields": [
+        {
+          "name": "problem",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "problems"
+        },
+        {
+          "name": "new_period_days",
+          "type": "number",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "justification",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "responsible",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "approval_required",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "new_end_date",
+          "type": "date",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": ["CREATE INDEX idx_pext_problem ON problem_extensions (problem)"]
+    },
+    {
+      "name": "known_errors",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != \"\"",
+        "view": "@request.auth.id != \"\"",
+        "create": "@request.auth.id != \"\"",
+        "update": "@request.auth.id != \"\"",
+        "delete": "@request.auth.id != \"\""
+      },
+      "fields": [
+        {
+          "name": "problem",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "problems"
+        },
+        {
+          "name": "known_cause",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "symptoms",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "affected_services",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "workaround",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "restrictions",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "responsible",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "status",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["Ativo", "Resolvido", "Arquivado"]
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": [
+        "CREATE INDEX idx_ke_problem ON known_errors (problem)",
+        "CREATE INDEX idx_ke_status ON known_errors (status)"
+      ]
+    },
+    {
+      "name": "problem_timeline",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != \"\"",
+        "view": "@request.auth.id != \"\"",
+        "create": "@request.auth.id != \"\"",
+        "update": "@request.auth.id != \"\"",
+        "delete": "@request.auth.id != \"\""
+      },
+      "fields": [
+        {
+          "name": "problem",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "problems"
+        },
+        {
+          "name": "stage",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "status",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "responsible",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "evidence",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "comments",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "event_date",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": ["CREATE INDEX idx_pt_problem ON problem_timeline (problem)"]
     }
   ]
 }

@@ -79,6 +79,18 @@ import ChangeReports from '@/pages/changes/ChangeReports'
 import ChangeSettings from '@/pages/changes/ChangeSettings'
 import ChangeDetail from '@/pages/changes/ChangeDetail'
 import ChangeCreate from '@/pages/changes/ChangeCreate'
+import ProblemDashboard from '@/pages/problems/ProblemDashboard'
+import ProblemList from '@/pages/problems/ProblemList'
+import ProblemCreate from '@/pages/problems/ProblemCreate'
+import ProblemDetail from '@/pages/problems/ProblemDetail'
+import MyProblems from '@/pages/problems/MyProblems'
+import ProblemInvestigation from '@/pages/problems/ProblemInvestigation'
+import ProblemEffectivenessAnalysis from '@/pages/problems/ProblemEffectivenessAnalysis'
+import ProblemPending from '@/pages/problems/ProblemPending'
+import ProblemClosed from '@/pages/problems/ProblemClosed'
+import KnownErrors from '@/pages/problems/KnownErrors'
+import ProblemReports from '@/pages/problems/ProblemReports'
+import ProblemSettings from '@/pages/problems/ProblemSettings'
 import { GlobalNotifications } from '@/components/GlobalNotifications'
 import { useAuth } from '@/hooks/use-auth'
 
@@ -192,6 +204,18 @@ const App = () => (
               <Route path="/changes/reports" element={<ChangeReports />} />
               <Route path="/changes/settings" element={<ChangeSettings />} />
               <Route path="/changes/:id" element={<ChangeDetail />} />
+              <Route path="/problems" element={<ProblemDashboard />} />
+              <Route path="/problems/list" element={<ProblemList />} />
+              <Route path="/problems/new" element={<ProblemCreate />} />
+              <Route path="/problems/my" element={<MyProblems />} />
+              <Route path="/problems/investigation" element={<ProblemInvestigation />} />
+              <Route path="/problems/effectiveness" element={<ProblemEffectivenessAnalysis />} />
+              <Route path="/problems/pending" element={<ProblemPending />} />
+              <Route path="/problems/closed" element={<ProblemClosed />} />
+              <Route path="/problems/known-errors" element={<KnownErrors />} />
+              <Route path="/problems/reports" element={<ProblemReports />} />
+              <Route path="/problems/settings" element={<ProblemSettings />} />
+              <Route path="/problems/:id" element={<ProblemDetail />} />
             </Route>
 
             <Route path="*" element={<NotFound />} />

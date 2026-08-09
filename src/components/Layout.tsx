@@ -37,6 +37,7 @@ import {
   ChevronDown,
   ChevronRight,
   GitBranch,
+  Bug,
 } from 'lucide-react'
 import { useAuth } from '@/hooks/use-auth'
 import { useTheme } from '@/hooks/use-theme'
@@ -74,6 +75,7 @@ export default function Layout() {
   const [chamadosMenuOpen, setChamadosMenuOpen] = useState(true)
   const [dashboardMenuOpen, setDashboardMenuOpen] = useState(true)
   const [changesMenuOpen, setChangesMenuOpen] = useState(true)
+  const [problemsMenuOpen, setProblemsMenuOpen] = useState(true)
 
   useEffect(() => {
     if (user) {
@@ -262,6 +264,31 @@ export default function Layout() {
     },
   ]
   const changesGroupVisible = changesSubmenuItems.some((i) => i.show)
+
+  const problemsSubmenuItems = [
+    { label: 'Dashboard de Problemas', path: '/problems', icon: LayoutDashboard, show: true },
+    { label: 'Lista de Problemas', path: '/problems/list', icon: Bug, show: true },
+    { label: 'Novo Problema', path: '/problems/new', icon: PlusCircle, show: true },
+    { label: 'Meus Problemas', path: '/problems/my', icon: User, show: true },
+    {
+      label: 'Problemas em Investigação',
+      path: '/problems/investigation',
+      icon: Search,
+      show: true,
+    },
+    { label: 'Análise de Efetividade', path: '/problems/effectiveness', icon: Gauge, show: true },
+    { label: 'Problemas Pendentes', path: '/problems/pending', icon: Clock, show: true },
+    { label: 'Problemas Encerrados', path: '/problems/closed', icon: CheckCircle2, show: true },
+    {
+      label: 'Base de Erros Conhecidos',
+      path: '/problems/known-errors',
+      icon: BookOpen,
+      show: true,
+    },
+    { label: 'Relatórios', path: '/problems/reports', icon: BarChart3, show: true },
+    { label: 'Configurações', path: '/problems/settings', icon: Settings, show: true },
+  ]
+  const problemsGroupVisible = problemsSubmenuItems.some((i) => i.show)
 
   const teamIdx = navItems.findIndex((i) => i.path === '/team')
   const navBeforeClient = navItems.slice(0, teamIdx).filter((i) => i.show)
@@ -453,6 +480,50 @@ export default function Layout() {
             </div>
             {changesMenuOpen &&
               changesSubmenuItems
+                .filter((i) => i.show)
+                .map((sub) => {
+                  const SubIcon = sub.icon
+                  const subActive = location.pathname === sub.path
+                  return (
+                    <Link
+                      key={sub.path}
+                      to={sub.path}
+                      onClick={() => setMobileOpen(false)}
+                      className={`flex items-center gap-3 pl-10 pr-4 py-2 text-[13px] font-medium transition-all duration-200 border-l-2 ${
+                        subActive
+                          ? 'border-primary bg-primary/10 text-primary'
+                          : 'border-transparent text-muted-foreground hover:bg-secondary/50 hover:text-foreground'
+                      }`}
+                    >
+                      <SubIcon className="h-4 w-4 shrink-0" />
+                      <span className="truncate">{sub.label}</span>
+                    </Link>
+                  )
+                })}
+          </div>
+        )}
+        {problemsGroupVisible && (
+          <div key="problems-group">
+            <div className="flex items-center">
+              <button
+                onClick={() => setProblemsMenuOpen(!problemsMenuOpen)}
+                className={`flex flex-1 items-center gap-3 px-4 py-2.5 text-sm font-medium transition-all duration-200 border-l-2 ${
+                  problemsSubmenuItems.some((i) => i.show && location.pathname === i.path)
+                    ? 'border-primary bg-primary/10 text-primary'
+                    : 'border-transparent text-muted-foreground hover:bg-secondary/50 hover:text-foreground'
+                }`}
+              >
+                <Bug className="h-[18px] w-[18px] shrink-0" />
+                <span className="truncate">Gerenciamento de Problemas</span>
+                {problemsMenuOpen ? (
+                  <ChevronDown className="ml-auto h-4 w-4" />
+                ) : (
+                  <ChevronRight className="ml-auto h-4 w-4" />
+                )}
+              </button>
+            </div>
+            {problemsMenuOpen &&
+              problemsSubmenuItems
                 .filter((i) => i.show)
                 .map((sub) => {
                   const SubIcon = sub.icon
