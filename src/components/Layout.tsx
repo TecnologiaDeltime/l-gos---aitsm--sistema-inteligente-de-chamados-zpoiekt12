@@ -91,7 +91,7 @@ export default function Layout() {
   const navItems = [
     { label: 'Dashboard', path: '/dashboard', icon: LayoutDashboard, show: true },
     { label: 'Meu Painel', path: '/operator-dashboard', icon: Gauge, show: true },
-    { label: 'Tickets', path: '/tickets', icon: Ticket, show: true },
+    { label: 'Fila de Tickets', path: '/tickets', icon: Ticket, show: true },
     { label: 'Equipe', path: '/team', icon: Users, show: permissions.canManageTeam },
     { label: 'Filas', path: '/queues', icon: Inbox, show: permissions.canManageQueues },
     { label: 'Relatórios', path: '/reports', icon: BarChart3, show: permissions.canViewReports },
