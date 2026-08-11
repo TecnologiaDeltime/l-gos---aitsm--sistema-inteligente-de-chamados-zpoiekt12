@@ -91,6 +91,18 @@ import ProblemClosed from '@/pages/problems/ProblemClosed'
 import KnownErrors from '@/pages/problems/KnownErrors'
 import ProblemReports from '@/pages/problems/ProblemReports'
 import ProblemSettings from '@/pages/problems/ProblemSettings'
+import VisitCreatePage from '@/pages/visits-n2/VisitCreatePage'
+import MyVisitsPage from '@/pages/visits-n2/MyVisitsPage'
+import VisitDetailPage from '@/pages/visits-n2/VisitDetailPage'
+import TravelEntriesPage from '@/pages/visits-n2/TravelEntriesPage'
+import ExpensesPage from '@/pages/visits-n2/ExpensesPage'
+import ServiceOrdersPage from '@/pages/visits-n2/ServiceOrdersPage'
+import ClientSignaturesPage from '@/pages/visits-n2/ClientSignaturesPage'
+import VisitChecklistsPage from '@/pages/visits-n2/VisitChecklistsPage'
+import RecurringVisitsPage from '@/pages/visits-n2/RecurringVisitsPage'
+import TechnicianAvailabilityPage from '@/pages/visits-n2/TechnicianAvailabilityPage'
+import KmRatesPage from '@/pages/visits-n2/KmRatesPage'
+import VisitReportsPage from '@/pages/visits-n2/VisitReportsPage'
 import { GlobalNotifications } from '@/components/GlobalNotifications'
 import { useAuth } from '@/hooks/use-auth'
 
@@ -216,6 +228,22 @@ const App = () => (
               <Route path="/problems/reports" element={<ProblemReports />} />
               <Route path="/problems/settings" element={<ProblemSettings />} />
               <Route path="/problems/:id" element={<ProblemDetail />} />
+              <Route path="/visitas-n2/dashboard" element={<VisitManagerDashboard />} />
+              <Route path="/visitas-n2/calendar" element={<TechnicalAgenda />} />
+              <Route path="/visitas-n2/list" element={<VisitList />} />
+              <Route path="/visitas-n2/new" element={<VisitCreatePage />} />
+              <Route path="/visitas-n2/my" element={<MyVisitsPage />} />
+              <Route path="/visitas-n2/travel" element={<TravelEntriesPage />} />
+              <Route path="/visitas-n2/expenses" element={<ExpensesPage />} />
+              <Route path="/visitas-n2/reimbursements" element={<ReimbursementDashboard />} />
+              <Route path="/visitas-n2/service-orders" element={<ServiceOrdersPage />} />
+              <Route path="/visitas-n2/signatures" element={<ClientSignaturesPage />} />
+              <Route path="/visitas-n2/checklists" element={<VisitChecklistsPage />} />
+              <Route path="/visitas-n2/recurring" element={<RecurringVisitsPage />} />
+              <Route path="/visitas-n2/availability" element={<TechnicianAvailabilityPage />} />
+              <Route path="/visitas-n2/km-rates" element={<KmRatesPage />} />
+              <Route path="/visitas-n2/reports" element={<VisitReportsPage />} />
+              <Route path="/visitas-n2/:id" element={<VisitDetailPage />} />
             </Route>
 
             <Route path="*" element={<NotFound />} />

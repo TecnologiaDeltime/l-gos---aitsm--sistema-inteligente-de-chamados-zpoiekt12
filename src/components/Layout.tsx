@@ -40,6 +40,8 @@ import {
   Bug,
   Search,
   CheckCircle2,
+  RefreshCw,
+  DollarSign,
 } from 'lucide-react'
 import { useAuth } from '@/hooks/use-auth'
 import { useTheme } from '@/hooks/use-theme'
@@ -78,6 +80,7 @@ export default function Layout() {
   const [dashboardMenuOpen, setDashboardMenuOpen] = useState(true)
   const [changesMenuOpen, setChangesMenuOpen] = useState(true)
   const [problemsMenuOpen, setProblemsMenuOpen] = useState(true)
+  const [visitsN2MenuOpen, setVisitsN2MenuOpen] = useState(true)
 
   useEffect(() => {
     if (user) {
@@ -291,6 +294,40 @@ export default function Layout() {
     { label: 'Configurações', path: '/problems/settings', icon: Settings, show: true },
   ]
   const problemsGroupVisible = problemsSubmenuItems.some((i) => i.show)
+
+  const visitsN2SubmenuItems = [
+    {
+      label: 'Dashboard de Visitas',
+      path: '/visitas-n2/dashboard',
+      icon: LayoutDashboard,
+      show: true,
+    },
+    {
+      label: 'Calendário de Visitas',
+      path: '/visitas-n2/calendar',
+      icon: CalendarClock,
+      show: true,
+    },
+    { label: 'Lista de Visitas', path: '/visitas-n2/list', icon: Ticket, show: true },
+    { label: 'Nova Visita', path: '/visitas-n2/new', icon: PlusCircle, show: true },
+    { label: 'Minhas Visitas', path: '/visitas-n2/my', icon: User, show: true },
+    { label: 'Deslocamentos', path: '/visitas-n2/travel', icon: MapPin, show: true },
+    { label: 'Despesas', path: '/visitas-n2/expenses', icon: FileCheck, show: true },
+    { label: 'Reembolsos', path: '/visitas-n2/reimbursements', icon: DollarSign, show: true },
+    { label: 'Ordens de Serviço', path: '/visitas-n2/service-orders', icon: FileText, show: true },
+    { label: 'Assinaturas', path: '/visitas-n2/signatures', icon: CheckCheck, show: true },
+    { label: 'Checklists de Visita', path: '/visitas-n2/checklists', icon: ListTree, show: true },
+    { label: 'Visitas Recorrentes', path: '/visitas-n2/recurring', icon: RefreshCw, show: true },
+    {
+      label: 'Disponibilidade de Técnicos',
+      path: '/visitas-n2/availability',
+      icon: Clock,
+      show: true,
+    },
+    { label: 'Taxas de KM', path: '/visitas-n2/km-rates', icon: Gauge, show: true },
+    { label: 'Relatórios', path: '/visitas-n2/reports', icon: BarChart3, show: true },
+  ]
+  const visitsN2GroupVisible = true
 
   const teamIdx = navItems.findIndex((i) => i.path === '/team')
   const navBeforeClient = navItems.slice(0, teamIdx).filter((i) => i.show)
@@ -548,6 +585,50 @@ export default function Layout() {
                 })}
           </div>
         )}
+        {visitsN2GroupVisible && (
+          <div key="visits-n2-group">
+            <div className="flex items-center">
+              <button
+                onClick={() => setVisitsN2MenuOpen(!visitsN2MenuOpen)}
+                className={`flex flex-1 items-center gap-3 px-4 py-2.5 text-sm font-medium transition-all duration-200 border-l-2 ${
+                  visitsN2SubmenuItems.some((i) => location.pathname === i.path)
+                    ? 'border-primary bg-primary/10 text-primary'
+                    : 'border-transparent text-muted-foreground hover:bg-secondary/50 hover:text-foreground'
+                }`}
+              >
+                <MapPin className="h-[18px] w-[18px] shrink-0" />
+                <span className="truncate">Gestão Visitas Técnicas N2</span>
+                {visitsN2MenuOpen ? (
+                  <ChevronDown className="ml-auto h-4 w-4" />
+                ) : (
+                  <ChevronRight className="ml-auto h-4 w-4" />
+                )}
+              </button>
+            </div>
+            {visitsN2MenuOpen &&
+              visitsN2SubmenuItems
+                .filter((i) => i.show)
+                .map((sub) => {
+                  const SubIcon = sub.icon
+                  const subActive = location.pathname === sub.path
+                  return (
+                    <Link
+                      key={sub.path}
+                      to={sub.path}
+                      onClick={() => setMobileOpen(false)}
+                      className={`flex items-center gap-3 pl-10 pr-4 py-2 text-[13px] font-medium transition-all duration-200 border-l-2 ${
+                        subActive
+                          ? 'border-primary bg-primary/10 text-primary'
+                          : 'border-transparent text-muted-foreground hover:bg-secondary/50 hover:text-foreground'
+                      }`}
+                    >
+                      <SubIcon className="h-4 w-4 shrink-0" />
+                      <span className="truncate">{sub.label}</span>
+                    </Link>
+                  )
+                })}
+          </div>
+        )}
         {navAfterClient.map(renderNavItem)}
       </nav>
 
@@ -586,6 +667,7 @@ export default function Layout() {
                 ...dashboardSubmenuItems,
                 ...clientSubmenuItems,
                 ...chamadosSubmenuItems,
+                ...visitsN2SubmenuItems,
               ].find((i) => i.path === location.pathname)?.label || 'Painel'}
             </h1>
           </div>
