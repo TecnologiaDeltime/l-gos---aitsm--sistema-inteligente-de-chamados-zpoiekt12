@@ -75,12 +75,12 @@ export default function Layout() {
   const navigate = useNavigate()
   const [notifications, setNotifications] = useState<NotificationRecord[]>([])
   const [mobileOpen, setMobileOpen] = useState(false)
-  const [clientMenuOpen, setClientMenuOpen] = useState(true)
-  const [chamadosMenuOpen, setChamadosMenuOpen] = useState(true)
-  const [dashboardMenuOpen, setDashboardMenuOpen] = useState(true)
-  const [changesMenuOpen, setChangesMenuOpen] = useState(true)
-  const [problemsMenuOpen, setProblemsMenuOpen] = useState(true)
-  const [visitsN2MenuOpen, setVisitsN2MenuOpen] = useState(true)
+  const [clientMenuOpen, setClientMenuOpen] = useState(false)
+  const [chamadosMenuOpen, setChamadosMenuOpen] = useState(false)
+  const [dashboardMenuOpen, setDashboardMenuOpen] = useState(false)
+  const [changesMenuOpen, setChangesMenuOpen] = useState(false)
+  const [problemsMenuOpen, setProblemsMenuOpen] = useState(false)
+  const [visitsN2MenuOpen, setVisitsN2MenuOpen] = useState(false)
 
   useEffect(() => {
     if (user) {
