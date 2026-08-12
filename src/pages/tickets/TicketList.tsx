@@ -24,6 +24,8 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { getTickets, updateTicket, TicketRecord } from '@/services/tickets'
+import { getUsers, UserItem } from '@/services/users'
+import { getCompanies, CompanyRecord } from '@/services/companies'
 import { PriorityBadge } from '@/components/PriorityBadge'
 import { StatusBadge } from '@/components/StatusBadge'
 import { SlaStatusBadge } from '@/components/SlaStatusBadge'
@@ -39,13 +41,39 @@ import { useToast } from '@/hooks/use-toast'
 import { isSoundEnabled, setSoundEnabled } from '@/lib/ticket-alerts'
 import { usePbHealth } from '@/hooks/use-pb-health'
 
+const TICKET_STATUSES = [
+  'Novo',
+  'Em Triagem',
+  'Aguardando Atribuição',
+  'Atribuído',
+  'Em Atendimento',
+  'Aguardando Cliente',
+  'Aguardando Aprovação',
+  'Aguardando Terceiro',
+  'Agendado',
+  'Escalonado',
+  'Resolvido',
+  'Aguardando Validação',
+  'Encerrado',
+  'Cancelado',
+  'Reaberto',
+] as const
+
+const TICKET_PRIORITIES = ['Crítica', 'Alta', 'Média', 'Baixa'] as const
+
+const CLOSED_STATUSES = ['Encerrado', 'Cancelado']
+
 export default function TicketList() {
   const [tickets, setTickets] = useState<TicketRecord[]>([])
+  const [users, setUsers] = useState<UserItem[]>([])
+  const [companies, setCompanies] = useState<CompanyRecord[]>([])
   const [loading, setLoading] = useState(true)
   const [view, setView] = useState<'table' | 'kanban'>('table')
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
-  const [contractSearch, setContractSearch] = useState('')
+  const [prioridadeFilter, setPrioridadeFilter] = useState('all')
+  const [analistaFilter, setAnalistaFilter] = useState('all')
+  const [clienteFilter, setClienteFilter] = useState('all')
   const [hiddenColumns, setHiddenColumnsState] = useState<string[]>([])
   const [soundOn, setSoundOn] = useState(isSoundEnabled())
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
@@ -56,7 +84,14 @@ export default function TicketList() {
 
   const loadData = async () => {
     try {
-      setTickets(await getTickets())
+      const [t, u, c] = await Promise.all([
+        getTickets(),
+        getUsers().catch(() => [] as UserItem[]),
+        getCompanies().catch(() => [] as CompanyRecord[]),
+      ])
+      setTickets(t)
+      setUsers(u)
+      setCompanies(c)
     } catch {
       /* noop */
     } finally {
@@ -110,12 +145,12 @@ export default function TicketList() {
       t.title.toLowerCase().includes(search.toLowerCase()) ||
       t.number.toLowerCase().includes(search.toLowerCase()) ||
       t.requester_name.toLowerCase().includes(search.toLowerCase())
-    const mSt = statusFilter === 'all' || t.status === statusFilter
-    const mC =
-      contractSearch === '' ||
-      (t.expand?.contract?.number || '').toLowerCase().includes(contractSearch.toLowerCase()) ||
-      (t.expand?.company?.trade_name || '').toLowerCase().includes(contractSearch.toLowerCase())
-    return ms && mSt && mC
+    const mSt =
+      statusFilter === 'all' ? !CLOSED_STATUSES.includes(t.status) : t.status === statusFilter
+    const mPriority = prioridadeFilter === 'all' || t.priority === prioridadeFilter
+    const mAnalist = analistaFilter === 'all' || t.assigned_to === analistaFilter
+    const mClient = clienteFilter === 'all' || t.company === clienteFilter
+    return ms && mSt && mPriority && mAnalist && mClient
   })
 
   const allFilteredSelected = filtered.length > 0 && filtered.every((t) => selectedIds.has(t.id))
@@ -154,9 +189,9 @@ export default function TicketList() {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex flex-1 items-center gap-2">
-          <div className="relative flex-1 max-w-md">
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+        <div className="flex flex-1 flex-wrap items-center gap-2">
+          <div className="relative min-w-[200px] flex-1 max-w-md">
             <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
             <Input
               placeholder="Buscar por nº, título ou solicitante..."
@@ -165,30 +200,61 @@ export default function TicketList() {
               className="pl-9"
             />
           </div>
-          <div className="relative w-40">
-            <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
-            <Input
-              placeholder="Contrato..."
-              value={contractSearch}
-              onChange={(e) => setContractSearch(e.target.value)}
-              className="pl-9"
-            />
-          </div>
           <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-40">
+            <SelectTrigger className="w-[180px]">
               <Filter className="h-4 w-4 mr-1 text-slate-400" />
               <SelectValue placeholder="Status" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Todos os Status</SelectItem>
-              <SelectItem value="Novo">Novo</SelectItem>
-              <SelectItem value="Em Atendimento">Em Atendimento</SelectItem>
-              <SelectItem value="Aguardando Cliente">Aguardando Cliente</SelectItem>
-              <SelectItem value="Resolvido">Resolvido</SelectItem>
+              <SelectItem value="all">Todos (Abertos)</SelectItem>
+              {TICKET_STATUSES.map((status) => (
+                <SelectItem key={status} value={status}>
+                  {status}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={prioridadeFilter} onValueChange={setPrioridadeFilter}>
+            <SelectTrigger className="w-[160px]">
+              <SelectValue placeholder="Prioridade" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todas as Prioridades</SelectItem>
+              {TICKET_PRIORITIES.map((priority) => (
+                <SelectItem key={priority} value={priority}>
+                  {priority}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={analistaFilter} onValueChange={setAnalistaFilter}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Analista" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos os Analistas</SelectItem>
+              {users.map((u) => (
+                <SelectItem key={u.id} value={u.id}>
+                  {u.name || u.email}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={clienteFilter} onValueChange={setClienteFilter}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Cliente" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos os Clientes</SelectItem>
+              {companies.map((c) => (
+                <SelectItem key={c.id} value={c.id}>
+                  {c.trade_name || c.legal_name}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 shrink-0">
           <Button
             variant="ghost"
             size="icon"
@@ -218,7 +284,7 @@ export default function TicketList() {
               onClick={() => setShowBatchDelegate(true)}
               className="bg-primary hover:bg-primary/90 text-primary-foreground"
             >
-              <Forward className="mr-1.5 h-4 w-4" /> Delegar em lote ({selectedIds.size})
+              <Forward className="mr-1.5 h-4 w-4" /> Delegar ({selectedIds.size})
             </Button>
           )}
           {view === 'kanban' && (
@@ -300,7 +366,7 @@ export default function TicketList() {
                 {filtered.length === 0 ? (
                   <tr>
                     <td colSpan={9} className="p-8 text-center text-slate-500">
-                      Nenhum chamado encontrado.
+                      Nenhum chamado encontrado com os filtros selecionados.
                     </td>
                   </tr>
                 ) : (
