@@ -44,7 +44,7 @@ onRecordAfterUpdateSuccess((e) => {
     notif.set('title', 'Pesquisa de Satisfação')
     notif.set(
       'message',
-      'O chamado #' +
+      'O chamado ' +
         record.getString('number') +
         ' foi resolvido. Pesquisa de satisfação disponível.',
     )

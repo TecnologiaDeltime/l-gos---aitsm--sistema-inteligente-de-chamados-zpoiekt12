@@ -77,9 +77,8 @@ export default function PortalPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    const num = `2026-${Math.floor(10000 + Math.random() * 90000)}`
     await createTicket({
-      number: num,
+      number: 'PENDENTE',
       company: user.company!,
       unit: user.unit || undefined,
       title,
@@ -272,7 +271,7 @@ export default function PortalPage() {
                       className="hover:bg-slate-50/60 cursor-pointer"
                       onClick={() => navigate(`/tickets/${t.id}`)}
                     >
-                      <td className="p-3.5 font-bold text-blue-600">#{t.number}</td>
+                      <td className="p-3.5 font-bold text-blue-600">{t.number}</td>
                       <td className="p-3.5 font-medium text-slate-900 max-w-sm truncate">
                         {t.title}
                       </td>

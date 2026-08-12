@@ -42,7 +42,7 @@ export function KanbanCard({
           to={`/tickets/${ticket.id}`}
           className="text-xs font-bold text-blue-600 hover:underline"
         >
-          #{ticket.number}
+          {ticket.number}
         </Link>
         <PriorityBadge priority={ticket.priority} />
       </div>

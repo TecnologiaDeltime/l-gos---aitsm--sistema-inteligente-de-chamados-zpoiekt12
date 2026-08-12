@@ -357,7 +357,7 @@ export default function TicketDetail() {
         <div className="itsm-card p-6 space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <h2 className="text-xl font-bold text-foreground">
-              #{ticket.number} - {ticket.title}
+              {ticket.number} - {ticket.title}
             </h2>
             <div className="flex items-center gap-2">
               <PriorityBadge priority={ticket.priority} />

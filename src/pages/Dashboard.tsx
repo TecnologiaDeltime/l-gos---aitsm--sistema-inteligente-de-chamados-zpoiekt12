@@ -267,7 +267,7 @@ export default function Dashboard() {
                     >
                       <td className="px-4 py-3 font-semibold text-primary">
                         <Link to={`/tickets/${t.id}`} className="hover:underline">
-                          #{t.number}
+                          {t.number}
                         </Link>
                       </td>
                       <td className="px-4 py-3 font-medium text-foreground max-w-xs truncate">

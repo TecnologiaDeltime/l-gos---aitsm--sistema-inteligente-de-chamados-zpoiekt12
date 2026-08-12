@@ -39,7 +39,7 @@ export function NewTicketToast() {
     if (typeof Notification === 'undefined') return
     if (Notification.permission !== 'granted') return
 
-    const title = `Novo Chamado #${ticket.number} - ${ticket.title}`
+    const title = `Novo Chamado: ${ticket.number} - ${ticket.title}`
     const body = `Solicitante: ${ticket.requester_name} | Prioridade: ${ticket.priority}`
 
     try {
@@ -75,7 +75,7 @@ export function NewTicketToast() {
         >
           <div className="flex-1 space-y-1">
             <div className="flex items-center gap-2">
-              <span className="text-sm font-bold text-blue-600">#{ticket.number}</span>
+              <span className="text-sm font-bold text-blue-600">{ticket.number}</span>
               <PriorityBadge priority={ticket.priority} />
             </div>
             <p className="text-sm font-medium text-slate-900 dark:text-slate-100">{ticket.title}</p>

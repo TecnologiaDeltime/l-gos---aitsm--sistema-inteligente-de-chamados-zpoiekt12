@@ -293,13 +293,12 @@ export default function TicketCreate() {
 
     setSubmitting(true)
     try {
-      const num = `2026-${Math.floor(10000 + Math.random() * 90000)}`
       const sub = categories.find((c) => c.id === subActivity)
       const sla = sub
         ? calculateSlaFromMinutes(sub.sla_response_minutes, sub.sla_solution_minutes)
         : {}
       const created = await createTicket({
-        number: num,
+        number: 'PENDENTE',
         company,
         unit: unit || undefined,
         department: department && department !== 'none' ? department : undefined,

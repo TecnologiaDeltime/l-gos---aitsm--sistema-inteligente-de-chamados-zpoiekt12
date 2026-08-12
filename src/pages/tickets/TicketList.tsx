@@ -383,7 +383,7 @@ export default function TicketList() {
                       </td>
                       <td className="px-4 py-3 font-bold text-primary">
                         <Link to={`/tickets/${t.id}`} className="hover:underline">
-                          #{t.number}
+                          {t.number}
                         </Link>
                       </td>
                       <td className="px-4 py-3 font-medium text-foreground max-w-sm truncate">

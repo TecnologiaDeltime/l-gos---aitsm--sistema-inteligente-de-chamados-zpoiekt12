@@ -34,7 +34,7 @@ onRecordAfterCreateSuccess((e) => {
       var notif = new Record(notifCollection)
       notif.set('user', recipients[j])
       notif.set('ticket', e.record.id)
-      notif.set('title', 'Chamado aguardando atribuição: #' + ticketNumber)
+      notif.set('title', 'Chamado aguardando atribuição: ' + ticketNumber)
       notif.set('message', ticketTitle)
       notif.set('type', 'Atribuição')
       notif.set('read', false)
