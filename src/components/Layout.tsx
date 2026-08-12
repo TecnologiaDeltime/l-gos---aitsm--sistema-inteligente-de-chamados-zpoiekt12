@@ -601,7 +601,7 @@ export default function Layout() {
                 }`}
               >
                 <MapPin className="h-[18px] w-[18px] shrink-0" />
-                <span className="truncate">Gestão Visitas Técnicas N2</span>
+                <span className="truncate">Gestão de Visitas</span>
                 {visitsN2MenuOpen ? (
                   <ChevronDown className="ml-auto h-4 w-4" />
                 ) : (
