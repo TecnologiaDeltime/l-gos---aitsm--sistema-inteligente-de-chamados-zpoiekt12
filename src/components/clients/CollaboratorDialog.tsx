@@ -229,26 +229,22 @@ export function CollaboratorDialog({
           </div>
           <div className="space-y-1">
             <Label className="text-xs">Filial</Label>
-            {branches.length === 0 ? (
-              <p className="text-xs text-slate-400">Nenhuma filial cadastrada</p>
-            ) : (
-              <Select
-                value={form.unit || 'none'}
-                onValueChange={(v) => set('unit', v === 'none' ? '' : v)}
-              >
-                <SelectTrigger className="h-9 text-sm">
-                  <SelectValue placeholder="Selecione uma filial" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">— Nenhuma —</SelectItem>
-                  {branches.map((b) => (
-                    <SelectItem key={b.id} value={b.id}>
-                      {b.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
+            <Select
+              value={form.unit || 'none'}
+              onValueChange={(v) => set('unit', v === 'none' ? '' : v)}
+            >
+              <SelectTrigger className="h-9 text-sm">
+                <SelectValue placeholder="Selecione uma filial" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Sem filial / Usar endereço do cliente</SelectItem>
+                {branches.map((b) => (
+                  <SelectItem key={b.id} value={b.id}>
+                    {b.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </div>
         <DialogFooter>
