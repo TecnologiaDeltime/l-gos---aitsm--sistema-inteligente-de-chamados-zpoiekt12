@@ -220,13 +220,26 @@ export default function TicketCreate() {
         setRequesterEmail(c.email || '')
         setRequesterPhone(c.phone || c.cell_phone || '')
         if (c.unit) setUnit(c.unit)
+        if (c.departments && c.departments.length > 0) {
+          setDepartment(c.departments[0])
+        }
+        const matchedEquipment = equipments.find(
+          (eq) =>
+            (eq.device_type === 'Desktop' || eq.device_type === 'Notebook') &&
+            ((eq.responsible_user &&
+              eq.responsible_user.trim().toLowerCase() === c.full_name.trim().toLowerCase()) ||
+              (eq.owner && eq.owner.trim().toLowerCase() === c.full_name.trim().toLowerCase())),
+        )
+        setEquipment(matchedEquipment ? matchedEquipment.id : '')
       } else {
         setRequesterName('')
         setRequesterEmail('')
         setRequesterPhone('')
+        setDepartment('')
+        setEquipment('')
       }
     },
-    [contacts],
+    [contacts, equipments],
   )
 
   const handleMainCategoryChange = (id: string) => {

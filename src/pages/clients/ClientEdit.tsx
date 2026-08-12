@@ -420,8 +420,8 @@ export default function ClientEdit() {
           </Button>
         </div>
       </form>
-      <FocalPointSection clientId={id} />
       <CollaboratorSection clientId={id} />
+      <FocalPointSection clientId={id} />
       <BranchSection clientId={id} />
       <EmailDomainSection clientId={id} />
     </div>

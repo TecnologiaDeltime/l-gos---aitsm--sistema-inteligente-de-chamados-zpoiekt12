@@ -18,15 +18,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Loader2, UserCheck } from 'lucide-react'
+import { Loader2 } from 'lucide-react'
 import {
   createClientContact,
   updateClientContact,
   type ClientContactRecord,
 } from '@/services/client-contacts'
-import { getCompanyUnitsByCompany, type CompanyUnitRecord } from '@/services/company-units'
+import { type CompanyUnitRecord } from '@/services/company-units'
 import { createCompanyAuditLog } from '@/services/companies'
-import { createUser, updateUser } from '@/services/users'
 import { useAuth } from '@/hooks/use-auth'
 import { useToast } from '@/hooks/use-toast'
 import { extractFieldErrors, type FieldErrors } from '@/lib/pocketbase/errors'
@@ -55,8 +54,6 @@ const EMPTY = {
   departments: [] as string[],
   unit: '' as string,
   is_focal_point: false,
-  password: '',
-  passwordConfirm: '',
 }
 
 export function CollaboratorDialog({
@@ -80,15 +77,13 @@ export function CollaboratorDialog({
       if (contact) {
         setForm({
           full_name: contact.full_name || '',
-          email: contact.email || (contact.expand?.user?.email as string) || '',
+          email: contact.email || '',
           phone: contact.phone || '',
           cell_phone: contact.cell_phone || '',
           has_whatsapp: contact.has_whatsapp || false,
           departments: contact.departments || [],
           unit: contact.unit || '',
           is_focal_point: contact.is_focal_point || false,
-          password: '',
-          passwordConfirm: '',
         })
       } else {
         setForm(EMPTY)
@@ -119,9 +114,6 @@ export function CollaboratorDialog({
     const errs: FieldErrors = {}
     if (!form.full_name.trim()) errs.full_name = 'Nome completo é obrigatório'
     if (!form.email.trim()) errs.email = 'E-mail é obrigatório'
-    if (!contact && !form.password.trim()) errs.password = 'Senha é obrigatória'
-    if (!contact && form.password !== form.passwordConfirm)
-      errs.passwordConfirm = 'As senhas não conferem'
     if (form.has_whatsapp && !form.cell_phone.trim())
       errs.cell_phone = 'Celular é obrigatório quando WhatsApp está marcado'
     if (Object.keys(errs).length > 0) {
@@ -132,37 +124,14 @@ export function CollaboratorDialog({
     setSaving(true)
     setErrors({})
     try {
-      const { password, passwordConfirm, ...contactData } = form
       const payload = {
-        ...contactData,
+        ...form,
         client: clientId,
         unit: form.unit || undefined,
       }
 
       if (contact) {
         await updateClientContact(contact.id, payload)
-        const linkedUserId = contact.user || (contact.expand?.user?.id as string)
-        if (linkedUserId) {
-          await updateUser(linkedUserId, {
-            name: form.full_name,
-            email: form.email,
-            phone: form.phone,
-          })
-        } else if (password) {
-          const newUser = await createUser({
-            name: form.full_name,
-            email: form.email,
-            password,
-            passwordConfirm,
-            phone: form.phone,
-            company: clientId,
-            unit: form.unit || undefined,
-            role: 'cliente_solicitante',
-            active: true,
-            verified: true,
-          } as any)
-          await updateClientContact(contact.id, { user: newUser.id })
-        }
         if (user?.id)
           await createCompanyAuditLog({
             user: user.id,
@@ -174,19 +143,7 @@ export function CollaboratorDialog({
             new_values: payload as Record<string, unknown>,
           })
       } else {
-        const newUser = await createUser({
-          name: form.full_name,
-          email: form.email,
-          password,
-          passwordConfirm,
-          phone: form.phone,
-          company: clientId,
-          unit: form.unit || undefined,
-          role: 'cliente_solicitante',
-          active: true,
-          verified: true,
-        } as any)
-        const created = await createClientContact({ ...payload, user: newUser.id })
+        const created = await createClientContact(payload)
         if (user?.id)
           await createCompanyAuditLog({
             user: user.id,
@@ -208,20 +165,11 @@ export function CollaboratorDialog({
     }
   }
 
-  const hasUser = !!(contact?.user || (contact as any)?.expand?.user)
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>
-            {contact ? 'Editar Colaborador' : 'Adicionar Colaborador'}
-            {hasUser && (
-              <span className="ml-2 inline-flex items-center gap-1 text-xs text-blue-600">
-                <UserCheck className="h-3 w-3" /> Conta vinculada
-              </span>
-            )}
-          </DialogTitle>
+          <DialogTitle>{contact ? 'Editar Colaborador' : 'Adicionar Colaborador'}</DialogTitle>
         </DialogHeader>
         <div className="space-y-3">
           <div className="space-y-1">
@@ -302,35 +250,6 @@ export function CollaboratorDialog({
               </Select>
             )}
           </div>
-          {(!contact || !hasUser) && (
-            <div className="space-y-2 rounded-lg border p-3 bg-slate-50 dark:bg-slate-800/50">
-              <p className="text-xs font-semibold text-slate-600 dark:text-slate-400">
-                {contact ? 'Criar conta de usuário' : 'Dados de acesso'}
-              </p>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <Label className="text-xs">Senha {!contact && '*'}</Label>
-                  <Input
-                    type="password"
-                    value={form.password}
-                    onChange={(e) => set('password', e.target.value)}
-                  />
-                  {errors.password && <p className="text-xs text-red-500">{errors.password}</p>}
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-xs">Confirmar {!contact && '*'}</Label>
-                  <Input
-                    type="password"
-                    value={form.passwordConfirm}
-                    onChange={(e) => set('passwordConfirm', e.target.value)}
-                  />
-                  {errors.passwordConfirm && (
-                    <p className="text-xs text-red-500">{errors.passwordConfirm}</p>
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
