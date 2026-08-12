@@ -2,9 +2,10 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { createCompany } from '@/services/companies'
+import { createCompany, createCompanyDepartment } from '@/services/companies'
 import { CollaboratorSection } from '@/components/clients/CollaboratorSection'
 import { BranchSection } from '@/components/clients/BranchSection'
+import { SectorSection } from '@/components/clients/SectorSection'
 import { useToast } from '@/hooks/use-toast'
 
 export default function ClientDetail() {
@@ -15,6 +16,7 @@ export default function ClientDetail() {
   const [email, setEmail] = useState('')
   const [phone, setPhone] = useState('')
   const [city, setCity] = useState('')
+  const [pendingSectors, setPendingSectors] = useState<string[]>([])
 
   const navigate = useNavigate()
   const { toast } = useToast()
@@ -32,6 +34,11 @@ export default function ClientDetail() {
         address_city: city,
         status: 'Ativo',
       })
+      if (pendingSectors.length > 0) {
+        await Promise.all(
+          pendingSectors.map((name) => createCompanyDepartment({ company: created.id, name })),
+        )
+      }
       toast({ title: 'Cliente cadastrado com sucesso!' })
       navigate(`/clients/${created.id}/edit`)
     } catch {
@@ -111,6 +118,7 @@ export default function ClientDetail() {
           </Button>
         </form>
       </div>
+      <SectorSection pendingSectors={pendingSectors} onPendingSectorsChange={setPendingSectors} />
       <CollaboratorSection />
       <BranchSection />
     </div>

@@ -35,6 +35,26 @@ export const getCompanyUnits = (companyId: string) =>
 export const getCompanyDepartments = (companyId: string) =>
   pb.collection('company_departments').getFullList({ filter: `company = "${companyId}"` })
 
+export interface CompanyDepartmentRecord {
+  id: string
+  company: string
+  unit?: string
+  name: string
+  created: string
+  updated: string
+}
+
+export const createCompanyDepartment = (data: { company: string; name: string; unit?: string }) =>
+  pb.collection('company_departments').create<CompanyDepartmentRecord>(data)
+
+export const updateCompanyDepartment = (
+  id: string,
+  data: Partial<{ name: string; unit?: string }>,
+) => pb.collection('company_departments').update<CompanyDepartmentRecord>(id, data)
+
+export const deleteCompanyDepartment = (id: string) =>
+  pb.collection('company_departments').delete(id)
+
 export const createCompanyAuditLog = (data: {
   user: string
   action: string
