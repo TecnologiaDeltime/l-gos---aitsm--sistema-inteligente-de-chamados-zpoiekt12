@@ -25,6 +25,7 @@ import { usePermissions } from '@/hooks/use-permissions'
 import { extractFieldErrors, type FieldErrors } from '@/lib/pocketbase/errors'
 import { CollaboratorSection } from '@/components/clients/CollaboratorSection'
 import { BranchSection } from '@/components/clients/BranchSection'
+import { FocalPointSection } from '@/components/clients/FocalPointSection'
 
 const EMPTY_FORM = {
   code: '',
@@ -375,6 +376,7 @@ export default function ClientEdit() {
           </Button>
         </div>
       </form>
+      <FocalPointSection clientId={id} />
       <CollaboratorSection clientId={id} />
       <BranchSection clientId={id} />
     </div>

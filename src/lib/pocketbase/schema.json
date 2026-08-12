@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-12T19:28:52.575Z",
+  "generatedAt": "2026-08-12T19:38:50.574Z",
   "collections": [
     {
       "name": "users",
@@ -3597,12 +3597,27 @@
           "required": false,
           "system": false,
           "collectionRef": "company_units"
+        },
+        {
+          "name": "user",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "is_focal_point",
+          "type": "bool",
+          "required": false,
+          "system": false
         }
       ],
       "indexes": [
         "CREATE INDEX idx_client_contacts_client ON client_contacts (client)",
         "CREATE INDEX idx_client_contacts_departments ON client_contacts (departments)",
-        "CREATE INDEX `idx_client_contacts_unit` ON `client_contacts` (unit)"
+        "CREATE INDEX `idx_client_contacts_unit` ON `client_contacts` (unit)",
+        "CREATE INDEX `idx_client_contacts_is_focal_point` ON `client_contacts` (is_focal_point)",
+        "CREATE INDEX `idx_client_contacts_user` ON `client_contacts` (user)"
       ]
     },
     {

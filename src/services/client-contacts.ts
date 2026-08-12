@@ -10,9 +10,26 @@ export interface ClientContactRecord {
   has_whatsapp?: boolean
   departments?: string[]
   unit?: string
+  user?: string
+  is_focal_point?: boolean
   created: string
   updated: string
 }
+
+export interface FocalPointData {
+  full_name: string
+  email: string
+  phone: string
+  cell_phone?: string
+  has_whatsapp?: boolean
+  user?: string
+}
+
+export const getFocalPoints = (clientId: string) =>
+  pb.collection('client_contacts').getFullList<ClientContactRecord>({
+    filter: `client = "${clientId}" && is_focal_point = true`,
+    sort: 'full_name',
+  })
 
 export const getClientContacts = (clientId: string) =>
   pb.collection('client_contacts').getFullList<ClientContactRecord>({

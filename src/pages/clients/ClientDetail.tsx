@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { createCompany, createCompanyDepartment } from '@/services/companies'
+import { createClientContact, type FocalPointData } from '@/services/client-contacts'
+import { FocalPointSection } from '@/components/clients/FocalPointSection'
 import { CollaboratorSection } from '@/components/clients/CollaboratorSection'
 import { BranchSection } from '@/components/clients/BranchSection'
 import { SectorSection } from '@/components/clients/SectorSection'
@@ -17,6 +19,7 @@ export default function ClientDetail() {
   const [phone, setPhone] = useState('')
   const [city, setCity] = useState('')
   const [pendingSectors, setPendingSectors] = useState<string[]>([])
+  const [pendingFocalPoints, setPendingFocalPoints] = useState<FocalPointData[]>([])
 
   const navigate = useNavigate()
   const { toast } = useToast()
@@ -37,6 +40,13 @@ export default function ClientDetail() {
       if (pendingSectors.length > 0) {
         await Promise.all(
           pendingSectors.map((name) => createCompanyDepartment({ company: created.id, name })),
+        )
+      }
+      if (pendingFocalPoints.length > 0) {
+        await Promise.all(
+          pendingFocalPoints.map((fp) =>
+            createClientContact({ ...fp, client: created.id, is_focal_point: true }),
+          ),
         )
       }
       toast({ title: 'Cliente cadastrado com sucesso!' })
@@ -119,6 +129,10 @@ export default function ClientDetail() {
         </form>
       </div>
       <SectorSection pendingSectors={pendingSectors} onPendingSectorsChange={setPendingSectors} />
+      <FocalPointSection
+        pendingFocalPoints={pendingFocalPoints}
+        onPendingFocalPointsChange={setPendingFocalPoints}
+      />
       <CollaboratorSection />
       <BranchSection />
     </div>

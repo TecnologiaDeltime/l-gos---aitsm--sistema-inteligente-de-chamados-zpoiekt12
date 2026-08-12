@@ -20,6 +20,7 @@ import {
   Phone,
   Smartphone,
   Building2,
+  Star,
 } from 'lucide-react'
 import {
   getClientContacts,
@@ -150,7 +151,10 @@ export function CollaboratorSection({ clientId }: { clientId?: string }) {
               className="flex items-start justify-between gap-2 rounded-lg border p-3"
             >
               <div className="space-y-1 text-sm">
-                <p className="font-semibold">{c.full_name}</p>
+                <p className="font-semibold flex items-center gap-1">
+                  {c.full_name}
+                  {c.is_focal_point && <Star className="h-3.5 w-3.5 text-amber-500" />}
+                </p>
                 {c.email && (
                   <p className="text-xs text-slate-500 flex items-center gap-1">
                     <Mail className="h-3 w-3" />

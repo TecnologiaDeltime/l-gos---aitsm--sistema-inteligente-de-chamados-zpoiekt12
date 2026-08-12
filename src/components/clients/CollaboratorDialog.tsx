@@ -53,6 +53,7 @@ const EMPTY = {
   has_whatsapp: false,
   departments: [] as string[],
   unit: '' as string,
+  is_focal_point: false,
 }
 
 export function CollaboratorDialog({
@@ -83,6 +84,7 @@ export function CollaboratorDialog({
               has_whatsapp: contact.has_whatsapp || false,
               departments: contact.departments || [],
               unit: contact.unit || '',
+              is_focal_point: contact.is_focal_point || false,
             }
           : EMPTY,
       )
@@ -197,6 +199,13 @@ export function CollaboratorDialog({
               onCheckedChange={(v) => set('has_whatsapp', v === true)}
             />
             <Label className="text-xs">Possui WhatsApp</Label>
+          </div>
+          <div className="flex items-center gap-2">
+            <Checkbox
+              checked={form.is_focal_point}
+              onCheckedChange={(v) => set('is_focal_point', v === true)}
+            />
+            <Label className="text-xs">É Ponto Focal</Label>
           </div>
           <div className="space-y-1">
             <Label className="text-xs">Setores</Label>
