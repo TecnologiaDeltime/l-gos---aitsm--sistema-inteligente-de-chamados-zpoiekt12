@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useMemo } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -23,6 +23,7 @@ import { useRealtime } from '@/hooks/use-realtime'
 import { useAuth } from '@/hooks/use-auth'
 import { useToast } from '@/hooks/use-toast'
 import { SectorDialog } from '@/components/clients/SectorDialog'
+import { buildSectorTree, flattenSectorTree } from '@/lib/sector-hierarchy'
 
 interface Props {
   clientId?: string
@@ -59,6 +60,8 @@ export function SectorSection({ clientId, pendingSectors, onPendingSectorsChange
   }, [loadData])
 
   useRealtime('company_departments', () => loadData(), !!clientId)
+
+  const flatSectors = useMemo(() => flattenSectorTree(buildSectorTree(sectors)), [sectors])
 
   const handleLocalAdd = () => {
     const name = input.trim()
@@ -196,10 +199,18 @@ export function SectorSection({ clientId, pendingSectors, onPendingSectorsChange
         <p className="text-sm text-slate-500 text-center py-4">Nenhum setor cadastrado.</p>
       ) : (
         <div className="space-y-2">
-          {sectors.map((s) => (
-            <div key={s.id} className="flex items-center justify-between rounded-lg border p-3">
+          {flatSectors.map((s) => (
+            <div
+              key={s.id}
+              className="flex items-center justify-between rounded-lg border p-3"
+              style={{ paddingLeft: `${12 + s.level * 20}px` }}
+            >
               <span className="text-sm font-medium flex items-center gap-2">
-                <Building className="h-3.5 w-3.5 text-slate-400" />
+                {s.level === 0 ? (
+                  <Building className="h-3.5 w-3.5 text-slate-400" />
+                ) : (
+                  <span className="text-slate-400 text-xs">↳</span>
+                )}
                 {s.name}
               </span>
               <div className="flex gap-1">
@@ -208,7 +219,7 @@ export function SectorSection({ clientId, pendingSectors, onPendingSectorsChange
                   variant="ghost"
                   className="h-7 w-7"
                   onClick={() => {
-                    setEditing(s)
+                    setEditing(sectors.find((x) => x.id === s.id) || null)
                     setDialogOpen(true)
                   }}
                 >
@@ -232,6 +243,7 @@ export function SectorSection({ clientId, pendingSectors, onPendingSectorsChange
         open={dialogOpen}
         onOpenChange={setDialogOpen}
         clientId={clientId}
+        sectors={sectors}
         sector={editing}
         onSaved={loadData}
       />

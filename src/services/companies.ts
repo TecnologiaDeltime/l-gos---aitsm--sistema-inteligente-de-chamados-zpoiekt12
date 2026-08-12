@@ -46,16 +46,21 @@ export interface CompanyDepartmentRecord {
   company: string
   unit?: string
   name: string
+  parent?: string
   created: string
   updated: string
 }
 
-export const createCompanyDepartment = (data: { company: string; name: string; unit?: string }) =>
-  pb.collection('company_departments').create<CompanyDepartmentRecord>(data)
+export const createCompanyDepartment = (data: {
+  company: string
+  name: string
+  unit?: string
+  parent?: string
+}) => pb.collection('company_departments').create<CompanyDepartmentRecord>(data)
 
 export const updateCompanyDepartment = (
   id: string,
-  data: Partial<{ name: string; unit?: string }>,
+  data: Partial<{ name: string; unit?: string; parent?: string }>,
 ) => pb.collection('company_departments').update<CompanyDepartmentRecord>(id, data)
 
 export const deleteCompanyDepartment = (id: string) =>

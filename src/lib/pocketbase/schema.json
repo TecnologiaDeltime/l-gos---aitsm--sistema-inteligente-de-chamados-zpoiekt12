@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-12T22:51:11.003Z",
+  "generatedAt": "2026-08-12T22:59:31.463Z",
   "collections": [
     {
       "name": "users",
@@ -352,9 +352,19 @@
           "required": false,
           "system": false,
           "autodateTriggers": ["onCreate", "onUpdate"]
+        },
+        {
+          "name": "parent",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "company_departments"
         }
       ],
-      "indexes": ["CREATE INDEX idx_depts_company ON company_departments (company)"]
+      "indexes": [
+        "CREATE INDEX idx_depts_company ON company_departments (company)",
+        "CREATE INDEX `idx_company_departments_parent` ON `company_departments` (parent)"
+      ]
     },
     {
       "name": "contracts",

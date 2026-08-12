@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import {
   Dialog,
   DialogContent,
@@ -10,7 +10,6 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Checkbox } from '@/components/ui/checkbox'
-import { ScrollArea } from '@/components/ui/scroll-area'
 import {
   Select,
   SelectContent,
@@ -26,6 +25,7 @@ import {
 } from '@/services/client-contacts'
 import { type CompanyUnitRecord } from '@/services/company-units'
 import { createCompanyAuditLog } from '@/services/companies'
+import { buildSectorTree, flattenSectorTree, getSectorIndent } from '@/lib/sector-hierarchy'
 import { useAuth } from '@/hooks/use-auth'
 import { useToast } from '@/hooks/use-toast'
 import { extractFieldErrors, type FieldErrors } from '@/lib/pocketbase/errors'
@@ -33,6 +33,7 @@ import { extractFieldErrors, type FieldErrors } from '@/lib/pocketbase/errors'
 interface Department {
   id: string
   name: string
+  parent?: string
 }
 
 interface Props {
@@ -91,6 +92,11 @@ export function CollaboratorDialog({
     }
   }, [open, contact])
 
+  const flatDepartments = useMemo(
+    () => flattenSectorTree(buildSectorTree(departments)),
+    [departments],
+  )
+
   const set = (k: string, v: unknown) => {
     setForm((p) => ({ ...p, [k]: v }))
     if (errors[k])
@@ -101,19 +107,11 @@ export function CollaboratorDialog({
       })
   }
 
-  const toggleDept = (id: string) => {
-    setForm((p) => ({
-      ...p,
-      departments: p.departments.includes(id)
-        ? p.departments.filter((d) => d !== id)
-        : [...p.departments, id],
-    }))
-  }
-
   const handleSubmit = async () => {
     const errs: FieldErrors = {}
     if (!form.full_name.trim()) errs.full_name = 'Nome completo é obrigatório'
     if (!form.email.trim()) errs.email = 'E-mail é obrigatório'
+    if (form.departments.length === 0) errs.departments = 'Selecione um setor'
     if (form.has_whatsapp && !form.cell_phone.trim())
       errs.cell_phone = 'Celular é obrigatório quando WhatsApp está marcado'
     if (Object.keys(errs).length > 0) {
@@ -208,24 +206,29 @@ export function CollaboratorDialog({
             <Label className="text-xs">É Ponto Focal</Label>
           </div>
           <div className="space-y-1">
-            <Label className="text-xs">Setores</Label>
+            <Label className="text-xs">Setor *</Label>
             {departments.length === 0 ? (
               <p className="text-xs text-slate-400">Nenhum setor cadastrado para este cliente.</p>
             ) : (
-              <ScrollArea className="h-24 rounded border p-2">
-                <div className="space-y-2">
-                  {departments.map((d) => (
-                    <div key={d.id} className="flex items-center gap-2">
-                      <Checkbox
-                        checked={form.departments.includes(d.id)}
-                        onCheckedChange={() => toggleDept(d.id)}
-                      />
-                      <span className="text-xs">{d.name}</span>
-                    </div>
+              <Select
+                value={form.departments[0] || 'none'}
+                onValueChange={(v) => set('departments', v === 'none' ? [] : [v])}
+              >
+                <SelectTrigger className="h-9 text-sm">
+                  <SelectValue placeholder="Selecione um setor" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">— Nenhum —</SelectItem>
+                  {flatDepartments.map((d) => (
+                    <SelectItem key={d.id} value={d.id}>
+                      {getSectorIndent(d.level)}
+                      {d.name}
+                    </SelectItem>
                   ))}
-                </div>
-              </ScrollArea>
+                </SelectContent>
+              </Select>
             )}
+            {errors.departments && <p className="text-xs text-red-500">{errors.departments}</p>}
           </div>
           <div className="space-y-1">
             <Label className="text-xs">Filial</Label>

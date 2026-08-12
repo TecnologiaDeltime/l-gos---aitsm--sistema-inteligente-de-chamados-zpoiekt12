@@ -9,12 +9,20 @@ import {
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { Loader2 } from 'lucide-react'
 import {
   createCompanyDepartment,
   updateCompanyDepartment,
   createCompanyAuditLog,
 } from '@/services/companies'
+import { buildSectorTree, flattenSectorTree, getSectorIndent } from '@/lib/sector-hierarchy'
 import { useAuth } from '@/hooks/use-auth'
 import { useToast } from '@/hooks/use-toast'
 import { extractFieldErrors, type FieldErrors } from '@/lib/pocketbase/errors'
@@ -23,20 +31,23 @@ interface SectorRecord {
   id: string
   name: string
   unit?: string
+  parent?: string
 }
 
 interface Props {
   open: boolean
   onOpenChange: (v: boolean) => void
   clientId: string
+  sectors: SectorRecord[]
   sector?: SectorRecord | null
   onSaved: () => void
 }
 
-export function SectorDialog({ open, onOpenChange, clientId, sector, onSaved }: Props) {
+export function SectorDialog({ open, onOpenChange, clientId, sectors, sector, onSaved }: Props) {
   const { user } = useAuth()
   const { toast } = useToast()
   const [name, setName] = useState('')
+  const [parent, setParent] = useState('')
   const [saving, setSaving] = useState(false)
   const [errors, setErrors] = useState<FieldErrors>({})
 
@@ -44,8 +55,12 @@ export function SectorDialog({ open, onOpenChange, clientId, sector, onSaved }: 
     if (open) {
       setErrors({})
       setName(sector?.name || '')
+      setParent(sector?.parent || '')
     }
   }, [open, sector])
+
+  const availableParents = sectors.filter((s) => s.id !== sector?.id)
+  const flatParents = flattenSectorTree(buildSectorTree(availableParents))
 
   const handleSubmit = async () => {
     if (!name.trim()) {
@@ -55,7 +70,7 @@ export function SectorDialog({ open, onOpenChange, clientId, sector, onSaved }: 
     setSaving(true)
     setErrors({})
     try {
-      const payload = { name: name.trim() }
+      const payload = { name: name.trim(), parent: parent || undefined }
       if (sector) {
         await updateCompanyDepartment(sector.id, payload)
         if (user?.id)
@@ -107,6 +122,26 @@ export function SectorDialog({ open, onOpenChange, clientId, sector, onSaved }: 
               onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleSubmit())}
             />
             {errors.name && <p className="text-xs text-red-500">{errors.name}</p>}
+          </div>
+          <div className="space-y-1">
+            <Label className="text-xs">Setor Pai (Sub-setor de)</Label>
+            <Select
+              value={parent || 'none'}
+              onValueChange={(v) => setParent(v === 'none' ? '' : v)}
+            >
+              <SelectTrigger className="h-9 text-sm">
+                <SelectValue placeholder="Nenhum (setor principal)" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Nenhum (setor principal)</SelectItem>
+                {flatParents.map((s) => (
+                  <SelectItem key={s.id} value={s.id}>
+                    {getSectorIndent(s.level)}
+                    {s.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </div>
         <DialogFooter>

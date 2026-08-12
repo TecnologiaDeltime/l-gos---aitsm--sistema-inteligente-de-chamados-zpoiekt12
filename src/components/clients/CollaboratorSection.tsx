@@ -38,6 +38,7 @@ import { CollaboratorDialog } from '@/components/clients/CollaboratorDialog'
 interface Department {
   id: string
   name: string
+  parent?: string
 }
 
 export function CollaboratorSection({ clientId }: { clientId?: string }) {
