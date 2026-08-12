@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-12T19:38:50.574Z",
+  "generatedAt": "2026-08-12T20:18:39.564Z",
   "collections": [
     {
       "name": "users",
@@ -200,6 +200,12 @@
           "required": false,
           "system": false,
           "autodateTriggers": ["onCreate", "onUpdate"]
+        },
+        {
+          "name": "site",
+          "type": "text",
+          "required": false,
+          "system": false
         }
       ],
       "indexes": [
@@ -7789,6 +7795,56 @@
         }
       ],
       "indexes": ["CREATE INDEX idx_pt_problem ON problem_timeline (problem)"]
+    },
+    {
+      "name": "client_email_domains",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != ''",
+        "view": "@request.auth.id != ''",
+        "create": "@request.auth.id != ''",
+        "update": "@request.auth.id != ''",
+        "delete": "@request.auth.id != ''"
+      },
+      "fields": [
+        {
+          "name": "client",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "companies"
+        },
+        {
+          "name": "domain",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "active",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": [
+        "CREATE INDEX idx_client_email_domains_client ON client_email_domains (client)",
+        "CREATE INDEX idx_client_email_domains_active ON client_email_domains (active)"
+      ]
     }
   ]
 }

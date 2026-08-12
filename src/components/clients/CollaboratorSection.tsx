@@ -21,6 +21,7 @@ import {
   Smartphone,
   Building2,
   Star,
+  UserCheck,
 } from 'lucide-react'
 import {
   getClientContacts,
@@ -154,6 +155,7 @@ export function CollaboratorSection({ clientId }: { clientId?: string }) {
                 <p className="font-semibold flex items-center gap-1">
                   {c.full_name}
                   {c.is_focal_point && <Star className="h-3.5 w-3.5 text-amber-500" />}
+                  {c.user && <UserCheck className="h-3.5 w-3.5 text-blue-500" />}
                 </p>
                 {c.email && (
                   <p className="text-xs text-slate-500 flex items-center gap-1">

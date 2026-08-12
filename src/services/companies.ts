@@ -9,9 +9,14 @@ export interface CompanyRecord {
   phone?: string
   email?: string
   address_street?: string
+  address_number?: string
+  address_neighborhood?: string
   address_city?: string
   address_state?: string
+  address_zipcode?: string
+  site?: string
   status?: string
+  notes?: string
   created: string
   updated: string
 }

@@ -12,6 +12,7 @@ export interface ClientContactRecord {
   unit?: string
   user?: string
   is_focal_point?: boolean
+  expand?: any
   created: string
   updated: string
 }
@@ -35,6 +36,7 @@ export const getClientContacts = (clientId: string) =>
   pb.collection('client_contacts').getFullList<ClientContactRecord>({
     filter: `client = "${clientId}"`,
     sort: 'full_name',
+    expand: 'user,unit',
   })
 
 export const getAllClientContacts = () =>

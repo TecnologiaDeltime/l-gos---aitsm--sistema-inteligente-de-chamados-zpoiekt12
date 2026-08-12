@@ -62,5 +62,53 @@ onRecordCreateRequest((e) => {
     return e.badRequestError(msg)
   }
 
+  if (source === 'E-mail') {
+    try {
+      var domains = $app.findRecordsByFilter(
+        'client_email_domains',
+        'client = "' + companyId + '" && active = true',
+        '',
+        0,
+        0,
+      )
+      if (domains.length > 0) {
+        var reqEmail = body.requester_email || ''
+        var emailDomain = ''
+        var atIdx = reqEmail.lastIndexOf('@')
+        if (atIdx >= 0) {
+          emailDomain = reqEmail.substring(atIdx + 1).toLowerCase()
+        }
+        var domainAllowed = false
+        for (var di = 0; di < domains.length; di++) {
+          var dVal = domains[di].getString('domain').toLowerCase()
+          if (dVal.startsWith('@')) dVal = dVal.substring(1)
+          if (dVal === emailDomain) {
+            domainAllowed = true
+            break
+          }
+        }
+        if (!domainAllowed) {
+          try {
+            var attCol = $app.findCollectionByNameOrId('blocked_attempts')
+            var attRec = new Record(attCol)
+            attRec.set('client', companyId)
+            attRec.set('requester_email', reqEmail)
+            attRec.set('channel', 'Email')
+            attRec.set('blocked', true)
+            attRec.set('notes', 'Domínio não autorizado: ' + emailDomain)
+            $app.save(attRec)
+          } catch (logErr) {
+            $app.logger().error('Error logging domain blocked attempt', 'error', logErr.message)
+          }
+          return e.badRequestError(
+            'Domínio de e-mail não autorizado para abertura de chamados para este cliente.',
+          )
+        }
+      }
+    } catch (domErr) {
+      // client_email_domains collection might not exist yet
+    }
+  }
+
   return e.next()
 }, 'tickets')

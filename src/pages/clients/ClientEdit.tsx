@@ -26,6 +26,7 @@ import { extractFieldErrors, type FieldErrors } from '@/lib/pocketbase/errors'
 import { CollaboratorSection } from '@/components/clients/CollaboratorSection'
 import { BranchSection } from '@/components/clients/BranchSection'
 import { FocalPointSection } from '@/components/clients/FocalPointSection'
+import { EmailDomainSection } from '@/components/clients/EmailDomainSection'
 
 const EMPTY_FORM = {
   code: '',
@@ -42,6 +43,7 @@ const EMPTY_FORM = {
   email: '',
   status: 'Ativo',
   notes: '',
+  site: '',
 }
 
 export default function ClientEdit() {
@@ -80,6 +82,7 @@ export default function ClientEdit() {
         email: data.email || '',
         status: data.status || 'Ativo',
         notes: data.notes || '',
+        site: (data as any).site || '',
       })
     } catch {
       setFetchError('Não foi possível carregar os dados do cliente.')
@@ -100,6 +103,26 @@ export default function ClientEdit() {
         delete next[key]
         return next
       })
+    }
+  }
+
+  const handleCepLookup = async (cep: string) => {
+    set('address_zipcode', cep)
+    const cleanCep = cep.replace(/\D/g, '')
+    if (cleanCep.length !== 8) return
+    try {
+      const res = await fetch(`https://viacep.com.br/ws/${cleanCep}/json/`)
+      const data = await res.json()
+      if (!data.erro) {
+        if (data.logradouro) set('address_street', data.logradouro)
+        if (data.bairro) set('address_neighborhood', data.bairro)
+        if (data.localidade) set('address_city', data.localidade)
+        if (data.uf) set('address_state', data.uf)
+      } else {
+        toast({ title: 'CEP não encontrado', variant: 'destructive' })
+      }
+    } catch {
+      toast({ title: 'Erro ao buscar CEP', variant: 'destructive' })
     }
   }
 
@@ -312,7 +335,7 @@ export default function ClientEdit() {
             <Input
               className={inputCls}
               value={form.address_zipcode}
-              onChange={(e) => set('address_zipcode', e.target.value)}
+              onChange={(e) => handleCepLookup(e.target.value)}
             />
           </div>
         </div>
@@ -334,6 +357,16 @@ export default function ClientEdit() {
               onChange={(e) => set('address_state', e.target.value)}
             />
           </div>
+        </div>
+
+        <div className="space-y-1">
+          <Label className="text-xs">Site</Label>
+          <Input
+            className={inputCls}
+            placeholder="https://www.exemplo.com.br"
+            value={form.site}
+            onChange={(e) => set('site', e.target.value)}
+          />
         </div>
 
         <div className="space-y-1">
@@ -379,6 +412,7 @@ export default function ClientEdit() {
       <FocalPointSection clientId={id} />
       <CollaboratorSection clientId={id} />
       <BranchSection clientId={id} />
+      <EmailDomainSection clientId={id} />
     </div>
   )
 }
