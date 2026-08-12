@@ -29,6 +29,7 @@ export default function ClientDetail() {
     address_city: '',
     address_state: '',
     address_zipcode: '',
+    address_complement: '',
     site: '',
   })
   const [cepLoading, setCepLoading] = useState(false)
@@ -211,6 +212,15 @@ export default function ClientDetail() {
             </div>
           </div>
           <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1">
+              <Label className="text-xs font-semibold">Complemento</Label>
+              <Input
+                className={cls}
+                placeholder="Apto, bloco, andar, lote..."
+                value={form.address_complement}
+                onChange={(e) => set('address_complement', e.target.value)}
+              />
+            </div>
             <div className="space-y-1">
               <Label className="text-xs font-semibold">Bairro</Label>
               <Input

@@ -14,6 +14,7 @@ export interface CompanyRecord {
   address_city?: string
   address_state?: string
   address_zipcode?: string
+  address_complement?: string
   site?: string
   status?: string
   notes?: string

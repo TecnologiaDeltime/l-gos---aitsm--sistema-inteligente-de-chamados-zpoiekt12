@@ -43,6 +43,7 @@ const EMPTY_FORM = {
   email: '',
   status: 'Ativo',
   notes: '',
+  address_complement: '',
   site: '',
 }
 
@@ -83,6 +84,7 @@ export default function ClientEdit() {
         status: data.status || 'Ativo',
         notes: data.notes || '',
         site: (data as any).site || '',
+        address_complement: (data as any).address_complement || '',
       })
     } catch {
       setFetchError('Não foi possível carregar os dados do cliente.')
@@ -322,6 +324,15 @@ export default function ClientEdit() {
         </div>
 
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <div className="space-y-1">
+            <Label className="text-xs">Complemento</Label>
+            <Input
+              className={inputCls}
+              placeholder="Apto, bloco, andar, lote..."
+              value={form.address_complement}
+              onChange={(e) => set('address_complement', e.target.value)}
+            />
+          </div>
           <div className="space-y-1">
             <Label className="text-xs">Bairro</Label>
             <Input
