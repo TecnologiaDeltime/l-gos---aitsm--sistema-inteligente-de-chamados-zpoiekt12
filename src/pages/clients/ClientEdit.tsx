@@ -23,6 +23,7 @@ import { useToast } from '@/hooks/use-toast'
 import { useAuth } from '@/hooks/use-auth'
 import { usePermissions } from '@/hooks/use-permissions'
 import { extractFieldErrors, type FieldErrors } from '@/lib/pocketbase/errors'
+import { SectorSection } from '@/components/clients/SectorSection'
 import { CollaboratorSection } from '@/components/clients/CollaboratorSection'
 import { BranchSection } from '@/components/clients/BranchSection'
 import { FocalPointSection } from '@/components/clients/FocalPointSection'
@@ -420,6 +421,7 @@ export default function ClientEdit() {
           </Button>
         </div>
       </form>
+      <SectorSection clientId={id} />
       <CollaboratorSection clientId={id} />
       <FocalPointSection clientId={id} />
       <BranchSection clientId={id} />
