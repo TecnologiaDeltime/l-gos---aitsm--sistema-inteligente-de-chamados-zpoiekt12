@@ -557,7 +557,7 @@ export default function Layout() {
                 }`}
               >
                 <Bug className="h-[18px] w-[18px] shrink-0" />
-                <span className="truncate">Gerenciamento de Problemas</span>
+                <span className="truncate">Gestão de Problemas</span>
                 {problemsMenuOpen ? (
                   <ChevronDown className="ml-auto h-4 w-4" />
                 ) : (
