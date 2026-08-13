@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/select'
 import { createEquipment, CI_STATUSES, DEVICE_TYPES, STORAGE_TYPES } from '@/services/equipments'
 import { getCompanies, getCompanyUnits, getCompanyDepartments } from '@/services/companies'
+import { getClientContacts, type ClientContactRecord } from '@/services/client-contacts'
 import { useToast } from '@/hooks/use-toast'
 import { extractFieldErrors, type FieldErrors } from '@/lib/pocketbase/errors'
 
@@ -20,7 +21,7 @@ const SECTIONS = [
   { key: 'ident', label: 'Identificação' },
   { key: 'hardware', label: 'Hardware' },
   { key: 'owner', label: 'Responsável' },
-  { key: 'dates', label: 'Datas' },
+  { key: 'garantia', label: 'Garantia' },
   { key: 'status', label: 'Status e Observações' },
 ]
 
@@ -30,6 +31,9 @@ export default function CiCreate() {
   const [companies, setCompanies] = useState<any[]>([])
   const [units, setUnits] = useState<any[]>([])
   const [departments, setDepartments] = useState<any[]>([])
+  const [contacts, setContacts] = useState<ClientContactRecord[]>([])
+  const [selectedOwnerId, setSelectedOwnerId] = useState('')
+  const [selectedResponsibleId, setSelectedResponsibleId] = useState('')
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({})
   const [saving, setSaving] = useState(false)
   const [form, setForm] = useState<Record<string, string>>({
@@ -75,15 +79,49 @@ export default function CiCreate() {
       getCompanyDepartments(form.company)
         .then(setDepartments)
         .catch(() => {})
+      getClientContacts(form.company)
+        .then(setContacts)
+        .catch(() => {})
+    } else {
+      setContacts([])
+      setUnits([])
+      setDepartments([])
     }
+    setSelectedOwnerId('')
+    setSelectedResponsibleId('')
   }, [form.company])
 
   const set = (k: string, v: string) => setForm((p) => ({ ...p, [k]: v }))
+
+  const handleOwnerSelect = (contactId: string) => {
+    const contact = contacts.find((c) => c.id === contactId)
+    setSelectedOwnerId(contactId)
+    setForm((p) => ({
+      ...p,
+      owner: contact?.full_name || '',
+      department: contact?.departments?.[0] || '',
+    }))
+  }
+
+  const handleResponsibleSelect = (contactId: string) => {
+    const contact = contacts.find((c) => c.id === contactId)
+    setSelectedResponsibleId(contactId)
+    setForm((p) => ({
+      ...p,
+      responsible_user: contact?.full_name || '',
+      department: contact?.departments?.[0] || '',
+    }))
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!form.company) {
       toast({ title: 'Selecione uma empresa', variant: 'destructive' })
+      return
+    }
+    if (!form.owner) {
+      setFieldErrors({ owner: 'O campo Dono do Equipamento é obrigatório.' })
+      toast({ title: 'Preencha o campo obrigatório: Dono do Equipamento', variant: 'destructive' })
       return
     }
     setSaving(true)
@@ -269,20 +307,47 @@ export default function CiCreate() {
           </h3>
           <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
             <div className="space-y-1">
-              <Label className="text-xs">Dono do equipamento</Label>
-              <Input
-                className={inputCls}
-                value={form.owner}
-                onChange={(e) => set('owner', e.target.value)}
-              />
+              <Label className="text-xs">Dono do equipamento *</Label>
+              <Select
+                value={selectedOwnerId}
+                onValueChange={handleOwnerSelect}
+                disabled={!form.company}
+              >
+                <SelectTrigger className={inputCls}>
+                  <SelectValue
+                    placeholder={form.company ? 'Selecione' : 'Selecione uma empresa primeiro'}
+                  />
+                </SelectTrigger>
+                <SelectContent>
+                  {contacts.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>
+                      {c.full_name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Err field="owner" />
             </div>
             <div className="space-y-1">
               <Label className="text-xs">Usuário responsável</Label>
-              <Input
-                className={inputCls}
-                value={form.responsible_user}
-                onChange={(e) => set('responsible_user', e.target.value)}
-              />
+              <Select
+                value={selectedResponsibleId}
+                onValueChange={handleResponsibleSelect}
+                disabled={!form.company}
+              >
+                <SelectTrigger className={inputCls}>
+                  <SelectValue
+                    placeholder={form.company ? 'Selecione' : 'Selecione uma empresa primeiro'}
+                  />
+                </SelectTrigger>
+                <SelectContent>
+                  {contacts.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>
+                      {c.full_name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="space-y-1">
               <Label className="text-xs">Departamento</Label>
