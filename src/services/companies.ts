@@ -35,6 +35,9 @@ export const updateCompany = (id: string, data: Partial<CompanyRecord>) =>
 
 export const deleteCompany = (id: string) => pb.collection('companies').delete(id)
 
+export const deleteCompanyCascade = (id: string) =>
+  pb.send(`/backend/v1/clients/${id}/delete-cascade`, { method: 'DELETE' })
+
 export const getCompanyUnits = (companyId: string) =>
   pb.collection('company_units').getFullList({ filter: `company = "${companyId}"` })
 

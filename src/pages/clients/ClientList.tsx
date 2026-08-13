@@ -15,7 +15,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
-import { getCompanies, deleteCompany, CompanyRecord } from '@/services/companies'
+import { getCompanies, deleteCompanyCascade, CompanyRecord } from '@/services/companies'
 import { getAllClientContacts } from '@/services/client-contacts'
 import { getAllCompanyUnits } from '@/services/company-units'
 import { useRealtime } from '@/hooks/use-realtime'
@@ -101,10 +101,11 @@ export default function ClientList() {
     const errors: string[] = []
     for (const id of ids) {
       try {
-        await deleteCompany(id)
+        await deleteCompanyCascade(id)
         successCount++
-      } catch (err) {
-        errors.push(getErrorMessage(err))
+      } catch (err: any) {
+        const msg = err?.response?.error || err?.response?.message || getErrorMessage(err)
+        errors.push(msg)
       }
     }
     setDeleting(false)
@@ -112,12 +113,12 @@ export default function ClientList() {
     if (successCount > 0) {
       toast({
         title: 'Clientes excluídos',
-        description: `${successCount} cliente(s) excluído(s) com sucesso.`,
+        description: `${successCount} cliente(s) excluído(s) com sucesso. Todos os registros relacionados foram removidos.`,
       })
     }
     if (errors.length > 0) {
       toast({
-        title: 'Erros ao excluir',
+        title: 'Erro ao excluir',
         description: errors.join(' '),
         variant: 'destructive',
       })
@@ -247,7 +248,10 @@ export default function ClientList() {
             <AlertDialogTitle>Confirmar Exclusão</AlertDialogTitle>
             <AlertDialogDescription>
               Tem certeza que deseja excluir {selectedIds.size} cliente(s) selecionado(s)? Esta ação
-              não pode ser desfeita. Clientes com registros vinculados podem não ser excluídos.
+              não pode ser desfeita. <strong>Todos os registros relacionados</strong> serão
+              permanentemente removidos, incluindo: filiais, departamentos, contatos, equipamentos,
+              contratos, chamados, visitas técnicas, aprovações, pesquisas de satisfação e demais
+              dados vinculados.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
