@@ -208,7 +208,16 @@ export function CollaboratorDialog({
           <div className="space-y-1">
             <Label className="text-xs">Setor *</Label>
             {departments.length === 0 ? (
-              <p className="text-xs text-slate-400">Nenhum setor cadastrado para este cliente.</p>
+              <div className="space-y-1">
+                <Select disabled>
+                  <SelectTrigger className="h-9 text-sm">
+                    <SelectValue placeholder="Nenhum setor cadastrado" />
+                  </SelectTrigger>
+                </Select>
+                <p className="text-xs text-amber-600 dark:text-amber-500">
+                  Cadastre setores na seção "Setores" acima antes de adicionar um colaborador.
+                </p>
+              </div>
             ) : (
               <Select
                 value={form.departments[0] || 'none'}

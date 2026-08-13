@@ -56,14 +56,14 @@ export function CollaboratorSection({ clientId }: { clientId?: string }) {
     if (!clientId) return
     setLoading(true)
     try {
-      const [c, d, b] = await Promise.all([
+      const [contactsRes, deptsRes, branchesRes] = await Promise.allSettled([
         getClientContacts(clientId),
         getCompanyDepartments(clientId),
         getCompanyUnitsByCompany(clientId),
       ])
-      setContacts(c)
-      setDepartments(d as unknown as Department[])
-      setBranches(b)
+      if (contactsRes.status === 'fulfilled') setContacts(contactsRes.value)
+      if (deptsRes.status === 'fulfilled') setDepartments(deptsRes.value as unknown as Department[])
+      if (branchesRes.status === 'fulfilled') setBranches(branchesRes.value)
     } catch {
       /* ignore */
     } finally {

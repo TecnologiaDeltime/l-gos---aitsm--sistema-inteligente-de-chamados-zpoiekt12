@@ -42,7 +42,10 @@ export const getCompanyUnits = (companyId: string) =>
   pb.collection('company_units').getFullList({ filter: `company = "${companyId}"` })
 
 export const getCompanyDepartments = (companyId: string) =>
-  pb.collection('company_departments').getFullList({ filter: `company = "${companyId}"` })
+  pb.collection('company_departments').getFullList<CompanyDepartmentRecord>({
+    filter: `company = "${companyId}"`,
+    sort: 'name',
+  })
 
 export interface CompanyDepartmentRecord {
   id: string
