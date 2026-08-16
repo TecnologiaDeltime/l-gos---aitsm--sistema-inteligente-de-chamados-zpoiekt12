@@ -1,5 +1,10 @@
 onRecordAfterCreateSuccess((e) => {
   var change = e.record
+
+  // Mudanças mantidas em backlog (Rascunho) não acionam o fluxo de aprovação
+  var currentStatus = change.getString('status')
+  if (currentStatus === 'Rascunho') return e.next()
+
   var changeTypeId = change.getString('change_type')
   if (!changeTypeId) return e.next()
 

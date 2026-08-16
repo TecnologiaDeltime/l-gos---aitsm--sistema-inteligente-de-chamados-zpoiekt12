@@ -13,6 +13,8 @@ export interface ChangeRecord {
   urgency: string
   risk_level: string
   risk_assessment?: string
+  risk_not_executing?: string
+  risk_executing?: string
   requester: string
   responsible?: string
   assigned_to?: string

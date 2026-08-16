@@ -97,6 +97,22 @@ export default function ChangeDetail() {
             <p className="text-xs text-muted-foreground">{change.risk_assessment}</p>
           </div>
         )}
+        {change.risk_not_executing && (
+          <div className="rounded-lg border p-3">
+            <p className="text-xs font-semibold mb-1">Riscos em não executar a mudança</p>
+            <p className="text-xs text-muted-foreground whitespace-pre-line">
+              {change.risk_not_executing}
+            </p>
+          </div>
+        )}
+        {change.risk_executing && (
+          <div className="rounded-lg border p-3">
+            <p className="text-xs font-semibold mb-1">Riscos em executar a mudança</p>
+            <p className="text-xs text-muted-foreground whitespace-pre-line">
+              {change.risk_executing}
+            </p>
+          </div>
+        )}
         <div className="flex flex-wrap items-center gap-2 pt-2 border-t">
           <Select value={change.status} onValueChange={handleStatusChange}>
             <SelectTrigger className="w-48 h-8 text-xs">

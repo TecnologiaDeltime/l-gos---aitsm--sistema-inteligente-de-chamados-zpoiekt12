@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ChevronLeft, Check } from 'lucide-react'
+import { ChevronLeft, Check, Send, Inbox } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -13,6 +13,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { createChange } from '@/services/changes'
 import { getChangeTypes, type ChangeTypeRecord } from '@/services/change-types'
 import { getActiveChangeTemplates, type ChangeTemplateRecord } from '@/services/change-templates'
@@ -40,6 +48,7 @@ export default function ChangeCreate() {
   const [users, setUsers] = useState<UserItem[]>([])
   const [errors, setErrors] = useState<FieldErrors>({})
   const [submitting, setSubmitting] = useState(false)
+  const [showDecision, setShowDecision] = useState(false)
   const [form, setForm] = useState({
     title: '',
     description: '',
@@ -50,6 +59,8 @@ export default function ChangeCreate() {
     urgency: 'Média',
     risk_level: 'Baixo',
     risk_assessment: '',
+    risk_not_executing: '',
+    risk_executing: '',
     company: '',
     responsible: '',
     planned_start: '',
@@ -94,9 +105,26 @@ export default function ChangeCreate() {
     }
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  // Validação do formulário antes de abrir o diálogo de decisão
+  const validate = () => {
+    const errs: FieldErrors = {}
+    if (!form.title.trim()) errs.title = 'Título é obrigatório'
+    if (!form.description.trim()) errs.description = 'O motivo é obrigatório'
+    setErrors(errs)
+    return Object.keys(errs).length === 0
+  }
+
+  // Ao clicar em "Registrar Mudança": valida e abre o diálogo de decisão
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (!user || !form.title.trim() || !form.description.trim()) return
+    if (!user) return
+    if (!validate()) return
+    setShowDecision(true)
+  }
+
+  // Salva a mudança com o status escolhido no diálogo de decisão
+  const saveChange = async (mode: 'approval' | 'backlog') => {
+    if (!user) return
     setSubmitting(true)
     setErrors({})
     try {
@@ -112,6 +140,8 @@ export default function ChangeCreate() {
         urgency: form.urgency,
         risk_level: form.risk_level,
         risk_assessment: form.risk_assessment || undefined,
+        risk_not_executing: form.risk_not_executing || undefined,
+        risk_executing: form.risk_executing || undefined,
         requester: user.id,
         responsible: form.responsible || undefined,
         company: form.company || undefined,
@@ -120,16 +150,20 @@ export default function ChangeCreate() {
         planned_end: form.planned_end || undefined,
         execution_plan: form.execution_plan || undefined,
         rollback_plan: form.rollback_plan || undefined,
-        status: 'Solicitada',
-        approval_status: 'Não Requerida',
+        status: mode === 'approval' ? 'Solicitada' : 'Rascunho',
+        approval_status: mode === 'approval' ? 'Pendente' : 'Não Requerida',
       })
-      toast({ title: 'Mudança registrada com sucesso!' })
+      toast({
+        title:
+          mode === 'approval' ? 'Mudança enviada para aprovação!' : 'Mudança salva no backlog!',
+      })
       navigate('/changes')
     } catch (err) {
       setErrors(extractFieldErrors(err))
       toast({ title: 'Erro ao criar mudança', variant: 'destructive' })
     } finally {
       setSubmitting(false)
+      setShowDecision(false)
     }
   }
 
@@ -149,11 +183,12 @@ export default function ChangeCreate() {
           {errors.title && <p className="text-xs text-red-500">{errors.title}</p>}
         </div>
         <div>
-          <Label className="text-sm">Descrição *</Label>
+          <Label className="text-sm">Motivo *</Label>
           <Textarea
             value={form.description}
             onChange={(e) => setForm({ ...form, description: e.target.value })}
             rows={3}
+            placeholder="Descreva o motivo da mudança..."
           />
           {errors.description && <p className="text-xs text-red-500">{errors.description}</p>}
         </div>
@@ -278,12 +313,21 @@ export default function ChangeCreate() {
           </div>
         </div>
         <div>
-          <Label className="text-xs">Avaliação de Risco</Label>
+          <Label className="text-xs">Riscos em não executar a mudança</Label>
           <Textarea
-            value={form.risk_assessment}
-            onChange={(e) => setForm({ ...form, risk_assessment: e.target.value })}
+            value={form.risk_not_executing}
+            onChange={(e) => setForm({ ...form, risk_not_executing: e.target.value })}
             rows={2}
-            placeholder="Descreva os riscos identificados..."
+            placeholder="Descreva o que pode acontecer se a mudança NÃO for realizada — impactos, riscos e consequências de manter o estado atual..."
+          />
+        </div>
+        <div>
+          <Label className="text-xs">Riscos em executar a mudança</Label>
+          <Textarea
+            value={form.risk_executing}
+            onChange={(e) => setForm({ ...form, risk_executing: e.target.value })}
+            rows={2}
+            placeholder="Descreva o que pode dar errado ao REALIZAR a mudança — falhas, indisponibilidade, impactos decorrentes da execução..."
           />
         </div>
         <div>
@@ -345,6 +389,50 @@ export default function ChangeCreate() {
           </Button>
         </div>
       </form>
+
+      {/* Diálogo de decisão: enviar para aprovação ou manter em backlog */}
+      <Dialog
+        open={showDecision}
+        onOpenChange={(open) => {
+          // Fechar (X / clique fora) apenas fecha — não salva, volta ao formulário
+          if (!submitting) setShowDecision(open)
+        }}
+      >
+        <DialogContent
+          className="max-w-md"
+          onPointerDownOutside={(e) => e.preventDefault()}
+          onEscapeKeyDown={(e) => e.preventDefault()}
+        >
+          <DialogHeader>
+            <DialogTitle>Enviar para aprovação?</DialogTitle>
+            <DialogDescription>
+              Deseja enviar esta mudança diretamente para aprovação do comitê ou mantê-la em
+              backlog?
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex-col gap-2 sm:flex-col">
+            <Button
+              type="button"
+              className="w-full"
+              disabled={submitting}
+              onClick={() => saveChange('approval')}
+            >
+              <Send className="mr-1.5 h-4 w-4" />
+              Enviar para Aprovação
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full"
+              disabled={submitting}
+              onClick={() => saveChange('backlog')}
+            >
+              <Inbox className="mr-1.5 h-4 w-4" />
+              Manter em Backlog
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
