@@ -14,7 +14,7 @@ import {
   AlertDialogCancel,
   AlertDialogAction,
 } from '@/components/ui/alert-dialog'
-import { Plus, Pencil, Trash2, Building, ChevronRight, Building2 } from 'lucide-react'
+import { Plus, Pencil, Trash2, Building, ChevronRight, Building2, Search } from 'lucide-react'
 import {
   getCompanyDepartments,
   deleteCompanyDepartment,
@@ -44,6 +44,7 @@ export function SectorSection({ clientId, pendingSectors, onPendingSectorsChange
   const [input, setInput] = useState('')
   const [editIndex, setEditIndex] = useState<number | null>(null)
   const [editValue, setEditValue] = useState('')
+  const [search, setSearch] = useState('')
 
   const loadData = useCallback(async () => {
     if (!clientId) return
@@ -63,7 +64,34 @@ export function SectorSection({ clientId, pendingSectors, onPendingSectorsChange
 
   useRealtime('company_departments', () => loadData(), !!clientId)
 
-  const tree = useMemo(() => buildSectorTree(sectors), [sectors])
+  const rawTree = useMemo(() => buildSectorTree(sectors), [sectors])
+
+  // Filter tree by name (case-insensitive). A parent is kept if it matches or
+  // any of its descendants match; matching descendants force-expand parents.
+  const tree = useMemo(() => {
+    const q = search.trim().toLowerCase()
+    if (!q) return rawTree
+
+    const filterNodes = (nodes: SectorNode[]): SectorNode[] => {
+      const result: SectorNode[] = []
+      for (const node of nodes) {
+        const selfMatch = node.name.toLowerCase().includes(q)
+        const filteredChildren = filterNodes(node.children)
+        if (selfMatch || filteredChildren.length > 0) {
+          result.push({
+            ...node,
+            children: selfMatch ? node.children : filteredChildren,
+          })
+        }
+      }
+      return result
+    }
+
+    return filterNodes(rawTree)
+  }, [rawTree, search])
+
+  // When searching, force-expand every collapsible parent so matches are visible.
+  const forceExpand = search.trim().length > 0
 
   const handleLocalAdd = () => {
     const name = input.trim()
@@ -218,21 +246,39 @@ export function SectorSection({ clientId, pendingSectors, onPendingSectorsChange
       ) : sectors.length === 0 ? (
         <p className="text-sm text-slate-500 text-center py-3">Nenhum setor cadastrado.</p>
       ) : (
-        <div className="max-h-64 overflow-y-auto pr-1 -mr-1 space-y-0.5">
-          {tree.map((node) => (
-            <SectorTreeItem
-              key={node.id}
-              node={node}
-              level={0}
-              sectors={sectors}
-              onEdit={(s) => {
-                setEditing(s)
-                setDialogOpen(true)
-              }}
-              onDelete={(id) => setDeleteId(id)}
+        <>
+          <div className="relative">
+            <Search className="pointer-events-none absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
+            <Input
+              placeholder="Buscar setor..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="h-8 pl-7 text-sm"
             />
-          ))}
-        </div>
+          </div>
+          {tree.length === 0 ? (
+            <p className="text-sm text-slate-500 text-center py-3">
+              Nenhum setor encontrado para "{search}".
+            </p>
+          ) : (
+            <div className="max-h-64 overflow-y-auto pr-1 -mr-1 space-y-0.5">
+              {tree.map((node) => (
+                <SectorTreeItem
+                  key={node.id}
+                  node={node}
+                  level={0}
+                  sectors={sectors}
+                  forceExpand={forceExpand}
+                  onEdit={(s) => {
+                    setEditing(s)
+                    setDialogOpen(true)
+                  }}
+                  onDelete={(id) => setDeleteId(id)}
+                />
+              ))}
+            </div>
+          )}
+        </>
       )}
 
       <SectorDialog
@@ -266,14 +312,16 @@ interface TreeItemProps {
   node: SectorNode
   level: number
   sectors: CompanyDepartmentRecord[]
+  forceExpand?: boolean
   onEdit: (s: CompanyDepartmentRecord) => void
   onDelete: (id: string) => void
 }
 
-function SectorTreeItem({ node, level, sectors, onEdit, onDelete }: TreeItemProps) {
-  const [open, setOpen] = useState(true)
+function SectorTreeItem({ node, level, sectors, forceExpand, onEdit, onDelete }: TreeItemProps) {
+  const [userOpen, setUserOpen] = useState(true)
   const hasChildren = node.children.length > 0
   const record = sectors.find((x) => x.id === node.id) || null
+  const open = forceExpand ? true : userOpen
 
   const indent = { paddingLeft: `${8 + level * 16}px` }
 
@@ -320,7 +368,7 @@ function SectorTreeItem({ node, level, sectors, onEdit, onDelete }: TreeItemProp
   }
 
   return (
-    <Collapsible open={open} onOpenChange={setOpen}>
+    <Collapsible open={open} onOpenChange={setUserOpen}>
       <div
         style={indent}
         className="group flex items-center justify-between rounded-md py-1 pl-1 pr-1 hover:bg-slate-50 dark:hover:bg-slate-800/60"
