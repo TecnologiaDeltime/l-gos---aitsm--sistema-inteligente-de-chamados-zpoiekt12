@@ -2,6 +2,8 @@ import { useState, useCallback, useEffect, useMemo } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Badge } from '@/components/ui/badge'
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import {
   AlertDialog,
   AlertDialogContent,
@@ -12,7 +14,7 @@ import {
   AlertDialogCancel,
   AlertDialogAction,
 } from '@/components/ui/alert-dialog'
-import { Plus, Pencil, Trash2, Building } from 'lucide-react'
+import { Plus, Pencil, Trash2, Building, ChevronRight, Building2 } from 'lucide-react'
 import {
   getCompanyDepartments,
   deleteCompanyDepartment,
@@ -23,7 +25,7 @@ import { useRealtime } from '@/hooks/use-realtime'
 import { useAuth } from '@/hooks/use-auth'
 import { useToast } from '@/hooks/use-toast'
 import { SectorDialog } from '@/components/clients/SectorDialog'
-import { buildSectorTree, flattenSectorTree } from '@/lib/sector-hierarchy'
+import { buildSectorTree, type SectorNode } from '@/lib/sector-hierarchy'
 
 interface Props {
   clientId?: string
@@ -61,7 +63,7 @@ export function SectorSection({ clientId, pendingSectors, onPendingSectorsChange
 
   useRealtime('company_departments', () => loadData(), !!clientId)
 
-  const flatSectors = useMemo(() => flattenSectorTree(buildSectorTree(sectors)), [sectors])
+  const tree = useMemo(() => buildSectorTree(sectors), [sectors])
 
   const handleLocalAdd = () => {
     const name = input.trim()
@@ -105,10 +107,20 @@ export function SectorSection({ clientId, pendingSectors, onPendingSectorsChange
     }
   }
 
+  // ---- Local (unsaved) mode: pending sectors as compact chips ----
   if (!clientId) {
     return (
-      <div className="rounded-xl border bg-white p-6 dark:bg-slate-900 space-y-4">
-        <h3 className="text-base font-bold">Setores</h3>
+      <div className="rounded-xl border bg-white p-4 dark:bg-slate-900 space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <h3 className="text-base font-bold">Setores</h3>
+            {pendingSectors && pendingSectors.length > 0 && (
+              <Badge variant="secondary" className="h-5 px-1.5 text-xs">
+                {pendingSectors.length}
+              </Badge>
+            )}
+          </div>
+        </div>
         <div className="flex gap-2">
           <Input
             placeholder="Nome do setor"
@@ -122,65 +134,73 @@ export function SectorSection({ clientId, pendingSectors, onPendingSectorsChange
           </Button>
         </div>
         {pendingSectors && pendingSectors.length > 0 ? (
-          <div className="space-y-2">
-            {pendingSectors.map((name, i) => (
-              <div key={i} className="flex items-center justify-between rounded-lg border p-3">
-                {editIndex === i ? (
-                  <div className="flex gap-2 flex-1">
+          <div className="max-h-48 overflow-y-auto pr-1 -mr-1">
+            <div className="flex flex-wrap gap-1.5">
+              {pendingSectors.map((name, i) =>
+                editIndex === i ? (
+                  <div key={i} className="flex gap-1.5 items-center">
                     <Input
-                      className="h-7 text-sm"
+                      className="h-7 w-40 text-sm"
                       value={editValue}
                       onChange={(e) => setEditValue(e.target.value)}
                       onKeyDown={(e) => e.key === 'Enter' && handleLocalEdit(i)}
                       autoFocus
                     />
-                    <Button size="sm" onClick={() => handleLocalEdit(i)}>
+                    <Button size="sm" className="h-7 px-2" onClick={() => handleLocalEdit(i)}>
                       OK
                     </Button>
                   </div>
                 ) : (
-                  <>
-                    <span className="text-sm font-medium flex items-center gap-2">
-                      <Building className="h-3.5 w-3.5 text-slate-400" />
-                      {name}
-                    </span>
-                    <div className="flex gap-1">
+                  <div
+                    key={i}
+                    className="group inline-flex items-center gap-1 rounded-md border bg-slate-50 dark:bg-slate-800 py-1 pl-2 pr-1 text-sm"
+                  >
+                    <Building className="h-3 w-3 text-slate-400" />
+                    <span className="font-medium">{name}</span>
+                    <div className="flex items-center opacity-0 transition-opacity group-hover:opacity-100">
                       <Button
                         size="icon"
                         variant="ghost"
-                        className="h-7 w-7"
+                        className="h-6 w-6"
                         onClick={() => {
                           setEditIndex(i)
                           setEditValue(name)
                         }}
                       >
-                        <Pencil className="h-3.5 w-3.5" />
+                        <Pencil className="h-3 w-3" />
                       </Button>
                       <Button
                         size="icon"
                         variant="ghost"
-                        className="h-7 w-7 text-red-500"
+                        className="h-6 w-6 text-red-500"
                         onClick={() => handleLocalRemove(i)}
                       >
-                        <Trash2 className="h-3.5 w-3.5" />
+                        <Trash2 className="h-3 w-3" />
                       </Button>
                     </div>
-                  </>
-                )}
-              </div>
-            ))}
+                  </div>
+                ),
+              )}
+            </div>
           </div>
         ) : (
-          <p className="text-sm text-slate-500 text-center py-2">Nenhum setor cadastrado.</p>
+          <p className="text-sm text-slate-500 text-center py-1">Nenhum setor cadastrado.</p>
         )}
       </div>
     )
   }
 
   return (
-    <div className="rounded-xl border bg-white p-6 dark:bg-slate-900 space-y-4">
+    <div className="rounded-xl border bg-white p-4 dark:bg-slate-900 space-y-3">
       <div className="flex items-center justify-between">
-        <h3 className="text-base font-bold">Setores</h3>
+        <div className="flex items-center gap-2">
+          <h3 className="text-base font-bold">Setores</h3>
+          {sectors.length > 0 && (
+            <Badge variant="secondary" className="h-5 px-1.5 text-xs">
+              {sectors.length}
+            </Badge>
+          )}
+        </div>
         <Button
           size="sm"
           variant="outline"
@@ -196,45 +216,21 @@ export function SectorSection({ clientId, pendingSectors, onPendingSectorsChange
       {loading ? (
         <Skeleton className="h-20 w-full" />
       ) : sectors.length === 0 ? (
-        <p className="text-sm text-slate-500 text-center py-4">Nenhum setor cadastrado.</p>
+        <p className="text-sm text-slate-500 text-center py-3">Nenhum setor cadastrado.</p>
       ) : (
-        <div className="space-y-2">
-          {flatSectors.map((s) => (
-            <div
-              key={s.id}
-              className="flex items-center justify-between rounded-lg border p-3"
-              style={{ paddingLeft: `${12 + s.level * 20}px` }}
-            >
-              <span className="text-sm font-medium flex items-center gap-2">
-                {s.level === 0 ? (
-                  <Building className="h-3.5 w-3.5 text-slate-400" />
-                ) : (
-                  <span className="text-slate-400 text-xs">↳</span>
-                )}
-                {s.name}
-              </span>
-              <div className="flex gap-1">
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  className="h-7 w-7"
-                  onClick={() => {
-                    setEditing(sectors.find((x) => x.id === s.id) || null)
-                    setDialogOpen(true)
-                  }}
-                >
-                  <Pencil className="h-3.5 w-3.5" />
-                </Button>
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  className="h-7 w-7 text-red-500"
-                  onClick={() => setDeleteId(s.id)}
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                </Button>
-              </div>
-            </div>
+        <div className="max-h-64 overflow-y-auto pr-1 -mr-1 space-y-0.5">
+          {tree.map((node) => (
+            <SectorTreeItem
+              key={node.id}
+              node={node}
+              level={0}
+              sectors={sectors}
+              onEdit={(s) => {
+                setEditing(s)
+                setDialogOpen(true)
+              }}
+              onDelete={(id) => setDeleteId(id)}
+            />
           ))}
         </div>
       )}
@@ -263,5 +259,105 @@ export function SectorSection({ clientId, pendingSectors, onPendingSectorsChange
         </AlertDialogContent>
       </AlertDialog>
     </div>
+  )
+}
+
+interface TreeItemProps {
+  node: SectorNode
+  level: number
+  sectors: CompanyDepartmentRecord[]
+  onEdit: (s: CompanyDepartmentRecord) => void
+  onDelete: (id: string) => void
+}
+
+function SectorTreeItem({ node, level, sectors, onEdit, onDelete }: TreeItemProps) {
+  const [open, setOpen] = useState(true)
+  const hasChildren = node.children.length > 0
+  const record = sectors.find((x) => x.id === node.id) || null
+
+  const indent = { paddingLeft: `${8 + level * 16}px` }
+
+  const actions = (
+    <div className="flex items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
+      <Button
+        size="icon"
+        variant="ghost"
+        className="h-6 w-6"
+        onClick={(e) => {
+          e.stopPropagation()
+          if (record) onEdit(record)
+        }}
+      >
+        <Pencil className="h-3 w-3" />
+      </Button>
+      <Button
+        size="icon"
+        variant="ghost"
+        className="h-6 w-6 text-red-500"
+        onClick={(e) => {
+          e.stopPropagation()
+          onDelete(node.id)
+        }}
+      >
+        <Trash2 className="h-3 w-3" />
+      </Button>
+    </div>
+  )
+
+  if (!hasChildren) {
+    return (
+      <div
+        style={indent}
+        className="group flex items-center justify-between rounded-md py-1 pl-2 pr-1 hover:bg-slate-50 dark:hover:bg-slate-800/60"
+      >
+        <span className="flex items-center gap-1.5 text-sm font-medium truncate">
+          <Building className="h-3.5 w-3.5 shrink-0 text-slate-400" />
+          <span className="truncate">{node.name}</span>
+        </span>
+        {actions}
+      </div>
+    )
+  }
+
+  return (
+    <Collapsible open={open} onOpenChange={setOpen}>
+      <div
+        style={indent}
+        className="group flex items-center justify-between rounded-md py-1 pl-1 pr-1 hover:bg-slate-50 dark:hover:bg-slate-800/60"
+      >
+        <CollapsibleTrigger asChild>
+          <button
+            type="button"
+            className="flex items-center gap-1.5 text-sm font-semibold truncate text-left flex-1 min-w-0 py-0.5"
+          >
+            <ChevronRight
+              className={`h-3.5 w-3.5 shrink-0 text-slate-400 transition-transform ${
+                open ? 'rotate-90' : ''
+              }`}
+            />
+            <Building2 className="h-3.5 w-3.5 shrink-0 text-slate-500" />
+            <span className="truncate">{node.name}</span>
+            <Badge variant="outline" className="h-4 px-1 text-[10px] font-normal shrink-0">
+              {node.children.length}
+            </Badge>
+          </button>
+        </CollapsibleTrigger>
+        {actions}
+      </div>
+      <CollapsibleContent>
+        <div className="space-y-0.5">
+          {node.children.map((child) => (
+            <SectorTreeItem
+              key={child.id}
+              node={child}
+              level={level + 1}
+              sectors={sectors}
+              onEdit={onEdit}
+              onDelete={onDelete}
+            />
+          ))}
+        </div>
+      </CollapsibleContent>
+    </Collapsible>
   )
 }
