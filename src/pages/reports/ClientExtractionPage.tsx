@@ -61,6 +61,13 @@ type FieldKey =
   | 'contract_monthly_hours'
   | 'contract_period'
   | 'contract_type'
+  // Distribuição de Horas
+  | 'contract_hours_level1'
+  | 'contract_hours_level2'
+  | 'contract_hours_level3'
+  | 'contract_hours_consultoria'
+  | 'contract_hours_backoffice'
+  | 'contract_hours_administrativo'
 
 interface FieldGroup {
   title: string
@@ -141,6 +148,17 @@ const FIELD_GROUPS: FieldGroup[] = [
       { key: 'contract_type', label: 'Tipo de Contrato' },
     ],
   },
+  {
+    title: 'Distribuição de Horas',
+    fields: [
+      { key: 'contract_hours_level1', label: 'Horas Nível 1' },
+      { key: 'contract_hours_level2', label: 'Horas Nível 2' },
+      { key: 'contract_hours_level3', label: 'Horas Nível 3' },
+      { key: 'contract_hours_consultoria', label: 'Horas Consultoria' },
+      { key: 'contract_hours_backoffice', label: 'Horas Backoffice' },
+      { key: 'contract_hours_administrativo', label: 'Horas Administrativo' },
+    ],
+  },
 ]
 
 // Campos que expandem em múltiplas linhas por empresa (relações 1:N)
@@ -165,6 +183,12 @@ const RELATIONAL_FIELDS: FieldKey[] = [
   'contract_monthly_hours',
   'contract_period',
   'contract_type',
+  'contract_hours_level1',
+  'contract_hours_level2',
+  'contract_hours_level3',
+  'contract_hours_consultoria',
+  'contract_hours_backoffice',
+  'contract_hours_administrativo',
 ]
 
 const ALL_FIELD_LABELS: Record<FieldKey, string> = FIELD_GROUPS.reduce(
@@ -182,6 +206,12 @@ interface ContractInfo {
   start_date?: string
   end_date?: string
   type?: string
+  hours_level1?: number | null
+  hours_level2?: number | null
+  hours_level3?: number | null
+  hours_consultoria?: number | null
+  hours_backoffice?: number | null
+  hours_administrativo?: number | null
 }
 
 interface CompanyContext {
@@ -305,7 +335,17 @@ export default function ClientExtractionPage() {
     )
     const needsDomain = cols.some((c) => ['email_domain', 'email_domain_active'].includes(c))
     const needsContract = cols.some((c) =>
-      ['contract_monthly_hours', 'contract_period', 'contract_type'].includes(c),
+      [
+        'contract_monthly_hours',
+        'contract_period',
+        'contract_type',
+        'contract_hours_level1',
+        'contract_hours_level2',
+        'contract_hours_level3',
+        'contract_hours_consultoria',
+        'contract_hours_backoffice',
+        'contract_hours_administrativo',
+      ].includes(c),
     )
 
     const hasRelational = cols.some((c) => RELATIONAL_FIELDS.includes(c))
@@ -455,6 +495,25 @@ export default function ClientExtractionPage() {
               break
             case 'contract_type':
               r[c] = contract.type || ''
+              break
+            case 'contract_hours_level1':
+              r[c] = contract.hours_level1 != null ? String(contract.hours_level1) : ''
+              break
+            case 'contract_hours_level2':
+              r[c] = contract.hours_level2 != null ? String(contract.hours_level2) : ''
+              break
+            case 'contract_hours_level3':
+              r[c] = contract.hours_level3 != null ? String(contract.hours_level3) : ''
+              break
+            case 'contract_hours_consultoria':
+              r[c] = contract.hours_consultoria != null ? String(contract.hours_consultoria) : ''
+              break
+            case 'contract_hours_backoffice':
+              r[c] = contract.hours_backoffice != null ? String(contract.hours_backoffice) : ''
+              break
+            case 'contract_hours_administrativo':
+              r[c] =
+                contract.hours_administrativo != null ? String(contract.hours_administrativo) : ''
               break
           }
         })

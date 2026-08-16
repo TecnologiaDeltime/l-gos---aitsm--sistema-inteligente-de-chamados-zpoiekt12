@@ -27,6 +27,12 @@ export interface ContractRecord {
   travel_policy?: string
   technical_visit_policy?: string
   notes?: string
+  hours_level1?: number | null
+  hours_level2?: number | null
+  hours_level3?: number | null
+  hours_consultoria?: number | null
+  hours_backoffice?: number | null
+  hours_administrativo?: number | null
   created: string
   updated: string
   expand?: any
@@ -48,6 +54,26 @@ export const CONTRACT_STATUSES = ['Ativo', 'Expirado', 'Cancelado']
 export const SERVICE_DAYS = ['Seg-Sex', 'Seg-Sáb', 'Todos', 'Personalizado']
 
 export const PRIORITY_OPTIONS = ['Crítica', 'Alta', 'Média', 'Baixa']
+
+export interface ContractHoursLevel {
+  key:
+    | 'hours_level1'
+    | 'hours_level2'
+    | 'hours_level3'
+    | 'hours_consultoria'
+    | 'hours_backoffice'
+    | 'hours_administrativo'
+  label: string
+}
+
+export const CONTRACT_HOURS_LEVELS: ContractHoursLevel[] = [
+  { key: 'hours_level1', label: 'Nível 1' },
+  { key: 'hours_level2', label: 'Nível 2' },
+  { key: 'hours_level3', label: 'Nível 3' },
+  { key: 'hours_consultoria', label: 'Consultoria' },
+  { key: 'hours_backoffice', label: 'Backoffice' },
+  { key: 'hours_administrativo', label: 'Administrativo' },
+]
 
 export const getContracts = (filter?: string) =>
   pb

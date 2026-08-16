@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-16T03:25:32.561Z",
+  "generatedAt": "2026-08-16T03:36:38.487Z",
   "collections": [
     {
       "name": "users",
@@ -620,6 +620,42 @@
           "required": false,
           "system": false,
           "selectValues": ["Crítica", "Alta", "Média", "Baixa"]
+        },
+        {
+          "name": "hours_level1",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "hours_level2",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "hours_level3",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "hours_consultoria",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "hours_backoffice",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "hours_administrativo",
+          "type": "number",
+          "required": false,
+          "system": false
         }
       ],
       "indexes": [

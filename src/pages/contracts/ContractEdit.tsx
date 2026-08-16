@@ -15,6 +15,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Loader2, ArrowLeft, Save, AlertCircle } from 'lucide-react'
+import { Checkbox } from '@/components/ui/checkbox'
 import {
   getContract,
   updateContract,
@@ -23,6 +24,7 @@ import {
   CONTRACT_STATUSES,
   SERVICE_DAYS,
   PRIORITY_OPTIONS,
+  CONTRACT_HOURS_LEVELS,
 } from '@/services/contracts'
 import { getCompanies, CompanyRecord } from '@/services/companies'
 import { useToast } from '@/hooks/use-toast'
@@ -33,6 +35,7 @@ import { cn } from '@/lib/utils'
 const SECTIONS = [
   { key: 'basic', label: 'Informações Básicas' },
   { key: 'hours', label: 'Horas e Valores' },
+  { key: 'distribution', label: 'Distribuição de Horas por Nível' },
   { key: 'sla', label: 'Parâmetros de SLA' },
   { key: 'services', label: 'Serviços e Políticas' },
   { key: 'notes', label: 'Observações' },
@@ -85,6 +88,12 @@ export default function ContractEdit() {
         overtime_policy: data.overtime_policy || '',
         travel_policy: data.travel_policy || '',
         technical_visit_policy: data.technical_visit_policy || '',
+        hours_level1: data.hours_level1 ?? '',
+        hours_level2: data.hours_level2 ?? '',
+        hours_level3: data.hours_level3 ?? '',
+        hours_consultoria: data.hours_consultoria ?? '',
+        hours_backoffice: data.hours_backoffice ?? '',
+        hours_administrativo: data.hours_administrativo ?? '',
         notes: data.notes || '',
       })
     } catch {
@@ -151,9 +160,17 @@ export default function ContractEdit() {
         'sla_solution_time',
         'sla_update_time',
         'sla_field_service_time',
+        'hours_level1',
+        'hours_level2',
+        'hours_level3',
+        'hours_consultoria',
+        'hours_backoffice',
+        'hours_administrativo',
       ]) {
         if (payload[key] === '' || payload[key] === undefined) {
-          delete payload[key]
+          payload[key] = null
+        } else {
+          payload[key] = Number(payload[key])
         }
       }
       await updateContract(id, payload)
@@ -401,10 +418,56 @@ export default function ContractEdit() {
           </div>
         </div>
 
-        {/* SLA Parameters */}
+        {/* Hours Distribution by Level */}
         <div className="rounded-xl border bg-white p-6 dark:bg-slate-900 space-y-4">
           <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300">
             {SECTIONS[2].label}
+          </h3>
+          <p className="text-xs text-slate-500 dark:text-slate-400">
+            Marque os níveis contratados e informe a quantidade de horas acordadas para cada nível.
+          </p>
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            {CONTRACT_HOURS_LEVELS.map((level) => {
+              const active =
+                form[level.key] !== '' && form[level.key] !== undefined && form[level.key] !== null
+              return (
+                <div
+                  key={level.key}
+                  className="flex items-center gap-3 rounded-lg border border-slate-200 p-3 dark:border-slate-700"
+                >
+                  <Checkbox
+                    id={`dist-${level.key}`}
+                    checked={active}
+                    onCheckedChange={(checked) =>
+                      set(level.key, checked ? form[level.key] || 0 : '')
+                    }
+                  />
+                  <label
+                    htmlFor={`dist-${level.key}`}
+                    className="text-xs font-medium cursor-pointer select-none min-w-[110px]"
+                  >
+                    {level.label}
+                  </label>
+                  <Input
+                    type="number"
+                    className={cn(inputCls, !active && 'opacity-40 pointer-events-none')}
+                    placeholder="Horas"
+                    value={form[level.key] ?? ''}
+                    disabled={!active}
+                    onChange={(e) =>
+                      set(level.key, e.target.value === '' ? '' : Number(e.target.value))
+                    }
+                  />
+                </div>
+              )
+            })}
+          </div>
+        </div>
+
+        {/* SLA Parameters */}
+        <div className="rounded-xl border bg-white p-6 dark:bg-slate-900 space-y-4">
+          <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300">
+            {SECTIONS[3].label}
           </h3>
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
             <div className="space-y-1">
@@ -480,7 +543,7 @@ export default function ContractEdit() {
         {/* Services and Policies */}
         <div className="rounded-xl border bg-white p-6 dark:bg-slate-900 space-y-4">
           <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300">
-            {SECTIONS[3].label}
+            {SECTIONS[4].label}
           </h3>
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div className="space-y-1">
@@ -529,7 +592,7 @@ export default function ContractEdit() {
         {/* Notes */}
         <div className="rounded-xl border bg-white p-6 dark:bg-slate-900 space-y-4">
           <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300">
-            {SECTIONS[4].label}
+            {SECTIONS[5].label}
           </h3>
           <div className="space-y-1">
             <Label className="text-xs">Observações</Label>
