@@ -6,6 +6,7 @@ import { ClientHoursBreakdownDialog } from '@/components/ClientHoursBreakdownDia
 import { ClientHoursHistoryDialog } from '@/components/ClientHoursHistoryDialog'
 import { getClientHoursData, type ClientHoursData } from '@/services/client-hours'
 import { useRealtime } from '@/hooks/use-realtime'
+import { formatSeconds } from '@/lib/duration'
 import { AlertCircle, RefreshCw, ChevronRight, Building2, History } from 'lucide-react'
 
 function getColorClass(pct: number) {
@@ -116,10 +117,12 @@ export default function ClientHoursPage() {
                           </p>
                           <p className="text-xs text-muted-foreground">{item.company.code}</p>
                         </td>
-                        <td className="p-4 text-right text-sm">
-                          {item.contractedHours.toFixed(1)}h
+                        <td className="p-4 text-right text-sm font-mono">
+                          {formatSeconds(item.contractedSeconds)}
                         </td>
-                        <td className="p-4 text-right text-sm">{item.consumedHours.toFixed(1)}h</td>
+                        <td className="p-4 text-right text-sm font-mono">
+                          {formatSeconds(item.consumedSeconds)}
+                        </td>
                         <td className="p-4 text-center">
                           <span className={`text-3xl font-bold ${getColorClass(item.percentage)}`}>
                             {item.percentage.toFixed(0)}%
@@ -174,9 +177,9 @@ export default function ClientHoursPage() {
                       {item.percentage.toFixed(0)}%
                     </span>
                   </div>
-                  <div className="flex justify-between text-xs text-muted-foreground">
-                    <span>Contratado: {item.contractedHours.toFixed(1)}h</span>
-                    <span>Consumido: {item.consumedHours.toFixed(1)}h</span>
+                  <div className="flex justify-between text-xs text-muted-foreground font-mono">
+                    <span>Contratado: {formatSeconds(item.contractedSeconds)}</span>
+                    <span>Consumido: {formatSeconds(item.consumedSeconds)}</span>
                   </div>
                   <Button
                     size="sm"

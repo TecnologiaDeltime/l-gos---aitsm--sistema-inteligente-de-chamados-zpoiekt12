@@ -1,10 +1,13 @@
 import { getContracts } from '@/services/contracts'
 import { getContractPeriods } from '@/services/contract-periods'
+import { parseDurationToSeconds } from '@/lib/duration'
 
 export interface MonthlyHoursData {
   month: string
   monthKey: string
+  /** Consumido em SEGUNDOS (preciso). */
   consumed: number
+  /** Contratado em SEGUNDOS (preciso). */
   contracted: number
   percentage: number
 }
@@ -36,6 +39,8 @@ export async function getClientHoursHistory(companyId: string): Promise<MonthlyH
   const companyPeriods = periods.filter((p) => companyContractIds.includes(p.contract))
 
   const now = new Date()
+  // Soma em SEGUNDOS (via parseDurationToSeconds) para garantir precisão total.
+  // Aceita valores legados em número puro (ex.: 96 → 96:00:00).
   const monthsMap = new Map<string, { consumed: number; contracted: number }>()
 
   for (let i = 11; i >= 0; i--) {
@@ -51,8 +56,8 @@ export async function getClientHoursHistory(companyId: string): Promise<MonthlyH
     const key = `${periodDate.getFullYear()}-${String(periodDate.getMonth() + 1).padStart(2, '0')}`
     if (monthsMap.has(key)) {
       const existing = monthsMap.get(key)!
-      existing.consumed += p.consumed_hours || 0
-      existing.contracted += p.contracted_hours || 0
+      existing.consumed += parseDurationToSeconds(p.consumed_hours) ?? 0
+      existing.contracted += parseDurationToSeconds(p.contracted_hours) ?? 0
     }
   })
 

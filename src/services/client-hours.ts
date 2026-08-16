@@ -2,18 +2,22 @@ import pb from '@/lib/pocketbase/client'
 import { getCompanies, CompanyRecord } from '@/services/companies'
 import { getContracts } from '@/services/contracts'
 import { getContractPeriods } from '@/services/contract-periods'
+import { parseDurationToSeconds } from '@/lib/duration'
 
 export interface ClientHoursData {
   company: CompanyRecord
-  contractedHours: number
-  consumedHours: number
+  /** Total contratado em SEGUNDOS (preciso). */
+  contractedSeconds: number
+  /** Total consumido em SEGUNDOS (preciso). */
+  consumedSeconds: number
   percentage: number
 }
 
 export interface QueueBreakdownItem {
   queueId: string
   queueName: string
-  hours: number
+  /** Total consumido em SEGUNDOS (preciso). */
+  seconds: number
   percentage: number
 }
 
@@ -38,27 +42,31 @@ export async function getClientHoursData(): Promise<ClientHoursData[]> {
   const contractCompanyMap = new Map<string, string>()
   contracts.forEach((c) => contractCompanyMap.set(c.id, c.company))
 
-  const companyMap = new Map<string, { contracted: number; consumed: number }>()
+  // Soma em SEGUNDOS (via parseDurationToSeconds) para garantir precisão total,
+  // sem erros de arredondamento de ponto flutuante. Aceita também valores
+  // legados em formato de número puro (ex.: 96 → 96:00:00).
+  const companyMap = new Map<string, { contractedSec: number; consumedSec: number }>()
 
   periods.forEach((p) => {
     if (p.status !== 'Ativo') return
     const companyId = contractCompanyMap.get(p.contract)
     if (!companyId) return
-    const existing = companyMap.get(companyId) || { contracted: 0, consumed: 0 }
-    existing.contracted += p.contracted_hours || 0
-    existing.consumed += p.consumed_hours || 0
+    const existing = companyMap.get(companyId) || { contractedSec: 0, consumedSec: 0 }
+    existing.contractedSec += parseDurationToSeconds(p.contracted_hours) ?? 0
+    existing.consumedSec += parseDurationToSeconds(p.consumed_hours) ?? 0
     companyMap.set(companyId, existing)
   })
 
   const result: ClientHoursData[] = []
   companies.forEach((company) => {
     const data = companyMap.get(company.id)
-    if (!data || data.contracted === 0) return
+    if (!data || data.contractedSec === 0) return
+    const pct = (data.consumedSec / data.contractedSec) * 100
     result.push({
       company,
-      contractedHours: data.contracted,
-      consumedHours: data.consumed,
-      percentage: (data.consumed / data.contracted) * 100,
+      contractedSeconds: data.contractedSec,
+      consumedSeconds: data.consumedSec,
+      percentage: pct,
     })
   })
 
@@ -103,26 +111,28 @@ export async function getQueueBreakdown(companyId: string): Promise<QueueBreakdo
     queueRecords.forEach((q: any) => queueNameMap.set(q.id, q.name))
   }
 
+  // Soma em SEGUNDOS (preciso) — duration_minutes está em minutos.
   const queueHoursMap = new Map<string, number>()
-  let totalHours = 0
+  let totalSeconds = 0
 
   allInteractions.forEach((interaction: any) => {
     const queueId = ticketQueueMap.get(interaction.ticket)
     if (!queueId) return
-    const hours = (interaction.duration_minutes || 0) / 60
-    queueHoursMap.set(queueId, (queueHoursMap.get(queueId) || 0) + hours)
-    totalHours += hours
+    const minutes = Number(interaction.duration_minutes) || 0
+    const seconds = Math.round(minutes * 60)
+    queueHoursMap.set(queueId, (queueHoursMap.get(queueId) || 0) + seconds)
+    totalSeconds += seconds
   })
 
   const result: QueueBreakdownItem[] = []
-  queueHoursMap.forEach((hours, queueId) => {
+  queueHoursMap.forEach((seconds, queueId) => {
     result.push({
       queueId,
       queueName: queueNameMap.get(queueId) || 'Sem Fila',
-      hours,
-      percentage: totalHours > 0 ? (hours / totalHours) * 100 : 0,
+      seconds,
+      percentage: totalSeconds > 0 ? (seconds / totalSeconds) * 100 : 0,
     })
   })
 
-  return result.sort((a, b) => b.hours - a.hours)
+  return result.sort((a, b) => b.seconds - a.seconds)
 }

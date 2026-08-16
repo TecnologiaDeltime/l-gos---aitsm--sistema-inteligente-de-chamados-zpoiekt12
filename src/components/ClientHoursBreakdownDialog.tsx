@@ -3,6 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Skeleton } from '@/components/ui/skeleton'
 import { Button } from '@/components/ui/button'
 import { getQueueBreakdown, type QueueBreakdownItem } from '@/services/client-hours'
+import { formatSeconds } from '@/lib/duration'
 import { AlertCircle, RefreshCw } from 'lucide-react'
 
 interface Props {
@@ -69,8 +70,8 @@ export function ClientHoursBreakdownDialog({ open, onClose, companyId, clientNam
               >
                 <div className="min-w-0">
                   <p className="text-sm font-medium truncate">{item.queueName}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {item.hours.toFixed(1)}h consumidas
+                  <p className="text-xs text-muted-foreground font-mono">
+                    {formatSeconds(item.seconds)} consumidas
                   </p>
                 </div>
                 <span className="text-lg font-bold text-primary ml-2 shrink-0">

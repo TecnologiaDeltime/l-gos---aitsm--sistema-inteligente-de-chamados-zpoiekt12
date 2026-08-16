@@ -16,6 +16,7 @@ import {
 import { getClientHoursHistory, type MonthlyHoursData } from '@/services/client-hours-history'
 import { useTheme } from '@/hooks/use-theme'
 import { useRealtime } from '@/hooks/use-realtime'
+import { formatSeconds } from '@/lib/duration'
 import { AlertCircle, RefreshCw, History } from 'lucide-react'
 
 function HistoryTooltip({ active, payload }: { active?: boolean; payload?: any[] }) {
@@ -26,10 +27,11 @@ function HistoryTooltip({ active, payload }: { active?: boolean; payload?: any[]
     <div className="rounded-lg border bg-popover p-3 shadow-md">
       <p className="text-xs font-semibold mb-1">{data.month}</p>
       <p className="text-xs text-muted-foreground">
-        Consumido: <span className="font-bold text-foreground">{data.consumed.toFixed(1)}h</span>
+        Consumido: <span className="font-bold text-foreground">{formatSeconds(data.consumed)}</span>
       </p>
       <p className="text-xs text-muted-foreground">
-        Contratado: <span className="font-bold text-foreground">{data.contracted.toFixed(1)}h</span>
+        Contratado:{' '}
+        <span className="font-bold text-foreground">{formatSeconds(data.contracted)}</span>
       </p>
       <p className="text-xs text-muted-foreground">
         Uso: <span className="font-bold text-foreground">{data.percentage.toFixed(1)}%</span>
