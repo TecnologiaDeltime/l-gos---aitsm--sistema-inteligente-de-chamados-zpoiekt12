@@ -23,7 +23,6 @@ import {
   CONTRACT_TYPES,
   CONTRACT_STATUSES,
   SERVICE_DAYS,
-  PRIORITY_OPTIONS,
   CONTRACT_HOURS_LEVELS,
   uniqueAgreementSlug,
   type CustomAgreementEntry,
@@ -39,7 +38,6 @@ const SECTIONS = [
   { key: 'basic', label: 'Informações Básicas' },
   { key: 'hours', label: 'Horas e Valores' },
   { key: 'distribution', label: 'Distribuição de Horas por Nível' },
-  { key: 'sla', label: 'Parâmetros de SLA' },
   { key: 'notes', label: 'Observações' },
 ]
 
@@ -89,11 +87,6 @@ export default function ContractEdit() {
         service_hours_end: data.service_hours_end || '',
         service_days: data.service_days || 'Seg-Sex',
         on_duty_coverage: data.on_duty_coverage ?? false,
-        sla_response_time: data.sla_response_time ?? '',
-        sla_solution_time: data.sla_solution_time ?? '',
-        sla_update_time: data.sla_update_time ?? '',
-        sla_field_service_time: data.sla_field_service_time ?? '',
-        priorities_available: data.priorities_available || [],
         hours_level1: data.hours_level1 ?? '',
         hours_level2: data.hours_level2 ?? '',
         hours_level3: data.hours_level3 ?? '',
@@ -178,14 +171,6 @@ export default function ContractEdit() {
     }
   }
 
-  const togglePriority = (p: string) => {
-    const current: string[] = form.priorities_available || []
-    set(
-      'priorities_available',
-      current.includes(p) ? current.filter((x) => x !== p) : [...current, p],
-    )
-  }
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!id) return
@@ -210,10 +195,6 @@ export default function ContractEdit() {
         'monthly_hours',
         'overtime_hour_value',
         'monthly_hour_limit',
-        'sla_response_time',
-        'sla_solution_time',
-        'sla_update_time',
-        'sla_field_service_time',
         'hours_level1',
         'hours_level2',
         'hours_level3',
@@ -659,86 +640,10 @@ export default function ContractEdit() {
           )}
         </div>
 
-        {/* SLA Parameters */}
-        <div className="rounded-xl border bg-white p-6 dark:bg-slate-900 space-y-4">
-          <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300">
-            {SECTIONS[3].label}
-          </h3>
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
-            <div className="space-y-1">
-              <Label className="text-xs">SLA Resposta (min)</Label>
-              <Input
-                type="number"
-                className={inputCls}
-                value={form.sla_response_time ?? ''}
-                onChange={(e) =>
-                  set('sla_response_time', e.target.value === '' ? '' : Number(e.target.value))
-                }
-              />
-            </div>
-            <div className="space-y-1">
-              <Label className="text-xs">SLA Solução (min)</Label>
-              <Input
-                type="number"
-                className={inputCls}
-                value={form.sla_solution_time ?? ''}
-                onChange={(e) =>
-                  set('sla_solution_time', e.target.value === '' ? '' : Number(e.target.value))
-                }
-              />
-            </div>
-            <div className="space-y-1">
-              <Label className="text-xs">SLA Atualização (min)</Label>
-              <Input
-                type="number"
-                className={inputCls}
-                value={form.sla_update_time ?? ''}
-                onChange={(e) =>
-                  set('sla_update_time', e.target.value === '' ? '' : Number(e.target.value))
-                }
-              />
-            </div>
-            <div className="space-y-1">
-              <Label className="text-xs">SLA Campo (min)</Label>
-              <Input
-                type="number"
-                className={inputCls}
-                value={form.sla_field_service_time ?? ''}
-                onChange={(e) =>
-                  set('sla_field_service_time', e.target.value === '' ? '' : Number(e.target.value))
-                }
-              />
-            </div>
-          </div>
-          <div className="space-y-2 pt-2">
-            <Label className="text-xs">Prioridades Disponíveis</Label>
-            <div className="flex flex-wrap gap-2">
-              {PRIORITY_OPTIONS.map((p) => {
-                const selected = (form.priorities_available || []).includes(p)
-                return (
-                  <button
-                    key={p}
-                    type="button"
-                    onClick={() => togglePriority(p)}
-                    className={cn(
-                      'px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors',
-                      selected
-                        ? 'bg-blue-600 text-white border-blue-600'
-                        : 'bg-white text-slate-600 border-slate-200 hover:border-blue-300 dark:bg-slate-800 dark:text-slate-300',
-                    )}
-                  >
-                    {p}
-                  </button>
-                )
-              })}
-            </div>
-          </div>
-        </div>
-
         {/* Notes */}
         <div className="rounded-xl border bg-white p-6 dark:bg-slate-900 space-y-4">
           <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300">
-            {SECTIONS[4].label}
+            {SECTIONS[3].label}
           </h3>
           <div className="space-y-1">
             <Label className="text-xs">Observações</Label>
