@@ -11,9 +11,17 @@ interface Props {
   onClose: () => void
   companyId: string
   clientName: string
+  /** monthKey = "YYYY-MM". Quando omitido, usa o mês corrente. */
+  monthKey?: string
 }
 
-export function ClientHoursBreakdownDialog({ open, onClose, companyId, clientName }: Props) {
+export function ClientHoursBreakdownDialog({
+  open,
+  onClose,
+  companyId,
+  clientName,
+  monthKey,
+}: Props) {
   const [data, setData] = useState<QueueBreakdownItem[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -22,7 +30,7 @@ export function ClientHoursBreakdownDialog({ open, onClose, companyId, clientNam
     setLoading(true)
     setError(null)
     try {
-      const result = await getQueueBreakdown(companyId)
+      const result = await getQueueBreakdown(companyId, monthKey)
       setData(result)
     } catch {
       setError('Falha ao carregar dados. Tente novamente.')
@@ -35,7 +43,8 @@ export function ClientHoursBreakdownDialog({ open, onClose, companyId, clientNam
     if (open && companyId) {
       load()
     }
-  }, [open, companyId])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, companyId, monthKey])
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
@@ -59,7 +68,7 @@ export function ClientHoursBreakdownDialog({ open, onClose, companyId, clientNam
           </div>
         ) : data.length === 0 ? (
           <p className="text-center text-sm text-muted-foreground py-8">
-            Sem dados de consumo para este cliente no mês atual.
+            Sem dados de consumo para este cliente no período selecionado.
           </p>
         ) : (
           <div className="space-y-2 max-h-[400px] overflow-y-auto">

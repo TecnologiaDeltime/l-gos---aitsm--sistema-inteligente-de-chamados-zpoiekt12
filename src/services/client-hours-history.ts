@@ -27,7 +27,16 @@ const MONTH_NAMES = [
   'Dez',
 ]
 
-export async function getClientHoursHistory(companyId: string): Promise<MonthlyHoursData[]> {
+/**
+ * Histórico de 12 meses de consumo do cliente.
+ *
+ * `endMonthKey` ("YYYY-MM") define o último mês da janela. Quando omitido,
+ * usa o mês corrente como último mês (comportamento original).
+ */
+export async function getClientHoursHistory(
+  companyId: string,
+  endMonthKey?: string,
+): Promise<MonthlyHoursData[]> {
   const contracts = await getContracts()
   const companyContractIds = contracts
     .filter((c: any) => c.company === companyId)
@@ -38,13 +47,30 @@ export async function getClientHoursHistory(companyId: string): Promise<MonthlyH
   const periods = await getContractPeriods()
   const companyPeriods = periods.filter((p) => companyContractIds.includes(p.contract))
 
-  const now = new Date()
+  // Último mês da janela: endMonthKey ou mês corrente.
+  let endYear: number
+  let endMonthIdx: number
+  if (endMonthKey) {
+    const [y, m] = endMonthKey.split('-')
+    endYear = parseInt(y, 10)
+    endMonthIdx = parseInt(m, 10) - 1
+    if (Number.isNaN(endYear) || Number.isNaN(endMonthIdx)) {
+      const now = new Date()
+      endYear = now.getFullYear()
+      endMonthIdx = now.getMonth()
+    }
+  } else {
+    const now = new Date()
+    endYear = now.getFullYear()
+    endMonthIdx = now.getMonth()
+  }
+
   // Soma em SEGUNDOS (via parseDurationToSeconds) para garantir precisão total.
   // Aceita valores legados em número puro (ex.: 96 → 96:00:00).
   const monthsMap = new Map<string, { consumed: number; contracted: number }>()
 
   for (let i = 11; i >= 0; i--) {
-    const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
+    const d = new Date(endYear, endMonthIdx - i, 1)
     const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
     monthsMap.set(key, { consumed: 0, contracted: 0 })
   }

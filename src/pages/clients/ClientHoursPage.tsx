@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useMemo } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Button } from '@/components/ui/button'
@@ -7,7 +7,15 @@ import { ClientHoursHistoryDialog } from '@/components/ClientHoursHistoryDialog'
 import { getClientHoursData, type ClientHoursData } from '@/services/client-hours'
 import { useRealtime } from '@/hooks/use-realtime'
 import { formatSeconds } from '@/lib/duration'
-import { AlertCircle, RefreshCw, ChevronRight, Building2, History } from 'lucide-react'
+import {
+  AlertCircle,
+  RefreshCw,
+  ChevronRight,
+  Building2,
+  History,
+  ChevronLeft,
+  Calendar,
+} from 'lucide-react'
 
 function getColorClass(pct: number) {
   if (pct >= 100) return 'text-red-500'
@@ -15,7 +23,42 @@ function getColorClass(pct: number) {
   return 'text-green-500'
 }
 
+const MONTH_NAMES_FULL = [
+  'Janeiro',
+  'Fevereiro',
+  'Março',
+  'Abril',
+  'Maio',
+  'Junho',
+  'Julho',
+  'Agosto',
+  'Setembro',
+  'Outubro',
+  'Novembro',
+  'Dezembro',
+]
+
+/** monthKey = "YYYY-MM" do mês atual. */
+function currentMonthKey(): string {
+  const now = new Date()
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+}
+
+/** Decrementa um monthKey em N meses. */
+function shiftMonth(monthKey: string, delta: number): string {
+  const [y, m] = monthKey.split('-').map((n) => parseInt(n, 10))
+  const d = new Date(y, m - 1 + delta, 1)
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+}
+
+function formatMonthLabel(monthKey: string): string {
+  const [y, m] = monthKey.split('-').map((n) => parseInt(n, 10))
+  return `${MONTH_NAMES_FULL[m - 1]} ${y}`
+}
+
 export default function ClientHoursPage() {
+  const thisMonth = useMemo(() => currentMonthKey(), [])
+  const [monthKey, setMonthKey] = useState<string>(thisMonth)
   const [data, setData] = useState<ClientHoursData[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -26,14 +69,14 @@ export default function ClientHoursPage() {
     setLoading(true)
     setError(null)
     try {
-      const result = await getClientHoursData()
+      const result = await getClientHoursData(monthKey)
       setData(result)
     } catch {
       setError('Falha ao carregar dados. Tente novamente.')
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [monthKey])
 
   useEffect(() => {
     loadData()
@@ -41,6 +84,8 @@ export default function ClientHoursPage() {
 
   useRealtime('contract_periods', () => loadData())
   useRealtime('ticket_interactions', () => loadData())
+
+  const isCurrentMonth = monthKey === thisMonth
 
   const handleRowClick = (item: ClientHoursData) => {
     setSelectedClient({
@@ -51,13 +96,70 @@ export default function ClientHoursPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-xl font-bold">Horas Clientes</h2>
         <Button size="sm" variant="outline" onClick={loadData} disabled={loading}>
           <RefreshCw className={`h-3.5 w-3.5 mr-1 ${loading ? 'animate-spin' : ''}`} />
           Atualizar
         </Button>
       </div>
+
+      {/* Seletor de mês/período */}
+      <Card>
+        <CardContent className="p-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <Calendar className="h-4 w-4 text-muted-foreground shrink-0" />
+              <span className="text-sm font-medium text-muted-foreground hidden sm:inline">
+                Período
+              </span>
+              <div className="flex items-center gap-1">
+                <Button
+                  size="icon"
+                  variant="outline"
+                  className="h-8 w-8"
+                  onClick={() => setMonthKey((k) => shiftMonth(k, -1))}
+                  aria-label="Mês anterior"
+                  disabled={loading}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                <div className="min-w-[150px] sm:min-w-[180px] text-center">
+                  <span className="text-sm font-semibold whitespace-nowrap">
+                    {formatMonthLabel(monthKey)}
+                  </span>
+                  {isCurrentMonth && (
+                    <span className="ml-2 inline-flex items-center rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary whitespace-nowrap">
+                      Mês atual
+                    </span>
+                  )}
+                </div>
+                <Button
+                  size="icon"
+                  variant="outline"
+                  className="h-8 w-8"
+                  onClick={() => setMonthKey((k) => shiftMonth(k, 1))}
+                  aria-label="Próximo mês"
+                  disabled={loading || isCurrentMonth}
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+            {!isCurrentMonth && (
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-8"
+                onClick={() => setMonthKey(thisMonth)}
+                disabled={loading}
+              >
+                Voltar para o mês atual
+              </Button>
+            )}
+          </div>
+        </CardContent>
+      </Card>
 
       {loading ? (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -76,7 +178,7 @@ export default function ClientHoursPage() {
       ) : data.length === 0 ? (
         <div className="text-center py-12 text-muted-foreground">
           <Building2 className="h-10 w-10 mx-auto mb-2 text-muted-foreground/50" />
-          <p>Nenhum cliente com contrato ativo no mês atual.</p>
+          <p>Nenhum consumo registrado neste período.</p>
         </div>
       ) : (
         <>
@@ -185,12 +287,13 @@ export default function ClientHoursPage() {
                     size="sm"
                     variant="outline"
                     className="w-full"
-                    onClick={() =>
+                    onClick={(e) => {
+                      e.stopPropagation()
                       setHistoryClient({
                         id: item.company.id,
                         name: item.company.trade_name || item.company.legal_name,
                       })
-                    }
+                    }}
                   >
                     <History className="h-3.5 w-3.5 mr-1" />
                     Ver Histórico
@@ -207,6 +310,7 @@ export default function ClientHoursPage() {
         onClose={() => setSelectedClient(null)}
         companyId={selectedClient?.id || ''}
         clientName={selectedClient?.name || ''}
+        monthKey={monthKey}
       />
 
       <ClientHoursHistoryDialog
@@ -214,6 +318,7 @@ export default function ClientHoursPage() {
         onClose={() => setHistoryClient(null)}
         companyId={historyClient?.id || ''}
         clientName={historyClient?.name || ''}
+        monthKey={monthKey}
       />
     </div>
   )

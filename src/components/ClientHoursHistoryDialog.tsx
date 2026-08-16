@@ -45,9 +45,17 @@ interface Props {
   onClose: () => void
   companyId: string
   clientName: string
+  /** monthKey = "YYYY-MM". Último mês da janela de 12 meses. */
+  monthKey?: string
 }
 
-export function ClientHoursHistoryDialog({ open, onClose, companyId, clientName }: Props) {
+export function ClientHoursHistoryDialog({
+  open,
+  onClose,
+  companyId,
+  clientName,
+  monthKey,
+}: Props) {
   const [data, setData] = useState<MonthlyHoursData[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -57,14 +65,14 @@ export function ClientHoursHistoryDialog({ open, onClose, companyId, clientName 
     setLoading(true)
     setError(null)
     try {
-      const result = await getClientHoursHistory(companyId)
+      const result = await getClientHoursHistory(companyId, monthKey)
       setData(result)
     } catch {
       setError('Falha ao carregar histórico. Tente novamente.')
     } finally {
       setLoading(false)
     }
-  }, [companyId])
+  }, [companyId, monthKey])
 
   useEffect(() => {
     if (open && companyId) load()
