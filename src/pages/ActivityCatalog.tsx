@@ -12,6 +12,7 @@ import {
 import { updateCategory } from '@/services/categories'
 import { useRealtime } from '@/hooks/use-realtime'
 import { useToast } from '@/hooks/use-toast'
+import { formatMinutes } from '@/lib/duration'
 
 export default function ActivityCatalog() {
   const { toast } = useToast()
@@ -173,8 +174,12 @@ export default function ActivityCatalog() {
                       {sub.urgency}
                     </Badge>
                     <PriorityBadge priority={sub.priority || ''} />
-                    <span className="text-slate-500">Resp: {sub.sla_response_minutes}min</span>
-                    <span className="text-slate-500">Sol: {sub.sla_solution_minutes}min</span>
+                    <span className="text-slate-500">
+                      Resp: {formatMinutes(sub.sla_response_minutes)}
+                    </span>
+                    <span className="text-slate-500">
+                      Sol: {formatMinutes(sub.sla_solution_minutes)}
+                    </span>
                     <Button
                       size="sm"
                       variant="ghost"

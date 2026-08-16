@@ -21,6 +21,7 @@ import { CategoryRecord, createCategory, updateCategory } from '@/services/categ
 import { computePriority, IMPACT_VALUES, URGENCY_VALUES } from '@/lib/itil-matrix'
 import { PriorityBadge } from '@/components/PriorityBadge'
 import { useToast } from '@/hooks/use-toast'
+import { formatMinutes, parseDurationToSeconds } from '@/lib/duration'
 
 interface ActivityCatalogDialogProps {
   open: boolean
