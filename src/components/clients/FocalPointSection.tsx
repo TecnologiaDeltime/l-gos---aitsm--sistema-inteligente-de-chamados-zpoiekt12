@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Badge } from '@/components/ui/badge'
 import {
   AlertDialog,
   AlertDialogContent,
@@ -143,35 +144,35 @@ export function FocalPointSection({
     onEdit?: () => void,
     onRemove?: () => void,
   ) => (
-    <div className="flex items-center justify-between rounded-lg border p-3">
-      <div className="space-y-1 text-sm">
-        <p className="font-semibold flex items-center gap-2">
-          <Star className="h-3.5 w-3.5 text-amber-500" />
-          {name}
+    <div className="group flex items-center justify-between rounded-md py-1 pl-2 pr-1 hover:bg-slate-50 dark:hover:bg-slate-800/60">
+      <div className="space-y-0.5 text-sm min-w-0">
+        <p className="font-semibold flex items-center gap-1.5 truncate">
+          <Star className="h-3.5 w-3.5 text-amber-500 shrink-0" />
+          <span className="truncate">{name}</span>
         </p>
         {email && (
-          <p className="text-xs text-slate-500 flex items-center gap-1">
-            <Mail className="h-3 w-3" />
-            {email}
+          <p className="text-xs text-slate-500 flex items-center gap-1 truncate">
+            <Mail className="h-3 w-3 shrink-0" />
+            <span className="truncate">{email}</span>
           </p>
         )}
         {phone && (
-          <p className="text-xs text-slate-500 flex items-center gap-1">
-            <Phone className="h-3 w-3" />
-            {phone}
+          <p className="text-xs text-slate-500 flex items-center gap-1 truncate">
+            <Phone className="h-3 w-3 shrink-0" />
+            <span className="truncate">{phone}</span>
           </p>
         )}
       </div>
       {(onEdit || onRemove) && (
-        <div className="flex gap-1">
+        <div className="flex items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100 shrink-0">
           {onEdit && (
-            <Button size="icon" variant="ghost" className="h-7 w-7" onClick={onEdit}>
-              <Pencil className="h-3.5 w-3.5" />
+            <Button size="icon" variant="ghost" className="h-6 w-6" onClick={onEdit}>
+              <Pencil className="h-3 w-3" />
             </Button>
           )}
           {onRemove && (
-            <Button size="icon" variant="ghost" className="h-7 w-7 text-red-500" onClick={onRemove}>
-              <Trash2 className="h-3.5 w-3.5" />
+            <Button size="icon" variant="ghost" className="h-6 w-6 text-red-500" onClick={onRemove}>
+              <Trash2 className="h-3 w-3" />
             </Button>
           )}
         </div>
@@ -181,13 +182,22 @@ export function FocalPointSection({
 
   if (!clientId) {
     return (
-      <div className="rounded-xl border bg-white p-6 dark:bg-slate-900 space-y-4">
-        <h3 className="text-base font-bold">Pontos Focais</h3>
-        <Button size="sm" variant="outline" onClick={openAdd}>
-          <Plus className="mr-1 h-4 w-4" /> Adicionar Ponto Focal
-        </Button>
+      <div className="rounded-xl border bg-white p-4 dark:bg-slate-900 space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <h3 className="text-base font-bold">Pontos Focais</h3>
+            {pendingFocalPoints && pendingFocalPoints.length > 0 && (
+              <Badge variant="secondary" className="h-5 px-1.5 text-xs">
+                {pendingFocalPoints.length}
+              </Badge>
+            )}
+          </div>
+          <Button size="sm" variant="outline" onClick={openAdd}>
+            <Plus className="mr-1 h-4 w-4" /> Adicionar Ponto Focal
+          </Button>
+        </div>
         {pendingFocalPoints && pendingFocalPoints.length > 0 ? (
-          <div className="space-y-2">
+          <div className="max-h-64 overflow-y-auto pr-1 -mr-1 space-y-0.5">
             {pendingFocalPoints.map((fp, i) =>
               renderRow(
                 fp.full_name,
@@ -202,7 +212,7 @@ export function FocalPointSection({
             )}
           </div>
         ) : (
-          <p className="text-sm text-slate-500 text-center py-2">Nenhum ponto focal cadastrado.</p>
+          <p className="text-sm text-slate-500 text-center py-1">Nenhum ponto focal cadastrado.</p>
         )}
         <FocalPointDialog
           open={dialogOpen}
@@ -216,9 +226,16 @@ export function FocalPointSection({
   }
 
   return (
-    <div className="rounded-xl border bg-white p-6 dark:bg-slate-900 space-y-4">
+    <div className="rounded-xl border bg-white p-4 dark:bg-slate-900 space-y-3">
       <div className="flex items-center justify-between">
-        <h3 className="text-base font-bold">Pontos Focais</h3>
+        <div className="flex items-center gap-2">
+          <h3 className="text-base font-bold">Pontos Focais</h3>
+          {focalPoints.length > 0 && (
+            <Badge variant="secondary" className="h-5 px-1.5 text-xs">
+              {focalPoints.length}
+            </Badge>
+          )}
+        </div>
         <Button size="sm" variant="outline" onClick={openAdd}>
           <Plus className="mr-1 h-4 w-4" /> Adicionar Ponto Focal
         </Button>
@@ -226,9 +243,9 @@ export function FocalPointSection({
       {loading ? (
         <Skeleton className="h-20 w-full" />
       ) : focalPoints.length === 0 ? (
-        <p className="text-sm text-slate-500 text-center py-4">Nenhum ponto focal cadastrado.</p>
+        <p className="text-sm text-slate-500 text-center py-3">Nenhum ponto focal cadastrado.</p>
       ) : (
-        <div className="space-y-2">
+        <div className="max-h-64 overflow-y-auto pr-1 -mr-1 space-y-0.5">
           {focalPoints.map((fp) =>
             renderRow(
               fp.full_name,

@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect, useMemo } from 'react'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Badge } from '@/components/ui/badge'
 import {
   AlertDialog,
   AlertDialogContent,
@@ -116,7 +117,7 @@ export function CollaboratorSection({ clientId }: { clientId?: string }) {
 
   if (!clientId) {
     return (
-      <div className="rounded-xl border bg-white p-6 dark:bg-slate-900">
+      <div className="rounded-xl border bg-white p-4 dark:bg-slate-900">
         <h3 className="text-base font-bold mb-2">Colaboradores</h3>
         <p className="text-sm text-slate-500">
           Salve o cliente primeiro para gerenciar colaboradores.
@@ -126,9 +127,16 @@ export function CollaboratorSection({ clientId }: { clientId?: string }) {
   }
 
   return (
-    <div className="rounded-xl border bg-white p-6 dark:bg-slate-900 space-y-4">
+    <div className="rounded-xl border bg-white p-4 dark:bg-slate-900 space-y-3">
       <div className="flex items-center justify-between">
-        <h3 className="text-base font-bold">Colaboradores</h3>
+        <div className="flex items-center gap-2">
+          <h3 className="text-base font-bold">Colaboradores</h3>
+          {contacts.length > 0 && (
+            <Badge variant="secondary" className="h-5 px-1.5 text-xs">
+              {contacts.length}
+            </Badge>
+          )}
+        </div>
         <Button
           size="sm"
           variant="outline"
@@ -144,73 +152,73 @@ export function CollaboratorSection({ clientId }: { clientId?: string }) {
       {loading ? (
         <Skeleton className="h-20 w-full" />
       ) : contacts.length === 0 ? (
-        <p className="text-sm text-slate-500 text-center py-4">Nenhum colaborador cadastrado.</p>
+        <p className="text-sm text-slate-500 text-center py-3">Nenhum colaborador cadastrado.</p>
       ) : (
-        <div className="space-y-2">
+        <div className="max-h-64 overflow-y-auto pr-1 -mr-1 space-y-0.5">
           {contacts.map((c) => (
             <div
               key={c.id}
-              className="flex items-start justify-between gap-2 rounded-lg border p-3"
+              className="group flex items-start justify-between gap-2 rounded-md py-1 pl-2 pr-1 hover:bg-slate-50 dark:hover:bg-slate-800/60"
             >
-              <div className="space-y-1 text-sm">
-                <p className="font-semibold flex items-center gap-1">
+              <div className="space-y-0.5 text-sm min-w-0">
+                <p className="font-semibold flex items-center gap-1 truncate">
                   {c.full_name}
-                  {c.is_focal_point && <Star className="h-3.5 w-3.5 text-amber-500" />}
-                  {c.user && <UserCheck className="h-3.5 w-3.5 text-blue-500" />}
+                  {c.is_focal_point && <Star className="h-3.5 w-3.5 text-amber-500 shrink-0" />}
+                  {c.user && <UserCheck className="h-3.5 w-3.5 text-blue-500 shrink-0" />}
                 </p>
                 {c.email && (
-                  <p className="text-xs text-slate-500 flex items-center gap-1">
-                    <Mail className="h-3 w-3" />
-                    {c.email}
+                  <p className="text-xs text-slate-500 flex items-center gap-1 truncate">
+                    <Mail className="h-3 w-3 shrink-0" />
+                    <span className="truncate">{c.email}</span>
                   </p>
                 )}
                 {c.phone && (
-                  <p className="text-xs text-slate-500 flex items-center gap-1">
-                    <Phone className="h-3 w-3" />
-                    {c.phone}
+                  <p className="text-xs text-slate-500 flex items-center gap-1 truncate">
+                    <Phone className="h-3 w-3 shrink-0" />
+                    <span className="truncate">{c.phone}</span>
                   </p>
                 )}
                 {c.cell_phone && (
-                  <p className="text-xs text-slate-500 flex items-center gap-1">
-                    <Smartphone className="h-3 w-3" />
-                    {c.cell_phone}
+                  <p className="text-xs text-slate-500 flex items-center gap-1 truncate">
+                    <Smartphone className="h-3 w-3 shrink-0" />
+                    <span className="truncate">{c.cell_phone}</span>
                     {c.has_whatsapp && (
-                      <span className="ml-1 inline-flex items-center gap-0.5 text-green-600">
+                      <span className="ml-1 inline-flex items-center gap-0.5 text-green-600 shrink-0">
                         <MessageCircle className="h-3 w-3" />
                         WhatsApp
                       </span>
                     )}
                   </p>
                 )}
-                <p className="text-xs text-slate-400 flex items-center gap-1">
-                  <Building2 className="h-3 w-3" />
-                  {c.unit ? branchMap[c.unit] || '—' : '—'}
+                <p className="text-xs text-slate-400 flex items-center gap-1 truncate">
+                  <Building2 className="h-3 w-3 shrink-0" />
+                  <span className="truncate">{c.unit ? branchMap[c.unit] || '—' : '—'}</span>
                 </p>
                 {c.departments && c.departments.length > 0 && (
-                  <p className="text-xs text-slate-400">
+                  <p className="text-xs text-slate-400 truncate">
                     {c.departments.map((d) => deptMap[d] || d).join(', ')}
                   </p>
                 )}
               </div>
-              <div className="flex gap-1">
+              <div className="flex items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100 shrink-0">
                 <Button
                   size="icon"
                   variant="ghost"
-                  className="h-7 w-7"
+                  className="h-6 w-6"
                   onClick={() => {
                     setEditing(c)
                     setDialogOpen(true)
                   }}
                 >
-                  <Pencil className="h-3.5 w-3.5" />
+                  <Pencil className="h-3 w-3" />
                 </Button>
                 <Button
                   size="icon"
                   variant="ghost"
-                  className="h-7 w-7 text-red-500"
+                  className="h-6 w-6 text-red-500"
                   onClick={() => setDeleteId(c.id)}
                 >
-                  <Trash2 className="h-3.5 w-3.5" />
+                  <Trash2 className="h-3 w-3" />
                 </Button>
               </div>
             </div>
