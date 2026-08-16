@@ -1,9 +1,10 @@
 import { cn } from '@/lib/utils'
+import { formatSeconds } from '@/lib/duration'
 
 interface HoursBalanceBarProps {
-  /** Total de horas contratadas (fixado pelo botão "Aplicar"). */
+  /** Total contratado em SEGUNDOS (fixado pelo botão "Aplicar"). */
   total: number | null | undefined
-  /** Horas já alocadas nos acordos de atendimento. */
+  /** Segundos já alocados nos acordos de atendimento. */
   allocated: number
   className?: string
 }
@@ -11,18 +12,19 @@ interface HoursBalanceBarProps {
 /**
  * Barra de saldo de horas em tempo real.
  *
- * Mostra quanto já foi alocado e quanto falta, com cor indicativa:
+ * Recebe e exibe tudo em HH:MM:SS (segundos internamente):
  *  - verde quando todo o saldo foi alocado (allocated === total)
  *  - vermelho quando ultrapassou o total (allocated > total)
  *  - azul/amber enquanto está em distribuição
  */
 export function HoursBalanceBar({ total, allocated, className }: HoursBalanceBarProps) {
-  const totalNum = typeof total === 'number' && !Number.isNaN(total) ? total : 0
-  const hasTotal = totalNum > 0
-  const remaining = Math.max(0, totalNum - allocated)
-  const over = hasTotal && allocated > totalNum
-  const fullyAllocated = hasTotal && allocated === totalNum
-  const pct = hasTotal ? Math.min(100, (allocated / totalNum) * 100) : 0
+  const totalSec = typeof total === 'number' && !Number.isNaN(total) ? total : 0
+  const allocatedSec = typeof allocated === 'number' && !Number.isNaN(allocated) ? allocated : 0
+  const hasTotal = totalSec > 0
+  const remaining = Math.max(0, totalSec - allocatedSec)
+  const over = hasTotal && allocatedSec > totalSec
+  const fullyAllocated = hasTotal && allocatedSec === totalSec
+  const pct = hasTotal ? Math.min(100, (allocatedSec / totalSec) * 100) : 0
 
   const barColor = over ? 'bg-red-500' : fullyAllocated ? 'bg-green-500' : 'bg-blue-500'
 
@@ -33,11 +35,11 @@ export function HoursBalanceBar({ total, allocated, className }: HoursBalanceBar
       : 'text-slate-600 dark:text-slate-300'
 
   const label = over
-    ? `Excedido em ${allocated - totalNum}h`
+    ? `Excedido em ${formatSeconds(allocatedSec - totalSec)}`
     : fullyAllocated
       ? 'Saldo totalmente alocado'
       : hasTotal
-        ? `Saldo: ${remaining}h restantes`
+        ? `Saldo: ${formatSeconds(remaining)} restantes`
         : 'Defina e aplique as horas mensais para acompanhar o saldo'
 
   return (
@@ -51,7 +53,7 @@ export function HoursBalanceBar({ total, allocated, className }: HoursBalanceBar
         <span className={cn('text-xs font-semibold', textColor)}>{label}</span>
         {hasTotal && (
           <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
-            {allocated}h / {totalNum}h
+            {formatSeconds(allocatedSec)} / {formatSeconds(totalSec)}
           </span>
         )}
       </div>

@@ -27,6 +27,7 @@ import { getCompanyUnitsByCompany, type CompanyUnitRecord } from '@/services/com
 import { getClientContacts, type ClientContactRecord } from '@/services/client-contacts'
 import { getAllEmailDomains } from '@/services/client-email-domains'
 import { CONTRACT_HOURS_LEVELS, type CustomAgreementEntry } from '@/services/contracts'
+import { formatHours } from '@/lib/duration'
 
 // Campos estáticos do relatório. Campos de acordos personalizados usam o
 // prefixo `custom:` + slug e são gerados dinamicamente a partir dos acordos
@@ -542,7 +543,7 @@ export default function ClientExtractionPage() {
         ;(cols as FieldKey[]).forEach((c) => {
           switch (c) {
             case 'contract_monthly_hours':
-              r[c] = contract.monthly_hours != null ? String(contract.monthly_hours) : ''
+              r[c] = contract.monthly_hours != null ? formatHours(contract.monthly_hours) : ''
               break
             case 'contract_period':
               r[c] = period
@@ -554,40 +555,40 @@ export default function ClientExtractionPage() {
               r[c] =
                 contract.removed_levels?.includes('hours_level1') || contract.hours_level1 == null
                   ? ''
-                  : String(contract.hours_level1)
+                  : formatHours(contract.hours_level1)
               break
             case 'contract_hours_level2':
               r[c] =
                 contract.removed_levels?.includes('hours_level2') || contract.hours_level2 == null
                   ? ''
-                  : String(contract.hours_level2)
+                  : formatHours(contract.hours_level2)
               break
             case 'contract_hours_level3':
               r[c] =
                 contract.removed_levels?.includes('hours_level3') || contract.hours_level3 == null
                   ? ''
-                  : String(contract.hours_level3)
+                  : formatHours(contract.hours_level3)
               break
             case 'contract_hours_consultoria':
               r[c] =
                 contract.removed_levels?.includes('hours_consultoria') ||
                 contract.hours_consultoria == null
                   ? ''
-                  : String(contract.hours_consultoria)
+                  : formatHours(contract.hours_consultoria)
               break
             case 'contract_hours_backoffice':
               r[c] =
                 contract.removed_levels?.includes('hours_backoffice') ||
                 contract.hours_backoffice == null
                   ? ''
-                  : String(contract.hours_backoffice)
+                  : formatHours(contract.hours_backoffice)
               break
             case 'contract_hours_administrativo':
               r[c] =
                 contract.removed_levels?.includes('hours_administrativo') ||
                 contract.hours_administrativo == null
                   ? ''
-                  : String(contract.hours_administrativo)
+                  : formatHours(contract.hours_administrativo)
               break
             default:
               if (isCustomFieldKey(c)) {
@@ -595,7 +596,7 @@ export default function ClientExtractionPage() {
                 const ag = (contract.custom_agreements || []).find(
                   (a) => a.slug === slug && a.active,
                 )
-                r[c] = ag && ag.hours != null ? String(ag.hours) : ''
+                r[c] = ag && ag.hours != null ? formatHours(ag.hours) : ''
               }
               break
           }

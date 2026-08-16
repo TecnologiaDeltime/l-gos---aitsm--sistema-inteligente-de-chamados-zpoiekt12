@@ -15,6 +15,7 @@ import { Badge } from '@/components/ui/badge'
 import { getContracts, ContractRecord } from '@/services/contracts'
 import { useRealtime } from '@/hooks/use-realtime'
 import { cn } from '@/lib/utils'
+import { formatHours } from '@/lib/duration'
 
 const statusColor: Record<string, string> = {
   Ativo: 'bg-green-100 text-green-700 border-green-200',
@@ -106,7 +107,8 @@ export default function ContractList() {
                 </p>
                 <p className="flex items-center gap-1.5">
                   <Clock className="h-3 w-3" />
-                  <span className="font-semibold">Horas Mensais:</span> {ct.monthly_hours || 0}h
+                  <span className="font-semibold">Horas Mensais:</span>{' '}
+                  {formatHours(ct.monthly_hours || 0)}
                 </p>
                 <p className="flex items-center gap-1.5">
                   <ShieldCheck className="h-3 w-3" />

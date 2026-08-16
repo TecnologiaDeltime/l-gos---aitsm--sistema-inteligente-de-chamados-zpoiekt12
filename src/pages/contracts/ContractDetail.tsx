@@ -23,6 +23,7 @@ import { getCompanies, CompanyRecord } from '@/services/companies'
 import { HoursBalanceBar } from '@/components/contracts/HoursBalance'
 import { useToast } from '@/hooks/use-toast'
 import { cn } from '@/lib/utils'
+import { parseDurationToSeconds, parseDurationToHours, formatSeconds } from '@/lib/duration'
 
 export default function ContractDetail() {
   const [number, setNumber] = useState(`CT-2024-${Math.floor(100 + Math.random() * 900)}`)
@@ -30,7 +31,7 @@ export default function ContractDetail() {
   const [type, setType] = useState('Pacote Mensal')
   // "Horas Mensais" só se aplica a "Pacote de Horas"; demais tipos iniciam vazio.
   const [hours, setHours] = useState('')
-  const [hoursByLevel, setHoursByLevel] = useState<Record<string, string | number>>({
+  const [hoursByLevel, setHoursByLevel] = useState<Record<string, string>>({
     hours_level1: '',
     hours_level2: '',
     hours_level3: '',
@@ -48,24 +49,24 @@ export default function ContractDetail() {
   // Toggle de alocação por acordo de atendimento (novo contrato começa desligado).
   const [hasAgreements, setHasAgreements] = useState(false)
 
-  // Soma em tempo real das horas distribuídas nos acordos (níveis + personalizados).
+  // Soma em tempo real (em SEGUNDOS) das horas distribuídas nos acordos
+  // (níveis + personalizados). Os campos do formulário estão em HH:MM:SS.
   const allocatedHours = useMemo(() => {
     const levelSum = CONTRACT_HOURS_LEVELS.reduce((sum, lvl) => {
-      const v = hoursByLevel[lvl.key]
-      const n = typeof v === 'number' ? v : typeof v === 'string' && v !== '' ? Number(v) : 0
-      return sum + (Number.isFinite(n) ? n : 0)
+      const s = parseDurationToSeconds(hoursByLevel[lvl.key])
+      return sum + (s ?? 0)
     }, 0)
     const customSum = customAgreements.reduce((sum, a) => {
       if (!a.active) return sum
-      const n = typeof a.hours === 'number' ? a.hours : 0
-      return sum + (Number.isFinite(n) ? n : 0)
+      const s = parseDurationToSeconds(a.hours)
+      return sum + (s ?? 0)
     }, 0)
     return levelSum + customSum
   }, [hoursByLevel, customAgreements])
 
   const applyHours = () => {
-    const n = parseInt(hours, 10)
-    setAppliedHours(Number.isFinite(n) && n >= 0 ? n : null)
+    const n = parseDurationToSeconds(hours)
+    setAppliedHours(n !== null && n >= 0 ? n : null)
   }
 
   // O campo "Horas Mensais" só é relevante (e habilitado) para "Pacote de Horas".
@@ -93,7 +94,8 @@ export default function ContractDetail() {
       if (v === '' || v === undefined || v === null) {
         levelPayload[level.key] = null
       } else {
-        levelPayload[level.key] = Number(v)
+        // Converte HH:MM:SS para horas fracionadas (number) antes de salvar.
+        levelPayload[level.key] = parseDurationToHours(v)
       }
     })
 
@@ -106,12 +108,16 @@ export default function ContractDetail() {
       number,
       company,
       type,
-      monthly_hours: parseInt(hours, 10),
+      monthly_hours: parseDurationToHours(hours),
       status: 'Ativo',
       sla_response_time: 30,
       sla_solution_time: 240,
       ...levelPayload,
-      custom_agreements: customAgreements,
+      custom_agreements: customAgreements.map((a) => {
+        const h = a.hours
+        const parsed = h === '' || h === undefined || h === null ? null : parseDurationToHours(h)
+        return { ...a, hours: parsed }
+      }),
       removed_levels: removedLevels,
     })
 
@@ -175,10 +181,15 @@ export default function ContractDetail() {
               <Label className="text-xs font-semibold">Horas Mensais</Label>
               <div className="flex items-center gap-2">
                 <Input
-                  type="number"
+                  placeholder="HH:MM:SS"
+                  inputMode="numeric"
                   value={hours}
                   disabled={!hoursEnabled}
                   onChange={(e) => setHours(e.target.value)}
+                  onBlur={(e) => {
+                    const s = parseDurationToSeconds(e.target.value)
+                    if (s !== null) setHours(formatSeconds(s))
+                  }}
                 />
                 <Button
                   type="button"
@@ -193,6 +204,7 @@ export default function ContractDetail() {
               </div>
               <p className="text-[11px] text-muted-foreground">
                 Clique em “Aplicar” para fixar o total de horas contratadas e acompanhar o saldo.
+                Formato HH:MM:SS (ex.: 00:01:36 = 1min36s).
               </p>
             </div>
           </div>
@@ -243,7 +255,7 @@ export default function ContractDetail() {
                           onCheckedChange={(checked) =>
                             setHoursByLevel((prev) => ({
                               ...prev,
-                              [level.key]: checked ? prev[level.key] || 0 : '',
+                              [level.key]: checked ? prev[level.key] || '00:00:00' : '',
                             }))
                           }
                         />
@@ -254,17 +266,26 @@ export default function ContractDetail() {
                           {level.label}
                         </label>
                         <Input
-                          type="number"
                           className={cn('h-9 text-sm', !active && 'opacity-40 pointer-events-none')}
-                          placeholder="Horas"
+                          placeholder="HH:MM:SS"
+                          inputMode="numeric"
                           value={hoursByLevel[level.key] ?? ''}
                           disabled={!active}
                           onChange={(e) =>
                             setHoursByLevel((prev) => ({
                               ...prev,
-                              [level.key]: e.target.value === '' ? '' : Number(e.target.value),
+                              [level.key]: e.target.value,
                             }))
                           }
+                          onBlur={(e) => {
+                            const s = parseDurationToSeconds(e.target.value)
+                            if (s !== null) {
+                              setHoursByLevel((prev) => ({
+                                ...prev,
+                                [level.key]: formatSeconds(s),
+                              }))
+                            }
+                          }}
                         />
                         <Button
                           type="button"
@@ -295,7 +316,11 @@ export default function ContractDetail() {
                         setCustomAgreements((prev) =>
                           prev.map((a, i) =>
                             i === idx
-                              ? { ...a, active: !!checked, hours: checked ? (a.hours ?? 0) : null }
+                              ? {
+                                  ...a,
+                                  active: !!checked,
+                                  hours: checked ? (a.hours ?? '00:00:00') : null,
+                                }
                               : a,
                           ),
                         )
@@ -312,9 +337,9 @@ export default function ContractDetail() {
                       }
                     />
                     <Input
-                      type="number"
                       className={cn('h-9 text-sm', !ag.active && 'opacity-40 pointer-events-none')}
-                      placeholder="Horas"
+                      placeholder="HH:MM:SS"
+                      inputMode="numeric"
                       value={ag.hours ?? ''}
                       disabled={!ag.active}
                       onChange={(e) =>
@@ -323,12 +348,21 @@ export default function ContractDetail() {
                             i === idx
                               ? {
                                   ...a,
-                                  hours: e.target.value === '' ? null : Number(e.target.value),
+                                  hours: e.target.value === '' ? null : e.target.value,
                                 }
                               : a,
                           ),
                         )
                       }
+                      onBlur={(e) => {
+                        if (e.target.value === '') return
+                        const s = parseDurationToSeconds(e.target.value)
+                        if (s !== null) {
+                          setCustomAgreements((prev) =>
+                            prev.map((a, i) => (i === idx ? { ...a, hours: formatSeconds(s) } : a)),
+                          )
+                        }
+                      }}
                     />
                     <Button
                       type="button"

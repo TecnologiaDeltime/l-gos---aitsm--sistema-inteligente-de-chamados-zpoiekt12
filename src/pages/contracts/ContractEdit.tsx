@@ -33,6 +33,12 @@ import { useToast } from '@/hooks/use-toast'
 import { usePermissions } from '@/hooks/use-permissions'
 import { extractFieldErrors, type FieldErrors } from '@/lib/pocketbase/errors'
 import { cn } from '@/lib/utils'
+import {
+  parseDurationToSeconds,
+  parseDurationToHours,
+  formatSeconds,
+  formatHours,
+} from '@/lib/duration'
 
 const SECTIONS = [
   { key: 'basic', label: 'Informações Básicas' },
@@ -87,18 +93,23 @@ export default function ContractEdit() {
         service_hours_end: data.service_hours_end || '',
         service_days: data.service_days || 'Seg-Sex',
         on_duty_coverage: data.on_duty_coverage ?? false,
-        hours_level1: data.hours_level1 ?? '',
-        hours_level2: data.hours_level2 ?? '',
-        hours_level3: data.hours_level3 ?? '',
-        hours_consultoria: data.hours_consultoria ?? '',
-        hours_backoffice: data.hours_backoffice ?? '',
-        hours_administrativo: data.hours_administrativo ?? '',
+        hours_level1: formatHours(data.hours_level1),
+        hours_level2: formatHours(data.hours_level2),
+        hours_level3: formatHours(data.hours_level3),
+        hours_consultoria: formatHours(data.hours_consultoria),
+        hours_backoffice: formatHours(data.hours_backoffice),
+        hours_administrativo: formatHours(data.hours_administrativo),
         notes: data.notes || '',
       })
-      setCustomAgreements(Array.isArray(data.custom_agreements) ? data.custom_agreements : [])
+      setCustomAgreements(
+        (Array.isArray(data.custom_agreements) ? data.custom_agreements : []).map((a) => ({
+          ...a,
+          hours: a.hours != null ? formatHours(a.hours) : (null as any),
+        })),
+      )
 
       // Saldo inicial: usa monthly_hours carregado como total contratado.
-      const mh = typeof data.monthly_hours === 'number' ? data.monthly_hours : null
+      const mh = parseDurationToSeconds(data.monthly_hours)
       setAppliedHours(mh)
 
       // Toggle automático: liga quando o contrato já tem distribuição salva.
@@ -138,25 +149,26 @@ export default function ContractEdit() {
     }
   }
 
-  // Soma em tempo real das horas distribuídas nos acordos (níveis + personalizados).
+  // Soma em tempo real (em SEGUNDOS) das horas distribuídas nos acordos
+  // (níveis + personalizados). Os campos do formulário estão em HH:MM:SS.
   const allocatedHours = useMemo(() => {
     const levelSum = CONTRACT_HOURS_LEVELS.reduce((sum, lvl) => {
       const v = form[lvl.key]
-      const n = typeof v === 'number' ? v : typeof v === 'string' && v !== '' ? Number(v) : 0
-      return sum + (Number.isFinite(n) ? n : 0)
+      const s = parseDurationToSeconds(v)
+      return sum + (s ?? 0)
     }, 0)
     const customSum = customAgreements.reduce((sum, a) => {
       if (!a.active) return sum
-      const n = typeof a.hours === 'number' ? a.hours : 0
-      return sum + (Number.isFinite(n) ? n : 0)
+      const s = parseDurationToSeconds(a.hours)
+      return sum + (s ?? 0)
     }, 0)
     return levelSum + customSum
   }, [form, customAgreements])
 
   const applyHours = () => {
     const v = form.monthly_hours
-    const n = typeof v === 'number' ? v : parseInt(String(v ?? ''), 10)
-    setAppliedHours(Number.isFinite(n) && n >= 0 ? n : null)
+    const n = parseDurationToSeconds(v)
+    setAppliedHours(n !== null && n >= 0 ? n : null)
   }
 
   // O campo "Horas Mensais" só é relevante (e habilitado) para "Pacote de Horas".
@@ -191,17 +203,28 @@ export default function ContractEdit() {
     setFieldErrors({})
     try {
       const payload: Record<string, any> = { ...form }
-      for (const key of [
+
+      // Campos de duração (HH:MM:SS) são convertidos para horas fracionadas
+      // (number) antes de salvar no banco. monetary/value fields continuam number.
+      const durationKeys = [
         'monthly_hours',
-        'overtime_hour_value',
-        'monthly_hour_limit',
         'hours_level1',
         'hours_level2',
         'hours_level3',
         'hours_consultoria',
         'hours_backoffice',
         'hours_administrativo',
-      ]) {
+      ]
+      for (const key of durationKeys) {
+        if (payload[key] === '' || payload[key] === undefined || payload[key] === null) {
+          payload[key] = null
+        } else {
+          const h = parseDurationToHours(payload[key])
+          payload[key] = h !== null ? h : null
+        }
+      }
+      // Campos monetários/limite permanecem numéricos diretos.
+      for (const key of ['overtime_hour_value', 'monthly_hour_limit']) {
         if (payload[key] === '' || payload[key] === undefined) {
           payload[key] = null
         } else {
@@ -212,7 +235,11 @@ export default function ContractEdit() {
       removedLevels.forEach((key) => {
         payload[key] = null
       })
-      payload.custom_agreements = customAgreements
+      payload.custom_agreements = customAgreements.map((a) => {
+        const h = a.hours
+        const parsed = h === '' || h === undefined || h === null ? null : parseDurationToHours(h)
+        return { ...a, hours: parsed }
+      })
       payload.removed_levels = removedLevels
       await updateContract(id, payload)
       toast({ title: 'Contrato atualizado com sucesso!' })
@@ -377,13 +404,16 @@ export default function ContractEdit() {
               <Label className="text-xs">Horas Mensais</Label>
               <div className="flex items-center gap-2">
                 <Input
-                  type="number"
                   className={inputCls}
+                  placeholder="HH:MM:SS"
+                  inputMode="numeric"
                   value={form.monthly_hours ?? ''}
                   disabled={!hoursEnabled}
-                  onChange={(e) =>
-                    set('monthly_hours', e.target.value === '' ? '' : Number(e.target.value))
-                  }
+                  onChange={(e) => set('monthly_hours', e.target.value)}
+                  onBlur={(e) => {
+                    const s = parseDurationToSeconds(e.target.value)
+                    if (s !== null) set('monthly_hours', formatSeconds(s))
+                  }}
                 />
                 <Button
                   type="button"
@@ -398,6 +428,7 @@ export default function ContractEdit() {
               </div>
               <p className="text-[11px] text-slate-500 dark:text-slate-400">
                 Clique em “Aplicar” para fixar o total de horas contratadas e acompanhar o saldo.
+                Formato HH:MM:SS (ex.: 00:01:36 = 1min36s).
               </p>
             </div>
             <div className="space-y-1">
@@ -520,7 +551,7 @@ export default function ContractEdit() {
                           id={`dist-${level.key}`}
                           checked={active}
                           onCheckedChange={(checked) =>
-                            set(level.key, checked ? form[level.key] || 0 : '')
+                            set(level.key, checked ? form[level.key] || '00:00:00' : '')
                           }
                         />
                         <label
@@ -530,14 +561,16 @@ export default function ContractEdit() {
                           {level.label}
                         </label>
                         <Input
-                          type="number"
                           className={cn(inputCls, !active && 'opacity-40 pointer-events-none')}
-                          placeholder="Horas"
+                          placeholder="HH:MM:SS"
+                          inputMode="numeric"
                           value={form[level.key] ?? ''}
                           disabled={!active}
-                          onChange={(e) =>
-                            set(level.key, e.target.value === '' ? '' : Number(e.target.value))
-                          }
+                          onChange={(e) => set(level.key, e.target.value)}
+                          onBlur={(e) => {
+                            const s = parseDurationToSeconds(e.target.value)
+                            if (s !== null) set(level.key, formatSeconds(s))
+                          }}
                         />
                         <Button
                           type="button"
@@ -568,7 +601,11 @@ export default function ContractEdit() {
                         setCustomAgreements((prev) =>
                           prev.map((a, i) =>
                             i === idx
-                              ? { ...a, active: !!checked, hours: checked ? (a.hours ?? 0) : null }
+                              ? {
+                                  ...a,
+                                  active: !!checked,
+                                  hours: checked ? (a.hours ?? '00:00:00') : null,
+                                }
                               : a,
                           ),
                         )
@@ -585,9 +622,9 @@ export default function ContractEdit() {
                       }
                     />
                     <Input
-                      type="number"
                       className={cn(inputCls, !ag.active && 'opacity-40 pointer-events-none')}
-                      placeholder="Horas"
+                      placeholder="HH:MM:SS"
+                      inputMode="numeric"
                       value={ag.hours ?? ''}
                       disabled={!ag.active}
                       onChange={(e) =>
@@ -596,12 +633,21 @@ export default function ContractEdit() {
                             i === idx
                               ? {
                                   ...a,
-                                  hours: e.target.value === '' ? null : Number(e.target.value),
+                                  hours: e.target.value === '' ? null : e.target.value,
                                 }
                               : a,
                           ),
                         )
                       }
+                      onBlur={(e) => {
+                        if (e.target.value === '') return
+                        const s = parseDurationToSeconds(e.target.value)
+                        if (s !== null) {
+                          setCustomAgreements((prev) =>
+                            prev.map((a, i) => (i === idx ? { ...a, hours: formatSeconds(s) } : a)),
+                          )
+                        }
+                      }}
                     />
                     <Button
                       type="button"

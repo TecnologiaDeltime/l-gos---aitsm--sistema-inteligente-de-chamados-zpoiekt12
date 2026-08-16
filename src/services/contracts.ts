@@ -48,7 +48,10 @@ export interface ContractRecord {
 export interface CustomAgreementEntry {
   slug: string
   name: string
-  hours: number | null
+  // Hours é armazenado no banco como number (horas fracionadas), mas nos
+  // formulários de contrato pode ser manipulado como string no formato
+  // HH:MM:SS durante a edição. Por isso aceita string | number | null.
+  hours: number | string | null
   active: boolean
 }
 
