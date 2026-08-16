@@ -57,6 +57,10 @@ type FieldKey =
   // Domínios de E-mail
   | 'email_domain'
   | 'email_domain_active'
+  // Contrato
+  | 'contract_monthly_hours'
+  | 'contract_period'
+  | 'contract_type'
 
 interface FieldGroup {
   title: string
@@ -129,6 +133,14 @@ const FIELD_GROUPS: FieldGroup[] = [
       { key: 'email_domain_active', label: 'Status (Ativo/Inativo)' },
     ],
   },
+  {
+    title: 'Contrato',
+    fields: [
+      { key: 'contract_monthly_hours', label: 'Horas Mensais' },
+      { key: 'contract_period', label: 'Vigência do Contrato' },
+      { key: 'contract_type', label: 'Tipo de Contrato' },
+    ],
+  },
 ]
 
 // Campos que expandem em múltiplas linhas por empresa (relações 1:N)
@@ -150,6 +162,9 @@ const RELATIONAL_FIELDS: FieldKey[] = [
   'focal_unit',
   'email_domain',
   'email_domain_active',
+  'contract_monthly_hours',
+  'contract_period',
+  'contract_type',
 ]
 
 const ALL_FIELD_LABELS: Record<FieldKey, string> = FIELD_GROUPS.reduce(
@@ -162,6 +177,13 @@ const ALL_FIELD_LABELS: Record<FieldKey, string> = FIELD_GROUPS.reduce(
   {} as Record<FieldKey, string>,
 )
 
+interface ContractInfo {
+  monthly_hours?: number | null
+  start_date?: string
+  end_date?: string
+  type?: string
+}
+
 interface CompanyContext {
   company: CompanyRecord
   units: CompanyUnitRecord[]
@@ -170,6 +192,7 @@ interface CompanyContext {
   departments: { id: string; name: string; parent?: string }[]
   parentDepartments: Record<string, string>
   emailDomains: { domain: string; active: boolean }[]
+  contracts: ContractInfo[]
 }
 
 export default function ClientExtractionPage() {
@@ -281,6 +304,9 @@ export default function ClientExtractionPage() {
       ['focal_name', 'focal_email', 'focal_phone', 'focal_unit'].includes(c),
     )
     const needsDomain = cols.some((c) => ['email_domain', 'email_domain_active'].includes(c))
+    const needsContract = cols.some((c) =>
+      ['contract_monthly_hours', 'contract_period', 'contract_type'].includes(c),
+    )
 
     const hasRelational = cols.some((c) => RELATIONAL_FIELDS.includes(c))
 
@@ -410,6 +436,32 @@ export default function ClientExtractionPage() {
       })
       collections.push(rows)
     }
+    if (needsContract) {
+      const rows = ctx.contracts.map((contract) => {
+        const r: Record<string, string> = {}
+        const start = contract.start_date ? contract.start_date.slice(0, 10) : ''
+        const end = contract.end_date ? contract.end_date.slice(0, 10) : ''
+        let period = ''
+        if (start && end) period = `${start} a ${end}`
+        else if (start) period = `desde ${start}`
+        else if (end) period = `até ${end}`
+        ;(cols as FieldKey[]).forEach((c) => {
+          switch (c) {
+            case 'contract_monthly_hours':
+              r[c] = contract.monthly_hours != null ? String(contract.monthly_hours) : ''
+              break
+            case 'contract_period':
+              r[c] = period
+              break
+            case 'contract_type':
+              r[c] = contract.type || ''
+              break
+          }
+        })
+        return r
+      })
+      collections.push(rows)
+    }
 
     // máxima quantidade de linhas entre as coleções (mínimo 1 para mostrar a empresa)
     const maxLen = Math.max(1, ...collections.map((c) => c.length))
@@ -483,6 +535,13 @@ export default function ClientExtractionPage() {
           emailDomains: allDomains
             .filter((d) => d.client === company.id)
             .map((d) => ({ domain: d.domain, active: d.active })),
+          contracts: await pb
+            .collection('contracts')
+            .getFullList<ContractInfo>({
+              filter: `company = "${company.id}"`,
+              sort: '-created',
+            })
+            .catch(() => [] as ContractInfo[]),
         }
         allRows.push(...buildRows(ctx, cols))
       }
