@@ -172,6 +172,18 @@ export default function ContractEdit() {
     setAppliedHours(Number.isFinite(n) && n >= 0 ? n : null)
   }
 
+  // O campo "Horas Mensais" só é relevante (e habilitado) para "Pacote de Horas".
+  const hoursEnabled = form.type === 'Pacote de Horas'
+
+  // Centraliza a troca de tipo: quando sai de "Pacote de Horas", zera horas e saldo.
+  const handleTypeChange = (v: string) => {
+    set('type', v)
+    if (v !== 'Pacote de Horas') {
+      set('monthly_hours', '')
+      setAppliedHours(null)
+    }
+  }
+
   const togglePriority = (p: string) => {
     const current: string[] = form.priorities_available || []
     set(
@@ -345,7 +357,7 @@ export default function ContractEdit() {
             </div>
             <div className="space-y-1">
               <Label className="text-xs">Tipo de Contrato *</Label>
-              <Select value={form.type || ''} onValueChange={(v) => set('type', v)}>
+              <Select value={form.type || ''} onValueChange={handleTypeChange}>
                 <SelectTrigger className={inputCls}>
                   <SelectValue />
                 </SelectTrigger>
@@ -393,6 +405,7 @@ export default function ContractEdit() {
                   type="number"
                   className={inputCls}
                   value={form.monthly_hours ?? ''}
+                  disabled={!hoursEnabled}
                   onChange={(e) =>
                     set('monthly_hours', e.target.value === '' ? '' : Number(e.target.value))
                   }
@@ -402,6 +415,7 @@ export default function ContractEdit() {
                   variant="secondary"
                   size="sm"
                   className="h-9 shrink-0"
+                  disabled={!hoursEnabled}
                   onClick={applyHours}
                 >
                   <Check className="mr-1 h-4 w-4" /> Aplicar

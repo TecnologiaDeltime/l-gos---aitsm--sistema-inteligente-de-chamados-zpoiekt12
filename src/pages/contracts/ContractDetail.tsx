@@ -28,7 +28,8 @@ export default function ContractDetail() {
   const [number, setNumber] = useState(`CT-2024-${Math.floor(100 + Math.random() * 900)}`)
   const [company, setCompany] = useState('')
   const [type, setType] = useState('Pacote Mensal')
-  const [hours, setHours] = useState('100')
+  // "Horas Mensais" só se aplica a "Pacote de Horas"; demais tipos iniciam vazio.
+  const [hours, setHours] = useState('')
   const [hoursByLevel, setHoursByLevel] = useState<Record<string, string | number>>({
     hours_level1: '',
     hours_level2: '',
@@ -43,7 +44,7 @@ export default function ContractDetail() {
   const [companies, setCompanies] = useState<CompanyRecord[]>([])
 
   // Total de horas contratadas fixado pelo botão "Aplicar" — usado como saldo.
-  const [appliedHours, setAppliedHours] = useState<number | null>(100)
+  const [appliedHours, setAppliedHours] = useState<number | null>(null)
   // Toggle de alocação por acordo de atendimento (novo contrato começa desligado).
   const [hasAgreements, setHasAgreements] = useState(false)
 
@@ -66,6 +67,9 @@ export default function ContractDetail() {
     const n = parseInt(hours, 10)
     setAppliedHours(Number.isFinite(n) && n >= 0 ? n : null)
   }
+
+  // O campo "Horas Mensais" só é relevante (e habilitado) para "Pacote de Horas".
+  const hoursEnabled = type === 'Pacote de Horas'
 
   const navigate = useNavigate()
   const { toast } = useToast()
@@ -145,7 +149,17 @@ export default function ContractDetail() {
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1">
               <Label className="text-xs font-semibold">Tipo de Contrato</Label>
-              <Select value={type} onValueChange={setType}>
+              <Select
+                value={type}
+                onValueChange={(v) => {
+                  setType(v)
+                  // "Pacote de Horas" habilita as horas mensais; demais tipos desabilitam e zeram.
+                  if (v !== 'Pacote de Horas') {
+                    setHours('')
+                    setAppliedHours(null)
+                  }
+                }}
+              >
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
@@ -160,12 +174,18 @@ export default function ContractDetail() {
             <div className="space-y-1">
               <Label className="text-xs font-semibold">Horas Mensais</Label>
               <div className="flex items-center gap-2">
-                <Input type="number" value={hours} onChange={(e) => setHours(e.target.value)} />
+                <Input
+                  type="number"
+                  value={hours}
+                  disabled={!hoursEnabled}
+                  onChange={(e) => setHours(e.target.value)}
+                />
                 <Button
                   type="button"
                   variant="secondary"
                   size="sm"
                   className="h-9 shrink-0"
+                  disabled={!hoursEnabled}
                   onClick={applyHours}
                 >
                   <Check className="mr-1 h-4 w-4" /> Aplicar
