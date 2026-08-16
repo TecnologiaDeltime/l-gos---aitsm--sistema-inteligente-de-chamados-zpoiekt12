@@ -1,8 +1,16 @@
-import { useState, useMemo } from 'react'
-import { FileDown, Table2, Loader2, Users } from 'lucide-react'
+import { useState, useMemo, useEffect } from 'react'
+import { FileDown, Table2, Loader2, Users, Building2 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { Label } from '@/components/ui/label'
 import {
   Table,
   TableBody,
@@ -229,12 +237,33 @@ export default function ClientExtractionPage() {
   const [selected, setSelected] = useState<Set<FieldKey>>(
     new Set<FieldKey>(['legal_name', 'trade_name', 'document', 'site', 'phone', 'email']),
   )
+  const [companies, setCompanies] = useState<CompanyRecord[]>([])
+  const [selectedCompanyId, setSelectedCompanyId] = useState<string>('all')
+  const [loadingCompanies, setLoadingCompanies] = useState(true)
   const [loading, setLoading] = useState(false)
   const [rows, setRows] = useState<Record<string, string>[]>([])
   const [columns, setColumns] = useState<FieldKey[]>([])
   const [hasGenerated, setHasGenerated] = useState(false)
   // Acordos personalizados consolidados de todos os contratos (slug -> nome).
   const [customAgreementsMap, setCustomAgreementsMap] = useState<CustomAgreementsMap>({})
+
+  // Carrega a lista de clientes (companies) para o seletor.
+  useEffect(() => {
+    let mounted = true
+    getCompanies()
+      .then((list) => {
+        if (mounted) setCompanies(list)
+      })
+      .catch(() => {
+        if (mounted) setCompanies([])
+      })
+      .finally(() => {
+        if (mounted) setLoadingCompanies(false)
+      })
+    return () => {
+      mounted = false
+    }
+  }, [])
 
   // Lista de grupos dinâmica = grupos estáticos + grupo de acordos personalizados (se houver).
   const fieldGroups: FieldGroup[] = useMemo(() => {
@@ -603,7 +632,11 @@ export default function ClientExtractionPage() {
     setLoading(true)
     try {
       const cols = orderedSelected
-      const companies = await getCompanies()
+      // Se um cliente específico foi selecionado, filtra apenas por ele; caso
+      // contrário, carrega todos os clientes (comportamento padrão).
+      const companies = await getCompanies(
+        selectedCompanyId !== 'all' ? `id = "${selectedCompanyId}"` : undefined,
+      )
       const allDomains = await getAllEmailDomains()
 
       // Carrega todos os contratos uma única vez para consolidar os acordos
@@ -746,6 +779,42 @@ export default function ClientExtractionPage() {
           </Button>
         </div>
       </div>
+
+      <Card>
+        <CardContent className="py-4">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
+            <div className="flex items-center gap-2 sm:w-64">
+              <Building2 className="h-4 w-4 text-muted-foreground" />
+              <Label htmlFor="client-filter" className="text-sm font-medium whitespace-nowrap">
+                Cliente
+              </Label>
+            </div>
+            <Select
+              value={selectedCompanyId}
+              onValueChange={(v) => setSelectedCompanyId(v)}
+              disabled={loadingCompanies}
+            >
+              <SelectTrigger id="client-filter" className="w-full sm:max-w-md">
+                <SelectValue
+                  placeholder={loadingCompanies ? 'Carregando clientes...' : 'Selecione um cliente'}
+                />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos os clientes</SelectItem>
+                {companies.map((c) => (
+                  <SelectItem key={c.id} value={c.id}>
+                    {c.trade_name || c.legal_name || c.document || c.id}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <p className="mt-2 text-xs text-muted-foreground">
+            Selecione um cliente específico para filtrar o relatório ou mantenha “Todos os clientes”
+            para gerar o relatório completo.
+          </p>
+        </CardContent>
+      </Card>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {fieldGroups.map((group) => {
