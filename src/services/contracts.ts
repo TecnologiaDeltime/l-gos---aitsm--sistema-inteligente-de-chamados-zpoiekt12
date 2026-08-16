@@ -56,7 +56,7 @@ export const CONTRACT_TYPES = [
   'Pacote Mensal',
   'Por Chamado',
   'Ilimitado',
-  'Banco de Horas',
+  'Pacote de Horas',
   'Projeto',
   'Sustentação Mensal',
   'Atendimento Avulso',

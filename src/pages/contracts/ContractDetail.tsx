@@ -152,7 +152,7 @@ export default function ContractDetail() {
                 <SelectContent>
                   <SelectItem value="Pacote Mensal">Pacote Mensal</SelectItem>
                   <SelectItem value="Por Chamado">Por Chamado</SelectItem>
-                  <SelectItem value="Banco de Horas">Banco de Horas</SelectItem>
+                  <SelectItem value="Pacote de Horas">Pacote de Horas</SelectItem>
                 </SelectContent>
               </Select>
             </div>

@@ -18,7 +18,7 @@ onRecordAfterUpdateSuccess((e) => {
   try {
     var contract = $app.findRecordById('contracts', contractId)
     var contractType = contract.getString('type')
-    var hourBasedTypes = ['Pacote Mensal', 'Banco de Horas', 'Sustentação Mensal', 'Híbrido']
+    var hourBasedTypes = ['Pacote Mensal', 'Pacote de Horas', 'Sustentação Mensal', 'Híbrido']
     if (hourBasedTypes.indexOf(contractType) === -1) return e.next()
 
     var currentHours = contract.getInt('monthly_hours') || 0

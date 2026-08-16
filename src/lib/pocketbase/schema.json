@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-16T04:05:36.341Z",
+  "generatedAt": "2026-08-16T04:23:59.256Z",
   "collections": [
     {
       "name": "users",
@@ -416,22 +416,6 @@
           "selectValues": ["Ativo", "Expirado", "Cancelado"]
         },
         {
-          "name": "type",
-          "type": "select",
-          "required": false,
-          "system": false,
-          "selectValues": [
-            "Pacote Mensal",
-            "Por Chamado",
-            "Ilimitado",
-            "Banco de Horas",
-            "Projeto",
-            "Sustentação Mensal",
-            "Atendimento Avulso",
-            "Híbrido"
-          ]
-        },
-        {
           "name": "monthly_hours",
           "type": "number",
           "required": false,
@@ -668,6 +652,22 @@
           "type": "json",
           "required": false,
           "system": false
+        },
+        {
+          "name": "type",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": [
+            "Pacote Mensal",
+            "Por Chamado",
+            "Ilimitado",
+            "Pacote de Horas",
+            "Projeto",
+            "Sustentação Mensal",
+            "Atendimento Avulso",
+            "Híbrido"
+          ]
         }
       ],
       "indexes": [
