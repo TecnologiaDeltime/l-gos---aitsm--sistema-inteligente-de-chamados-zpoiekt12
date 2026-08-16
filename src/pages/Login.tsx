@@ -42,7 +42,7 @@ export default function Login() {
           <img
             src={serviceOneLogo}
             alt="ServiceOne"
-            className="h-16 w-auto max-w-[280px] object-contain mb-1"
+            className="h-24 sm:h-28 w-auto max-w-[300px] object-contain mb-1"
           />
           <p className="text-sm text-slate-500 dark:text-slate-400">
             Gestão de Chamados e Controle de SLA
