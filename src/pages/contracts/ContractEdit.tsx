@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -14,7 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Loader2, ArrowLeft, Save, AlertCircle, Plus, Trash2 } from 'lucide-react'
+import { Loader2, ArrowLeft, Save, AlertCircle, Plus, Trash2, Check } from 'lucide-react'
 import { Checkbox } from '@/components/ui/checkbox'
 import {
   getContract,
@@ -29,6 +29,7 @@ import {
   type CustomAgreementEntry,
 } from '@/services/contracts'
 import { getCompanies, CompanyRecord } from '@/services/companies'
+import { HoursBalanceBar } from '@/components/contracts/HoursBalance'
 import { useToast } from '@/hooks/use-toast'
 import { usePermissions } from '@/hooks/use-permissions'
 import { extractFieldErrors, type FieldErrors } from '@/lib/pocketbase/errors'
@@ -60,6 +61,12 @@ export default function ContractEdit() {
   const [customAgreements, setCustomAgreements] = useState<CustomAgreementEntry[]>([])
   // Chaves (ContractHoursLevel.key) dos acordos base removidos pelo usuário.
   const [removedLevels, setRemovedLevels] = useState<string[]>([])
+
+  // Total de horas contratadas fixado pelo botão "Aplicar" — usado como saldo.
+  const [appliedHours, setAppliedHours] = useState<number | null>(null)
+  // Toggle de alocação por acordo de atendimento. Quando null, ainda não foi
+  // determinado a partir dos dados carregados (ver loadContract).
+  const [hasAgreements, setHasAgreements] = useState<boolean>(false)
 
   const loadContract = useCallback(async () => {
     if (!id) return
@@ -102,6 +109,20 @@ export default function ContractEdit() {
         notes: data.notes || '',
       })
       setCustomAgreements(Array.isArray(data.custom_agreements) ? data.custom_agreements : [])
+
+      // Saldo inicial: usa monthly_hours carregado como total contratado.
+      const mh = typeof data.monthly_hours === 'number' ? data.monthly_hours : null
+      setAppliedHours(mh)
+
+      // Toggle automático: liga quando o contrato já tem distribuição salva.
+      const hasBaseLevel = CONTRACT_HOURS_LEVELS.some((lvl) => {
+        const v = data[lvl.key]
+        return v !== null && v !== undefined && Number(v) > 0
+      })
+      const hasCustom = (data.custom_agreements || []).some(
+        (a) => a && a.active && Number(a.hours ?? 0) > 0,
+      )
+      setHasAgreements(hasBaseLevel || hasCustom)
     } catch {
       setFetchError('Não foi possível carregar o contrato. Verifique se ele ainda existe.')
     } finally {
@@ -128,6 +149,27 @@ export default function ContractEdit() {
         return next
       })
     }
+  }
+
+  // Soma em tempo real das horas distribuídas nos acordos (níveis + personalizados).
+  const allocatedHours = useMemo(() => {
+    const levelSum = CONTRACT_HOURS_LEVELS.reduce((sum, lvl) => {
+      const v = form[lvl.key]
+      const n = typeof v === 'number' ? v : typeof v === 'string' && v !== '' ? Number(v) : 0
+      return sum + (Number.isFinite(n) ? n : 0)
+    }, 0)
+    const customSum = customAgreements.reduce((sum, a) => {
+      if (!a.active) return sum
+      const n = typeof a.hours === 'number' ? a.hours : 0
+      return sum + (Number.isFinite(n) ? n : 0)
+    }, 0)
+    return levelSum + customSum
+  }, [form, customAgreements])
+
+  const applyHours = () => {
+    const v = form.monthly_hours
+    const n = typeof v === 'number' ? v : parseInt(String(v ?? ''), 10)
+    setAppliedHours(Number.isFinite(n) && n >= 0 ? n : null)
   }
 
   const togglePriority = (p: string) => {
@@ -346,14 +388,28 @@ export default function ContractEdit() {
           <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
             <div className="space-y-1">
               <Label className="text-xs">Horas Mensais</Label>
-              <Input
-                type="number"
-                className={inputCls}
-                value={form.monthly_hours ?? ''}
-                onChange={(e) =>
-                  set('monthly_hours', e.target.value === '' ? '' : Number(e.target.value))
-                }
-              />
+              <div className="flex items-center gap-2">
+                <Input
+                  type="number"
+                  className={inputCls}
+                  value={form.monthly_hours ?? ''}
+                  onChange={(e) =>
+                    set('monthly_hours', e.target.value === '' ? '' : Number(e.target.value))
+                  }
+                />
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  className="h-9 shrink-0"
+                  onClick={applyHours}
+                >
+                  <Check className="mr-1 h-4 w-4" /> Aplicar
+                </Button>
+              </div>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                Clique em “Aplicar” para fixar o total de horas contratadas e acompanhar o saldo.
+              </p>
             </div>
             <div className="space-y-1">
               <Label className="text-xs">Limite de Horas Mensais</Label>
@@ -435,42 +491,127 @@ export default function ContractEdit() {
           <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300">
             {SECTIONS[2].label}
           </h3>
-          <p className="text-xs text-slate-500 dark:text-slate-400">
-            Marque os acordos contratados e informe a quantidade de horas acordadas para cada um.
-          </p>
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            {CONTRACT_HOURS_LEVELS.filter((level) => !removedLevels.includes(level.key)).map(
-              (level) => {
-                const active =
-                  form[level.key] !== '' &&
-                  form[level.key] !== undefined &&
-                  form[level.key] !== null
-                return (
+
+          {/* Toggle: este contrato possui alocação por acordo de atendimento? */}
+          <div className="flex items-center justify-between gap-3 rounded-lg border border-slate-200 bg-slate-50/60 p-3 dark:border-slate-700 dark:bg-slate-800/40">
+            <div>
+              <label className="text-xs font-semibold">
+                Este contrato possui alocação de horas por acordo de atendimento?
+              </label>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                Quando desligado, a distribuição de horas fica oculta.
+              </p>
+            </div>
+            <Switch checked={hasAgreements} onCheckedChange={setHasAgreements} />
+          </div>
+
+          {appliedHours !== null && appliedHours > 0 && (
+            <HoursBalanceBar total={appliedHours} allocated={allocatedHours} />
+          )}
+
+          {hasAgreements && (
+            <>
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                Marque os acordos contratados e informe a quantidade de horas acordadas para cada
+                um.
+              </p>
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                {CONTRACT_HOURS_LEVELS.filter((level) => !removedLevels.includes(level.key)).map(
+                  (level) => {
+                    const active =
+                      form[level.key] !== '' &&
+                      form[level.key] !== undefined &&
+                      form[level.key] !== null
+                    return (
+                      <div
+                        key={level.key}
+                        className="flex items-center gap-3 rounded-lg border border-slate-200 p-3 dark:border-slate-700"
+                      >
+                        <Checkbox
+                          id={`dist-${level.key}`}
+                          checked={active}
+                          onCheckedChange={(checked) =>
+                            set(level.key, checked ? form[level.key] || 0 : '')
+                          }
+                        />
+                        <label
+                          htmlFor={`dist-${level.key}`}
+                          className="text-xs font-medium cursor-pointer select-none min-w-[110px]"
+                        >
+                          {level.label}
+                        </label>
+                        <Input
+                          type="number"
+                          className={cn(inputCls, !active && 'opacity-40 pointer-events-none')}
+                          placeholder="Horas"
+                          value={form[level.key] ?? ''}
+                          disabled={!active}
+                          onChange={(e) =>
+                            set(level.key, e.target.value === '' ? '' : Number(e.target.value))
+                          }
+                        />
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-red-500 hover:text-red-600"
+                          title={`Remover ${level.label}`}
+                          onClick={() => {
+                            setRemovedLevels((prev) => [...prev, level.key])
+                            set(level.key, '')
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    )
+                  },
+                )}
+                {customAgreements.map((ag, idx) => (
                   <div
-                    key={level.key}
-                    className="flex items-center gap-3 rounded-lg border border-slate-200 p-3 dark:border-slate-700"
+                    key={ag.slug}
+                    className="flex items-center gap-2 rounded-lg border border-blue-200 bg-blue-50/40 p-3 dark:border-blue-900 dark:bg-blue-950/30"
                   >
                     <Checkbox
-                      id={`dist-${level.key}`}
-                      checked={active}
+                      id={`dist-custom-${ag.slug}`}
+                      checked={ag.active}
                       onCheckedChange={(checked) =>
-                        set(level.key, checked ? form[level.key] || 0 : '')
+                        setCustomAgreements((prev) =>
+                          prev.map((a, i) =>
+                            i === idx
+                              ? { ...a, active: !!checked, hours: checked ? (a.hours ?? 0) : null }
+                              : a,
+                          ),
+                        )
                       }
                     />
-                    <label
-                      htmlFor={`dist-${level.key}`}
-                      className="text-xs font-medium cursor-pointer select-none min-w-[110px]"
-                    >
-                      {level.label}
-                    </label>
+                    <Input
+                      className={cn(inputCls, 'min-w-[110px]')}
+                      placeholder="Nome do acordo"
+                      value={ag.name}
+                      onChange={(e) =>
+                        setCustomAgreements((prev) =>
+                          prev.map((a, i) => (i === idx ? { ...a, name: e.target.value } : a)),
+                        )
+                      }
+                    />
                     <Input
                       type="number"
-                      className={cn(inputCls, !active && 'opacity-40 pointer-events-none')}
+                      className={cn(inputCls, !ag.active && 'opacity-40 pointer-events-none')}
                       placeholder="Horas"
-                      value={form[level.key] ?? ''}
-                      disabled={!active}
+                      value={ag.hours ?? ''}
+                      disabled={!ag.active}
                       onChange={(e) =>
-                        set(level.key, e.target.value === '' ? '' : Number(e.target.value))
+                        setCustomAgreements((prev) =>
+                          prev.map((a, i) =>
+                            i === idx
+                              ? {
+                                  ...a,
+                                  hours: e.target.value === '' ? null : Number(e.target.value),
+                                }
+                              : a,
+                          ),
+                        )
                       }
                     />
                     <Button
@@ -478,93 +619,36 @@ export default function ContractEdit() {
                       variant="ghost"
                       size="icon"
                       className="h-8 w-8 text-red-500 hover:text-red-600"
-                      title={`Remover ${level.label}`}
-                      onClick={() => {
-                        setRemovedLevels((prev) => [...prev, level.key])
-                        set(level.key, '')
-                      }}
+                      onClick={() =>
+                        setCustomAgreements((prev) => prev.filter((_, i) => i !== idx))
+                      }
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
-                )
-              },
-            )}
-            {customAgreements.map((ag, idx) => (
-              <div
-                key={ag.slug}
-                className="flex items-center gap-2 rounded-lg border border-blue-200 bg-blue-50/40 p-3 dark:border-blue-900 dark:bg-blue-950/30"
-              >
-                <Checkbox
-                  id={`dist-custom-${ag.slug}`}
-                  checked={ag.active}
-                  onCheckedChange={(checked) =>
-                    setCustomAgreements((prev) =>
-                      prev.map((a, i) =>
-                        i === idx
-                          ? { ...a, active: !!checked, hours: checked ? (a.hours ?? 0) : null }
-                          : a,
-                      ),
-                    )
-                  }
-                />
-                <Input
-                  className={cn(inputCls, 'min-w-[110px]')}
-                  placeholder="Nome do acordo"
-                  value={ag.name}
-                  onChange={(e) =>
-                    setCustomAgreements((prev) =>
-                      prev.map((a, i) => (i === idx ? { ...a, name: e.target.value } : a)),
-                    )
-                  }
-                />
-                <Input
-                  type="number"
-                  className={cn(inputCls, !ag.active && 'opacity-40 pointer-events-none')}
-                  placeholder="Horas"
-                  value={ag.hours ?? ''}
-                  disabled={!ag.active}
-                  onChange={(e) =>
-                    setCustomAgreements((prev) =>
-                      prev.map((a, i) =>
-                        i === idx
-                          ? { ...a, hours: e.target.value === '' ? null : Number(e.target.value) }
-                          : a,
-                      ),
-                    )
-                  }
-                />
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8 text-red-500 hover:text-red-600"
-                  onClick={() => setCustomAgreements((prev) => prev.filter((_, i) => i !== idx))}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
+                ))}
               </div>
-            ))}
-          </div>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className="w-full border-dashed"
-            onClick={() =>
-              setCustomAgreements((prev) => [
-                ...prev,
-                {
-                  slug: uniqueAgreementSlug('Novo Acordo', prev),
-                  name: '',
-                  hours: null,
-                  active: true,
-                },
-              ])
-            }
-          >
-            <Plus className="mr-2 h-4 w-4" /> Adicionar acordo de atendimento
-          </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="w-full border-dashed"
+                onClick={() =>
+                  setCustomAgreements((prev) => [
+                    ...prev,
+                    {
+                      slug: uniqueAgreementSlug('Novo Acordo', prev),
+                      name: '',
+                      hours: null,
+                      active: true,
+                    },
+                  ])
+                }
+              >
+                <Plus className="mr-2 h-4 w-4" /> Adicionar acordo de atendimento
+              </Button>
+            </>
+          )}
         </div>
 
         {/* SLA Parameters */}
