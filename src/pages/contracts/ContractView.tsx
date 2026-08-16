@@ -3,7 +3,12 @@ import { useParams, useNavigate, Link } from 'react-router-dom'
 import { ArrowLeft, FileDown, Pencil, AlertTriangle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
-import { getContract, getContractTickets, ContractRecord } from '@/services/contracts'
+import {
+  getContract,
+  getContractTickets,
+  ContractRecord,
+  CONTRACT_HOURS_LEVELS,
+} from '@/services/contracts'
 import { StatusBadge } from '@/components/StatusBadge'
 import { exportContractPdf } from '@/lib/pdf-export'
 import { formatHours, formatMinutes } from '@/lib/duration'
@@ -84,6 +89,21 @@ export default function ContractView() {
     { l: 'Dias', v: contract.service_days || 'N/A' },
   ]
 
+  // Distribuição de horas por acordo de atendimento
+  const removedLevels = contract.removed_levels ?? []
+  const baseLevels = CONTRACT_HOURS_LEVELS.filter((lvl) => !removedLevels.includes(lvl.key)).map(
+    (lvl) => ({
+      label: lvl.label,
+      hours: contract[lvl.key],
+    }),
+  )
+  const activeCustomAgreements = (contract.custom_agreements ?? []).filter((a) => a.active)
+  const distributionRows = [
+    ...baseLevels.map((b) => ({ label: b.label, hours: b.hours })),
+    ...activeCustomAgreements.map((a) => ({ label: a.name, hours: a.hours })),
+  ].filter((r) => Number(r.hours) > 0)
+  const showDistribution = distributionRows.length > 0
+
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       <div className="flex items-center justify-between">
@@ -143,6 +163,22 @@ export default function ContractView() {
           ))}
         </div>
       </div>
+
+      {showDistribution && (
+        <div className="rounded-xl border bg-white p-6 dark:bg-slate-900">
+          <h3 className="text-sm font-semibold mb-4">
+            Distribuição de horas por acordo de atendimento
+          </h3>
+          <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
+            {distributionRows.map((row, i) => (
+              <div key={i}>
+                <p className="text-xs text-slate-500">{row.label}</p>
+                <p className="text-sm font-medium">{formatHours(row.hours || 0)}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="rounded-xl border bg-white p-6 dark:bg-slate-900">
         <h3 className="text-sm font-semibold mb-4">Chamados Vinculados ({tickets.length})</h3>
