@@ -36,6 +36,8 @@ export default function ContractDetail() {
     hours_administrativo: '',
   })
   const [customAgreements, setCustomAgreements] = useState<CustomAgreementEntry[]>([])
+  // Chaves dos acordos de atendimento base removidos pelo usuário no formulário.
+  const [removedLevels, setRemovedLevels] = useState<string[]>([])
   const [companies, setCompanies] = useState<CompanyRecord[]>([])
 
   const navigate = useNavigate()
@@ -64,6 +66,11 @@ export default function ContractDetail() {
       }
     })
 
+    // Acordos base removidos também têm suas horas zeradas para consistência.
+    removedLevels.forEach((key) => {
+      levelPayload[key] = null
+    })
+
     await createContract({
       number,
       company,
@@ -74,6 +81,7 @@ export default function ContractDetail() {
       sla_solution_time: 240,
       ...levelPayload,
       custom_agreements: customAgreements,
+      removed_levels: removedLevels,
     })
 
     toast({ title: 'Contrato salvo com sucesso!' })
@@ -139,48 +147,63 @@ export default function ContractDetail() {
               </p>
             </div>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              {CONTRACT_HOURS_LEVELS.map((level) => {
-                const active =
-                  hoursByLevel[level.key] !== '' &&
-                  hoursByLevel[level.key] !== undefined &&
-                  hoursByLevel[level.key] !== null
-                return (
-                  <div
-                    key={level.key}
-                    className="flex items-center gap-3 rounded-lg border border-slate-200 p-3 dark:border-slate-700"
-                  >
-                    <Checkbox
-                      id={`new-${level.key}`}
-                      checked={active}
-                      onCheckedChange={(checked) =>
-                        setHoursByLevel((prev) => ({
-                          ...prev,
-                          [level.key]: checked ? prev[level.key] || 0 : '',
-                        }))
-                      }
-                    />
-                    <label
-                      htmlFor={`new-${level.key}`}
-                      className="text-xs font-medium cursor-pointer select-none min-w-[110px]"
+              {CONTRACT_HOURS_LEVELS.filter((level) => !removedLevels.includes(level.key)).map(
+                (level) => {
+                  const active =
+                    hoursByLevel[level.key] !== '' &&
+                    hoursByLevel[level.key] !== undefined &&
+                    hoursByLevel[level.key] !== null
+                  return (
+                    <div
+                      key={level.key}
+                      className="flex items-center gap-3 rounded-lg border border-slate-200 p-3 dark:border-slate-700"
                     >
-                      {level.label}
-                    </label>
-                    <Input
-                      type="number"
-                      className={cn('h-9 text-sm', !active && 'opacity-40 pointer-events-none')}
-                      placeholder="Horas"
-                      value={hoursByLevel[level.key] ?? ''}
-                      disabled={!active}
-                      onChange={(e) =>
-                        setHoursByLevel((prev) => ({
-                          ...prev,
-                          [level.key]: e.target.value === '' ? '' : Number(e.target.value),
-                        }))
-                      }
-                    />
-                  </div>
-                )
-              })}
+                      <Checkbox
+                        id={`new-${level.key}`}
+                        checked={active}
+                        onCheckedChange={(checked) =>
+                          setHoursByLevel((prev) => ({
+                            ...prev,
+                            [level.key]: checked ? prev[level.key] || 0 : '',
+                          }))
+                        }
+                      />
+                      <label
+                        htmlFor={`new-${level.key}`}
+                        className="text-xs font-medium cursor-pointer select-none min-w-[110px]"
+                      >
+                        {level.label}
+                      </label>
+                      <Input
+                        type="number"
+                        className={cn('h-9 text-sm', !active && 'opacity-40 pointer-events-none')}
+                        placeholder="Horas"
+                        value={hoursByLevel[level.key] ?? ''}
+                        disabled={!active}
+                        onChange={(e) =>
+                          setHoursByLevel((prev) => ({
+                            ...prev,
+                            [level.key]: e.target.value === '' ? '' : Number(e.target.value),
+                          }))
+                        }
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-red-500 hover:text-red-600"
+                        title={`Remover ${level.label}`}
+                        onClick={() => {
+                          setRemovedLevels((prev) => [...prev, level.key])
+                          setHoursByLevel((prev) => ({ ...prev, [level.key]: '' }))
+                        }}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  )
+                },
+              )}
               {customAgreements.map((ag, idx) => (
                 <div
                   key={ag.slug}

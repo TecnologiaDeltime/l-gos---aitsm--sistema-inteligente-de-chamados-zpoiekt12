@@ -36,6 +36,10 @@ export interface ContractRecord {
   // Acordos de atendimento personalizados cadastrados pelo usuário.
   // Cada item: { slug, name, hours, active }
   custom_agreements?: CustomAgreementEntry[] | null
+  // Chaves (ContractHoursLevel.key) dos 6 acordos de atendimento base que o
+  // usuário removeu do formulário de contrato. Permite ocultá-los sem excluir
+  // as colunas físicas, mantendo compatibilidade com relatórios e dados antigos.
+  removed_levels?: string[] | null
   created: string
   updated: string
   expand?: any

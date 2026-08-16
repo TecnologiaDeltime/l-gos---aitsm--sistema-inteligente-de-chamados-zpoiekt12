@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-16T03:53:03.975Z",
+  "generatedAt": "2026-08-16T03:58:57.745Z",
   "collections": [
     {
       "name": "users",
@@ -659,6 +659,12 @@
         },
         {
           "name": "custom_agreements",
+          "type": "json",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "removed_levels",
           "type": "json",
           "required": false,
           "system": false

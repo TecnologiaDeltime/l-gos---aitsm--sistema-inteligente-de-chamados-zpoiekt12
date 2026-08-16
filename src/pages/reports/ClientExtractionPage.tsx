@@ -206,6 +206,7 @@ interface ContractInfo {
   hours_backoffice?: number | null
   hours_administrativo?: number | null
   custom_agreements?: CustomAgreementEntry[] | null
+  removed_levels?: string[] | null
 }
 
 interface CompanyContext {
@@ -521,23 +522,43 @@ export default function ClientExtractionPage() {
               r[c] = contract.type || ''
               break
             case 'contract_hours_level1':
-              r[c] = contract.hours_level1 != null ? String(contract.hours_level1) : ''
+              r[c] =
+                contract.removed_levels?.includes('hours_level1') || contract.hours_level1 == null
+                  ? ''
+                  : String(contract.hours_level1)
               break
             case 'contract_hours_level2':
-              r[c] = contract.hours_level2 != null ? String(contract.hours_level2) : ''
+              r[c] =
+                contract.removed_levels?.includes('hours_level2') || contract.hours_level2 == null
+                  ? ''
+                  : String(contract.hours_level2)
               break
             case 'contract_hours_level3':
-              r[c] = contract.hours_level3 != null ? String(contract.hours_level3) : ''
+              r[c] =
+                contract.removed_levels?.includes('hours_level3') || contract.hours_level3 == null
+                  ? ''
+                  : String(contract.hours_level3)
               break
             case 'contract_hours_consultoria':
-              r[c] = contract.hours_consultoria != null ? String(contract.hours_consultoria) : ''
+              r[c] =
+                contract.removed_levels?.includes('hours_consultoria') ||
+                contract.hours_consultoria == null
+                  ? ''
+                  : String(contract.hours_consultoria)
               break
             case 'contract_hours_backoffice':
-              r[c] = contract.hours_backoffice != null ? String(contract.hours_backoffice) : ''
+              r[c] =
+                contract.removed_levels?.includes('hours_backoffice') ||
+                contract.hours_backoffice == null
+                  ? ''
+                  : String(contract.hours_backoffice)
               break
             case 'contract_hours_administrativo':
               r[c] =
-                contract.hours_administrativo != null ? String(contract.hours_administrativo) : ''
+                contract.removed_levels?.includes('hours_administrativo') ||
+                contract.hours_administrativo == null
+                  ? ''
+                  : String(contract.hours_administrativo)
               break
             default:
               if (isCustomFieldKey(c)) {

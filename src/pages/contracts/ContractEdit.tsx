@@ -58,6 +58,8 @@ export default function ContractEdit() {
 
   const [form, setForm] = useState<Record<string, any>>({})
   const [customAgreements, setCustomAgreements] = useState<CustomAgreementEntry[]>([])
+  // Chaves (ContractHoursLevel.key) dos acordos base removidos pelo usuário.
+  const [removedLevels, setRemovedLevels] = useState<string[]>([])
 
   const loadContract = useCallback(async () => {
     if (!id) return
@@ -177,7 +179,12 @@ export default function ContractEdit() {
           payload[key] = Number(payload[key])
         }
       }
+      // Acordos base removidos também têm suas horas zeradas para consistência.
+      removedLevels.forEach((key) => {
+        payload[key] = null
+      })
       payload.custom_agreements = customAgreements
+      payload.removed_levels = removedLevels
       await updateContract(id, payload)
       toast({ title: 'Contrato atualizado com sucesso!' })
       navigate('/contracts')
@@ -432,40 +439,57 @@ export default function ContractEdit() {
             Marque os acordos contratados e informe a quantidade de horas acordadas para cada um.
           </p>
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            {CONTRACT_HOURS_LEVELS.map((level) => {
-              const active =
-                form[level.key] !== '' && form[level.key] !== undefined && form[level.key] !== null
-              return (
-                <div
-                  key={level.key}
-                  className="flex items-center gap-3 rounded-lg border border-slate-200 p-3 dark:border-slate-700"
-                >
-                  <Checkbox
-                    id={`dist-${level.key}`}
-                    checked={active}
-                    onCheckedChange={(checked) =>
-                      set(level.key, checked ? form[level.key] || 0 : '')
-                    }
-                  />
-                  <label
-                    htmlFor={`dist-${level.key}`}
-                    className="text-xs font-medium cursor-pointer select-none min-w-[110px]"
+            {CONTRACT_HOURS_LEVELS.filter((level) => !removedLevels.includes(level.key)).map(
+              (level) => {
+                const active =
+                  form[level.key] !== '' &&
+                  form[level.key] !== undefined &&
+                  form[level.key] !== null
+                return (
+                  <div
+                    key={level.key}
+                    className="flex items-center gap-3 rounded-lg border border-slate-200 p-3 dark:border-slate-700"
                   >
-                    {level.label}
-                  </label>
-                  <Input
-                    type="number"
-                    className={cn(inputCls, !active && 'opacity-40 pointer-events-none')}
-                    placeholder="Horas"
-                    value={form[level.key] ?? ''}
-                    disabled={!active}
-                    onChange={(e) =>
-                      set(level.key, e.target.value === '' ? '' : Number(e.target.value))
-                    }
-                  />
-                </div>
-              )
-            })}
+                    <Checkbox
+                      id={`dist-${level.key}`}
+                      checked={active}
+                      onCheckedChange={(checked) =>
+                        set(level.key, checked ? form[level.key] || 0 : '')
+                      }
+                    />
+                    <label
+                      htmlFor={`dist-${level.key}`}
+                      className="text-xs font-medium cursor-pointer select-none min-w-[110px]"
+                    >
+                      {level.label}
+                    </label>
+                    <Input
+                      type="number"
+                      className={cn(inputCls, !active && 'opacity-40 pointer-events-none')}
+                      placeholder="Horas"
+                      value={form[level.key] ?? ''}
+                      disabled={!active}
+                      onChange={(e) =>
+                        set(level.key, e.target.value === '' ? '' : Number(e.target.value))
+                      }
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-red-500 hover:text-red-600"
+                      title={`Remover ${level.label}`}
+                      onClick={() => {
+                        setRemovedLevels((prev) => [...prev, level.key])
+                        set(level.key, '')
+                      }}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                )
+              },
+            )}
             {customAgreements.map((ag, idx) => (
               <div
                 key={ag.slug}
