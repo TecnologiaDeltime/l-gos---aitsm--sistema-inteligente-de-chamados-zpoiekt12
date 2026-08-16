@@ -40,7 +40,6 @@ const SECTIONS = [
   { key: 'hours', label: 'Horas e Valores' },
   { key: 'distribution', label: 'Distribuição de Horas por Nível' },
   { key: 'sla', label: 'Parâmetros de SLA' },
-  { key: 'services', label: 'Serviços e Políticas' },
   { key: 'notes', label: 'Observações' },
 ]
 
@@ -95,11 +94,6 @@ export default function ContractEdit() {
         sla_update_time: data.sla_update_time ?? '',
         sla_field_service_time: data.sla_field_service_time ?? '',
         priorities_available: data.priorities_available || [],
-        included_services: data.included_services || '',
-        excluded_services: data.excluded_services || '',
-        overtime_policy: data.overtime_policy || '',
-        travel_policy: data.travel_policy || '',
-        technical_visit_policy: data.technical_visit_policy || '',
         hours_level1: data.hours_level1 ?? '',
         hours_level2: data.hours_level2 ?? '',
         hours_level3: data.hours_level3 ?? '',
@@ -741,59 +735,10 @@ export default function ContractEdit() {
           </div>
         </div>
 
-        {/* Services and Policies */}
-        <div className="rounded-xl border bg-white p-6 dark:bg-slate-900 space-y-4">
-          <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300">
-            {SECTIONS[4].label}
-          </h3>
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            <div className="space-y-1">
-              <Label className="text-xs">Serviços Incluídos</Label>
-              <Textarea
-                rows={3}
-                value={form.included_services || ''}
-                onChange={(e) => set('included_services', e.target.value)}
-              />
-            </div>
-            <div className="space-y-1">
-              <Label className="text-xs">Serviços Excluídos</Label>
-              <Textarea
-                rows={3}
-                value={form.excluded_services || ''}
-                onChange={(e) => set('excluded_services', e.target.value)}
-              />
-            </div>
-            <div className="space-y-1">
-              <Label className="text-xs">Política de Horas Extras</Label>
-              <Textarea
-                rows={3}
-                value={form.overtime_policy || ''}
-                onChange={(e) => set('overtime_policy', e.target.value)}
-              />
-            </div>
-            <div className="space-y-1">
-              <Label className="text-xs">Política de Deslocamento</Label>
-              <Textarea
-                rows={3}
-                value={form.travel_policy || ''}
-                onChange={(e) => set('travel_policy', e.target.value)}
-              />
-            </div>
-            <div className="space-y-1 md:col-span-2">
-              <Label className="text-xs">Política de Visita Técnica</Label>
-              <Textarea
-                rows={3}
-                value={form.technical_visit_policy || ''}
-                onChange={(e) => set('technical_visit_policy', e.target.value)}
-              />
-            </div>
-          </div>
-        </div>
-
         {/* Notes */}
         <div className="rounded-xl border bg-white p-6 dark:bg-slate-900 space-y-4">
           <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300">
-            {SECTIONS[5].label}
+            {SECTIONS[4].label}
           </h3>
           <div className="space-y-1">
             <Label className="text-xs">Observações</Label>
