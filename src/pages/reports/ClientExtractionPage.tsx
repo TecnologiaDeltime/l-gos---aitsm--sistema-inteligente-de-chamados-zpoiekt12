@@ -18,63 +18,61 @@ import { getCompanies, type CompanyRecord } from '@/services/companies'
 import { getCompanyUnitsByCompany, type CompanyUnitRecord } from '@/services/company-units'
 import { getClientContacts, type ClientContactRecord } from '@/services/client-contacts'
 import { getAllEmailDomains } from '@/services/client-email-domains'
+import { CONTRACT_HOURS_LEVELS, type CustomAgreementEntry } from '@/services/contracts'
 
-type FieldKey =
-  // Dados Básicos
-  | 'legal_name'
-  | 'trade_name'
-  | 'document'
-  | 'site'
-  | 'phone'
-  | 'email'
-  // Endereço
-  | 'address_zipcode'
-  | 'address_street'
-  | 'address_number'
-  | 'address_complement'
-  | 'address_neighborhood'
-  | 'address_city'
-  | 'address_state'
-  // Filiais
-  | 'unit_name'
-  | 'unit_address'
-  | 'unit_phone'
-  | 'unit_manager'
-  // Setores
-  | 'department_name'
-  | 'department_parent'
-  // Colaboradores
-  | 'contact_name'
-  | 'contact_email'
-  | 'contact_phone'
-  | 'contact_department'
-  | 'contact_unit'
-  // Pontos Focais
-  | 'focal_name'
-  | 'focal_email'
-  | 'focal_phone'
-  | 'focal_unit'
-  // Domínios de E-mail
-  | 'email_domain'
-  | 'email_domain_active'
-  // Contrato
-  | 'contract_monthly_hours'
-  | 'contract_period'
-  | 'contract_type'
-  // Distribuição de Horas
-  | 'contract_hours_level1'
-  | 'contract_hours_level2'
-  | 'contract_hours_level3'
-  | 'contract_hours_consultoria'
-  | 'contract_hours_backoffice'
-  | 'contract_hours_administrativo'
+// Campos estáticos do relatório. Campos de acordos personalizados usam o
+// prefixo `custom:` + slug e são gerados dinamicamente a partir dos acordos
+// cadastrados nos contratos.
+type FieldKey = string
+
+const STATIC_FIELD_KEYS = [
+  'legal_name',
+  'trade_name',
+  'document',
+  'site',
+  'phone',
+  'email',
+  'address_zipcode',
+  'address_street',
+  'address_number',
+  'address_complement',
+  'address_neighborhood',
+  'address_city',
+  'address_state',
+  'unit_name',
+  'unit_address',
+  'unit_phone',
+  'unit_manager',
+  'department_name',
+  'department_parent',
+  'contact_name',
+  'contact_email',
+  'contact_phone',
+  'contact_department',
+  'contact_unit',
+  'focal_name',
+  'focal_email',
+  'focal_phone',
+  'focal_unit',
+  'email_domain',
+  'email_domain_active',
+  'contract_monthly_hours',
+  'contract_period',
+  'contract_type',
+  ...CONTRACT_HOURS_LEVELS.map((l) => `contract_${l.key}`),
+] as const
+
+// Auxilia para identificar um campo de acordo personalizado (custom:<slug>).
+const customFieldKey = (slug: string) => `custom:${slug}`
+const isCustomFieldKey = (k: string) => k.startsWith('custom:')
+const customSlugFromKey = (k: string) => k.slice('custom:'.length)
 
 interface FieldGroup {
   title: string
   fields: { key: FieldKey; label: string }[]
 }
 
-const FIELD_GROUPS: FieldGroup[] = [
+const STATIC_FIELD_GROUPS: FieldGroup[] = [
   {
     title: 'Dados Básicos',
     fields: [
@@ -183,22 +181,17 @@ const RELATIONAL_FIELDS: FieldKey[] = [
   'contract_monthly_hours',
   'contract_period',
   'contract_type',
-  'contract_hours_level1',
-  'contract_hours_level2',
-  'contract_hours_level3',
-  'contract_hours_consultoria',
-  'contract_hours_backoffice',
-  'contract_hours_administrativo',
+  ...CONTRACT_HOURS_LEVELS.map((l) => `contract_${l.key}`),
 ]
 
-const ALL_FIELD_LABELS: Record<FieldKey, string> = FIELD_GROUPS.reduce(
+const ALL_FIELD_LABELS: Record<string, string> = STATIC_FIELD_GROUPS.reduce(
   (acc, g) => {
     g.fields.forEach((f) => {
       acc[f.key] = f.label
     })
     return acc
   },
-  {} as Record<FieldKey, string>,
+  {} as Record<string, string>,
 )
 
 interface ContractInfo {
@@ -212,6 +205,7 @@ interface ContractInfo {
   hours_consultoria?: number | null
   hours_backoffice?: number | null
   hours_administrativo?: number | null
+  custom_agreements?: CustomAgreementEntry[] | null
 }
 
 interface CompanyContext {
@@ -225,6 +219,10 @@ interface CompanyContext {
   contracts: ContractInfo[]
 }
 
+// Acordos personalizados consolidados a partir de todos os contratos
+// (slug -> nome de exibição). Usado para gerar os campos dinâmicos do relatório.
+type CustomAgreementsMap = Record<string, string>
+
 export default function ClientExtractionPage() {
   const permissions = usePermissions()
   const [selected, setSelected] = useState<Set<FieldKey>>(
@@ -234,6 +232,30 @@ export default function ClientExtractionPage() {
   const [rows, setRows] = useState<Record<string, string>[]>([])
   const [columns, setColumns] = useState<FieldKey[]>([])
   const [hasGenerated, setHasGenerated] = useState(false)
+  // Acordos personalizados consolidados de todos os contratos (slug -> nome).
+  const [customAgreementsMap, setCustomAgreementsMap] = useState<CustomAgreementsMap>({})
+
+  // Lista de grupos dinâmica = grupos estáticos + grupo de acordos personalizados (se houver).
+  const fieldGroups: FieldGroup[] = useMemo(() => {
+    const customFields = Object.entries(customAgreementsMap).map(([slug, name]) => ({
+      key: customFieldKey(slug) as FieldKey,
+      label: `Horas ${name || slug}`,
+    }))
+    if (customFields.length === 0) return STATIC_FIELD_GROUPS
+    const customGroup: FieldGroup = {
+      title: 'Acordos de Atendimento Personalizados',
+      fields: customFields,
+    }
+    // Insere o grupo de acordos personalizados logo após "Distribuição de Horas".
+    const result = [...STATIC_FIELD_GROUPS]
+    const distIdx = result.findIndex((g) => g.title === 'Distribuição de Horas')
+    if (distIdx >= 0) {
+      result.splice(distIdx + 1, 0, customGroup)
+    } else {
+      result.push(customGroup)
+    }
+    return result
+  }, [customAgreementsMap])
 
   const toggleField = (key: FieldKey) => {
     setSelected((prev) => {
@@ -259,10 +281,11 @@ export default function ClientExtractionPage() {
 
   const orderedSelected = useMemo(
     () =>
-      FIELD_GROUPS.flatMap((g) => g.fields)
+      fieldGroups
+        .flatMap((g) => g.fields)
         .filter((f) => selected.has(f.key))
         .map((f) => f.key),
-    [selected],
+    [fieldGroups, selected],
   )
 
   const buildRows = (ctx: CompanyContext, cols: FieldKey[]): Record<string, string>[] => {
@@ -334,21 +357,22 @@ export default function ClientExtractionPage() {
       ['focal_name', 'focal_email', 'focal_phone', 'focal_unit'].includes(c),
     )
     const needsDomain = cols.some((c) => ['email_domain', 'email_domain_active'].includes(c))
-    const needsContract = cols.some((c) =>
-      [
-        'contract_monthly_hours',
-        'contract_period',
-        'contract_type',
-        'contract_hours_level1',
-        'contract_hours_level2',
-        'contract_hours_level3',
-        'contract_hours_consultoria',
-        'contract_hours_backoffice',
-        'contract_hours_administrativo',
-      ].includes(c),
+    const needsContract = cols.some(
+      (c) =>
+        [
+          'contract_monthly_hours',
+          'contract_period',
+          'contract_type',
+          'contract_hours_level1',
+          'contract_hours_level2',
+          'contract_hours_level3',
+          'contract_hours_consultoria',
+          'contract_hours_backoffice',
+          'contract_hours_administrativo',
+        ].includes(c) || isCustomFieldKey(c),
     )
 
-    const hasRelational = cols.some((c) => RELATIONAL_FIELDS.includes(c))
+    const hasRelational = cols.some((c) => RELATIONAL_FIELDS.includes(c) || isCustomFieldKey(c))
 
     if (!hasRelational) {
       out.push(companyRow())
@@ -515,6 +539,15 @@ export default function ClientExtractionPage() {
               r[c] =
                 contract.hours_administrativo != null ? String(contract.hours_administrativo) : ''
               break
+            default:
+              if (isCustomFieldKey(c)) {
+                const slug = customSlugFromKey(c)
+                const ag = (contract.custom_agreements || []).find(
+                  (a) => a.slug === slug && a.active,
+                )
+                r[c] = ag && ag.hours != null ? String(ag.hours) : ''
+              }
+              break
           }
         })
         return r
@@ -551,6 +584,25 @@ export default function ClientExtractionPage() {
       const cols = orderedSelected
       const companies = await getCompanies()
       const allDomains = await getAllEmailDomains()
+
+      // Carrega todos os contratos uma única vez para consolidar os acordos
+      // personalizados disponíveis como campos do relatório.
+      const allContracts = await pb
+        .collection('contracts')
+        .getFullList<ContractInfo>({ sort: '-created' })
+        .catch(() => [] as ContractInfo[])
+      const agreementsMap: CustomAgreementsMap = {}
+      allContracts.forEach((contract) => {
+        ;(contract.custom_agreements || []).forEach((ag) => {
+          if (ag.slug) {
+            // Mantém o nome mais recente não-vazio já cadastrado para o slug.
+            if (!agreementsMap[ag.slug] || ag.name) {
+              agreementsMap[ag.slug] = ag.name || agreementsMap[ag.slug] || ag.slug
+            }
+          }
+        })
+      })
+      setCustomAgreementsMap(agreementsMap)
 
       const allRows: Record<string, string>[] = []
       for (const company of companies) {
@@ -675,7 +727,7 @@ export default function ClientExtractionPage() {
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {FIELD_GROUPS.map((group) => {
+        {fieldGroups.map((group) => {
           const groupSelected = group.fields.filter((f) => selected.has(f.key)).length
           const allSelected = groupSelected === group.fields.length
           return (

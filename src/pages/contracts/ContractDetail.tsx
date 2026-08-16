@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { Plus, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -11,7 +12,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { createContract, CONTRACT_HOURS_LEVELS } from '@/services/contracts'
+import {
+  createContract,
+  CONTRACT_HOURS_LEVELS,
+  uniqueAgreementSlug,
+  type CustomAgreementEntry,
+} from '@/services/contracts'
 import { getCompanies, CompanyRecord } from '@/services/companies'
 import { useToast } from '@/hooks/use-toast'
 import { cn } from '@/lib/utils'
@@ -29,6 +35,7 @@ export default function ContractDetail() {
     hours_backoffice: '',
     hours_administrativo: '',
   })
+  const [customAgreements, setCustomAgreements] = useState<CustomAgreementEntry[]>([])
   const [companies, setCompanies] = useState<CompanyRecord[]>([])
 
   const navigate = useNavigate()
@@ -66,6 +73,7 @@ export default function ContractDetail() {
       sla_response_time: 30,
       sla_solution_time: 240,
       ...levelPayload,
+      custom_agreements: customAgreements,
     })
 
     toast({ title: 'Contrato salvo com sucesso!' })
@@ -120,12 +128,14 @@ export default function ContractDetail() {
             </div>
           </div>
 
-          {/* Distribuição de Horas por Nível de Atendimento */}
+          {/* Distribuição de horas por acordo de atendimento */}
           <div className="space-y-3">
             <div>
-              <label className="text-xs font-semibold">Distribuição de Horas por Nível</label>
+              <label className="text-xs font-semibold">
+                Distribuição de horas por acordo de atendimento
+              </label>
               <p className="text-xs text-muted-foreground">
-                Marque os níveis contratados e informe a quantidade de horas acordadas.
+                Marque os acordos contratados e informe a quantidade de horas acordadas.
               </p>
             </div>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -171,7 +181,81 @@ export default function ContractDetail() {
                   </div>
                 )
               })}
+              {customAgreements.map((ag, idx) => (
+                <div
+                  key={ag.slug}
+                  className="flex items-center gap-2 rounded-lg border border-blue-200 bg-blue-50/40 p-3 dark:border-blue-900 dark:bg-blue-950/30"
+                >
+                  <Checkbox
+                    id={`new-custom-${ag.slug}`}
+                    checked={ag.active}
+                    onCheckedChange={(checked) =>
+                      setCustomAgreements((prev) =>
+                        prev.map((a, i) =>
+                          i === idx
+                            ? { ...a, active: !!checked, hours: checked ? (a.hours ?? 0) : null }
+                            : a,
+                        ),
+                      )
+                    }
+                  />
+                  <Input
+                    className="h-9 text-sm min-w-[110px]"
+                    placeholder="Nome do acordo"
+                    value={ag.name}
+                    onChange={(e) =>
+                      setCustomAgreements((prev) =>
+                        prev.map((a, i) => (i === idx ? { ...a, name: e.target.value } : a)),
+                      )
+                    }
+                  />
+                  <Input
+                    type="number"
+                    className={cn('h-9 text-sm', !ag.active && 'opacity-40 pointer-events-none')}
+                    placeholder="Horas"
+                    value={ag.hours ?? ''}
+                    disabled={!ag.active}
+                    onChange={(e) =>
+                      setCustomAgreements((prev) =>
+                        prev.map((a, i) =>
+                          i === idx
+                            ? { ...a, hours: e.target.value === '' ? null : Number(e.target.value) }
+                            : a,
+                        ),
+                      )
+                    }
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-red-500 hover:text-red-600"
+                    onClick={() => setCustomAgreements((prev) => prev.filter((_, i) => i !== idx))}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              ))}
             </div>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="w-full border-dashed"
+              onClick={() =>
+                setCustomAgreements((prev) => [
+                  ...prev,
+                  {
+                    slug: uniqueAgreementSlug('Novo Acordo', prev),
+                    name: '',
+                    hours: null,
+                    active: true,
+                  },
+                ])
+              }
+            >
+              <Plus className="mr-2 h-4 w-4" /> Adicionar acordo de atendimento
+            </Button>
           </div>
 
           <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-700">

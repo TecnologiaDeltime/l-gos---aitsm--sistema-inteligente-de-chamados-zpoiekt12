@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-16T03:36:38.487Z",
+  "generatedAt": "2026-08-16T03:53:03.975Z",
   "collections": [
     {
       "name": "users",
@@ -654,6 +654,12 @@
         {
           "name": "hours_administrativo",
           "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "custom_agreements",
+          "type": "json",
           "required": false,
           "system": false
         }

@@ -33,9 +33,19 @@ export interface ContractRecord {
   hours_consultoria?: number | null
   hours_backoffice?: number | null
   hours_administrativo?: number | null
+  // Acordos de atendimento personalizados cadastrados pelo usuário.
+  // Cada item: { slug, name, hours, active }
+  custom_agreements?: CustomAgreementEntry[] | null
   created: string
   updated: string
   expand?: any
+}
+
+export interface CustomAgreementEntry {
+  slug: string
+  name: string
+  hours: number | null
+  active: boolean
 }
 
 export const CONTRACT_TYPES = [
@@ -74,6 +84,28 @@ export const CONTRACT_HOURS_LEVELS: ContractHoursLevel[] = [
   { key: 'hours_backoffice', label: 'Backoffice' },
   { key: 'hours_administrativo', label: 'Administrativo' },
 ]
+
+// Gera um slug estável a partir do nome do acordo (sem acentos, espaços → _).
+export const slugifyAgreement = (name: string): string =>
+  name
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim()
+    .replace(/[^a-zA-Z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '')
+    .toLowerCase()
+
+// Cria um slug único que não colide com os existentes.
+export const uniqueAgreementSlug = (name: string, existing: { slug: string }[]): string => {
+  const base = slugifyAgreement(name) || 'acordo'
+  let slug = base
+  let n = 2
+  while (existing.some((a) => a.slug === slug)) {
+    slug = `${base}_${n}`
+    n += 1
+  }
+  return slug
+}
 
 export const getContracts = (filter?: string) =>
   pb
