@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import {
   Dialog,
   DialogContent,
@@ -9,7 +9,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Loader2 } from 'lucide-react'
+import { Loader2, Search } from 'lucide-react'
 import {
   createCompanyUnit,
   updateCompanyUnit,
@@ -19,6 +19,7 @@ import { createCompanyAuditLog } from '@/services/companies'
 import { useAuth } from '@/hooks/use-auth'
 import { useToast } from '@/hooks/use-toast'
 import { extractFieldErrors, type FieldErrors } from '@/lib/pocketbase/errors'
+import { fetchCep } from '@/lib/cep'
 
 interface Props {
   open: boolean
@@ -33,6 +34,7 @@ const EMPTY: Record<string, string> = {
   address_street: '',
   address_number: '',
   address_neighborhood: '',
+  address_complement: '',
   address_city: '',
   address_state: '',
   address_zipcode: '',
@@ -45,11 +47,14 @@ export function BranchDialog({ open, onOpenChange, clientId, branch, onSaved }: 
   const { toast } = useToast()
   const [form, setForm] = useState<Record<string, string>>(EMPTY)
   const [saving, setSaving] = useState(false)
+  const [cepLoading, setCepLoading] = useState(false)
   const [errors, setErrors] = useState<FieldErrors>({})
+  const lastCepSearchedRef = useRef<string>('')
 
   useEffect(() => {
     if (open) {
       setErrors({})
+      lastCepSearchedRef.current = ''
       setForm(
         branch
           ? {
@@ -57,6 +62,7 @@ export function BranchDialog({ open, onOpenChange, clientId, branch, onSaved }: 
               address_street: branch.address_street || '',
               address_number: branch.address_number || '',
               address_neighborhood: branch.address_neighborhood || '',
+              address_complement: branch.address_complement || '',
               address_city: branch.address_city || '',
               address_state: branch.address_state || '',
               address_zipcode: branch.address_zipcode || '',
@@ -76,6 +82,49 @@ export function BranchDialog({ open, onOpenChange, clientId, branch, onSaved }: 
         delete n[k]
         return n
       })
+  }
+
+  // Busca automática por CEP ao digitar (8 dígitos)
+  const handleCepChange = async (raw: string) => {
+    const masked = raw
+      .replace(/\D/g, '')
+      .slice(0, 8)
+      .replace(/(\d{5})(\d)/, '$1-$2')
+    set('address_zipcode', masked)
+    const clean = masked.replace(/\D/g, '')
+    if (clean.length !== 8 || clean === lastCepSearchedRef.current) return
+    lastCepSearchedRef.current = clean
+    setCepLoading(true)
+    try {
+      const data = await fetchCep(clean)
+      if (!data) {
+        toast({
+          title: 'CEP não encontrado',
+          description: 'Verifique o CEP informado e tente novamente.',
+          variant: 'destructive',
+        })
+        return
+      }
+      setForm((p) => ({
+        ...p,
+        address_street: data.logradouro || p.address_street,
+        address_neighborhood: data.bairro || p.address_neighborhood,
+        address_city: data.localidade || p.address_city,
+        address_state: data.uf || p.address_state,
+      }))
+      toast({
+        title: 'Endereço preenchido',
+        description: `${data.localidade}/${data.uf}`,
+      })
+    } catch {
+      toast({
+        title: 'Erro ao buscar CEP',
+        description: 'Não foi possível consultar o endereço. Tente novamente.',
+        variant: 'destructive',
+      })
+    } finally {
+      setCepLoading(false)
+    }
   }
 
   const handleSubmit = async () => {
@@ -99,7 +148,7 @@ export function BranchDialog({ open, onOpenChange, clientId, branch, onSaved }: 
             entity_type: 'company_units',
             entity_id: branch.id,
             description: `Filial "${form.name}" atualizada`,
-            old_values: branch as Record<string, unknown>,
+            old_values: branch as unknown as Record<string, unknown>,
             new_values: payload as Record<string, unknown>,
           })
       } else {
@@ -163,6 +212,15 @@ export function BranchDialog({ open, onOpenChange, clientId, branch, onSaved }: 
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1">
+              <Label className="text-xs">Complemento</Label>
+              <Input
+                className={cls}
+                placeholder="Apto, bloco, sala..."
+                value={form.address_complement}
+                onChange={(e) => set('address_complement', e.target.value)}
+              />
+            </div>
+            <div className="space-y-1">
               <Label className="text-xs">Bairro</Label>
               <Input
                 className={cls}
@@ -170,16 +228,24 @@ export function BranchDialog({ open, onOpenChange, clientId, branch, onSaved }: 
                 onChange={(e) => set('address_neighborhood', e.target.value)}
               />
             </div>
-            <div className="space-y-1">
-              <Label className="text-xs">CEP</Label>
-              <Input
-                className={cls}
-                value={form.address_zipcode}
-                onChange={(e) => set('address_zipcode', e.target.value)}
-              />
-            </div>
           </div>
           <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1">
+              <Label className="text-xs">CEP</Label>
+              <div className="relative">
+                <Input
+                  className={cls}
+                  placeholder="00000-000"
+                  value={form.address_zipcode}
+                  onChange={(e) => handleCepChange(e.target.value)}
+                />
+                {cepLoading ? (
+                  <Loader2 className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-slate-400" />
+                ) : (
+                  <Search className="absolute right-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+                )}
+              </div>
+            </div>
             <div className="space-y-1">
               <Label className="text-xs">Cidade</Label>
               <Input
@@ -188,6 +254,8 @@ export function BranchDialog({ open, onOpenChange, clientId, branch, onSaved }: 
                 onChange={(e) => set('address_city', e.target.value)}
               />
             </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1">
               <Label className="text-xs">Estado</Label>
               <Input
@@ -196,8 +264,6 @@ export function BranchDialog({ open, onOpenChange, clientId, branch, onSaved }: 
                 onChange={(e) => set('address_state', e.target.value)}
               />
             </div>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1">
               <Label className="text-xs">Telefone</Label>
               <Input
@@ -206,14 +272,14 @@ export function BranchDialog({ open, onOpenChange, clientId, branch, onSaved }: 
                 onChange={(e) => set('phone', e.target.value)}
               />
             </div>
-            <div className="space-y-1">
-              <Label className="text-xs">Gerente</Label>
-              <Input
-                className={cls}
-                value={form.manager_name}
-                onChange={(e) => set('manager_name', e.target.value)}
-              />
-            </div>
+          </div>
+          <div className="space-y-1">
+            <Label className="text-xs">Gerente</Label>
+            <Input
+              className={cls}
+              value={form.manager_name}
+              onChange={(e) => set('manager_name', e.target.value)}
+            />
           </div>
         </div>
         <DialogFooter>

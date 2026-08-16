@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-13T01:07:50.121Z",
+  "generatedAt": "2026-08-16T02:22:33.071Z",
   "collections": [
     {
       "name": "users",
@@ -304,6 +304,12 @@
           "required": false,
           "system": false,
           "autodateTriggers": ["onCreate", "onUpdate"]
+        },
+        {
+          "name": "address_complement",
+          "type": "text",
+          "required": false,
+          "system": false
         }
       ],
       "indexes": ["CREATE INDEX idx_units_company ON company_units (company)"]

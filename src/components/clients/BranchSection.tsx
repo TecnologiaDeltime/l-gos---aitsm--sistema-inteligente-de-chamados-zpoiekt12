@@ -61,7 +61,7 @@ export function BranchSection({ clientId }: { clientId?: string }) {
         entity_type: 'company_units',
         entity_id: deleteId,
         description: `Filial "${branch?.name}" excluída`,
-        old_values: branch as Record<string, unknown>,
+        old_values: branch as unknown as Record<string, unknown>,
       })
       toast({ title: 'Filial excluída com sucesso!' })
     } catch {
@@ -113,6 +113,7 @@ export function BranchSection({ clientId }: { clientId?: string }) {
                   <p className="text-xs text-slate-500 flex items-center gap-1">
                     <MapPin className="h-3 w-3" />
                     {`${b.address_street}, ${b.address_number || 'S/N'}`}
+                    {b.address_complement && ` - ${b.address_complement}`}
                     {b.address_neighborhood && ` - ${b.address_neighborhood}`}
                     {b.address_city && ` - ${b.address_city}/${b.address_state || ''}`}
                   </p>

@@ -10,6 +10,7 @@ export interface CompanyUnitRecord {
   address_city?: string
   address_state?: string
   address_zipcode?: string
+  address_complement?: string
   phone?: string
   manager_name?: string
   created: string
