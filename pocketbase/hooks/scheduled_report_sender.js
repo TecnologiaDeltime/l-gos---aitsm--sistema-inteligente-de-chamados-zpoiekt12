@@ -218,7 +218,7 @@ cronAdd('scheduled_report_sender', '0 2 * * *', function () {
 
       for (var ei = 0; ei < recipientEmails.length; ei++) {
         var message = new MailMessage()
-        message.from = { address: 'noreply@itsm.local', name: 'Sistema ITSM' }
+        message.from = { address: 'noreply@serviceone.com.br', name: 'ServiceOne' }
         message.to = [{ address: recipientEmails[ei] }]
         message.subject = subject
         message.text = bodyText
