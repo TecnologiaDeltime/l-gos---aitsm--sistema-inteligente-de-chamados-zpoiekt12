@@ -20,6 +20,7 @@ import {
 } from '@/components/ui/table'
 import { Crown } from 'lucide-react'
 import { exportToCsv } from '@/lib/export-utils'
+import { formatHours } from '@/lib/duration'
 import { Button } from '@/components/ui/button'
 
 type MetricKey = 'sla' | 'attended' | 'resolved' | 'hours' | 'reopens' | 'resolution'
@@ -106,7 +107,7 @@ export default function ManagerDashboard() {
         totalT.length > 0 ? ((totalSlaMet.length / totalT.length) * 100).toFixed(1) + '%' : '0%',
     },
     { label: 'SLA Violado', value: totalT.filter((t) => t.sla_status === 'Violado').length },
-    { label: 'Horas Totais', value: totalHours.toFixed(1) + 'h' },
+    { label: 'Horas Totais', value: formatHours(totalHours) },
     { label: 'Críticos', value: totalT.filter((t) => t.priority === 'P1').length },
     { label: 'Sem Atribuição', value: totalT.filter((t) => !t.assigned_to).length },
     { label: 'Operadores', value: operators.length },

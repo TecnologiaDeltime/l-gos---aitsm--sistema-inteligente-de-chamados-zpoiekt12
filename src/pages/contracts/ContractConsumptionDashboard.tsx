@@ -15,6 +15,7 @@ import { getContracts, ContractRecord } from '@/services/contracts'
 import { getContractPeriods, ContractPeriodRecord } from '@/services/contract-periods'
 import { useRealtime } from '@/hooks/use-realtime'
 import { exportToCsv } from '@/lib/export-utils'
+import { formatHours } from '@/lib/duration'
 import { AlertTriangle, Ban, Clock, Download } from 'lucide-react'
 
 export default function ContractConsumptionDashboard() {
@@ -59,21 +60,21 @@ export default function ContractConsumptionDashboard() {
     },
     {
       label: 'Horas Contratadas',
-      value: totalContracted.toFixed(0) + 'h',
+      value: formatHours(totalContracted),
       icon: Clock,
       color: 'text-indigo-600',
       bg: 'bg-indigo-50',
     },
     {
       label: 'Horas Consumidas',
-      value: totalConsumed.toFixed(0) + 'h',
+      value: formatHours(totalConsumed),
       icon: Clock,
       color: 'text-orange-600',
       bg: 'bg-orange-50',
     },
     {
       label: 'Saldo Total',
-      value: (totalContracted - totalConsumed).toFixed(0) + 'h',
+      value: formatHours(totalContracted - totalConsumed),
       icon: Clock,
       color: 'text-green-600',
       bg: 'bg-green-50',
@@ -201,9 +202,9 @@ export default function ContractConsumptionDashboard() {
                   <TableCell className="text-xs">
                     {d.contract.expand?.company?.trade_name || 'N/A'}
                   </TableCell>
-                  <TableCell className="text-xs">{d.contracted.toFixed(1)}h</TableCell>
-                  <TableCell className="text-xs">{d.consumed.toFixed(1)}h</TableCell>
-                  <TableCell className="text-xs">{d.balance.toFixed(1)}h</TableCell>
+                  <TableCell className="text-xs">{formatHours(d.contracted)}</TableCell>
+                  <TableCell className="text-xs">{formatHours(d.consumed)}</TableCell>
+                  <TableCell className="text-xs">{formatHours(d.balance)}</TableCell>
                   <TableCell className="text-xs">
                     <span
                       className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${colorFor(d.pct)}`}

@@ -48,7 +48,7 @@ export function HoursConsumptionCard({
         <div className="grid grid-cols-3 gap-2 text-center">
           <div>
             <p className="text-[10px] text-muted-foreground">Contratadas</p>
-            <p className="text-sm font-bold text-foreground">{contractedHours.toFixed(0)}h</p>
+            <p className="text-sm font-bold text-foreground">{formatHours(contractedHours)}</p>
           </div>
           <div>
             <p className="text-[10px] text-muted-foreground">Consumidas</p>

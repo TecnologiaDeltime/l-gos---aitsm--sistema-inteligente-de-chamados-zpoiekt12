@@ -8,6 +8,7 @@ import { getVisits, TechnicalVisitRecord } from '@/services/technical-visits'
 import { getTechnicianExpenses } from '@/services/expenses'
 import { getTechnicianTravelEntries } from '@/services/travel-entries'
 import { useRealtime } from '@/hooks/use-realtime'
+import { formatHours } from '@/lib/duration'
 
 export default function TechnicianDashboardPage() {
   const { user } = useAuth()
@@ -88,7 +89,7 @@ export default function TechnicianDashboardPage() {
     },
     {
       label: 'Horas Hoje',
-      value: totalHours.toFixed(1) + 'h',
+      value: formatHours(totalHours),
       icon: Clock,
       color: 'text-indigo-600',
       bg: 'bg-indigo-50',
