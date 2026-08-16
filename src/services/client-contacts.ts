@@ -24,6 +24,10 @@ export interface FocalPointData {
   cell_phone?: string
   has_whatsapp?: boolean
   user?: string
+  departments?: string[]
+  unit?: string
+  is_focal_point?: boolean
+  client?: string
 }
 
 export const getFocalPoints = (clientId: string) =>

@@ -30,20 +30,15 @@ import { useAuth } from '@/hooks/use-auth'
 import { useToast } from '@/hooks/use-toast'
 import { extractFieldErrors, type FieldErrors } from '@/lib/pocketbase/errors'
 
-interface Department {
-  id: string
-  name: string
-}
-
 interface Props {
   open: boolean
   onOpenChange: (v: boolean) => void
   clientId?: string
-  departments?: Department[]
   branches?: CompanyUnitRecord[]
   contact?: ClientContactRecord | null
   pendingFocalPoints?: FocalPointData[]
   onPendingFocalPointsChange?: (points: FocalPointData[]) => void
+  editPendingIdx?: number | null
   onSaved?: () => void
 }
 
@@ -53,7 +48,7 @@ const EMPTY: FocalPointData = {
   phone: '',
   cell_phone: '',
   has_whatsapp: false,
-  departments: [] as string[],
+  user: '',
   unit: '',
   is_focal_point: true,
   client: '',
@@ -63,11 +58,11 @@ export function FocalPointDialog({
   open,
   onOpenChange,
   clientId,
-  departments = [],
   branches = [],
   contact,
   pendingFocalPoints = [],
   onPendingFocalPointsChange,
+  editPendingIdx = null,
   onSaved,
 }: Props) {
   const { user } = useAuth()
@@ -77,25 +72,37 @@ export function FocalPointDialog({
   const [errors, setErrors] = useState<FieldErrors>({})
 
   useEffect(() => {
-    if (open) {
-      setErrors({})
-      if (contact) {
-        setForm({
-          full_name: contact.full_name || '',
-          email: contact.email || '',
-          phone: contact.phone || '',
-          cell_phone: contact.cell_phone || '',
-          has_whatsapp: contact.has_whatsapp || false,
-          departments: contact.departments || [],
-          unit: contact.unit || '',
-          is_focal_point: contact.is_focal_point ?? true,
-          client: clientId || '',
-        })
-      } else {
-        setForm({ ...EMPTY, client: clientId || '' })
-      }
+    if (!open) return
+    setErrors({})
+    if (contact) {
+      setForm({
+        full_name: contact.full_name || '',
+        email: contact.email || '',
+        phone: contact.phone || '',
+        cell_phone: contact.cell_phone || '',
+        has_whatsapp: contact.has_whatsapp || false,
+        user: contact.user || '',
+        unit: contact.unit || '',
+        is_focal_point: contact.is_focal_point ?? true,
+        client: clientId || '',
+      })
+    } else if (editPendingIdx !== null && pendingFocalPoints[editPendingIdx]) {
+      const fp = pendingFocalPoints[editPendingIdx]
+      setForm({
+        full_name: fp.full_name || '',
+        email: fp.email || '',
+        phone: fp.phone || '',
+        cell_phone: fp.cell_phone || '',
+        has_whatsapp: fp.has_whatsapp || false,
+        user: fp.user || '',
+        unit: fp.unit || '',
+        is_focal_point: fp.is_focal_point ?? true,
+        client: clientId || '',
+      })
+    } else {
+      setForm({ ...EMPTY, client: clientId || '' })
     }
-  }, [open, contact, clientId])
+  }, [open, contact, clientId, editPendingIdx, pendingFocalPoints])
 
   const set = (k: string, v: unknown) => {
     setForm((p) => ({ ...p, [k]: v }))
@@ -105,15 +112,6 @@ export function FocalPointDialog({
         delete n[k]
         return n
       })
-  }
-
-  const toggleDept = (id: string) => {
-    setForm((p) => ({
-      ...p,
-      departments: p.departments?.includes(id)
-        ? p.departments.filter((d) => d !== id)
-        : [...(p.departments || []), id],
-    }))
   }
 
   const handleSubmit = async () => {
@@ -128,13 +126,20 @@ export function FocalPointDialog({
     }
 
     if (!clientId) {
-      const newPoint: FocalPointData = {
+      if (!onPendingFocalPointsChange) return
+      const point: FocalPointData = {
         ...form,
         is_focal_point: true,
         unit: form.unit || undefined,
       }
-      onPendingFocalPointsChange?.([...pendingFocalPoints, newPoint])
-      toast({ title: 'Ponto focal adicionado!' })
+      if (editPendingIdx !== null) {
+        const next = [...pendingFocalPoints]
+        next[editPendingIdx] = point
+        onPendingFocalPointsChange(next)
+      } else {
+        onPendingFocalPointsChange([...pendingFocalPoints, point])
+      }
+      toast({ title: 'Ponto focal salvo com sucesso!' })
       onOpenChange(false)
       return
     }
@@ -147,6 +152,7 @@ export function FocalPointDialog({
         client: clientId,
         is_focal_point: true,
         unit: form.unit || undefined,
+        user: form.user || undefined,
       }
 
       if (contact) {
@@ -241,22 +247,6 @@ export function FocalPointDialog({
               </SelectContent>
             </Select>
           </div>
-          {departments.length > 0 && (
-            <div className="space-y-1">
-              <Label className="text-xs">Setores</Label>
-              <div className="space-y-2 rounded border p-2">
-                {departments.map((d) => (
-                  <div key={d.id} className="flex items-center gap-2">
-                    <Checkbox
-                      checked={form.departments?.includes(d.id) || false}
-                      onCheckedChange={() => toggleDept(d.id)}
-                    />
-                    <span className="text-xs">{d.name}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>

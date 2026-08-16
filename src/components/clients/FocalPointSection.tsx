@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useMemo } from 'react'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Badge } from '@/components/ui/badge'
@@ -12,15 +12,14 @@ import {
   AlertDialogCancel,
   AlertDialogAction,
 } from '@/components/ui/alert-dialog'
-import { Plus, Pencil, Trash2, Star, Mail, Phone } from 'lucide-react'
+import { Plus, Pencil, Trash2, Star, Mail, Phone, Building2 } from 'lucide-react'
 import {
   getFocalPoints,
-  createClientContact,
-  updateClientContact,
   deleteClientContact,
   type ClientContactRecord,
   type FocalPointData,
 } from '@/services/client-contacts'
+import { getCompanyUnitsByCompany, type CompanyUnitRecord } from '@/services/company-units'
 import { createCompanyAuditLog } from '@/services/companies'
 import { useRealtime } from '@/hooks/use-realtime'
 import { useAuth } from '@/hooks/use-auth'
@@ -41,18 +40,23 @@ export function FocalPointSection({
   const { user } = useAuth()
   const { toast } = useToast()
   const [focalPoints, setFocalPoints] = useState<ClientContactRecord[]>([])
+  const [branches, setBranches] = useState<CompanyUnitRecord[]>([])
   const [loading, setLoading] = useState(false)
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editing, setEditing] = useState<ClientContactRecord | null>(null)
   const [editPendingIdx, setEditPendingIdx] = useState<number | null>(null)
   const [deleteId, setDeleteId] = useState<string | null>(null)
-  const [saving, setSaving] = useState(false)
 
   const loadData = useCallback(async () => {
     if (!clientId) return
     setLoading(true)
     try {
-      setFocalPoints(await getFocalPoints(clientId))
+      const [fpsRes, branchesRes] = await Promise.allSettled([
+        getFocalPoints(clientId),
+        getCompanyUnitsByCompany(clientId),
+      ])
+      if (fpsRes.status === 'fulfilled') setFocalPoints(fpsRes.value)
+      if (branchesRes.status === 'fulfilled') setBranches(branchesRes.value)
     } catch {
       /* ignore */
     } finally {
@@ -65,6 +69,15 @@ export function FocalPointSection({
   }, [loadData])
 
   useRealtime('client_contacts', () => loadData(), !!clientId)
+  useRealtime('company_units', () => loadData(), !!clientId)
+
+  const branchMap = useMemo(() => {
+    const m: Record<string, string> = {}
+    branches.forEach((b) => {
+      m[b.id] = b.name
+    })
+    return m
+  }, [branches])
 
   const openAdd = () => {
     setEditing(null)
@@ -84,36 +97,8 @@ export function FocalPointSection({
     setDialogOpen(true)
   }
 
-  const handleSave = async (data: FocalPointData) => {
-    if (!clientId) {
-      if (!onPendingFocalPointsChange) return
-      const list = pendingFocalPoints || []
-      if (editPendingIdx !== null) {
-        const next = [...list]
-        next[editPendingIdx] = data
-        onPendingFocalPointsChange(next)
-      } else {
-        onPendingFocalPointsChange([...list, data])
-      }
-      setDialogOpen(false)
-      return
-    }
-    setSaving(true)
-    try {
-      const payload = { ...data, user: data.user || undefined }
-      if (editing) {
-        await updateClientContact(editing.id, { ...payload, is_focal_point: true })
-      } else {
-        await createClientContact({ ...payload, client: clientId, is_focal_point: true })
-      }
-      toast({ title: 'Ponto focal salvo com sucesso!' })
-      setDialogOpen(false)
-      loadData()
-    } catch {
-      toast({ title: 'Erro ao salvar ponto focal', variant: 'destructive' })
-    } finally {
-      setSaving(false)
-    }
+  const handleSaved = () => {
+    loadData()
   }
 
   const handleDelete = async () => {
@@ -141,10 +126,11 @@ export function FocalPointSection({
     name: string,
     email?: string,
     phone?: string,
+    unitName?: string,
     onEdit?: () => void,
     onRemove?: () => void,
   ) => (
-    <div className="group flex items-center justify-between rounded-md py-1 pl-2 pr-1 hover:bg-slate-50 dark:hover:bg-slate-800/60">
+    <div className="group flex items-start justify-between gap-2 rounded-md py-1 pl-2 pr-1 hover:bg-slate-50 dark:hover:bg-slate-800/60">
       <div className="space-y-0.5 text-sm min-w-0">
         <p className="font-semibold flex items-center gap-1.5 truncate">
           <Star className="h-3.5 w-3.5 text-amber-500 shrink-0" />
@@ -162,6 +148,10 @@ export function FocalPointSection({
             <span className="truncate">{phone}</span>
           </p>
         )}
+        <p className="text-xs text-slate-400 flex items-center gap-1 truncate">
+          <Building2 className="h-3 w-3 shrink-0" />
+          <span className="truncate">{unitName || 'Sem filial'}</span>
+        </p>
       </div>
       {(onEdit || onRemove) && (
         <div className="flex items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100 shrink-0">
@@ -203,6 +193,7 @@ export function FocalPointSection({
                 fp.full_name,
                 fp.email,
                 fp.phone,
+                fp.unit ? branchMap[fp.unit] : undefined,
                 () => openEditPending(i),
                 () =>
                   onPendingFocalPointsChange?.(
@@ -217,9 +208,12 @@ export function FocalPointSection({
         <FocalPointDialog
           open={dialogOpen}
           onOpenChange={setDialogOpen}
-          initialData={editPendingIdx !== null ? pendingFocalPoints?.[editPendingIdx] : null}
-          onSave={handleSave}
-          saving={saving}
+          branches={branches}
+          contact={null}
+          pendingFocalPoints={pendingFocalPoints}
+          onPendingFocalPointsChange={onPendingFocalPointsChange}
+          editPendingIdx={editPendingIdx}
+          onSaved={handleSaved}
         />
       </div>
     )
@@ -251,6 +245,7 @@ export function FocalPointSection({
               fp.full_name,
               fp.email,
               fp.phone,
+              fp.unit ? branchMap[fp.unit] : undefined,
               () => openEdit(fp),
               () => setDeleteId(fp.id),
             ),
@@ -261,20 +256,9 @@ export function FocalPointSection({
         open={dialogOpen}
         onOpenChange={setDialogOpen}
         clientId={clientId}
-        initialData={
-          editing
-            ? {
-                full_name: editing.full_name,
-                email: editing.email || '',
-                phone: editing.phone || '',
-                cell_phone: editing.cell_phone || '',
-                has_whatsapp: editing.has_whatsapp || false,
-                user: editing.user || '',
-              }
-            : null
-        }
-        onSave={handleSave}
-        saving={saving}
+        branches={branches}
+        contact={editing}
+        onSaved={handleSaved}
       />
       <AlertDialog open={!!deleteId} onOpenChange={(o) => !o && setDeleteId(null)}>
         <AlertDialogContent>
