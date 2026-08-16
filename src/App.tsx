@@ -57,6 +57,7 @@ import BlockingManagement from '@/pages/blocking/BlockingManagement'
 import NotFound from '@/pages/NotFound'
 import PortalPage from '@/pages/portal/PortalPage'
 import UnitReportsPage from '@/pages/reports/UnitReportsPage'
+import ClientExtractionPage from '@/pages/reports/ClientExtractionPage'
 import AutomationList from '@/pages/automations/AutomationList'
 import AutomationEditor from '@/pages/automations/AutomationEditor'
 import AutomationDashboard from '@/pages/automations/AutomationDashboard'
@@ -174,6 +175,7 @@ const App = () => (
               <Route path="/sla-goals" element={<SlaGoalsPage />} />
               <Route path="/scheduled-reports" element={<ScheduledReportsPage />} />
               <Route path="/reports/unit" element={<UnitReportsPage />} />
+              <Route path="/reports/clients" element={<ClientExtractionPage />} />
               <Route path="/knowledge-base" element={<KnowledgeBase />} />
               <Route path="/cmdb" element={<CmdbDashboard />} />
               <Route path="/cmdb/assets" element={<CiList />} />

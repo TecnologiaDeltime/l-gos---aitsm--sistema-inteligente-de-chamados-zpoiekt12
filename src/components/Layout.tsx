@@ -82,6 +82,7 @@ export default function Layout() {
   const [problemsMenuOpen, setProblemsMenuOpen] = useState(false)
   const [visitsN2MenuOpen, setVisitsN2MenuOpen] = useState(false)
   const [configuracoesMenuOpen, setConfiguracoesMenuOpen] = useState(false)
+  const [relatoriosMenuOpen, setRelatoriosMenuOpen] = useState(false)
 
   useEffect(() => {
     if (user) {
@@ -101,13 +102,6 @@ export default function Layout() {
 
   const navItems = [
     { label: 'Meu Painel', path: '/operator-dashboard', icon: Gauge, show: true },
-    { label: 'Relatórios', path: '/reports', icon: BarChart3, show: permissions.canViewReports },
-    {
-      label: 'Relatórios por Filial',
-      path: '/reports/unit',
-      icon: BarChart3,
-      show: permissions.canAccessUnitReports,
-    },
     {
       label: 'Painel Gerencial',
       path: '/manager-dashboard',
@@ -331,9 +325,55 @@ export default function Layout() {
     { label: 'Central de Aprovações', path: '/approval-center', icon: FileCheck, show: true },
     { label: 'Configurações Gerais', path: '/settings', icon: Settings, show: permissions.isAdmin },
   ]
+  const relatoriosSubmenuItems = [
+    {
+      label: 'Relatórios Gerenciais',
+      path: '/reports',
+      icon: BarChart3,
+      show: permissions.canViewReports,
+    },
+    {
+      label: 'Relatórios por Filial',
+      path: '/reports/unit',
+      icon: BarChart3,
+      show: permissions.canAccessUnitReports,
+    },
+    {
+      label: 'Dashboard de SLA',
+      path: '/sla-dashboard',
+      icon: BarChart3,
+      show: permissions.canViewReports,
+    },
+    {
+      label: 'Metas de SLA',
+      path: '/sla-goals',
+      icon: BarChart3,
+      show: permissions.canViewReports,
+    },
+    {
+      label: 'Atividades Recorrentes',
+      path: '/recurrent-activities',
+      icon: BarChart3,
+      show: permissions.canViewReports,
+    },
+    {
+      label: 'Relatórios Agendados',
+      path: '/scheduled-reports',
+      icon: BarChart3,
+      show: permissions.canViewReports,
+    },
+    {
+      label: 'Extração de Clientes',
+      path: '/reports/clients',
+      icon: BarChart3,
+      show: permissions.canViewReports,
+    },
+  ]
+  const relatoriosGroupVisible = relatoriosSubmenuItems.some((i) => i.show)
+
   const configuracoesGroupVisible = configuracoesSubmenuItems.some((i) => i.show)
 
-  const teamIdx = navItems.findIndex((i) => i.path === '/reports')
+  const teamIdx = navItems.findIndex((i) => i.path === '/manager-dashboard')
   const navBeforeClient = navItems.slice(0, teamIdx).filter((i) => i.show)
   const navAfterClient = navItems.slice(teamIdx).filter((i) => i.show)
 
@@ -633,6 +673,50 @@ export default function Layout() {
                 })}
           </div>
         )}
+        {relatoriosGroupVisible && (
+          <div key="relatorios-group">
+            <div className="flex items-center">
+              <button
+                onClick={() => setRelatoriosMenuOpen(!relatoriosMenuOpen)}
+                className={`flex flex-1 items-center gap-3 px-4 py-2.5 text-sm font-medium transition-all duration-200 border-l-2 ${
+                  relatoriosSubmenuItems.some((i) => i.show && location.pathname === i.path)
+                    ? 'border-primary bg-primary/10 text-primary'
+                    : 'border-transparent text-muted-foreground hover:bg-secondary/50 hover:text-foreground'
+                }`}
+              >
+                <BarChart3 className="h-[18px] w-[18px] shrink-0" />
+                <span className="truncate">Relatórios</span>
+                {relatoriosMenuOpen ? (
+                  <ChevronDown className="ml-auto h-4 w-4" />
+                ) : (
+                  <ChevronRight className="ml-auto h-4 w-4" />
+                )}
+              </button>
+            </div>
+            {relatoriosMenuOpen &&
+              relatoriosSubmenuItems
+                .filter((i) => i.show)
+                .map((sub) => {
+                  const SubIcon = sub.icon
+                  const subActive = location.pathname === sub.path
+                  return (
+                    <Link
+                      key={sub.path}
+                      to={sub.path}
+                      onClick={() => setMobileOpen(false)}
+                      className={`flex items-center gap-3 pl-10 pr-4 py-2 text-[13px] font-medium transition-all duration-200 border-l-2 ${
+                        subActive
+                          ? 'border-primary bg-primary/10 text-primary'
+                          : 'border-transparent text-muted-foreground hover:bg-secondary/50 hover:text-foreground'
+                      }`}
+                    >
+                      <SubIcon className="h-4 w-4 shrink-0" />
+                      <span className="truncate">{sub.label}</span>
+                    </Link>
+                  )
+                })}
+          </div>
+        )}
         {navAfterClient.map(renderNavItem)}
         {configuracoesGroupVisible && (
           <div key="configuracoes-group">
@@ -715,7 +799,10 @@ export default function Layout() {
                 ...dashboardSubmenuItems,
                 ...clientSubmenuItems,
                 ...chamadosSubmenuItems,
+                ...changesSubmenuItems,
+                ...problemsSubmenuItems,
                 ...visitsN2SubmenuItems,
+                ...relatoriosSubmenuItems,
                 ...configuracoesSubmenuItems,
               ].find((i) => i.path === location.pathname)?.label || 'Painel'}
             </h1>
