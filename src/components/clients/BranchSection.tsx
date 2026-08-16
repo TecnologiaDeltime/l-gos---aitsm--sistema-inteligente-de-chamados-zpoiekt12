@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Badge } from '@/components/ui/badge'
 import {
   AlertDialog,
   AlertDialogContent,
@@ -11,7 +12,7 @@ import {
   AlertDialogCancel,
   AlertDialogAction,
 } from '@/components/ui/alert-dialog'
-import { Plus, Pencil, Trash2, MapPin, Phone, User } from 'lucide-react'
+import { Plus, Pencil, Trash2, MapPin, Phone, User, Building2 } from 'lucide-react'
 import {
   getCompanyUnitsByCompany,
   deleteCompanyUnit,
@@ -71,19 +72,41 @@ export function BranchSection({ clientId }: { clientId?: string }) {
     }
   }
 
+  const buildAddress = (b: CompanyUnitRecord) => {
+    const parts: string[] = []
+    if (b.address_street) {
+      parts.push(`${b.address_street}, ${b.address_number || 'S/N'}`)
+    }
+    if (b.address_complement) parts.push(b.address_complement)
+    if (b.address_neighborhood) parts.push(b.address_neighborhood)
+    if (b.address_city) parts.push(`${b.address_city}/${b.address_state || ''}`)
+    return parts.join(' - ')
+  }
+
   if (!clientId) {
     return (
-      <div className="rounded-xl border bg-white p-6 dark:bg-slate-900">
-        <h3 className="text-base font-bold mb-2">Filiais</h3>
+      <div className="rounded-xl border bg-white p-4 dark:bg-slate-900 space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <h3 className="text-base font-bold">Filiais</h3>
+          </div>
+        </div>
         <p className="text-sm text-slate-500">Salve o cliente primeiro para gerenciar filiais.</p>
       </div>
     )
   }
 
   return (
-    <div className="rounded-xl border bg-white p-6 dark:bg-slate-900 space-y-4">
+    <div className="rounded-xl border bg-white p-4 dark:bg-slate-900 space-y-3">
       <div className="flex items-center justify-between">
-        <h3 className="text-base font-bold">Filiais</h3>
+        <div className="flex items-center gap-2">
+          <h3 className="text-base font-bold">Filiais</h3>
+          {branches.length > 0 && (
+            <Badge variant="secondary" className="h-5 px-1.5 text-xs">
+              {branches.length}
+            </Badge>
+          )}
+        </div>
         <Button
           size="sm"
           variant="outline"
@@ -99,61 +122,64 @@ export function BranchSection({ clientId }: { clientId?: string }) {
       {loading ? (
         <Skeleton className="h-20 w-full" />
       ) : branches.length === 0 ? (
-        <p className="text-sm text-slate-500 text-center py-4">Nenhuma filial cadastrada.</p>
+        <p className="text-sm text-slate-500 text-center py-3">Nenhuma filial cadastrada.</p>
       ) : (
-        <div className="space-y-2">
-          {branches.map((b) => (
-            <div
-              key={b.id}
-              className="flex items-start justify-between gap-2 rounded-lg border p-3"
-            >
-              <div className="space-y-1 text-sm">
-                <p className="font-semibold">{b.name}</p>
-                {b.address_street && (
-                  <p className="text-xs text-slate-500 flex items-center gap-1">
-                    <MapPin className="h-3 w-3" />
-                    {`${b.address_street}, ${b.address_number || 'S/N'}`}
-                    {b.address_complement && ` - ${b.address_complement}`}
-                    {b.address_neighborhood && ` - ${b.address_neighborhood}`}
-                    {b.address_city && ` - ${b.address_city}/${b.address_state || ''}`}
+        <div className="max-h-64 overflow-y-auto pr-1 -mr-1 space-y-0.5">
+          {branches.map((b) => {
+            const address = buildAddress(b)
+            return (
+              <div
+                key={b.id}
+                className="group flex items-start justify-between gap-2 rounded-md py-1 pl-2 pr-1 hover:bg-slate-50 dark:hover:bg-slate-800/60"
+              >
+                <div className="space-y-0.5 text-sm min-w-0">
+                  <p className="font-semibold flex items-center gap-1.5 truncate">
+                    <Building2 className="h-3.5 w-3.5 shrink-0 text-slate-400" />
+                    <span className="truncate">{b.name}</span>
                   </p>
-                )}
-                {b.phone && (
-                  <p className="text-xs text-slate-500 flex items-center gap-1">
-                    <Phone className="h-3 w-3" />
-                    {b.phone}
-                  </p>
-                )}
-                {b.manager_name && (
-                  <p className="text-xs text-slate-500 flex items-center gap-1">
-                    <User className="h-3 w-3" />
-                    {b.manager_name}
-                  </p>
-                )}
+                  {address && (
+                    <p className="text-xs text-slate-500 flex items-center gap-1 truncate">
+                      <MapPin className="h-3 w-3 shrink-0" />
+                      <span className="truncate">{address}</span>
+                    </p>
+                  )}
+                  {b.phone && (
+                    <p className="text-xs text-slate-500 flex items-center gap-1 truncate">
+                      <Phone className="h-3 w-3 shrink-0" />
+                      <span className="truncate">{b.phone}</span>
+                    </p>
+                  )}
+                  {b.manager_name && (
+                    <p className="text-xs text-slate-500 flex items-center gap-1 truncate">
+                      <User className="h-3 w-3 shrink-0" />
+                      <span className="truncate">{b.manager_name}</span>
+                    </p>
+                  )}
+                </div>
+                <div className="flex items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100 shrink-0">
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="h-6 w-6"
+                    onClick={() => {
+                      setEditing(b)
+                      setDialogOpen(true)
+                    }}
+                  >
+                    <Pencil className="h-3 w-3" />
+                  </Button>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="h-6 w-6 text-red-500"
+                    onClick={() => setDeleteId(b.id)}
+                  >
+                    <Trash2 className="h-3 w-3" />
+                  </Button>
+                </div>
               </div>
-              <div className="flex gap-1">
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  className="h-7 w-7"
-                  onClick={() => {
-                    setEditing(b)
-                    setDialogOpen(true)
-                  }}
-                >
-                  <Pencil className="h-3.5 w-3.5" />
-                </Button>
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  className="h-7 w-7 text-red-500"
-                  onClick={() => setDeleteId(b.id)}
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                </Button>
-              </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
       )}
 
