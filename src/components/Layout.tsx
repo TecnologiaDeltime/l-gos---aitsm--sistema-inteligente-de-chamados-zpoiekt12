@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom'
+import serviceOneLogo from '@/assets/chatgpt-image-16-de-ago.de-2026-194645-c96c2.png'
 import {
   LayoutDashboard,
   Ticket,
@@ -399,14 +400,14 @@ export default function Layout() {
 
   const navContent = (
     <div className="flex h-full flex-col bg-sidebar border-r border-sidebar-border">
-      <div className="flex h-16 items-center gap-2.5 px-5 border-b border-border">
-        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary">
-          <Shield className="h-5 w-5 text-primary-foreground" />
-        </div>
-        <div>
-          <span className="font-bold text-base text-foreground tracking-tight">Sistema ITSM</span>
-          <p className="text-[10px] text-muted-foreground font-medium">Gestão de Chamados</p>
-        </div>
+      <div className="flex h-16 items-center px-4 border-b border-border">
+        <Link to="/" className="flex items-center gap-2.5">
+          <img
+            src={serviceOneLogo}
+            alt="ServiceOne Logo"
+            className="h-9 w-auto max-w-[180px] object-contain"
+          />
+        </Link>
       </div>
 
       <nav className="sidebar-scroll flex-1 overflow-y-auto py-2 scroll-smooth">
@@ -765,9 +766,7 @@ export default function Layout() {
       </nav>
 
       <div className="px-5 py-3 border-t border-border">
-        <p className="text-[10px] text-muted-foreground font-medium">
-          Sistema ITSM v1.0 &copy; 2026
-        </p>
+        <p className="text-[10px] text-muted-foreground font-medium">ServiceOne v1.0 &copy; 2026</p>
       </div>
     </div>
   )

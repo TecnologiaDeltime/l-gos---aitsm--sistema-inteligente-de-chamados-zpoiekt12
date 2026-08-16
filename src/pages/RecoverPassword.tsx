@@ -1,8 +1,9 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Shield, Mail, ArrowLeft } from 'lucide-react'
+import { Mail, ArrowLeft } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import serviceOneLogo from '@/assets/chatgpt-image-16-de-ago.de-2026-194645-c96c2.png'
 
 export default function RecoverPassword() {
   const [sent, setSent] = useState(false)
@@ -16,11 +17,13 @@ export default function RecoverPassword() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-900 via-blue-950 to-purple-950 p-4">
       <div className="w-full max-w-md space-y-6 rounded-2xl bg-white p-8 shadow-2xl dark:bg-slate-900">
-        <div className="text-center space-y-2">
-          <div className="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-blue-600 text-white">
-            <Shield className="h-7 w-7" />
-          </div>
-          <h1 className="text-2xl font-bold">Recuperar Senha</h1>
+        <div className="flex flex-col items-center justify-center text-center space-y-2">
+          <img
+            src={serviceOneLogo}
+            alt="ServiceOne"
+            className="h-12 w-auto max-w-[240px] object-contain mb-1"
+          />
+          <h1 className="text-xl font-bold">Recuperar Senha</h1>
         </div>
 
         {sent ? (

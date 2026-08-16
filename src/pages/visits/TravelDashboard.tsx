@@ -9,6 +9,7 @@ import { exportToCsv } from '@/lib/export-utils'
 import { Button } from '@/components/ui/button'
 import { Download } from 'lucide-react'
 import { useRealtime } from '@/hooks/use-realtime'
+import { Badge } from '@/components/ui/badge'
 
 export default function TravelDashboard() {
   const [entries, setEntries] = useState<TravelEntryRecord[]>([])

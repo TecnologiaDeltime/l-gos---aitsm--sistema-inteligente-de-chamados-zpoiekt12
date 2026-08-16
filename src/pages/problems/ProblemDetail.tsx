@@ -1,6 +1,16 @@
 import { useEffect, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import { ArrowLeft, Plus, Trash2, History, Bug, Clock, FileCheck, GitBranch } from 'lucide-react'
+import {
+  ArrowLeft,
+  Plus,
+  Trash2,
+  History,
+  Bug,
+  Clock,
+  FileCheck,
+  GitBranch,
+  CheckCircle2,
+} from 'lucide-react'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -584,7 +594,7 @@ export default function ProblemDetail() {
             </div>
           </div>
           <Button size="sm" onClick={handleSaveRootCause}>
-            <CheckCircle2Icon className="mr-1.5 h-4 w-4" /> Salvar Causa Raiz
+            <CheckCircle2 className="mr-1.5 h-4 w-4" /> Salvar Causa Raiz
           </Button>
         </TabsContent>
         <TabsContent value="workaround" className="pt-4 space-y-3">
