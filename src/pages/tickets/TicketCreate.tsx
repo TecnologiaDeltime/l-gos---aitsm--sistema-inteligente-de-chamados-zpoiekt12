@@ -1,6 +1,15 @@
 import { useEffect, useState, useCallback, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Check, ChevronLeft, ChevronRight, ClipboardList, Loader2, Tag, User } from 'lucide-react'
+import {
+  Check,
+  ChevronLeft,
+  ChevronRight,
+  ClipboardList,
+  FileText,
+  Loader2,
+  Tag,
+  User,
+} from 'lucide-react'
 import {
   Select,
   SelectContent,
