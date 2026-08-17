@@ -48,6 +48,7 @@ import {
 import { InteractionEditDialog } from '@/components/InteractionEditDialog'
 import { DelegateDialog } from '@/components/DelegateDialog'
 import { ResolveTicketDialog } from '@/components/ResolveTicketDialog'
+import { HourReviewDialog } from '@/components/HourReviewDialog'
 import { getActiveTemplates, TicketTemplateRecord } from '@/services/ticket-templates'
 import { deleteInteractionWithReversal } from '@/services/ticket-interactions'
 import {
@@ -118,6 +119,7 @@ export default function TicketDetail() {
   const [showDelegate, setShowDelegate] = useState(false)
   const [categoryData, setCategoryData] = useState<CategoryRecord | null>(null)
   const [showResolve, setShowResolve] = useState(false)
+  const [showHourReview, setShowHourReview] = useState(false)
   const [showNoRecordsConfirm, setShowNoRecordsConfirm] = useState(false)
   const [showSlaPause, setShowSlaPause] = useState(false)
   const [commentTemplates, setCommentTemplates] = useState<TicketTemplateRecord[]>([])
@@ -330,7 +332,7 @@ export default function TicketDetail() {
     if (!hasTimeEntries && !hasComments) {
       setShowNoRecordsConfirm(true)
     } else {
-      setShowResolve(true)
+      setShowHourReview(true)
     }
   }
 
@@ -1030,6 +1032,15 @@ export default function TicketDetail() {
         onOpenChange={setShowDelegate}
         onDelegated={loadData}
       />
+      <HourReviewDialog
+        interactions={interactions}
+        open={showHourReview}
+        onOpenChange={setShowHourReview}
+        onProceed={() => setShowResolve(true)}
+        timerRunning={timerRunning}
+        timerDisplay={timerDisplay}
+        pendingTimeSpent={timeSpent}
+      />
       <ResolveTicketDialog
         ticketId={id!}
         open={showResolve}
@@ -1051,7 +1062,7 @@ export default function TicketDetail() {
               className="bg-red-600 hover:bg-red-700"
               onClick={() => {
                 setShowNoRecordsConfirm(false)
-                setShowResolve(true)
+                setShowHourReview(true)
               }}
             >
               Sim, encerrar
@@ -1093,7 +1104,7 @@ export default function TicketDetail() {
           if (!hasTimeEntries && !hasComments) {
             setShowNoRecordsConfirm(true)
           } else {
-            setShowResolve(true)
+            setShowHourReview(true)
           }
         }}
       />
