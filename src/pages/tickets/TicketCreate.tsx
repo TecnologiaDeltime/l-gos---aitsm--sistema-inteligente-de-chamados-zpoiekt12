@@ -130,6 +130,26 @@ export default function TicketCreate() {
     () => categories.filter((c) => c.parent === mainCategory && c.active !== false),
     [categories, mainCategory],
   )
+  // Contratos filtrados pela empresa selecionada (client-side)
+  const availableContracts = useMemo(
+    () => contracts.filter((c) => c.company === company),
+    [contracts, company],
+  )
+
+  const handleCompanyChange = useCallback(
+    (companyId: string) => {
+      setCompany(companyId)
+      // Limpa o contrato e refaz o filtro pela nova empresa
+      setContract('')
+      if (!companyId) return
+      const filtered = contracts.filter((c) => c.company === companyId)
+      if (filtered.length === 0) return
+      // Prefere o primeiro contrato "Ativo"; se não houver, o primeiro disponível
+      const active = filtered.find((c) => (c.status || '').toLowerCase() === 'ativo')
+      setContract((active || filtered[0]).id)
+    },
+    [contracts],
+  )
 
   useEffect(() => {
     const load = async () => {
@@ -373,7 +393,7 @@ export default function TicketCreate() {
             </div>
             <div className="space-y-2">
               <FieldLabel>Empresa / Cliente</FieldLabel>
-              <Select value={company} onValueChange={setCompany}>
+              <Select value={company} onValueChange={handleCompanyChange}>
                 <SelectTrigger className="rounded-lg">
                   <SelectValue placeholder="Selecione o cliente" />
                 </SelectTrigger>
@@ -578,12 +598,20 @@ export default function TicketCreate() {
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <FieldLabel>Contrato</FieldLabel>
-                <Select value={contract} onValueChange={setContract}>
+                <Select value={contract} onValueChange={setContract} disabled={!company}>
                   <SelectTrigger className="rounded-lg">
-                    <SelectValue placeholder="Selecione o contrato (opcional)" />
+                    <SelectValue
+                      placeholder={
+                        company
+                          ? availableContracts.length
+                            ? 'Selecione o contrato (opcional)'
+                            : 'Nenhum contrato para esta empresa'
+                          : 'Selecione uma empresa primeiro'
+                      }
+                    />
                   </SelectTrigger>
                   <SelectContent>
-                    {contracts.map((c) => (
+                    {availableContracts.map((c) => (
                       <SelectItem key={c.id} value={c.id}>
                         {c.number} — {c.expand?.company?.trade_name || 'N/A'}
                       </SelectItem>
