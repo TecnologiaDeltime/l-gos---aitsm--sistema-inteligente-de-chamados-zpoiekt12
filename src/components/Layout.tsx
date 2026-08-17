@@ -84,6 +84,7 @@ export default function Layout() {
   const [visitsN2MenuOpen, setVisitsN2MenuOpen] = useState(false)
   const [configuracoesMenuOpen, setConfiguracoesMenuOpen] = useState(false)
   const [relatoriosMenuOpen, setRelatoriosMenuOpen] = useState(false)
+  const [cmdbMenuOpen, setCmdbMenuOpen] = useState(false)
 
   useEffect(() => {
     if (user) {
@@ -142,8 +143,6 @@ export default function Layout() {
       icon: Star,
       show: permissions.canViewReports,
     },
-    { label: 'CMDB', path: '/cmdb', icon: Boxes, show: permissions.canViewCmdb },
-    { label: 'Ativos', path: '/cmdb/assets', icon: Server, show: permissions.canViewCmdb },
     { label: 'Base de Conhecimento', path: '/knowledge-base', icon: BookOpen, show: true },
     {
       label: 'Dashboard de Automações',
@@ -207,6 +206,17 @@ export default function Layout() {
   ]
 
   const chamadosGroupVisible = chamadosSubmenuItems.some((i) => i.show)
+
+  const cmdbSubmenuItems = [
+    { label: 'Ativos', path: '/cmdb/assets', icon: Server, show: permissions.canViewCmdb },
+    {
+      label: 'Itens de Configuração',
+      path: '/cmdb/configuration-items',
+      icon: Boxes,
+      show: permissions.canViewCmdb,
+    },
+  ]
+  const cmdbGroupVisible = permissions.canViewCmdb
 
   const changesSubmenuItems = [
     { label: 'Dashboard de Mudanças', path: '/changes', icon: LayoutDashboard, show: true },
@@ -316,7 +326,6 @@ export default function Layout() {
     },
     { label: 'Filas', path: '/queues', icon: Inbox, show: permissions.canManageQueues },
     { label: 'Equipe', path: '/team', icon: Users, show: permissions.canManageTeam },
-    { label: 'Tipos de Ativo', path: '/cmdb/types', icon: Tags, show: permissions.canManageCmdb },
     {
       label: 'Bloqueio de Clientes',
       path: '/blocking',
@@ -520,6 +529,50 @@ export default function Layout() {
             </div>
             {clientMenuOpen &&
               clientSubmenuItems
+                .filter((i) => i.show)
+                .map((sub) => {
+                  const SubIcon = sub.icon
+                  const subActive = location.pathname === sub.path
+                  return (
+                    <Link
+                      key={sub.path}
+                      to={sub.path}
+                      onClick={() => setMobileOpen(false)}
+                      className={`flex items-center gap-3 pl-10 pr-4 py-2 text-[13px] font-medium transition-all duration-200 border-l-2 ${
+                        subActive
+                          ? 'border-primary bg-primary/10 text-primary'
+                          : 'border-transparent text-muted-foreground hover:bg-secondary/50 hover:text-foreground'
+                      }`}
+                    >
+                      <SubIcon className="h-4 w-4 shrink-0" />
+                      <span className="truncate">{sub.label}</span>
+                    </Link>
+                  )
+                })}
+          </div>
+        )}
+        {cmdbGroupVisible && (
+          <div key="cmdb-group">
+            <div className="flex items-center">
+              <button
+                onClick={() => setCmdbMenuOpen(!cmdbMenuOpen)}
+                className={`flex flex-1 items-center gap-3 px-4 py-2.5 text-sm font-medium transition-all duration-200 border-l-2 ${
+                  cmdbSubmenuItems.some((i) => i.show && location.pathname === i.path)
+                    ? 'border-primary bg-primary/10 text-primary'
+                    : 'border-transparent text-muted-foreground hover:bg-secondary/50 hover:text-foreground'
+                }`}
+              >
+                <Server className="h-[18px] w-[18px] shrink-0" />
+                <span className="truncate">CMDB</span>
+                {cmdbMenuOpen ? (
+                  <ChevronDown className="ml-auto h-4 w-4" />
+                ) : (
+                  <ChevronRight className="ml-auto h-4 w-4" />
+                )}
+              </button>
+            </div>
+            {cmdbMenuOpen &&
+              cmdbSubmenuItems
                 .filter((i) => i.show)
                 .map((sub) => {
                   const SubIcon = sub.icon
@@ -797,6 +850,7 @@ export default function Layout() {
                 ...navItems,
                 ...dashboardSubmenuItems,
                 ...clientSubmenuItems,
+                ...cmdbSubmenuItems,
                 ...chamadosSubmenuItems,
                 ...changesSubmenuItems,
                 ...problemsSubmenuItems,

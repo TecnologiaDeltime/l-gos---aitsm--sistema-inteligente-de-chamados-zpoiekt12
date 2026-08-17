@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-17T22:36:09.837Z",
+  "generatedAt": "2026-08-17T23:00:37.473Z",
   "collections": [
     {
       "name": "users",
@@ -1390,7 +1390,7 @@
         "CREATE INDEX idx_tickets_priority ON tickets (priority)",
         "CREATE INDEX idx_tickets_sla_status ON tickets (sla_status)",
         "CREATE INDEX `idx_tickets_parent_ticket` ON `tickets` (parent_ticket_id)",
-        "CREATE INDEX idx_tickets_association_group ON tickets (association_group_id)"
+        "CREATE INDEX `idx_tickets_association_group` ON `tickets` (association_group_id)"
       ]
     },
     {

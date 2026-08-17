@@ -179,6 +179,7 @@ const App = () => (
               <Route path="/knowledge-base" element={<KnowledgeBase />} />
               <Route path="/cmdb" element={<CmdbDashboard />} />
               <Route path="/cmdb/assets" element={<CiList />} />
+              <Route path="/cmdb/configuration-items" element={<CiList />} />
               <Route path="/cmdb/assets/new" element={<CiCreate />} />
               <Route path="/cmdb/assets/:id" element={<CiDetail />} />
               <Route path="/cmdb/import" element={<CiImport />} />
