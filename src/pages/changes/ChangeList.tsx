@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { PlusCircle, Search } from 'lucide-react'
+import { PlusCircle, Search, Send, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -11,7 +11,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { getChanges, type ChangeRecord } from '@/services/changes'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import { getChanges, submitChangeForApproval, type ChangeRecord } from '@/services/changes'
 import { getChangeTypes, type ChangeTypeRecord } from '@/services/change-types'
 import {
   ChangeStatusBadge,
@@ -20,14 +28,18 @@ import {
 } from '@/components/ChangeStatusBadge'
 import { CHANGE_STATUSES } from '@/lib/change-constants'
 import { useRealtime } from '@/hooks/use-realtime'
+import { useToast } from '@/hooks/use-toast'
 
 export default function ChangeList() {
+  const { toast } = useToast()
   const [changes, setChanges] = useState<ChangeRecord[]>([])
   const [types, setTypes] = useState<ChangeTypeRecord[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
   const [typeFilter, setTypeFilter] = useState('all')
+  const [submitTarget, setSubmitTarget] = useState<ChangeRecord | null>(null)
+  const [submitting, setSubmitting] = useState(false)
 
   const loadData = async () => {
     try {
@@ -44,6 +56,26 @@ export default function ChangeList() {
     loadData()
   }, [])
   useRealtime('changes', () => loadData())
+
+  const handleConfirmSubmit = async () => {
+    if (!submitTarget) return
+    setSubmitting(true)
+    try {
+      await submitChangeForApproval(submitTarget.id)
+      toast({ title: 'Requisição enviada para aprovação do comitê' })
+      setSubmitTarget(null)
+      await loadData()
+    } catch (err: any) {
+      toast({
+        title: 'Erro ao enviar para aprovação',
+        description:
+          err?.message || err?.response?.message || 'Não foi possível enviar a requisição.',
+        variant: 'destructive',
+      })
+    } finally {
+      setSubmitting(false)
+    }
+  }
 
   const filtered = changes.filter((c) => {
     const ms =
@@ -122,12 +154,13 @@ export default function ChangeList() {
                 <th className="px-4 py-3">Status</th>
                 <th className="px-4 py-3">Solicitante</th>
                 <th className="px-4 py-3">Responsável</th>
+                <th className="px-4 py-3 text-right">Ações</th>
               </tr>
             </thead>
             <tbody className="divide-y">
               {filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="p-8 text-center">
+                  <td colSpan={9} className="p-8 text-center">
                     Nenhuma mudança encontrada.
                   </td>
                 </tr>
@@ -161,6 +194,19 @@ export default function ChangeList() {
                     <td className="px-4 py-3">
                       {c.expand?.responsible?.name || c.expand?.assigned_to?.name || '-'}
                     </td>
+                    <td className="px-4 py-3 text-right">
+                      {c.status === 'Rascunho' && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-8"
+                          onClick={() => setSubmitTarget(c)}
+                        >
+                          <Send className="mr-1.5 h-3.5 w-3.5" />
+                          Enviar para Aprovação
+                        </Button>
+                      )}
+                    </td>
                   </tr>
                 ))
               )}
@@ -168,6 +214,40 @@ export default function ChangeList() {
           </table>
         </div>
       </div>
+
+      <Dialog
+        open={!!submitTarget}
+        onOpenChange={(open) => {
+          if (!submitting) setSubmitTarget(open ? submitTarget : null)
+        }}
+      >
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Enviar para Aprovação</DialogTitle>
+            <DialogDescription>
+              Deseja enviar esta Requisição de Mudança para aprovação do comitê?
+              {submitTarget && (
+                <span className="block mt-1 font-medium text-foreground">
+                  {submitTarget.number} - {submitTarget.title}
+                </span>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" disabled={submitting} onClick={() => setSubmitTarget(null)}>
+              Cancelar
+            </Button>
+            <Button disabled={submitting} onClick={handleConfirmSubmit}>
+              {submitting ? (
+                <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+              ) : (
+                <Send className="mr-1.5 h-4 w-4" />
+              )}
+              Enviar para Aprovação
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

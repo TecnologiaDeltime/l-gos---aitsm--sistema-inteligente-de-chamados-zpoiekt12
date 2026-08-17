@@ -90,6 +90,12 @@ export const decideChangeApproval = (changeId: string, decision: string, comment
     headers: { 'Content-Type': 'application/json' },
   })
 
+// Submete uma RDM em Rascunho para o fluxo de aprovação do comitê
+export const submitChangeForApproval = (changeId: string) =>
+  pb.send(`/backend/v1/changes/${changeId}/submit`, {
+    method: 'POST',
+  })
+
 export const getMyChanges = (userId: string) =>
   pb.collection('changes').getFullList<ChangeRecord>({
     filter: `requester = "${userId}" || responsible = "${userId}" || assigned_to = "${userId}"`,

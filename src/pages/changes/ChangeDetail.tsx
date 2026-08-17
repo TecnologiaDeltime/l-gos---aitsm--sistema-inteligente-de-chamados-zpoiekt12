@@ -15,6 +15,7 @@ import {
   Crown,
   Users,
   ShieldAlert,
+  Send,
 } from 'lucide-react'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Button } from '@/components/ui/button'
@@ -29,11 +30,20 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import {
   getChange,
   getChangeAuditLogs,
   getChangeApprovals,
   updateChange,
   decideChangeApproval,
+  submitChangeForApproval,
   type ChangeRecord,
 } from '@/services/changes'
 import { getCommitteeByCompanyAndType } from '@/services/change-committee'
@@ -58,6 +68,8 @@ export default function ChangeDetail() {
   const [voteComment, setVoteComment] = useState('')
   const [processing, setProcessing] = useState<string | null>(null)
   const [now, setNow] = useState(() => Date.now())
+  const [showSubmit, setShowSubmit] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
 
   // tick a cada minuto para atualizar o contador regressivo
   useEffect(() => {
@@ -173,6 +185,28 @@ export default function ChangeDetail() {
     }
   }
 
+  const handleSubmitForApproval = async () => {
+    if (!id) return
+    setSubmitting(true)
+    try {
+      await submitChangeForApproval(id)
+      toast({ title: 'Requisição enviada para aprovação do comitê' })
+      setShowSubmit(false)
+      loadData()
+    } catch (err: any) {
+      toast({
+        title: 'Erro ao enviar para aprovação',
+        description:
+          err?.message ||
+          err?.response?.message ||
+          'Não foi possível enviar a requisição para aprovação.',
+        variant: 'destructive',
+      })
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
   if (!change) return <Skeleton className="h-96 w-full rounded-xl" />
 
   return (
@@ -191,11 +225,19 @@ export default function ChangeDetail() {
           <div className="flex items-center gap-2">
             <ChangePriorityBadge priority={change.priority} />
             <ChangeStatusBadge status={change.status} />
+            {change.status === 'Rascunho' && (
+              <Button size="sm" className="h-8" onClick={() => setShowSubmit(true)}>
+                <Send className="mr-1.5 h-4 w-4" />
+                Enviar para Aprovação
+              </Button>
+            )}
           </div>
         </div>
         <p className="text-xs text-muted-foreground">
           Aberto por{' '}
-          <span className="font-semibold text-foreground">{change.expand?.requester?.name}</span> em{' '}
+          <span className="font-semibold text-foreground">
+            {change.expand?.requester?.name}
+          </span> em{' '}
           {new Date(change.created).toLocaleString('pt-BR')}
         </p>
         <div className="rounded-lg bg-muted p-4 text-sm text-muted-foreground border border-border">
@@ -581,6 +623,35 @@ export default function ChangeDetail() {
           </div>
         </div>
       </div>
+
+      <Dialog
+        open={showSubmit}
+        onOpenChange={(open) => {
+          if (!submitting) setShowSubmit(open)
+        }}
+      >
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Enviar para Aprovação</DialogTitle>
+            <DialogDescription>
+              Deseja enviar esta Requisição de Mudança para aprovação do comitê?
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" disabled={submitting} onClick={() => setShowSubmit(false)}>
+              Cancelar
+            </Button>
+            <Button disabled={submitting} onClick={handleSubmitForApproval}>
+              {submitting ? (
+                <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+              ) : (
+                <Send className="mr-1.5 h-4 w-4" />
+              )}
+              Enviar para Aprovação
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
