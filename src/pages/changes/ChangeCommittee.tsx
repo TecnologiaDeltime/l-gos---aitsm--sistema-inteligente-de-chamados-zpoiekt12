@@ -80,6 +80,7 @@ export default function ChangeCommittee() {
   const [selectedMembers, setSelectedMembers] = useState<string[]>([])
   const [memberType, setMemberType] = useState<Record<string, 'user' | 'client_contact'>>({})
   const [active, setActive] = useState(true)
+  const [votingDeadlineHours, setVotingDeadlineHours] = useState(48)
   const [saving, setSaving] = useState(false)
 
   const loadData = () => {
@@ -172,6 +173,7 @@ export default function ChangeCommittee() {
     setSelectedMembers([])
     setMemberType({})
     setActive(true)
+    setVotingDeadlineHours(48)
     setOpen(true)
   }
 
@@ -185,6 +187,7 @@ export default function ChangeCommittee() {
     setSelectedMembers(c.members || [])
     setMemberType(c.member_type || {})
     setActive(c.active ?? true)
+    setVotingDeadlineHours(c.voting_deadline_hours ?? 48)
     setOpen(true)
   }
 
@@ -284,6 +287,7 @@ export default function ChangeCommittee() {
         chairperson,
         member_type: memberType,
         active,
+        voting_deadline_hours: votingDeadlineHours,
       }
       if (editTarget) {
         await updateCommittee(editTarget.id, payload)
@@ -399,6 +403,9 @@ export default function ChangeCommittee() {
                   <div className="text-[10px] text-muted-foreground">
                     Regra:{' '}
                     {c.voting_rule || (isEmerg ? 'Presidente Unilateral' : 'Maioria Simples')}
+                  </div>
+                  <div className="text-[10px] text-muted-foreground">
+                    Prazo: {c.voting_deadline_hours ? c.voting_deadline_hours + 'h' : '48h'}
                   </div>
                   <div className="flex justify-end gap-1 pt-1 border-t">
                     <Button size="sm" variant="ghost" onClick={() => openEdit(c)}>
@@ -550,6 +557,22 @@ export default function ChangeCommittee() {
             <div className="flex items-center gap-2">
               <Switch checked={active} onCheckedChange={setActive} />
               <Label className="text-xs">Ativo</Label>
+            </div>
+
+            <div>
+              <Label className="text-xs">Prazo de Votação (horas)</Label>
+              <Input
+                type="number"
+                min={1}
+                value={votingDeadlineHours}
+                onChange={(e) =>
+                  setVotingDeadlineHours(Math.max(1, parseInt(e.target.value || '48', 10) || 48))
+                }
+              />
+              <p className="text-[10px] text-muted-foreground mt-1">
+                Tempo que os membros têm para votar após a RDM ser enviada para aprovação. Padrão:
+                48h.
+              </p>
             </div>
           </div>
           <DialogFooter>

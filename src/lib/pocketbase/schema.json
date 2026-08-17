@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-17T00:59:46.050Z",
+  "generatedAt": "2026-08-17T02:14:55.865Z",
   "collections": [
     {
       "name": "users",
@@ -6300,6 +6300,12 @@
           "type": "json",
           "required": false,
           "system": false
+        },
+        {
+          "name": "voting_deadline_hours",
+          "type": "number",
+          "required": false,
+          "system": false
         }
       ],
       "indexes": [
@@ -6565,6 +6571,18 @@
         },
         {
           "name": "risk_executing",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "voting_deadline_at",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "escalation_reason",
           "type": "text",
           "required": false,
           "system": false

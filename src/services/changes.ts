@@ -35,6 +35,8 @@ export interface ChangeRecord {
   approved_by?: string
   approved_at?: string
   committee_decision?: string
+  voting_deadline_at?: string
+  escalation_reason?: string
   created: string
   updated: string
   expand?: any

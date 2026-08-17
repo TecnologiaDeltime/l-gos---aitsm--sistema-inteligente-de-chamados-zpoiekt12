@@ -18,6 +18,7 @@ export interface ChangeCommitteeRecord {
   max_members?: number
   voting_rule?: 'Presidente Unilateral' | 'Maioria Simples'
   member_type?: CommitteeMemberType
+  voting_deadline_hours?: number
   created: string
   updated: string
   expand?: any

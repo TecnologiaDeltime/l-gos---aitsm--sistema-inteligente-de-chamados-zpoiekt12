@@ -22,6 +22,16 @@ routerAdd(
       )
       if (approvals.length === 0) return e.notFoundError('No pending approval found')
 
+      var change = $app.findRecordById('changes', changeId)
+      // Verificar se o prazo de votação já expirou ANTES de registrar o voto
+      var deadlineStr = change.getString('voting_deadline_at')
+      if (deadlineStr) {
+        var deadlineTime = new Date(deadlineStr).getTime()
+        if (!isNaN(deadlineTime) && deadlineTime > 0 && new Date().getTime() > deadlineTime) {
+          return e.badRequestError('O prazo de votação expirou. Esta mudança foi escalonada.')
+        }
+      }
+
       approvals.forEach(function (a) {
         a.set('status', decision)
         a.set('vote_type', decision)
@@ -30,7 +40,6 @@ routerAdd(
         $app.save(a)
       })
 
-      var change = $app.findRecordById('changes', changeId)
       var oldStatus = change.getString('status')
       var oldApprovalStatus = change.getString('approval_status')
       var companyId = change.getString('company')

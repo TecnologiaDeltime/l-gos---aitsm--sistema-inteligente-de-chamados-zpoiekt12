@@ -14,6 +14,7 @@ import {
   Loader2,
   Crown,
   Users,
+  ShieldAlert,
 } from 'lucide-react'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Button } from '@/components/ui/button'
@@ -56,6 +57,40 @@ export default function ChangeDetail() {
   const [committee, setCommittee] = useState<any | null>(null)
   const [voteComment, setVoteComment] = useState('')
   const [processing, setProcessing] = useState<string | null>(null)
+  const [now, setNow] = useState(() => Date.now())
+
+  // tick a cada minuto para atualizar o contador regressivo
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 60000)
+    return () => clearInterval(t)
+  }, [])
+
+  const deadlineInfo = useMemo(() => {
+    const dl = change?.voting_deadline_at
+    if (!dl) return null
+    const ts = new Date(dl).getTime()
+    if (isNaN(ts)) return null
+    const diff = ts - now
+    const expired = diff <= 0
+    const totalMinutes = Math.abs(Math.floor(diff / 60000))
+    const days = Math.floor(totalMinutes / (60 * 24))
+    const hours = Math.floor((totalMinutes % (60 * 24)) / 60)
+    const mins = totalMinutes % 60
+    let remaining = ''
+    if (days > 0) remaining = `${days}d ${hours}h ${mins}min`
+    else if (hours > 0) remaining = `${hours}h ${mins}min`
+    else remaining = `${mins}min`
+    let status: 'ok' | 'warn' | 'expired' = 'ok'
+    if (expired) status = 'expired'
+    else if (diff <= 6 * 3600 * 1000) status = 'warn'
+    return {
+      ts,
+      expired,
+      remaining,
+      status,
+      label: expired ? 'Expirado' : status === 'warn' ? 'Próximo do fim' : 'Dentro do prazo',
+    }
+  }, [change?.voting_deadline_at, now])
 
   const loadData = () => {
     if (!id) return
@@ -127,8 +162,12 @@ export default function ChangeDetail() {
       })
       setVoteComment('')
       loadData()
-    } catch {
-      toast({ title: 'Erro ao registrar voto', variant: 'destructive' })
+    } catch (err: any) {
+      toast({
+        title: 'Erro ao registrar voto',
+        description: err?.message || err?.response?.message || 'Não foi possível registrar o voto.',
+        variant: 'destructive',
+      })
     } finally {
       setProcessing(null)
     }
@@ -275,6 +314,69 @@ export default function ChangeDetail() {
           </Tabs>
         </div>
         <div className="space-y-4">
+          {deadlineInfo && change.approval_status === 'Pendente' && (
+            <div
+              className={
+                'itsm-card p-4 space-y-2 border-l-4 ' +
+                (deadlineInfo.status === 'expired'
+                  ? 'border-l-red-500'
+                  : deadlineInfo.status === 'warn'
+                    ? 'border-l-amber-500'
+                    : 'border-l-green-500')
+              }
+            >
+              <div className="flex items-center justify-between">
+                <h3 className="font-semibold text-sm flex items-center gap-2">
+                  <Clock className="h-4 w-4" /> Prazo de Votação
+                </h3>
+                <Badge
+                  className={
+                    deadlineInfo.status === 'expired'
+                      ? 'bg-red-100 text-red-700 hover:bg-red-100'
+                      : deadlineInfo.status === 'warn'
+                        ? 'bg-amber-100 text-amber-700 hover:bg-amber-100'
+                        : 'bg-green-100 text-green-700 hover:bg-green-100'
+                  }
+                >
+                  {deadlineInfo.label}
+                </Badge>
+              </div>
+              <div className="text-xs space-y-1">
+                <div className="text-muted-foreground">
+                  Data/hora limite:{' '}
+                  <span className="font-medium text-foreground">
+                    {new Date(deadlineInfo.ts).toLocaleString('pt-BR')}
+                  </span>
+                </div>
+                <div
+                  className={
+                    'font-medium ' +
+                    (deadlineInfo.status === 'expired'
+                      ? 'text-red-600'
+                      : deadlineInfo.status === 'warn'
+                        ? 'text-amber-600'
+                        : 'text-green-600')
+                  }
+                >
+                  {deadlineInfo.expired
+                    ? `Expirado há ${deadlineInfo.remaining}`
+                    : `Restam ${deadlineInfo.remaining}`}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {change.escalation_reason && (
+            <div className="itsm-card p-4 space-y-1 border-l-4 border-l-orange-500">
+              <h3 className="font-semibold text-sm flex items-center gap-2">
+                <ShieldAlert className="h-4 w-4" /> Escalonamento
+              </h3>
+              <p className="text-xs text-muted-foreground whitespace-pre-line">
+                {change.escalation_reason}
+              </p>
+            </div>
+          )}
+
           {change.status === 'Aguardando Aprovação' && (
             <div className="itsm-card p-4 space-y-3">
               <h3 className="font-semibold text-sm border-b pb-2 flex items-center gap-2">

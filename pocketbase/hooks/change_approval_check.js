@@ -161,6 +161,16 @@ onRecordAfterCreateSuccess((e) => {
     var changeRec = $app.findRecordById('changes', change.id)
     changeRec.set('approval_status', 'Pendente')
     changeRec.set('status', 'Aguardando Aprovação')
+
+    // Prazo de votação: agora + voting_deadline_hours do comitê (default 48h)
+    var deadlineHours = 48
+    if (committee) {
+      var dh = committee.get('voting_deadline_hours')
+      if (dh && !isNaN(dh) && dh > 0) deadlineHours = dh
+    }
+    var deadlineAt = new Date()
+    deadlineAt.setHours(deadlineAt.getHours() + deadlineHours)
+    changeRec.set('voting_deadline_at', deadlineAt.toISOString())
     $app.save(changeRec)
 
     var auditCol = $app.findCollectionByNameOrId('change_audit_logs')
@@ -182,10 +192,17 @@ onRecordAfterCreateSuccess((e) => {
         var notif = new Record(notifCol)
         notif.set('user', mu.id)
         notif.set('title', 'Nova mudança pendente de aprovação')
-        notif.set(
-          'message',
-          'Mudança #' + change.getString('number') + ' (' + committeeType + ') requer seu voto',
-        )
+        var notifMsg =
+          'Mudança #' + change.getString('number') + ' (' + committeeType + ') requer seu voto'
+        if (deadlineAt) {
+          notifMsg +=
+            ' — prazo de votação até ' +
+            deadlineAt.toLocaleString('pt-BR') +
+            ' (' +
+            deadlineHours +
+            'h)'
+        }
+        notif.set('message', notifMsg)
         notif.set('type', 'Aprovação')
         notif.set('read', false)
         $app.save(notif)
@@ -234,7 +251,14 @@ onRecordAfterCreateSuccess((e) => {
           'Link: ' +
           link +
           '\n\n' +
-          'Por favor, acesse o sistema para registrar seu voto (Aprovar / Recusar / Solicitar Revisão).'
+          'Por favor, acesse o sistema para registrar seu voto (Aprovar / Recusar / Solicitar Revisão).' +
+          (deadlineAt
+            ? '\n\nPrazo de votação: ' +
+              deadlineAt.toLocaleString('pt-BR') +
+              ' (' +
+              deadlineHours +
+              'h)'
+            : '')
 
         var message = new MailMessage()
         message.from = { address: 'noreply@serviceone.com.br', name: 'ServiceOne' }

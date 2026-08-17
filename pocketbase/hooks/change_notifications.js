@@ -116,7 +116,26 @@ onRecordAfterUpdateSuccess((e) => {
   var subject = ''
   var bodyText = ''
 
-  if (newStatus === 'Em Execução') {
+  if (newStatus === 'Aguardando Aprovação' && oldStatus === 'Rascunho') {
+    // RDM enviada para aprovação a partir de rascunho — notificar membros com o prazo
+    var deadlineStr = record.getString('voting_deadline_at')
+    var deadlineLine = ''
+    if (deadlineStr) {
+      try {
+        deadlineLine = '\nPrazo de votação: ' + new Date(deadlineStr).toLocaleString('pt-BR')
+      } catch (_) {}
+    }
+    subject = '[Comitê] Mudança #' + changeNumber + ' enviada para aprovação'
+    bodyText =
+      'A mudança #' +
+      changeNumber +
+      ' - ' +
+      changeTitle +
+      ' foi enviada para aprovação do comitê.' +
+      deadlineLine +
+      '\n\nLink: ' +
+      link
+  } else if (newStatus === 'Em Execução') {
     subject = '[Comitê] Mudança #' + changeNumber + ' iniciou execução'
     bodyText =
       'A mudança #' +
