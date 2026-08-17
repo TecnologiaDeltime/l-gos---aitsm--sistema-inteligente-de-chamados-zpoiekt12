@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { Mail, Lock, Loader2 } from 'lucide-react'
+import { ClientResponseError } from 'pocketbase'
 import { useAuth } from '@/hooks/use-auth'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -24,9 +25,25 @@ export default function Login() {
     setLoading(false)
 
     if (error) {
+      // Surface the real backend message instead of a generic string, so
+      // the user knows whether it's a bad password, a disabled account, etc.
+      let description = 'Verifique suas credenciais de e-mail e senha.'
+      if (error instanceof ClientResponseError) {
+        const status = error.status
+        if (status === 0 || error.isAbort) {
+          description =
+            'Não foi possível conectar ao servidor. Verifique sua conexão e tente novamente.'
+        } else if (error.response?.message) {
+          description = error.response.message
+        } else if (error.message) {
+          description = error.message
+        }
+      } else if (error instanceof Error && error.message) {
+        description = error.message
+      }
       toast({
         title: 'Falha no login',
-        description: 'Verifique suas credenciais de e-mail e senha.',
+        description,
         variant: 'destructive',
       })
     } else {
