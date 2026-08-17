@@ -108,6 +108,7 @@ export default function TicketDetail() {
   const [showDelegate, setShowDelegate] = useState(false)
   const [categoryData, setCategoryData] = useState<CategoryRecord | null>(null)
   const [showResolve, setShowResolve] = useState(false)
+  const [showNoRecordsConfirm, setShowNoRecordsConfirm] = useState(false)
   const [showSlaPause, setShowSlaPause] = useState(false)
   const [commentTemplates, setCommentTemplates] = useState<TicketTemplateRecord[]>([])
   const [selectedCommentTemplate, setSelectedCommentTemplate] =
@@ -283,6 +284,16 @@ export default function TicketDetail() {
     toast({ title: 'SLA Retomado' })
   }
 
+  const handleResolveClick = () => {
+    const hasTimeEntries = interactions.some((i) => (i.duration_minutes || 0) > 0)
+    const hasComments = interactions.some((i) => i.content && i.content.trim().length > 0)
+    if (!hasTimeEntries && !hasComments) {
+      setShowNoRecordsConfirm(true)
+    } else {
+      setShowResolve(true)
+    }
+  }
+
   const handleStartService = async () => {
     if (!id) return
     try {
@@ -431,7 +442,7 @@ export default function TicketDetail() {
               <Button
                 size="sm"
                 className="bg-emerald-600 hover:bg-emerald-700"
-                onClick={() => setShowResolve(true)}
+                onClick={handleResolveClick}
               >
                 <CheckCircle2 className="mr-1.5 h-4 w-4" /> Resolver
               </Button>
@@ -888,6 +899,29 @@ export default function TicketDetail() {
         onOpenChange={setShowResolve}
         onResolved={loadData}
       />
+      <AlertDialog open={showNoRecordsConfirm} onOpenChange={setShowNoRecordsConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Nenhum registro encontrado</AlertDialogTitle>
+            <AlertDialogDescription>
+              Este chamado não possui horas lançadas ou comentários. Deseja realmente encerrá-lo
+              mesmo assim?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-red-600 hover:bg-red-700"
+              onClick={() => {
+                setShowNoRecordsConfirm(false)
+                setShowResolve(true)
+              }}
+            >
+              Sim, encerrar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
       <SlaPauseDialog
         open={showSlaPause}
         onOpenChange={setShowSlaPause}
