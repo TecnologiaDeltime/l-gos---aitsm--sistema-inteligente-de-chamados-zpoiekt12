@@ -49,9 +49,48 @@ export function Stopwatch({ ticketId }: { ticketId: string }) {
   const handleStart = () => {
     startRef.current = new Date()
     setRunning(true)
+    if (user) {
+      createInteraction({
+        ticket: ticketId,
+        author: user.id,
+        type: 'Interno',
+        content: 'Cronômetro iniciado — registro de horas em andamento',
+        origin: 'Cronômetro',
+        duration_minutes: 0,
+        hour_type: hourType,
+        billing_status: billingStatus,
+      })
+        .then(() => toast({ title: 'Cronômetro iniciado — horas em registro' }))
+        .catch(() =>
+          toast({
+            title: 'Erro ao registrar início do cronômetro',
+            variant: 'destructive',
+          }),
+        )
+    }
   }
   const handlePause = () => {
     setRunning(false)
+    const durationMinutes = Math.max(0, Math.round(elapsed / 60))
+    if (user) {
+      createInteraction({
+        ticket: ticketId,
+        author: user.id,
+        type: 'Interno',
+        content: `Cronômetro pausado — ${formatTime(elapsed)} registrado(s)`,
+        origin: 'Cronômetro',
+        duration_minutes: durationMinutes,
+        hour_type: hourType,
+        billing_status: billingStatus,
+      })
+        .then(() => toast({ title: 'Cronômetro pausado — horas registradas' }))
+        .catch(() =>
+          toast({
+            title: 'Erro ao registrar pausa do cronômetro',
+            variant: 'destructive',
+          }),
+        )
+    }
   }
 
   const handleStop = useCallback(async () => {
