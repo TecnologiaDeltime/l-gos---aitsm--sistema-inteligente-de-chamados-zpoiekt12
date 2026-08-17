@@ -87,6 +87,19 @@ export default function ChangeCreate() {
       .catch(() => {})
   }, [])
 
+  const selectedType = types.find((t) => t.id === form.change_type)
+  const isStandardType = selectedType?.is_standard === true
+
+  const handleTypeChange = (v: string) => {
+    const t = types.find((x) => x.id === v)
+    // Ao trocar para um tipo que não seja "Mudança Padrão", limpa a seleção do catálogo
+    if (!t?.is_standard) {
+      setForm((prev) => ({ ...prev, change_type: v, template: '' }))
+    } else {
+      setForm((prev) => ({ ...prev, change_type: v }))
+    }
+  }
+
   const handleTemplateChange = (id: string) => {
     setForm({ ...form, template: id })
     const tmpl = templates.find((t) => t.id === id)
@@ -94,6 +107,8 @@ export default function ChangeCreate() {
       setForm((prev) => ({
         ...prev,
         template: id,
+        title: tmpl.name || prev.title,
+        description: tmpl.description || prev.description,
         priority: tmpl.default_priority || prev.priority,
         impact: tmpl.default_impact || prev.impact,
         urgency: tmpl.default_urgency || prev.urgency,
@@ -175,7 +190,7 @@ export default function ChangeCreate() {
       >
         <ChevronLeft className="h-4 w-4" /> Voltar
       </Link>
-      <h1 className="text-xl font-bold">Nova Solicitação de Mudança</h1>
+      <h1 className="text-xl font-bold">Nova Requisição de Mudança (RDM)</h1>
       <form onSubmit={handleSubmit} className="space-y-4 rounded-xl border bg-card p-6 shadow-sm">
         <div>
           <Label className="text-sm">Título *</Label>
@@ -195,10 +210,7 @@ export default function ChangeCreate() {
         <div className="grid gap-3 sm:grid-cols-2">
           <div>
             <Label className="text-xs">Tipo de Mudança</Label>
-            <Select
-              value={form.change_type}
-              onValueChange={(v) => setForm({ ...form, change_type: v })}
-            >
+            <Select value={form.change_type} onValueChange={handleTypeChange}>
               <SelectTrigger>
                 <SelectValue placeholder="Selecione" />
               </SelectTrigger>
@@ -211,21 +223,23 @@ export default function ChangeCreate() {
               </SelectContent>
             </Select>
           </div>
-          <div>
-            <Label className="text-xs">Modelo</Label>
-            <Select value={form.template} onValueChange={handleTemplateChange}>
-              <SelectTrigger>
-                <SelectValue placeholder="Selecione (opcional)" />
-              </SelectTrigger>
-              <SelectContent>
-                {templates.map((t) => (
-                  <SelectItem key={t.id} value={t.id}>
-                    {t.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          {isStandardType && (
+            <div>
+              <Label className="text-xs">Catálogo de Mudança Padrão</Label>
+              <Select value={form.template} onValueChange={handleTemplateChange}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione um item do catálogo" />
+                </SelectTrigger>
+                <SelectContent>
+                  {templates.map((t) => (
+                    <SelectItem key={t.id} value={t.id}>
+                      {t.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
         </div>
         <div className="grid gap-3 sm:grid-cols-3">
           <div>

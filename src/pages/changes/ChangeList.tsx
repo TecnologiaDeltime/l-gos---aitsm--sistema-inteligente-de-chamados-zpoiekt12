@@ -105,7 +105,7 @@ export default function ChangeList() {
         </div>
         <Link to="/changes/new">
           <Button className="bg-primary hover:bg-primary/90">
-            <PlusCircle className="mr-2 h-4 w-4" /> Nova Mudança
+            <PlusCircle className="mr-2 h-4 w-4" /> Nova Requisição de Mudança (RDM)
           </Button>
         </Link>
       </div>

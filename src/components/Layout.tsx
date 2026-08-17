@@ -210,7 +210,7 @@ export default function Layout() {
 
   const changesSubmenuItems = [
     { label: 'Dashboard de Mudanças', path: '/changes', icon: LayoutDashboard, show: true },
-    { label: 'Solicitações de Mudança', path: '/changes/list', icon: FileText, show: true },
+    { label: 'Requisições de Mudança (RDM)', path: '/changes/list', icon: FileText, show: true },
     { label: 'Minhas Mudanças', path: '/changes/my', icon: User, show: true },
     { label: 'Mudanças Pendentes de Aprovação', path: '/changes/pending', icon: Clock, show: true },
     { label: 'Calendário de Mudanças', path: '/changes/calendar', icon: CalendarClock, show: true },
@@ -222,7 +222,7 @@ export default function Layout() {
       show: permissions.isAdmin || permissions.isGestor,
     },
     {
-      label: 'Modelos de Mudança',
+      label: 'Catálogo de Mudança Padrão',
       path: '/changes/templates',
       icon: FileCheck,
       show: permissions.isAdmin || permissions.isGestor,

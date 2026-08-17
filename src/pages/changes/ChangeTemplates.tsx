@@ -114,10 +114,10 @@ export default function ChangeTemplates() {
     try {
       if (editTarget) {
         await updateChangeTemplate(editTarget.id, form)
-        toast({ title: 'Modelo atualizado!' })
+        toast({ title: 'Item do catálogo atualizado!' })
       } else {
         await createChangeTemplate(form)
-        toast({ title: 'Modelo criado!' })
+        toast({ title: 'Item do catálogo criado!' })
       }
       setOpen(false)
       loadData()
@@ -131,10 +131,10 @@ export default function ChangeTemplates() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-bold flex items-center gap-2">
-          <FileText className="h-5 w-5" /> Modelos de Mudança
+          <FileText className="h-5 w-5" /> Catálogo de Mudança Padrão
         </h2>
         <Button size="sm" onClick={openNew}>
-          <Plus className="mr-1 h-4 w-4" /> Novo Modelo
+          <Plus className="mr-1 h-4 w-4" /> Novo Item do Catálogo
         </Button>
       </div>
       <div className="grid gap-3 md:grid-cols-2">
@@ -152,7 +152,7 @@ export default function ChangeTemplates() {
                   onClick={() => {
                     deleteChangeTemplate(t.id)
                     loadData()
-                    toast({ title: 'Modelo removido' })
+                    toast({ title: 'Item do catálogo removido' })
                   }}
                 >
                   <Trash2 className="h-3.5 w-3.5 text-red-500" />
@@ -184,7 +184,9 @@ export default function ChangeTemplates() {
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{editTarget ? 'Editar Modelo' : 'Novo Modelo'}</DialogTitle>
+            <DialogTitle>
+              {editTarget ? 'Editar Item do Catálogo' : 'Novo Item do Catálogo'}
+            </DialogTitle>
           </DialogHeader>
           <div className="space-y-3">
             <div>
