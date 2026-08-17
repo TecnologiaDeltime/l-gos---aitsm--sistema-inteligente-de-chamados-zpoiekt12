@@ -1,19 +1,25 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import {
   ArrowLeft,
   History,
   CheckCircle2,
+  XCircle,
+  RefreshCw,
   FileCheck,
   User,
   Building2,
   Clock,
   GitBranch,
+  Loader2,
+  Crown,
+  Users,
 } from 'lucide-react'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Badge } from '@/components/ui/badge'
+import { Textarea } from '@/components/ui/textarea'
 import {
   Select,
   SelectContent,
@@ -21,14 +27,21 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { getChange, getChangeAuditLogs, updateChange, type ChangeRecord } from '@/services/changes'
+import {
+  getChange,
+  getChangeAuditLogs,
+  getChangeApprovals,
+  updateChange,
+  decideChangeApproval,
+  type ChangeRecord,
+} from '@/services/changes'
+import { getCommitteeByCompanyAndType } from '@/services/change-committee'
 import { CHANGE_STATUSES } from '@/lib/change-constants'
 import {
   ChangeStatusBadge,
   RiskLevelBadge,
   ChangePriorityBadge,
 } from '@/components/ChangeStatusBadge'
-import { formatHours } from '@/lib/duration'
 import { useAuth } from '@/hooks/use-auth'
 import { useRealtime } from '@/hooks/use-realtime'
 import { useToast } from '@/hooks/use-toast'
@@ -40,14 +53,32 @@ export default function ChangeDetail() {
   const [change, setChange] = useState<ChangeRecord | null>(null)
   const [auditLogs, setAuditLogs] = useState<any[]>([])
   const [approvals, setApprovals] = useState<any[]>([])
+  const [committee, setCommittee] = useState<any | null>(null)
+  const [voteComment, setVoteComment] = useState('')
+  const [processing, setProcessing] = useState<string | null>(null)
 
   const loadData = () => {
     if (!id) return
     getChange(id)
-      .then(setChange)
+      .then((c) => {
+        setChange(c)
+        // carregar comitê correspondente
+        const ctName = c.expand?.change_type?.name
+        const ctType = ctName === 'Mudança de Emergência' ? 'Emergencial' : 'Padrão'
+        if (c.company) {
+          getCommitteeByCompanyAndType(c.company, ctType as 'Emergencial' | 'Padrão')
+            .then(setCommittee)
+            .catch(() => setCommittee(null))
+        } else {
+          setCommittee(null)
+        }
+      })
       .catch(() => {})
     getChangeAuditLogs(id)
       .then(setAuditLogs)
+      .catch(() => {})
+    getChangeApprovals(id)
+      .then(setApprovals)
       .catch(() => {})
   }
   useEffect(() => {
@@ -55,12 +86,52 @@ export default function ChangeDetail() {
   }, [id])
   useRealtime('changes', () => loadData())
   useRealtime('change_audit_logs', () => loadData())
+  useRealtime('change_approvals', () => loadData())
 
   const handleStatusChange = async (newStatus: string) => {
     if (!id) return
     await updateChange(id, { status: newStatus })
     toast({ title: `Status alterado para: ${newStatus}` })
     loadData()
+  }
+
+  const myApproval = useMemo(
+    () => approvals.find((a) => a.approver === user?.id),
+    [approvals, user],
+  )
+  const myPendingApproval = myApproval && myApproval.status === 'Pendente' ? myApproval : null
+  const isCommitteeMember = !!myApproval
+  const isPresident = committee && user && committee.chairperson === user.id
+
+  const voteCounts = useMemo(() => {
+    let approved = 0
+    let refused = 0
+    let revision = 0
+    let pending = 0
+    approvals.forEach((a) => {
+      if (a.status === 'Aprovado') approved++
+      else if (a.status === 'Recusado') refused++
+      else if (a.status === 'Solicitar Revisão') revision++
+      else pending++
+    })
+    return { approved, refused, revision, pending, total: approvals.length }
+  }, [approvals])
+
+  const handleVote = async (decision: 'Aprovado' | 'Recusado' | 'Solicitar Revisão') => {
+    if (!id) return
+    setProcessing(decision)
+    try {
+      await decideChangeApproval(id, decision, voteComment)
+      toast({
+        title: `Voto registrado: ${decision}`,
+      })
+      setVoteComment('')
+      loadData()
+    } catch {
+      toast({ title: 'Erro ao registrar voto', variant: 'destructive' })
+    } finally {
+      setProcessing(null)
+    }
   }
 
   if (!change) return <Skeleton className="h-96 w-full rounded-xl" />
@@ -204,6 +275,168 @@ export default function ChangeDetail() {
           </Tabs>
         </div>
         <div className="space-y-4">
+          {change.status === 'Aguardando Aprovação' && (
+            <div className="itsm-card p-4 space-y-3">
+              <h3 className="font-semibold text-sm border-b pb-2 flex items-center gap-2">
+                <Users className="h-4 w-4" /> Votos do Comitê
+              </h3>
+              {committee && (
+                <div className="text-xs space-y-1">
+                  <div className="flex items-center gap-2">
+                    <Badge
+                      className={
+                        committee.committee_type === 'Emergencial'
+                          ? 'bg-green-100 text-green-700 hover:bg-green-100'
+                          : 'bg-blue-100 text-blue-700 hover:bg-blue-100'
+                      }
+                    >
+                      {committee.committee_type}
+                    </Badge>
+                    <span className="text-muted-foreground">Regra: {committee.voting_rule}</span>
+                  </div>
+                  {committee.chairperson && (
+                    <div className="flex items-center gap-1 text-muted-foreground">
+                      <Crown className="h-3 w-3 text-amber-500" />
+                      Presidente: {committee.expand?.chairperson?.name || '—'}
+                    </div>
+                  )}
+                </div>
+              )}
+              <div className="text-xs space-y-1">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Aprovados</span>
+                  <Badge className="bg-green-100 text-green-700 hover:bg-green-100">
+                    {voteCounts.approved}
+                  </Badge>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Recusados</span>
+                  <Badge className="bg-red-100 text-red-700 hover:bg-red-100">
+                    {voteCounts.refused}
+                  </Badge>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Revisão</span>
+                  <Badge className="bg-amber-100 text-amber-700 hover:bg-amber-100">
+                    {voteCounts.revision}
+                  </Badge>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Pendentes</span>
+                  <Badge variant="outline">{voteCounts.pending}</Badge>
+                </div>
+                <p className="text-[10px] text-slate-500 pt-1">
+                  {voteCounts.total > 0
+                    ? `${voteCounts.total - voteCounts.pending} de ${voteCounts.total} votaram`
+                    : 'Nenhum membro do comitê atribuído.'}
+                </p>
+              </div>
+
+              {/* Lista de membros e seus votos */}
+              {approvals.length > 0 && (
+                <div className="space-y-1 pt-1 border-t">
+                  {approvals.map((a) => (
+                    <div key={a.id} className="flex items-center justify-between text-xs">
+                      <span className="flex items-center gap-1">
+                        {committee?.chairperson === a.approver && (
+                          <Crown className="h-3 w-3 text-amber-500" />
+                        )}
+                        {a.expand?.approver?.name || '—'}
+                      </span>
+                      <Badge
+                        variant="outline"
+                        className={
+                          'text-[10px] ' +
+                          (a.status === 'Aprovado'
+                            ? 'bg-green-50 text-green-700'
+                            : a.status === 'Recusado'
+                              ? 'bg-red-50 text-red-700'
+                              : a.status === 'Solicitar Revisão'
+                                ? 'bg-amber-50 text-amber-700'
+                                : '')
+                        }
+                      >
+                        {a.status}
+                      </Badge>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {isPresident && committee?.committee_type === 'Emergencial' && (
+                <div className="rounded-md bg-amber-50 border border-amber-200 p-2 text-[11px] text-amber-800">
+                  Você é o presidente deste comitê emergencial — seu voto é decisivo e
+                  aprova/reprova a mudança imediatamente.
+                </div>
+              )}
+
+              {myPendingApproval ? (
+                <div className="space-y-2 pt-1 border-t">
+                  <Textarea
+                    placeholder="Comentário (opcional)..."
+                    value={voteComment}
+                    onChange={(e) => setVoteComment(e.target.value)}
+                    rows={2}
+                    className="text-xs"
+                  />
+                  <div className="grid grid-cols-3 gap-1">
+                    <Button
+                      size="sm"
+                      className="bg-green-600 hover:bg-green-700 h-8"
+                      onClick={() => handleVote('Aprovado')}
+                      disabled={processing !== null}
+                    >
+                      {processing === 'Aprovado' ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <CheckCircle2 className="h-3.5 w-3.5" />
+                      )}{' '}
+                      Aprovar
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="destructive"
+                      className="h-8"
+                      onClick={() => handleVote('Recusado')}
+                      disabled={processing !== null}
+                    >
+                      {processing === 'Recusado' ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <XCircle className="h-3.5 w-3.5" />
+                      )}{' '}
+                      Recusar
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-8"
+                      onClick={() => handleVote('Solicitar Revisão')}
+                      disabled={processing !== null}
+                    >
+                      {processing === 'Solicitar Revisão' ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <RefreshCw className="h-3.5 w-3.5" />
+                      )}{' '}
+                      Revisão
+                    </Button>
+                  </div>
+                </div>
+              ) : isCommitteeMember ? (
+                <p className="text-[11px] text-slate-500 pt-1 border-t">
+                  Seu voto já foi registrado.
+                </p>
+              ) : (
+                change.status === 'Aguardando Aprovação' && (
+                  <p className="text-[11px] text-slate-500 pt-1 border-t">
+                    Você não é membro do comitê desta mudança.
+                  </p>
+                )
+              )}
+            </div>
+          )}
+
           <div className="itsm-card p-4 space-y-3">
             <h3 className="font-semibold text-sm border-b pb-2">Informações</h3>
             <div className="space-y-2 text-xs">

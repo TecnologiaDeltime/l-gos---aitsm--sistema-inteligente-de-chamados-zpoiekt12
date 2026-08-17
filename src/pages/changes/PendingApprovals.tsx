@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Clock, CheckCircle2, XCircle, Loader2 } from 'lucide-react'
+import { Clock, CheckCircle2, XCircle, Loader2, RefreshCw } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -34,7 +34,13 @@ export default function PendingApprovals() {
     setProcessing(changeId + decision)
     try {
       await decideChangeApproval(changeId, decision, comments[changeId] || '')
-      toast({ title: `Mudança ${decision === 'Aprovado' ? 'aprovada' : 'recusada'}!` })
+      const label =
+        decision === 'Aprovado'
+          ? 'aprovada'
+          : decision === 'Recusado'
+            ? 'recusada'
+            : 'marcada para revisão'
+      toast({ title: `Mudança ${label}!` })
       loadData()
     } catch {
       toast({ title: 'Erro ao processar', variant: 'destructive' })
@@ -112,6 +118,19 @@ export default function PendingApprovals() {
                     <XCircle className="mr-1 h-3.5 w-3.5" />
                   )}{' '}
                   Recusar
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => handleDecide(a.change, 'Solicitar Revisão')}
+                  disabled={processing === a.change + 'Solicitar Revisão'}
+                >
+                  {processing === a.change + 'Solicitar Revisão' ? (
+                    <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <RefreshCw className="mr-1 h-3.5 w-3.5" />
+                  )}{' '}
+                  Revisão
                 </Button>
               </div>
             </CardContent>

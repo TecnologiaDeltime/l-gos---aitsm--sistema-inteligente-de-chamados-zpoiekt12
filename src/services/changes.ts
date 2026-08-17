@@ -74,6 +74,13 @@ export const getMyPendingApprovals = (userId: string) =>
     expand: 'change,change.change_type,change.requester,change.company',
   })
 
+export const getMyApprovals = (userId: string) =>
+  pb.collection('change_approvals').getFullList({
+    filter: `approver = "${userId}"`,
+    sort: '-created',
+    expand: 'change,change.change_type,change.requester,change.company',
+  })
+
 export const decideChangeApproval = (changeId: string, decision: string, comment: string) =>
   pb.send(`/backend/v1/changes/${changeId}/approve`, {
     method: 'POST',

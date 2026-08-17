@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-17T00:41:05.354Z",
+  "generatedAt": "2026-08-17T00:59:46.050Z",
   "collections": [
     {
       "name": "users",
@@ -6267,9 +6267,47 @@
           "required": false,
           "system": false,
           "autodateTriggers": ["onCreate", "onUpdate"]
+        },
+        {
+          "name": "committee_type",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["Emergencial", "Padrão"]
+        },
+        {
+          "name": "company",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "companies"
+        },
+        {
+          "name": "max_members",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "voting_rule",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["Presidente Unilateral", "Maioria Simples"]
+        },
+        {
+          "name": "member_type",
+          "type": "json",
+          "required": false,
+          "system": false
         }
       ],
-      "indexes": ["CREATE INDEX idx_change_committee_active ON change_committee (active)"]
+      "indexes": [
+        "CREATE INDEX idx_change_committee_active ON change_committee (active)",
+        "CREATE INDEX `idx_change_committee_company` ON `change_committee` (company)",
+        "CREATE INDEX `idx_change_committee_type` ON `change_committee` (committee_type)",
+        "CREATE INDEX `idx_change_committee_company_type` ON `change_committee` (company,committee_type)"
+      ]
     },
     {
       "name": "changes",
@@ -6599,6 +6637,13 @@
           "required": false,
           "system": false,
           "autodateTriggers": ["onCreate", "onUpdate"]
+        },
+        {
+          "name": "vote_type",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["Aprovado", "Recusado", "Solicitar Revisão"]
         }
       ],
       "indexes": [
