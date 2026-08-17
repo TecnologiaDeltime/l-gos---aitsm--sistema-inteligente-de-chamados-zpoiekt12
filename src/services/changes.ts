@@ -73,7 +73,7 @@ export const getMyPendingApprovals = (userId: string) =>
   pb.collection('change_approvals').getFullList({
     filter: `approver = "${userId}" && status = "Pendente"`,
     sort: '-created',
-    expand: 'change,change.change_type,change.requester,change.company',
+    expand: 'change,change.change_type,change.requester,change.company,change.template',
   })
 
 export const getMyApprovals = (userId: string) =>
