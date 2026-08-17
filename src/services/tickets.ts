@@ -36,6 +36,7 @@ export interface TicketRecord {
   billable_hours?: number
   solution?: string
   parent_ticket_id?: string
+  association_group_id?: string
   created: string
   updated: string
   expand?: any
@@ -68,7 +69,7 @@ export const getTickets = (filter?: string, sort: string = '-created') =>
 export const getTicket = (id: string) =>
   pb.collection('tickets').getOne<TicketRecord>(id, {
     expand:
-      'company,unit,department,contract,contract.company,category,subcategory,equipment,queue,assigned_to,closed_by,parent_ticket_id',
+      'company,unit,department,contract,contract.company,category,subcategory,equipment,queue,assigned_to,closed_by,parent_ticket_id,association_group_id',
   })
 
 export const createTicket = (data: Partial<TicketRecord>) =>

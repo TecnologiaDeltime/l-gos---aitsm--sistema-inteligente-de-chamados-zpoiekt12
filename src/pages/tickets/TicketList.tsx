@@ -12,6 +12,7 @@ import {
   WifiOff,
   Forward,
   GitBranch,
+  Link2,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -157,6 +158,12 @@ export default function TicketList() {
   // Conjunto de IDs de tickets que são pais de algum outro ticket carregado.
   const parentIds = useMemo(
     () => new Set(tickets.map((t) => t.parent_ticket_id).filter(Boolean) as string[]),
+    [tickets],
+  )
+
+  // Conjunto de IDs de tickets que possuem grupo de associação.
+  const associatedIds = useMemo(
+    () => new Set(tickets.filter((t) => !!t.association_group_id).map((t) => t.id)),
     [tickets],
   )
 
@@ -409,6 +416,15 @@ export default function TicketList() {
                               <GitBranch className="h-3 w-3" />
                             </span>
                           ) : null}
+                          {associatedIds.has(t.id) && (
+                            <Link
+                              to={`/tickets/${t.id}`}
+                              title="Possui chamados associados"
+                              className="inline-flex items-center text-blue-600"
+                            >
+                              <Link2 className="h-3 w-3" />
+                            </Link>
+                          )}
                         </div>
                       </td>
                       <td className="px-4 py-3 font-medium text-foreground max-w-sm truncate">

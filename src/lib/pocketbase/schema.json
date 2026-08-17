@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-17T22:24:11.965Z",
+  "generatedAt": "2026-08-17T22:36:09.837Z",
   "collections": [
     {
       "name": "users",
@@ -1374,6 +1374,12 @@
           "required": false,
           "system": false,
           "collectionRef": "tickets"
+        },
+        {
+          "name": "association_group_id",
+          "type": "text",
+          "required": false,
+          "system": false
         }
       ],
       "indexes": [
@@ -1383,7 +1389,8 @@
         "CREATE INDEX idx_tickets_status ON tickets (status)",
         "CREATE INDEX idx_tickets_priority ON tickets (priority)",
         "CREATE INDEX idx_tickets_sla_status ON tickets (sla_status)",
-        "CREATE INDEX `idx_tickets_parent_ticket` ON `tickets` (parent_ticket_id)"
+        "CREATE INDEX `idx_tickets_parent_ticket` ON `tickets` (parent_ticket_id)",
+        "CREATE INDEX idx_tickets_association_group ON tickets (association_group_id)"
       ]
     },
     {

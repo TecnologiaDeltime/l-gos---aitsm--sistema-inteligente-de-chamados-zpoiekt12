@@ -20,10 +20,15 @@ import {
   History,
   GitBranch,
   ArrowUpRight,
+  Link2,
 } from 'lucide-react'
 import { ChildTicketDialog, checkPendingChildren } from '@/components/ChildTicketDialog'
 import { PendingChildrenAlert } from '@/components/PendingChildrenAlert'
+import { AssociateTicketsDialog } from '@/components/AssociateTicketsDialog'
+import { BatchResolveConfirmDialog } from '@/components/BatchResolveConfirmDialog'
 import { getChildTickets, TicketRecord as ChildTicket } from '@/services/tickets'
+import { getAssociatedTickets } from '@/services/ticket-associations'
+import type { TicketRecord as AssociatedTicket } from '@/services/tickets'
 import { Skeleton } from '@/components/ui/skeleton'
 import { RequesterInfo } from '@/components/RequesterInfo'
 import { Button } from '@/components/ui/button'
@@ -122,6 +127,9 @@ export default function TicketDetail() {
   const [childTickets, setChildTickets] = useState<ChildTicket[]>([])
   const [pendingChildren, setPendingChildren] = useState<ChildTicket[]>([])
   const [showPendingAlert, setShowPendingAlert] = useState(false)
+  const [showAssociate, setShowAssociate] = useState(false)
+  const [associatedTickets, setAssociatedTickets] = useState<AssociatedTicket[]>([])
+  const [showBatchResolve, setShowBatchResolve] = useState(false)
   // Indica se o usuário já confirmou o encerramento apesar do alerta (não usado
   // para bypass — o encerramento é sempre bloqueado enquanto houver pendentes).
 
@@ -151,6 +159,9 @@ export default function TicketDetail() {
     getChildTickets(id)
       .then(setChildTickets)
       .catch(() => {})
+    getAssociatedTickets(id)
+      .then(setAssociatedTickets)
+      .catch(() => setAssociatedTickets([]))
   }
   useEffect(() => {
     loadData()
@@ -304,6 +315,14 @@ export default function TicketDetail() {
     if (pending.length > 0) {
       setPendingChildren(pending)
       setShowPendingAlert(true)
+      return
+    }
+    // Se o ticket possui associações abertas, oferece o fechamento em massa.
+    const openAssociated = associatedTickets.filter(
+      (t) => !['Resolvido', 'Cancelado', 'Encerrado'].includes(t.status),
+    )
+    if (openAssociated.length > 0) {
+      setShowBatchResolve(true)
       return
     }
     const hasTimeEntries = interactions.some((i) => (i.duration_minutes || 0) > 0)
@@ -499,6 +518,19 @@ export default function TicketDetail() {
                   title="Abrir um ticket filho vinculado a este chamado"
                 >
                   <GitBranch className="mr-1.5 h-4 w-4 text-blue-600" /> Abrir Ticket Filho
+                </Button>
+              )}
+            {ticket.status !== 'Resolvido' &&
+              ticket.status !== 'Encerrado' &&
+              ticket.status !== 'Cancelado' &&
+              !ticket.parent_ticket_id && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setShowAssociate(true)}
+                  title="Associar este chamado a outros chamados abertos"
+                >
+                  <Link2 className="mr-1.5 h-4 w-4 text-blue-600" /> Associar Chamados
                 </Button>
               )}
             {(perms.isAdmin || perms.isGestor || perms.isClienteGestor) && (
@@ -902,6 +934,33 @@ export default function TicketDetail() {
             </SelectContent>
           </Select>
         </div>
+        {associatedTickets.length > 0 && (
+          <div className="itsm-card p-4 space-y-3">
+            <h3 className="font-semibold text-sm text-foreground border-b border-border pb-2 flex items-center gap-1.5">
+              <Link2 className="h-4 w-4 text-blue-600" />
+              Chamados Associados ({associatedTickets.length})
+            </h3>
+            <div className="space-y-2">
+              {associatedTickets.map((c) => (
+                <div
+                  key={c.id}
+                  className="flex items-center justify-between gap-2 rounded-md border border-border p-2 text-xs"
+                >
+                  <Link
+                    to={`/tickets/${c.id}`}
+                    className="font-medium text-primary hover:underline truncate"
+                  >
+                    {c.number} — {c.title}
+                  </Link>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <PriorityBadge priority={c.priority} />
+                    <StatusBadge status={c.status} />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
         {childTickets.length > 0 && (
           <div className="itsm-card p-4 space-y-3">
             <h3 className="font-semibold text-sm text-foreground border-b border-border pb-2 flex items-center gap-1.5">
@@ -1015,6 +1074,28 @@ export default function TicketDetail() {
         pending={pendingChildren}
         open={showPendingAlert}
         onOpenChange={setShowPendingAlert}
+      />
+      <AssociateTicketsDialog
+        ticket={ticket}
+        open={showAssociate}
+        onOpenChange={setShowAssociate}
+        onAssociated={loadData}
+      />
+      <BatchResolveConfirmDialog
+        ticket={ticket}
+        associatedTickets={associatedTickets}
+        open={showBatchResolve}
+        onOpenChange={setShowBatchResolve}
+        onResolved={loadData}
+        onResolveOnlyCurrent={() => {
+          const hasTimeEntries = interactions.some((i) => (i.duration_minutes || 0) > 0)
+          const hasComments = interactions.some((i) => i.content && i.content.trim().length > 0)
+          if (!hasTimeEntries && !hasComments) {
+            setShowNoRecordsConfirm(true)
+          } else {
+            setShowResolve(true)
+          }
+        }}
       />
     </div>
   )
