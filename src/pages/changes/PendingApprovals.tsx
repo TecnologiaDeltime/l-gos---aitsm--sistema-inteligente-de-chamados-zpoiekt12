@@ -15,6 +15,7 @@ import {
   Undo2,
   FileText,
   Calendar,
+  Lightbulb,
 } from 'lucide-react'
 import {
   Accordion,
@@ -290,15 +291,41 @@ function ApprovalCard({
               {change.expand?.template?.name || '-'}
             </InfoRow>
           )}
-          {change.planned_start && (
-            <InfoRow icon={Calendar} label="Início Planejado">
-              {new Date(change.planned_start).toLocaleString('pt-BR')}
-            </InfoRow>
-          )}
-          {change.planned_end && (
-            <InfoRow icon={Calendar} label="Fim Planejado">
-              {new Date(change.planned_end).toLocaleString('pt-BR')}
-            </InfoRow>
+          {(change.planned_start || change.planned_end) && (
+            <div className="sm:col-span-2 rounded-lg border border-amber-300/60 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-700/40 p-3 space-y-2">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs font-semibold flex items-center gap-1.5 text-amber-800 dark:text-amber-300">
+                  <Lightbulb className="h-3.5 w-3.5" /> Sugestão de Início e Fim do Solicitante
+                </span>
+                <Badge className="text-[10px] bg-amber-100 text-amber-800 hover:bg-amber-100 dark:bg-amber-900/50 dark:text-amber-200">
+                  Sugestão do Solicitante
+                </Badge>
+              </div>
+              <div className="grid gap-2 sm:grid-cols-2">
+                <div className="flex items-center gap-2 text-xs text-amber-900 dark:text-amber-200">
+                  <Calendar className="h-4 w-4 shrink-0" />
+                  <span className="font-medium">Sugestão de Início:</span>
+                  <span className="font-semibold">
+                    {change.planned_start
+                      ? new Date(change.planned_start).toLocaleString('pt-BR')
+                      : '—'}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2 text-xs text-amber-900 dark:text-amber-200">
+                  <Calendar className="h-4 w-4 shrink-0" />
+                  <span className="font-medium">Sugestão de Fim:</span>
+                  <span className="font-semibold">
+                    {change.planned_end
+                      ? new Date(change.planned_end).toLocaleString('pt-BR')
+                      : '—'}
+                  </span>
+                </div>
+              </div>
+              <p className="text-[10px] text-amber-700 dark:text-amber-400 italic">
+                As datas acima são uma sugestão do solicitante e devem ser avaliadas pelo comitê —
+                podem ser um fator de aprovação ou reprovação da mudança.
+              </p>
+            </div>
           )}
         </div>
 
