@@ -35,22 +35,40 @@ export interface TicketRecord {
   work_hours?: number
   billable_hours?: number
   solution?: string
+  parent_ticket_id?: string
   created: string
   updated: string
   expand?: any
 }
 
+// Status considerados "encerrados" — não bloqueiam o fechamento do ticket pai.
+export const CHILD_CLOSED_STATUSES = ['Resolvido', 'Cancelado', 'Encerrado']
+
+/** Busca todos os tickets filhos de um ticket pai. */
+export const getChildTickets = (parentId: string) =>
+  pb.collection('tickets').getFullList<TicketRecord>({
+    filter: `parent_ticket_id = "${parentId}"`,
+    sort: 'created',
+    expand: 'company,contract,assigned_to',
+  })
+
+/** Busca um único ticket filho (pai) já com expand do pai. */
+export const getParentTicket = (parentId: string) =>
+  pb.collection('tickets').getOne<TicketRecord>(parentId, {
+    expand: 'company,contract,assigned_to',
+  })
+
 export const getTickets = (filter?: string, sort: string = '-created') =>
   pb.collection('tickets').getFullList<TicketRecord>({
     filter,
     sort,
-    expand: 'company,category,subcategory,assigned_to,queue,contract,equipment',
+    expand: 'company,category,subcategory,assigned_to,queue,contract,equipment,parent_ticket_id',
   })
 
 export const getTicket = (id: string) =>
   pb.collection('tickets').getOne<TicketRecord>(id, {
     expand:
-      'company,unit,department,contract,contract.company,category,subcategory,equipment,queue,assigned_to,closed_by',
+      'company,unit,department,contract,contract.company,category,subcategory,equipment,queue,assigned_to,closed_by,parent_ticket_id',
   })
 
 export const createTicket = (data: Partial<TicketRecord>) =>

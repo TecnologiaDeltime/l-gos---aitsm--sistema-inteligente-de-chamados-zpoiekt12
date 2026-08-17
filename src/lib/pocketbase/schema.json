@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-17T22:10:13.976Z",
+  "generatedAt": "2026-08-17T22:24:11.965Z",
   "collections": [
     {
       "name": "users",
@@ -1367,6 +1367,13 @@
           "type": "date",
           "required": false,
           "system": false
+        },
+        {
+          "name": "parent_ticket_id",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "tickets"
         }
       ],
       "indexes": [
@@ -1375,7 +1382,8 @@
         "CREATE INDEX idx_tickets_assigned ON tickets (assigned_to)",
         "CREATE INDEX idx_tickets_status ON tickets (status)",
         "CREATE INDEX idx_tickets_priority ON tickets (priority)",
-        "CREATE INDEX idx_tickets_sla_status ON tickets (sla_status)"
+        "CREATE INDEX idx_tickets_sla_status ON tickets (sla_status)",
+        "CREATE INDEX `idx_tickets_parent_ticket` ON `tickets` (parent_ticket_id)"
       ]
     },
     {

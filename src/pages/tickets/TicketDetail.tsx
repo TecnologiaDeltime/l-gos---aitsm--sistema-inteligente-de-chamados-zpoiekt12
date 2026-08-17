@@ -18,7 +18,12 @@ import {
   Loader2,
   Forward,
   History,
+  GitBranch,
+  ArrowUpRight,
 } from 'lucide-react'
+import { ChildTicketDialog, checkPendingChildren } from '@/components/ChildTicketDialog'
+import { PendingChildrenAlert } from '@/components/PendingChildrenAlert'
+import { getChildTickets, TicketRecord as ChildTicket } from '@/services/tickets'
 import { Skeleton } from '@/components/ui/skeleton'
 import { RequesterInfo } from '@/components/RequesterInfo'
 import { Button } from '@/components/ui/button'
@@ -113,6 +118,12 @@ export default function TicketDetail() {
   const [commentTemplates, setCommentTemplates] = useState<TicketTemplateRecord[]>([])
   const [selectedCommentTemplate, setSelectedCommentTemplate] =
     useState<TicketTemplateRecord | null>(null)
+  const [showChildTicket, setShowChildTicket] = useState(false)
+  const [childTickets, setChildTickets] = useState<ChildTicket[]>([])
+  const [pendingChildren, setPendingChildren] = useState<ChildTicket[]>([])
+  const [showPendingAlert, setShowPendingAlert] = useState(false)
+  // Indica se o usuário já confirmou o encerramento apesar do alerta (não usado
+  // para bypass — o encerramento é sempre bloqueado enquanto houver pendentes).
 
   const loadData = () => {
     if (!id) return
@@ -136,6 +147,9 @@ export default function TicketDetail() {
       .catch(() => {})
     getTicketHistory(id)
       .then(setHistory)
+      .catch(() => {})
+    getChildTickets(id)
+      .then(setChildTickets)
       .catch(() => {})
   }
   useEffect(() => {
@@ -284,7 +298,14 @@ export default function TicketDetail() {
     toast({ title: 'SLA Retomado' })
   }
 
-  const handleResolveClick = () => {
+  const handleResolveClick = async () => {
+    // Regra de bloqueio: ticket pai com filhos pendentes não pode ser encerrado.
+    const pending = await checkPendingChildren(id!)
+    if (pending.length > 0) {
+      setPendingChildren(pending)
+      setShowPendingAlert(true)
+      return
+    }
     const hasTimeEntries = interactions.some((i) => (i.duration_minutes || 0) > 0)
     const hasComments = interactions.some((i) => i.content && i.content.trim().length > 0)
     if (!hasTimeEntries && !hasComments) {
@@ -371,6 +392,23 @@ export default function TicketDetail() {
               {ticket.number} - {ticket.title}
             </h2>
             <div className="flex items-center gap-2">
+              {ticket.parent_ticket_id && (
+                <Link
+                  to={`/tickets/${ticket.parent_ticket_id}`}
+                  className="inline-flex items-center gap-1 rounded-full border border-blue-300 bg-blue-50 px-2 py-0.5 text-[11px] font-medium text-blue-700 hover:bg-blue-100 dark:bg-blue-950/40 dark:border-blue-800 dark:text-blue-300"
+                  title="Ver ticket pai"
+                >
+                  <ArrowUpRight className="h-3 w-3" />
+                  Ticket Filho de #
+                  {ticket.expand?.parent_ticket_id?.number || ticket.parent_ticket_id}
+                </Link>
+              )}
+              {childTickets.length > 0 && (
+                <span className="inline-flex items-center gap-1 rounded-full border border-slate-300 bg-slate-50 px-2 py-0.5 text-[11px] font-medium text-slate-600 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300">
+                  <GitBranch className="h-3 w-3" />
+                  {childTickets.length} filho(s)
+                </span>
+              )}
               <PriorityBadge priority={ticket.priority} />
               <StatusBadge status={ticket.status} />
             </div>
@@ -450,6 +488,19 @@ export default function TicketDetail() {
             <Button size="sm" variant="outline" onClick={() => setShowDelegate(true)}>
               <Forward className="mr-1.5 h-4 w-4" /> Delegar
             </Button>
+            {ticket.status !== 'Resolvido' &&
+              ticket.status !== 'Encerrado' &&
+              ticket.status !== 'Cancelado' &&
+              !ticket.parent_ticket_id && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setShowChildTicket(true)}
+                  title="Abrir um ticket filho vinculado a este chamado"
+                >
+                  <GitBranch className="mr-1.5 h-4 w-4 text-blue-600" /> Abrir Ticket Filho
+                </Button>
+              )}
             {(perms.isAdmin || perms.isGestor || perms.isClienteGestor) && (
               <>
                 <Button size="sm" variant="outline" onClick={() => setShowApproval(true)}>
@@ -851,6 +902,33 @@ export default function TicketDetail() {
             </SelectContent>
           </Select>
         </div>
+        {childTickets.length > 0 && (
+          <div className="itsm-card p-4 space-y-3">
+            <h3 className="font-semibold text-sm text-foreground border-b border-border pb-2 flex items-center gap-1.5">
+              <GitBranch className="h-4 w-4 text-blue-600" />
+              Tickets Filhos ({childTickets.length})
+            </h3>
+            <div className="space-y-2">
+              {childTickets.map((c) => (
+                <div
+                  key={c.id}
+                  className="flex items-center justify-between gap-2 rounded-md border border-border p-2 text-xs"
+                >
+                  <Link
+                    to={`/tickets/${c.id}`}
+                    className="font-medium text-primary hover:underline truncate"
+                  >
+                    {c.number} — {c.title}
+                  </Link>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <PriorityBadge priority={c.priority} />
+                    <StatusBadge status={c.status} />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
       <ApprovalDialog ticketId={id!} open={showApproval} onOpenChange={setShowApproval} />
       <VisitDialog
@@ -926,6 +1004,17 @@ export default function TicketDetail() {
         open={showSlaPause}
         onOpenChange={setShowSlaPause}
         onConfirm={handlePauseSla}
+      />
+      <ChildTicketDialog
+        parent={ticket}
+        open={showChildTicket}
+        onOpenChange={setShowChildTicket}
+        onCreated={loadData}
+      />
+      <PendingChildrenAlert
+        pending={pendingChildren}
+        open={showPendingAlert}
+        onOpenChange={setShowPendingAlert}
       />
     </div>
   )

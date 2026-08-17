@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
   PlusCircle,
@@ -11,6 +11,7 @@ import {
   VolumeX,
   WifiOff,
   Forward,
+  GitBranch,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -152,6 +153,12 @@ export default function TicketList() {
     const mClient = clienteFilter === 'all' || t.company === clienteFilter
     return ms && mSt && mPriority && mAnalist && mClient
   })
+
+  // Conjunto de IDs de tickets que são pais de algum outro ticket carregado.
+  const parentIds = useMemo(
+    () => new Set(tickets.map((t) => t.parent_ticket_id).filter(Boolean) as string[]),
+    [tickets],
+  )
 
   const allFilteredSelected = filtered.length > 0 && filtered.every((t) => selectedIds.has(t.id))
   const someFilteredSelected = filtered.some((t) => selectedIds.has(t.id)) && !allFilteredSelected
@@ -382,9 +389,27 @@ export default function TicketList() {
                         />
                       </td>
                       <td className="px-4 py-3 font-bold text-primary">
-                        <Link to={`/tickets/${t.id}`} className="hover:underline">
-                          {t.number}
-                        </Link>
+                        <div className="flex items-center gap-1">
+                          <Link to={`/tickets/${t.id}`} className="hover:underline">
+                            {t.number}
+                          </Link>
+                          {t.parent_ticket_id ? (
+                            <Link
+                              to={`/tickets/${t.parent_ticket_id}`}
+                              title={`Ticket filho de ${t.expand?.parent_ticket_id?.number || '#'}`}
+                              className="inline-flex items-center text-blue-600 hover:text-blue-800"
+                            >
+                              <GitBranch className="h-3 w-3" />
+                            </Link>
+                          ) : parentIds.has(t.id) ? (
+                            <span
+                              title="Possui tickets filhos"
+                              className="inline-flex items-center text-amber-500"
+                            >
+                              <GitBranch className="h-3 w-3" />
+                            </span>
+                          ) : null}
+                        </div>
                       </td>
                       <td className="px-4 py-3 font-medium text-foreground max-w-sm truncate">
                         <Link to={`/tickets/${t.id}`} className="hover:underline">
