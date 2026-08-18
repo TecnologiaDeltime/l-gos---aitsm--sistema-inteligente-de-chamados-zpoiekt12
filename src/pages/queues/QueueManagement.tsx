@@ -3,17 +3,29 @@ import { Inbox, Plus, Pencil } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
-import { getQueues, createQueue, QueueRecord } from '@/services/queues'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { getQueues, createQueue, QUEUE_LEVELS, QueueRecord, QueueLevel } from '@/services/queues'
+import { getCompanies, CompanyRecord } from '@/services/companies'
 import { useToast } from '@/hooks/use-toast'
 import { useRealtime } from '@/hooks/use-realtime'
 import { QueueEditDialog } from '@/components/queues/QueueEditDialog'
 
 export default function QueueManagement() {
   const [queues, setQueues] = useState<QueueRecord[]>([])
+  const [companies, setCompanies] = useState<CompanyRecord[]>([])
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
+  const [level, setLevel] = useState<QueueLevel | ''>('')
+  const [companyId, setCompanyId] = useState('')
   const [editingQueue, setEditingQueue] = useState<QueueRecord | null>(null)
   const [editOpen, setEditOpen] = useState(false)
+  const [creating, setCreating] = useState(false)
   const { toast } = useToast()
 
   const loadData = () => {
@@ -24,6 +36,9 @@ export default function QueueManagement() {
 
   useEffect(() => {
     loadData()
+    getCompanies()
+      .then(setCompanies)
+      .catch(() => {})
   }, [])
 
   useRealtime('queues', () => {
@@ -32,15 +47,38 @@ export default function QueueManagement() {
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!name) return
+    if (!name) {
+      toast({ title: 'Informe o nome da fila', variant: 'destructive' })
+      return
+    }
+    if (!level) {
+      toast({ title: 'Selecione o nível de atendimento', variant: 'destructive' })
+      return
+    }
+    if (!companyId) {
+      toast({ title: 'Selecione a empresa', variant: 'destructive' })
+      return
+    }
+    setCreating(true)
     try {
-      await createQueue({ name, description, active: true, distribution_rule: 'Disponibilidade' })
+      await createQueue({
+        name,
+        description,
+        active: true,
+        distribution_rule: 'Disponibilidade',
+        level,
+        company: companyId,
+      })
       setName('')
       setDescription('')
+      setLevel('')
+      setCompanyId('')
       toast({ title: 'Fila criada com sucesso!' })
       loadData()
     } catch {
       toast({ title: 'Erro ao criar fila', variant: 'destructive' })
+    } finally {
+      setCreating(false)
     }
   }
 
@@ -75,8 +113,47 @@ export default function QueueManagement() {
                 onChange={(e) => setDescription(e.target.value)}
               />
             </div>
-            <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-700" size="sm">
-              <Plus className="mr-1 h-4 w-4" /> Criar Fila
+            <div className="space-y-1">
+              <label className="text-xs font-semibold">
+                Nível de Atendimento <span className="text-red-500">*</span>
+              </label>
+              <Select value={level} onValueChange={(v) => setLevel(v as QueueLevel)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione o nível" />
+                </SelectTrigger>
+                <SelectContent>
+                  {QUEUE_LEVELS.map((l) => (
+                    <SelectItem key={l} value={l}>
+                      {l}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-semibold">
+                Empresa <span className="text-red-500">*</span>
+              </label>
+              <Select value={companyId} onValueChange={setCompanyId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione a empresa" />
+                </SelectTrigger>
+                <SelectContent>
+                  {companies.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>
+                      {c.trade_name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <Button
+              type="submit"
+              className="w-full bg-blue-600 hover:bg-blue-700"
+              size="sm"
+              disabled={creating}
+            >
+              <Plus className="mr-1 h-4 w-4" /> {creating ? 'Criando...' : 'Criar Fila'}
             </Button>
           </form>
         </div>
@@ -87,46 +164,68 @@ export default function QueueManagement() {
               Nenhuma fila cadastrada.
             </div>
           )}
-          {queues.map((q) => (
-            <div
-              key={q.id}
-              className="rounded-xl border bg-white p-4 shadow-sm flex items-center justify-between dark:bg-slate-900"
-            >
-              <div className="flex items-center gap-3">
-                <div
-                  className={
-                    q.active
-                      ? 'p-2 rounded-lg bg-blue-50 text-blue-600'
-                      : 'p-2 rounded-lg bg-slate-100 text-slate-400'
-                  }
-                >
-                  <Inbox className="h-5 w-5" />
-                </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <p className="font-bold text-sm text-slate-900 dark:text-slate-100">{q.name}</p>
-                    {!q.active && (
-                      <Badge variant="outline" className="text-xs">
-                        Inativa
-                      </Badge>
-                    )}
+          {queues.map((q) => {
+            const companyName =
+              q.expand?.company?.trade_name ||
+              companies.find((c) => c.id === q.company)?.trade_name ||
+              null
+            return (
+              <div
+                key={q.id}
+                className="rounded-xl border bg-white p-4 shadow-sm flex items-center justify-between dark:bg-slate-900"
+              >
+                <div className="flex items-center gap-3">
+                  <div
+                    className={
+                      q.active
+                        ? 'p-2 rounded-lg bg-blue-50 text-blue-600'
+                        : 'p-2 rounded-lg bg-slate-100 text-slate-400'
+                    }
+                  >
+                    <Inbox className="h-5 w-5" />
                   </div>
-                  <p className="text-xs text-slate-500">{q.description || 'Sem descrição'}</p>
+                  <div>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <p className="font-bold text-sm text-slate-900 dark:text-slate-100">
+                        {q.name}
+                      </p>
+                      {q.level ? (
+                        <Badge className="text-xs bg-indigo-50 text-indigo-700 hover:bg-indigo-100 dark:bg-indigo-950 dark:text-indigo-300">
+                          {q.level}
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="text-xs text-slate-400">
+                          Sem nível
+                        </Badge>
+                      )}
+                      {companyName && (
+                        <Badge variant="outline" className="text-xs">
+                          {companyName}
+                        </Badge>
+                      )}
+                      {!q.active && (
+                        <Badge variant="outline" className="text-xs">
+                          Inativa
+                        </Badge>
+                      )}
+                    </div>
+                    <p className="text-xs text-slate-500">{q.description || 'Sem descrição'}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  {q.priority != null && (
+                    <span className="text-xs text-slate-400">P: {q.priority}</span>
+                  )}
+                  <span className="text-xs font-medium text-blue-600 bg-blue-50 px-2.5 py-1 rounded-full">
+                    {q.distribution_rule || 'Disponibilidade'}
+                  </span>
+                  <Button variant="ghost" size="sm" onClick={() => handleEdit(q)}>
+                    <Pencil className="h-4 w-4" />
+                  </Button>
                 </div>
               </div>
-              <div className="flex items-center gap-2">
-                {q.priority != null && (
-                  <span className="text-xs text-slate-400">P: {q.priority}</span>
-                )}
-                <span className="text-xs font-medium text-blue-600 bg-blue-50 px-2.5 py-1 rounded-full">
-                  {q.distribution_rule || 'Disponibilidade'}
-                </span>
-                <Button variant="ghost" size="sm" onClick={() => handleEdit(q)}>
-                  <Pencil className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
       </div>
 

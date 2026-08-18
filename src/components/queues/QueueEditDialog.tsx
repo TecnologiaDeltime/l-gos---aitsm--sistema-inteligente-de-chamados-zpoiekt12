@@ -20,9 +20,10 @@ import {
 } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
 import { X } from 'lucide-react'
-import { QueueRecord, updateQueue } from '@/services/queues'
+import { QueueRecord, QueueLevel, QUEUE_LEVELS, updateQueue } from '@/services/queues'
 import { getUsers, UserItem } from '@/services/users'
 import { getCategories, CategoryRecord } from '@/services/categories'
+import { getCompanies, CompanyRecord } from '@/services/companies'
 import { useToast } from '@/hooks/use-toast'
 import { extractFieldErrors, type FieldErrors } from '@/lib/pocketbase/errors'
 
@@ -43,8 +44,11 @@ export function QueueEditDialog({ queue, open, onOpenChange, onSaved }: QueueEdi
   const [active, setActive] = useState(true)
   const [members, setMembers] = useState<string[]>([])
   const [categories, setCategories] = useState<string[]>([])
+  const [level, setLevel] = useState<QueueLevel | ''>('')
+  const [companyId, setCompanyId] = useState('')
   const [allUsers, setAllUsers] = useState<UserItem[]>([])
   const [allCategories, setAllCategories] = useState<CategoryRecord[]>([])
+  const [allCompanies, setAllCompanies] = useState<CompanyRecord[]>([])
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({})
   const [saving, setSaving] = useState(false)
   const { toast } = useToast()
@@ -58,6 +62,8 @@ export function QueueEditDialog({ queue, open, onOpenChange, onSaved }: QueueEdi
       setActive(queue.active ?? true)
       setMembers(queue.members ?? [])
       setCategories(queue.categories ?? [])
+      setLevel((queue.level as QueueLevel) || '')
+      setCompanyId(queue.company || '')
       setFieldErrors({})
     }
   }, [queue, open])
@@ -69,6 +75,9 @@ export function QueueEditDialog({ queue, open, onOpenChange, onSaved }: QueueEdi
         .catch(() => {})
       getCategories()
         .then(setAllCategories)
+        .catch(() => {})
+      getCompanies()
+        .then(setAllCompanies)
         .catch(() => {})
     }
   }, [open])
@@ -83,6 +92,14 @@ export function QueueEditDialog({ queue, open, onOpenChange, onSaved }: QueueEdi
 
   const handleSave = async () => {
     if (!queue) return
+    if (!level) {
+      setFieldErrors({ level: 'Selecione o nível de atendimento.' })
+      return
+    }
+    if (!companyId) {
+      setFieldErrors({ company: 'Selecione a empresa.' })
+      return
+    }
     setSaving(true)
     setFieldErrors({})
     try {
@@ -94,6 +111,8 @@ export function QueueEditDialog({ queue, open, onOpenChange, onSaved }: QueueEdi
         active,
         members,
         categories,
+        level,
+        company: companyId,
       })
       toast({ title: 'Fila atualizada com sucesso!' })
       onOpenChange(false)
@@ -137,6 +156,46 @@ export function QueueEditDialog({ queue, open, onOpenChange, onSaved }: QueueEdi
             {fieldErrors.description && (
               <p className="text-xs text-red-500">{fieldErrors.description}</p>
             )}
+          </div>
+
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div className="space-y-1.5">
+              <Label className="text-sm font-semibold">
+                Nível de Atendimento <span className="text-red-500">*</span>
+              </Label>
+              <Select value={level} onValueChange={(v) => setLevel(v as QueueLevel)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione o nível" />
+                </SelectTrigger>
+                <SelectContent>
+                  {QUEUE_LEVELS.map((l) => (
+                    <SelectItem key={l} value={l}>
+                      {l}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {fieldErrors.level && <p className="text-xs text-red-500">{fieldErrors.level}</p>}
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-sm font-semibold">
+                Empresa <span className="text-red-500">*</span>
+              </Label>
+              <Select value={companyId} onValueChange={setCompanyId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione a empresa" />
+                </SelectTrigger>
+                <SelectContent>
+                  {allCompanies.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>
+                      {c.trade_name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {fieldErrors.company && <p className="text-xs text-red-500">{fieldErrors.company}</p>}
+            </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4">

@@ -24,13 +24,15 @@ import { Badge } from '@/components/ui/badge'
 import { useToast } from '@/hooks/use-toast'
 import { cn } from '@/lib/utils'
 import { getCompanies, getCompanyDepartments, type CompanyRecord } from '@/services/companies'
-import { getContracts, type ContractRecord } from '@/services/contracts'
+import { getContracts, type ContractRecord, QUEUE_LEVEL_TO_HOURS_KEY } from '@/services/contracts'
 import { getCategories, type CategoryRecord } from '@/services/categories'
 import { getEquipments, type EquipmentRecord } from '@/services/equipments'
 import { getClientContacts, type ClientContactRecord } from '@/services/client-contacts'
 import { getCompanyUnitsByCompany, type CompanyUnitRecord } from '@/services/company-units'
 import { createTicket } from '@/services/tickets'
+import { getQueues, type QueueRecord, QUEUE_LEVELS } from '@/services/queues'
 import { getUsers, type UserItem } from '@/services/users'
+import { Inbox } from 'lucide-react'
 import { markTicketAsSelfCreated } from '@/lib/ticket-alerts'
 import { calculateSlaFromMinutes } from '@/lib/sla-utils'
 import { computePriority } from '@/lib/itil-matrix'
@@ -127,6 +129,8 @@ export default function TicketCreate() {
   const [deptLoading, setDeptLoading] = useState(false)
   const [technicians, setTechnicians] = useState<UserItem[]>([])
   const [assignedTo, setAssignedTo] = useState('')
+  const [queueId, setQueueId] = useState('')
+  const [allQueues, setAllQueues] = useState<QueueRecord[]>([])
 
   const [currentStep, setCurrentStep] = useState(0)
   const [submitting, setSubmitting] = useState(false)
@@ -145,11 +149,45 @@ export default function TicketCreate() {
     [contracts, company],
   )
 
+  /**
+   * Filas disponíveis para a empresa selecionada:
+   * - contract ativo da empresa encontrado
+   * - níveis com horas alocadas (> 0) no contrato
+   * - filas cujo `level` corresponde a um nível com horas E cuja `company` é a
+   *   empresa selecionada.
+   * Retorna { queues, hasContract, hasLevels } para exibição de mensagens.
+   */
+  const availableQueues = useMemo(() => {
+    if (!company) return { queues: [] as QueueRecord[], hasContract: false, hasLevels: false }
+    const activeContract = contracts.find(
+      (c) => c.company === company && (c.status || '').toLowerCase() === 'ativo',
+    )
+    if (!activeContract)
+      return { queues: [] as QueueRecord[], hasContract: false, hasLevels: false }
+
+    const levelsWithHours = new Set<string>()
+    QUEUE_LEVELS.forEach((lvl) => {
+      const key = QUEUE_LEVEL_TO_HOURS_KEY[lvl]
+      const hours = Number((activeContract as any)[key]) || 0
+      if (hours > 0) levelsWithHours.add(lvl)
+    })
+
+    if (levelsWithHours.size === 0) {
+      return { queues: [] as QueueRecord[], hasContract: true, hasLevels: false }
+    }
+
+    const filtered = allQueues.filter(
+      (q) => q.company === company && q.level && levelsWithHours.has(q.level),
+    )
+    return { queues: filtered, hasContract: true, hasLevels: true }
+  }, [company, contracts, allQueues])
+
   const handleCompanyChange = useCallback(
     (companyId: string) => {
       setCompany(companyId)
-      // Limpa o contrato e refaz o filtro pela nova empresa
+      // Limpa o contrato, a fila e refaz o filtro pela nova empresa
       setContract('')
+      setQueueId('')
       if (!companyId) return
       const filtered = contracts.filter((c) => c.company === companyId)
       if (filtered.length === 0) return
@@ -162,16 +200,18 @@ export default function TicketCreate() {
 
   useEffect(() => {
     const load = async () => {
-      const [comps, cats, conts, techs] = await Promise.all([
+      const [comps, cats, conts, techs, queues] = await Promise.all([
         getCompanies(),
         getCategories(),
         getContracts().catch(() => []),
         getUsers("role='tecnico' || role='gestor' || role='admin'").catch(() => []),
+        getQueues().catch(() => []),
       ])
       setCompanies(comps)
       setCategories(cats)
       setContracts(conts as ContractRecord[])
       setTechnicians(techs as UserItem[])
+      setAllQueues(queues as QueueRecord[])
     }
     load()
   }, [])
@@ -338,7 +378,7 @@ export default function TicketCreate() {
       const sub = categories.find((c) => c.id === subActivity)
       const sla = sub
         ? calculateSlaFromMinutes(sub.sla_response_minutes, sub.sla_solution_minutes)
-        : {}
+        : { sla_response_deadline: undefined, sla_solution_deadline: undefined }
       const created = await createTicket({
         number: 'PENDENTE',
         company,
@@ -351,6 +391,7 @@ export default function TicketCreate() {
         subcategory: subActivity || undefined,
         equipment: equipment || undefined,
         contract: contract || undefined,
+        queue: queueId || undefined,
         impact: autoImpact || 'Médio',
         urgency: autoUrgency || 'Média',
         priority: autoPriority || 'Média',
@@ -363,7 +404,7 @@ export default function TicketCreate() {
         sla_status: 'Dentro do Prazo',
         sla_response_deadline: sla.sla_response_deadline,
         sla_solution_deadline: sla.sla_solution_deadline,
-      })
+      } as any)
       markTicketAsSelfCreated(created.id)
       toast({ title: 'Chamado aberto com sucesso!' })
       navigate('/tickets')
@@ -644,6 +685,37 @@ export default function TicketCreate() {
                 </Select>
               </div>
             </div>
+
+            <div className="space-y-2">
+              <FieldLabel>Fila de Atendimento</FieldLabel>
+              {!company ? (
+                <div className="flex items-center gap-2 h-9 px-3 rounded-lg border bg-slate-50 dark:bg-slate-800 text-xs text-slate-400">
+                  <Inbox className="h-3.5 w-3.5" />
+                  Selecione uma empresa primeiro
+                </div>
+              ) : availableQueues.queues.length === 0 ? (
+                <div className="flex items-center gap-2 h-9 px-3 rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-950/30 text-xs text-amber-700 dark:text-amber-300">
+                  <Inbox className="h-3.5 w-3.5 shrink-0" />
+                  Nenhuma fila disponível para esta empresa. Verifique o contrato.
+                </div>
+              ) : (
+                <Select value={queueId} onValueChange={setQueueId}>
+                  <SelectTrigger className="rounded-lg">
+                    <SelectValue placeholder="Selecione a fila (opcional)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableQueues.queues.map((q) => (
+                      <SelectItem key={q.id} value={q.id}>
+                        {q.name} {q.level ? `· ${q.level}` : ''}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+              <p className="text-[11px] text-slate-400">
+                Filas filtradas pelo contrato ativo e pelos níveis com horas alocadas da empresa.
+              </p>
+            </div>
           </div>
         )}
 
@@ -684,6 +756,7 @@ export default function TicketCreate() {
                 {autoPriority || 'Sem prioridade'}
                 {subActivity && ' · Atividade selecionada'}
                 {contract && ' · Contrato vinculado'}
+                {queueId && ' · Fila vinculada'}
               </p>
             </div>
           </div>

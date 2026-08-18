@@ -85,6 +85,7 @@ import { ApprovalDialog } from '@/components/ApprovalDialog'
 import { VisitDialog } from '@/components/VisitDialog'
 import { SlaPauseDialog, STATUS_BY_REASON } from '@/components/SlaPauseDialog'
 import { formatMinutes, formatHours } from '@/lib/duration'
+import { Inbox } from 'lucide-react'
 import { useAuth } from '@/hooks/use-auth'
 import { usePermissions } from '@/hooks/use-permissions'
 import { useRealtime } from '@/hooks/use-realtime'
@@ -903,6 +904,28 @@ export default function TicketDetail() {
               </div>
             )}
           </div>
+        </div>
+        <div className="itsm-card p-4 space-y-3">
+          <h3 className="font-semibold text-sm text-foreground border-b border-border pb-2">
+            Fila de Atendimento
+          </h3>
+          {ticket.queue && ticket.expand?.queue ? (
+            <div className="flex items-center gap-2 text-xs">
+              <Inbox className="h-4 w-4 text-muted-foreground" />
+              <span className="font-medium text-foreground">{ticket.expand.queue.name}</span>
+              {ticket.expand.queue.level ? (
+                <Badge className="text-[10px] bg-indigo-50 text-indigo-700 hover:bg-indigo-100 dark:bg-indigo-950 dark:text-indigo-300">
+                  {ticket.expand.queue.level}
+                </Badge>
+              ) : (
+                <Badge variant="outline" className="text-[10px] text-slate-400">
+                  Sem nível
+                </Badge>
+              )}
+            </div>
+          ) : (
+            <p className="text-xs text-muted-foreground">Nenhuma fila vinculada.</p>
+          )}
         </div>
         <div className="itsm-card p-4 space-y-3">
           <h3 className="font-semibold text-sm text-foreground border-b border-border pb-2">

@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-18T01:17:12.170Z",
+  "generatedAt": "2026-08-18T01:41:29.844Z",
   "collections": [
     {
       "name": "users",
@@ -830,6 +830,27 @@
           "required": false,
           "system": false,
           "autodateTriggers": ["onCreate", "onUpdate"]
+        },
+        {
+          "name": "level",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": [
+            "Nível 1",
+            "Nível 2",
+            "Nível 3",
+            "Consultoria",
+            "Backoffice",
+            "Administrativo"
+          ]
+        },
+        {
+          "name": "company",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "companies"
         }
       ],
       "indexes": ["CREATE INDEX idx_queues_active ON queues (active)"]

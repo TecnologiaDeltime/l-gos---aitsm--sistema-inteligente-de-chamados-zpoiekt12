@@ -92,6 +92,20 @@ export const CONTRACT_HOURS_LEVELS: ContractHoursLevel[] = [
   { key: 'hours_administrativo', label: 'Administrativo' },
 ]
 
+/**
+ * Mapeia o rótulo de nível de atendimento (usado no campo `level` das filas)
+ * para a chave de horas do contrato correspondente.
+ * Ex.: "Nível 1" → "hours_level1", "Consultoria" → "hours_consultoria".
+ */
+export const QUEUE_LEVEL_TO_HOURS_KEY: Record<string, ContractHoursLevel['key']> = {
+  'Nível 1': 'hours_level1',
+  'Nível 2': 'hours_level2',
+  'Nível 3': 'hours_level3',
+  Consultoria: 'hours_consultoria',
+  Backoffice: 'hours_backoffice',
+  Administrativo: 'hours_administrativo',
+}
+
 // Gera um slug estável a partir do nome do acordo (sem acentos, espaços → _).
 export const slugifyAgreement = (name: string): string =>
   name
