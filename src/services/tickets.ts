@@ -39,6 +39,8 @@ export interface TicketRecord {
   association_group_id?: string
   created: string
   updated: string
+  /** Última interação do chamado (expand via getTicketsWithLastInteraction). */
+  last_interaction_at?: string
   expand?: any
 }
 
@@ -65,6 +67,52 @@ export const getTickets = (filter?: string, sort: string = '-created') =>
     sort,
     expand: 'company,category,subcategory,assigned_to,queue,contract,equipment,parent_ticket_id',
   })
+
+/**
+ * Busca todos os tickets (com os mesmos expands de `getTickets`) e anexa
+ * `last_interaction_at` — a data (ISO) da criação da última interação de cada
+ * chamado. Usado pela listagem para calcular o "Tempo sem Atualização".
+ *
+ * As interações são buscadas em lotes ( filtro OR por ids ) para evitar N+1.
+ */
+export const getTicketsWithLastInteraction = async (
+  filter?: string,
+  sort: string = '-created',
+): Promise<TicketRecord[]> => {
+  const tickets = await getTickets(filter, sort)
+  if (tickets.length === 0) return tickets
+
+  const batchSize = 50
+  const lastInteractionByTicket = new Map<string, string>()
+
+  for (let i = 0; i < tickets.length; i += batchSize) {
+    const batch = tickets.slice(i, i + batchSize)
+    const ticketFilter = batch.map((t) => `ticket = "${t.id}"`).join(' || ')
+    try {
+      const interactions = await pb
+        .collection('ticket_interactions')
+        .getFullList<{ ticket: string; created: string }>({
+          filter: ticketFilter,
+          sort: '-created',
+          fields: 'ticket,created',
+          requestKey: `last_interaction_${i}`,
+        })
+      // sort '-created' ⇒ o primeiro que aparece para cada ticket é o mais recente.
+      for (const it of interactions) {
+        if (!lastInteractionByTicket.has(it.ticket)) {
+          lastInteractionByTicket.set(it.ticket, it.created)
+        }
+      }
+    } catch {
+      /* graceful degradation — sem interações, usa updated */
+    }
+  }
+
+  return tickets.map((t) => ({
+    ...t,
+    last_interaction_at: lastInteractionByTicket.get(t.id) || t.last_interaction_at,
+  }))
+}
 
 export const getTicket = (id: string) =>
   pb.collection('tickets').getOne<TicketRecord>(id, {
