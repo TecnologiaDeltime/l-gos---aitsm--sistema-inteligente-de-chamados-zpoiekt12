@@ -69,6 +69,116 @@ export const getTickets = (filter?: string, sort: string = '-created') =>
   })
 
 /**
+ * Busca todos os tickets que participam de alguma relação pai/filho
+ * (`parent_ticket_id` preenchido OU são referenciados como pai por algum
+ * outro ticket). Retorna uma lista plana com `expand` de company/assigned_to
+ * já resolvido — a árvore é montada no cliente a partir do `parent_ticket_id`.
+ *
+ * A consulta é feita em duas partes porque o PocketBase não suporta OR entre
+ * "campo vazio/nulo" e "id referenciado por outro registro" de forma simples;
+ * então buscamos filhos + pais e deduplicamos.
+ */
+export const getTicketHierarchy = async (): Promise<TicketRecord[]> => {
+  // 1) Tickets que são filhos (têm parent_ticket_id).
+  const children = await pb.collection('tickets').getFullList<TicketRecord>({
+    filter: `parent_ticket_id != ""`,
+    sort: '-created',
+    expand: 'company,category,subcategory,assigned_to,queue,contract,equipment,parent_ticket_id',
+  })
+
+  // 2) IDs dos pais referenciados (podem não estar no conjunto acima).
+  const parentIds = Array.from(
+    new Set(children.map((c) => c.parent_ticket_id).filter(Boolean) as string[]),
+  )
+
+  const parents: TicketRecord[] = []
+  const batchSize = 50
+  for (let i = 0; i < parentIds.length; i += batchSize) {
+    const batch = parentIds.slice(i, i + batchSize)
+    const filter = batch.map((id) => `id = "${id}"`).join(' || ')
+    try {
+      const result = await pb.collection('tickets').getFullList<TicketRecord>({
+        filter,
+        sort: '-created',
+        expand:
+          'company,category,subcategory,assigned_to,queue,contract,equipment,parent_ticket_id',
+        requestKey: `hierarchy_parents_${i}`,
+      })
+      parents.push(...result)
+    } catch {
+      /* graceful — ignora lotes que falharem */
+    }
+  }
+
+  // Deduplica por id (um ticket pode aparecer em ambos os conjuntos se for
+  // pai e filho ao mesmo tempo).
+  const byId = new Map<string, TicketRecord>()
+  for (const t of [...children, ...parents]) {
+    if (!byId.has(t.id)) byId.set(t.id, t)
+  }
+  return Array.from(byId.values())
+}
+
+/**
+ * Nó da árvore de tickets: o ticket + seus filhos diretos (recursivo).
+ */
+export interface TicketTreeNode {
+  ticket: TicketRecord
+  children: TicketTreeNode[]
+}
+
+/**
+ * Monta a floresta de tickets a partir de uma lista plana. Apenas raízes
+ * (tickets sem `parent_ticket_id`) que possuem ao menos um filho aparecem
+ * no topo — tickets isolados não são exibidos na visão de hierarquia.
+ */
+export const buildTicketForest = (tickets: TicketRecord[]): TicketTreeNode[] => {
+  const byId = new Map<string, TicketRecord>()
+  for (const t of tickets) byId.set(t.id, t)
+
+  // Filhos diretos de cada ticket.
+  const childrenOf = new Map<string, TicketRecord[]>()
+  for (const t of tickets) {
+    const pid = t.parent_ticket_id
+    if (pid && byId.has(pid)) {
+      const arr = childrenOf.get(pid) || []
+      arr.push(t)
+      childrenOf.set(pid, arr)
+    }
+  }
+
+  const buildNode = (ticket: TicketRecord): TicketTreeNode => ({
+    ticket,
+    children: (childrenOf.get(ticket.id) || [])
+      .slice()
+      .sort((a, b) => a.number.localeCompare(b.number, undefined, { numeric: true }))
+      .map(buildNode),
+  })
+
+  // Raízes = tickets sem parent_ticket_id (ou cujo pai não está no conjunto)
+  // que possuem ao menos um filho.
+  return tickets
+    .filter((t) => {
+      const pid = t.parent_ticket_id
+      const isRoot = !pid || !byId.has(pid)
+      const hasChildren = (childrenOf.get(t.id)?.length || 0) > 0
+      return isRoot && hasChildren
+    })
+    .slice()
+    .sort((a, b) => a.number.localeCompare(b.number, undefined, { numeric: true }))
+    .map(buildNode)
+}
+
+/**
+ * Conta o total de descendentes (filhos + netos + ...) de um nó.
+ */
+export const countDescendants = (node: TicketTreeNode): number => {
+  let total = node.children.length
+  for (const child of node.children) total += countDescendants(child)
+  return total
+}
+
+/**
  * Busca todos os tickets (com os mesmos expands de `getTickets`) e anexa
  * `last_interaction_at` — a data (ISO) da criação da última interação de cada
  * chamado. Usado pela listagem para calcular o "Tempo sem Atualização".

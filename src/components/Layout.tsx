@@ -43,6 +43,7 @@ import {
   CheckCircle2,
   RefreshCw,
   DollarSign,
+  Network,
 } from 'lucide-react'
 import { useAuth } from '@/hooks/use-auth'
 import { useTheme } from '@/hooks/use-theme'
@@ -184,6 +185,12 @@ export default function Layout() {
 
   const chamadosSubmenuItems = [
     { label: 'Fila de Tickets', path: '/tickets', icon: Ticket, show: true },
+    {
+      label: 'Hierarquia de Tickets',
+      path: '/tickets/tree',
+      icon: Network,
+      show: permissions.isTecnico || permissions.isClienteGestor,
+    },
     { label: 'Abrir Chamado', path: '/chamados/novo', icon: PlusCircle, show: true },
     { label: 'Aprovações', path: '/aprovacoes', icon: FileCheck, show: true },
     { label: 'Categorias', path: '/categorias', icon: Tags, show: permissions.canManageCategories },
