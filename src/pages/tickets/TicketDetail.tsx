@@ -133,6 +133,7 @@ export default function TicketDetail() {
   const [showAssociate, setShowAssociate] = useState(false)
   const [associatedTickets, setAssociatedTickets] = useState<AssociatedTicket[]>([])
   const [showBatchResolve, setShowBatchResolve] = useState(false)
+  const [resolveBlockMessage, setResolveBlockMessage] = useState<string | null>(null)
   // Indica se o usuário já confirmou o encerramento apesar do alerta (não usado
   // para bypass — o encerramento é sempre bloqueado enquanto houver pendentes).
 
@@ -313,6 +314,20 @@ export default function TicketDetail() {
   }
 
   const handleResolveClick = async () => {
+    // Validação 1: SLA pausado impede a resolução.
+    if (ticket?.sla_paused) {
+      setResolveBlockMessage(
+        'O SLA deste chamado está pausado. Retome o SLA antes de resolver o chamado.',
+      )
+      return
+    }
+    // Validação 2: atendimento não iniciado impede a resolução.
+    if (!ticket?.sla_response_start) {
+      setResolveBlockMessage(
+        'O atendimento deste chamado ainda não foi iniciado. Inicie o atendimento antes de resolver o chamado.',
+      )
+      return
+    }
     // Regra de bloqueio: ticket pai com filhos pendentes não pode ser encerrado.
     const pending = await checkPendingChildren(id!)
     if (pending.length > 0) {
@@ -1131,6 +1146,22 @@ export default function TicketDetail() {
           }
         }}
       />
+      <AlertDialog
+        open={!!resolveBlockMessage}
+        onOpenChange={(open) => !open && setResolveBlockMessage(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Não é possível resolver o chamado</AlertDialogTitle>
+            <AlertDialogDescription>{resolveBlockMessage}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction onClick={() => setResolveBlockMessage(null)}>
+              Entendi
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }
