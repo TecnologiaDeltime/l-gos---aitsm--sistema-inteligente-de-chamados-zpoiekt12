@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-18T01:55:02.627Z",
+  "generatedAt": "2026-08-18T02:19:10.593Z",
   "collections": [
     {
       "name": "users",
@@ -1401,6 +1401,12 @@
           "type": "text",
           "required": false,
           "system": false
+        },
+        {
+          "name": "last_stale_alert_at",
+          "type": "date",
+          "required": false,
+          "system": false
         }
       ],
       "indexes": [
@@ -1411,7 +1417,8 @@
         "CREATE INDEX idx_tickets_priority ON tickets (priority)",
         "CREATE INDEX idx_tickets_sla_status ON tickets (sla_status)",
         "CREATE INDEX `idx_tickets_parent_ticket` ON `tickets` (parent_ticket_id)",
-        "CREATE INDEX `idx_tickets_association_group` ON `tickets` (association_group_id)"
+        "CREATE INDEX `idx_tickets_association_group` ON `tickets` (association_group_id)",
+        "CREATE INDEX `idx_tickets_last_stale_alert` ON `tickets` (last_stale_alert_at)"
       ]
     },
     {
@@ -1943,13 +1950,6 @@
           "system": false
         },
         {
-          "name": "type",
-          "type": "select",
-          "required": false,
-          "system": false,
-          "selectValues": ["SLA", "Atribuição", "Interação", "Aprovação", "Sistema", "Alerta"]
-        },
-        {
           "name": "read",
           "type": "bool",
           "required": false,
@@ -1974,6 +1974,21 @@
           "required": false,
           "system": false,
           "autodateTriggers": ["onCreate", "onUpdate"]
+        },
+        {
+          "name": "type",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": [
+            "SLA",
+            "Atribuição",
+            "Interação",
+            "Aprovação",
+            "Sistema",
+            "Alerta",
+            "StaleTicket"
+          ]
         }
       ],
       "indexes": ["CREATE INDEX idx_notifications_user ON notifications (user)"]
@@ -8212,6 +8227,80 @@
       ],
       "indexes": [
         "CREATE INDEX idx_consumption_alert_configs_company ON consumption_alert_configs (company)"
+      ]
+    },
+    {
+      "name": "stale_ticket_alert_settings",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != ''",
+        "view": "@request.auth.id != ''",
+        "create": "@request.auth.id != '' && (@request.auth.role = \"admin\" || @request.auth.role = \"gestor\")",
+        "update": "@request.auth.id != '' && (@request.auth.role = \"admin\" || @request.auth.role = \"gestor\")",
+        "delete": "@request.auth.id != '' && @request.auth.role = \"admin\""
+      },
+      "fields": [
+        {
+          "name": "company",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "companies"
+        },
+        {
+          "name": "enabled",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "popup_enabled",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "voice_enabled",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "hours_without_update",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "scope",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["global", "company"]
+        },
+        {
+          "name": "last_alert_at",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": [
+        "CREATE INDEX idx_stale_ticket_alert_settings_company ON stale_ticket_alert_settings (company)"
       ]
     }
   ]

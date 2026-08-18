@@ -108,6 +108,7 @@ import NotificationsPage from '@/pages/notifications/NotificationsPage'
 import { GlobalNotifications } from '@/components/GlobalNotifications'
 import { SlaResponseAlerts } from '@/components/SlaResponseAlerts'
 import { ConsumptionAlerts } from '@/components/ConsumptionAlerts'
+import { StaleTicketAlerts } from '@/components/StaleTicketAlerts'
 import { useAuth } from '@/hooks/use-auth'
 
 function RootRedirect() {
@@ -126,6 +127,7 @@ const App = () => (
           <GlobalNotifications />
           <SlaResponseAlerts />
           <ConsumptionAlerts />
+          <StaleTicketAlerts />
           <Routes>
             {/* Public Auth Routes */}
             <Route path="/login" element={<Login />} />

@@ -24,6 +24,11 @@ import {
   saveConsumptionAlertConfig,
   ConsumptionAlertConfig,
 } from '@/services/consumption-alert-config'
+import {
+  getStaleTicketAlertSettings,
+  saveStaleTicketAlertSettings,
+  StaleTicketAlertSettings,
+} from '@/services/stale-ticket-alert-settings'
 import { usePermissions } from '@/hooks/use-permissions'
 import { Hourglass } from 'lucide-react'
 
@@ -44,6 +49,11 @@ export default function SettingsPage() {
   const [consumptionSaving, setConsumptionSaving] = useState(false)
   const [consumption, setConsumption] = useState<ConsumptionAlertConfig | null>(null)
 
+  // Estado dos alertas de chamados sem atualização.
+  const [staleLoading, setStaleLoading] = useState(true)
+  const [staleSaving, setStaleSaving] = useState(false)
+  const [stale, setStale] = useState<StaleTicketAlertSettings | null>(null)
+
   useEffect(() => {
     setVoiceEnabled(getVoiceAlertsEnabled())
     setSlaThreshold(getSlaThresholdMinutes())
@@ -55,8 +65,11 @@ export default function SettingsPage() {
       .then((c) => setConsumption(c))
       .catch(() => {})
       .finally(() => setConsumptionLoading(false))
+    getStaleTicketAlertSettings()
+      .then((s) => setStale(s))
+      .catch(() => {})
+      .finally(() => setStaleLoading(false))
   }, [])
-
   const handleConsumptionSave = async () => {
     if (!consumption) return
     setConsumptionSaving(true)
@@ -79,6 +92,25 @@ export default function SettingsPage() {
       toast({ title: 'Erro ao salvar configurações de consumo', variant: 'destructive' })
     } finally {
       setConsumptionSaving(false)
+    }
+  }
+
+  const handleStaleSave = async () => {
+    if (!stale) return
+    setStaleSaving(true)
+    try {
+      const saved = await saveStaleTicketAlertSettings({
+        enabled: stale.enabled,
+        popup_enabled: stale.popup_enabled,
+        voice_enabled: stale.voice_enabled,
+        hours_without_update: stale.hours_without_update,
+      })
+      setStale(saved)
+      toast({ title: 'Configurações de alertas de chamados sem atualização salvas' })
+    } catch {
+      toast({ title: 'Erro ao salvar configurações', variant: 'destructive' })
+    } finally {
+      setStaleSaving(false)
     }
   }
 
@@ -491,6 +523,105 @@ export default function SettingsPage() {
           ) : (
             <p className="text-xs text-red-500">
               Não foi possível carregar as configurações de consumo.
+            </p>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card className="itsm-card">
+        <CardHeader className="border-b border-slate-200 dark:border-slate-800">
+          <CardTitle className="text-base font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+            <Hourglass className="h-5 w-5 text-blue-600" />
+            Alertas de Chamados sem Atualização
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-6 p-6">
+          <p className="text-xs text-slate-500 max-w-md">
+            Configura os alertas disparados quando um chamado aberto está há mais de X horas sem
+            nenhuma atualização (interação). O alerta é enviado ao operador responsável e exibido em
+            tempo real no sistema via popup e/ou voz. As alterações são persistidas no backend.
+          </p>
+          {staleLoading ? (
+            <p className="text-xs text-slate-400">Carregando configurações...</p>
+          ) : stale ? (
+            <>
+              <div className="flex items-center justify-between">
+                <div className="space-y-1">
+                  <Label className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                    Habilitar alertas de chamados sem atualização
+                  </Label>
+                  <p className="text-xs text-slate-500 max-w-md">
+                    Liga/desliga todo o sistema de alertas de chamados sem movimento.
+                  </p>
+                </div>
+                <Switch
+                  checked={stale.enabled}
+                  onCheckedChange={(c) => setStale({ ...stale, enabled: c })}
+                  disabled={!permissions.isGestor}
+                />
+              </div>
+
+              <div className="space-y-3 pt-4 border-t border-slate-100 dark:border-slate-800">
+                <p className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                  Canais de notificação
+                </p>
+                <div className="flex items-center justify-between">
+                  <Label className="text-sm text-slate-600 dark:text-slate-400">
+                    Popup no sistema
+                  </Label>
+                  <Switch
+                    checked={stale.popup_enabled}
+                    onCheckedChange={(c) => setStale({ ...stale, popup_enabled: c })}
+                    disabled={!permissions.isGestor}
+                  />
+                </div>
+                <div className="flex items-center justify-between">
+                  <Label className="text-sm text-slate-600 dark:text-slate-400">Voz</Label>
+                  <Switch
+                    checked={stale.voice_enabled}
+                    onCheckedChange={(c) => setStale({ ...stale, voice_enabled: c })}
+                    disabled={!permissions.isGestor}
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4 pt-4 border-t border-slate-100 dark:border-slate-800">
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                    Horas sem atualização
+                  </Label>
+                  <p className="text-xs text-slate-500">
+                    Tempo mínimo sem interação para disparar o alerta (padrão: 8h).
+                  </p>
+                  <Input
+                    type="number"
+                    min={1}
+                    max={720}
+                    value={stale.hours_without_update}
+                    onChange={(e) => {
+                      const n = parseInt(e.target.value, 10)
+                      if (!isNaN(n) && n >= 1) setStale({ ...stale, hours_without_update: n })
+                    }}
+                    className="itsm-input w-32"
+                    disabled={!permissions.isGestor}
+                  />
+                </div>
+              </div>
+
+              {permissions.isGestor && (
+                <Button
+                  onClick={handleStaleSave}
+                  disabled={staleSaving}
+                  className="bg-blue-600 hover:bg-blue-700"
+                >
+                  <Save className="mr-1.5 h-4 w-4" />
+                  {staleSaving ? 'Salvando...' : 'Salvar Configurações'}
+                </Button>
+              )}
+            </>
+          ) : (
+            <p className="text-xs text-red-500">
+              Não foi possível carregar as configurações de alertas de chamados sem atualização.
             </p>
           )}
         </CardContent>
