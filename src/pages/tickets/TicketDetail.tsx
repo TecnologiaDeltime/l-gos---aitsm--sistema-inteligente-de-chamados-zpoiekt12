@@ -424,22 +424,31 @@ export default function TicketDetail() {
     <div className="grid gap-6 lg:grid-cols-3">
       <div className="space-y-6 lg:col-span-2">
         <div className="itsm-card p-6 space-y-4">
+          {ticket.parent_ticket_id && (
+            <Link
+              to={`/tickets/${ticket.parent_ticket_id}`}
+              className="flex items-center gap-2 rounded-lg border border-blue-300 bg-blue-50 px-3 py-2 text-sm font-medium text-blue-700 hover:bg-blue-100 transition-colors dark:bg-blue-950/40 dark:border-blue-800 dark:text-blue-300"
+              title="Ir para o ticket pai"
+            >
+              <ArrowUpRight className="h-4 w-4 shrink-0" />
+              <span className="shrink-0">
+                Ticket Filho de{' '}
+                <strong className="font-bold">
+                  #{ticket.expand?.parent_ticket_id?.number || ticket.parent_ticket_id}
+                </strong>
+              </span>
+              {ticket.expand?.parent_ticket_id?.title && (
+                <span className="truncate text-blue-600/80 dark:text-blue-400/80">
+                  — {ticket.expand.parent_ticket_id.title}
+                </span>
+              )}
+            </Link>
+          )}
           <div className="flex flex-wrap items-center justify-between gap-2">
             <h2 className="text-xl font-bold text-foreground">
               {ticket.number} - {ticket.title}
             </h2>
             <div className="flex items-center gap-2">
-              {ticket.parent_ticket_id && (
-                <Link
-                  to={`/tickets/${ticket.parent_ticket_id}`}
-                  className="inline-flex items-center gap-1 rounded-full border border-blue-300 bg-blue-50 px-2 py-0.5 text-[11px] font-medium text-blue-700 hover:bg-blue-100 dark:bg-blue-950/40 dark:border-blue-800 dark:text-blue-300"
-                  title="Ver ticket pai"
-                >
-                  <ArrowUpRight className="h-3 w-3" />
-                  Ticket Filho de #
-                  {ticket.expand?.parent_ticket_id?.number || ticket.parent_ticket_id}
-                </Link>
-              )}
               {childTickets.length > 0 && (
                 <span className="inline-flex items-center gap-1 rounded-full border border-slate-300 bg-slate-50 px-2 py-0.5 text-[11px] font-medium text-slate-600 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300">
                   <GitBranch className="h-3 w-3" />
