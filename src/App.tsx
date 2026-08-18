@@ -105,6 +105,7 @@ import TechnicianAvailabilityPage from '@/pages/visits-n2/TechnicianAvailability
 import KmRatesPage from '@/pages/visits-n2/KmRatesPage'
 import VisitReportsPage from '@/pages/visits-n2/VisitReportsPage'
 import { GlobalNotifications } from '@/components/GlobalNotifications'
+import { SlaResponseAlerts } from '@/components/SlaResponseAlerts'
 import { useAuth } from '@/hooks/use-auth'
 
 function RootRedirect() {
@@ -121,6 +122,7 @@ const App = () => (
           <Toaster />
           <Sonner />
           <GlobalNotifications />
+          <SlaResponseAlerts />
           <Routes>
             {/* Public Auth Routes */}
             <Route path="/login" element={<Login />} />

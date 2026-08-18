@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-17T23:35:07.071Z",
+  "generatedAt": "2026-08-18T01:17:12.170Z",
   "collections": [
     {
       "name": "users",
@@ -8005,6 +8005,90 @@
         "CREATE INDEX idx_client_email_domains_client ON client_email_domains (client)",
         "CREATE INDEX idx_client_email_domains_active ON client_email_domains (active)"
       ]
+    },
+    {
+      "name": "sla_alert_settings",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != ''",
+        "view": "@request.auth.id != ''",
+        "create": "@request.auth.id != '' && (@request.auth.role = \"admin\" || @request.auth.role = \"gestor\")",
+        "update": "@request.auth.id != '' && (@request.auth.role = \"admin\" || @request.auth.role = \"gestor\")",
+        "delete": "@request.auth.id != '' && @request.auth.role = \"admin\""
+      },
+      "fields": [
+        {
+          "name": "company",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "companies"
+        },
+        {
+          "name": "enabled",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "popup_enabled",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "email_enabled",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "voice_enabled",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "minutes_before_expiry",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "interval_minutes",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "scope",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["global", "company"]
+        },
+        {
+          "name": "last_alert_at",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": ["CREATE INDEX idx_sla_alert_settings_company ON sla_alert_settings (company)"]
     }
   ]
 }
