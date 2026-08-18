@@ -104,8 +104,10 @@ import RecurringVisitsPage from '@/pages/visits-n2/RecurringVisitsPage'
 import TechnicianAvailabilityPage from '@/pages/visits-n2/TechnicianAvailabilityPage'
 import KmRatesPage from '@/pages/visits-n2/KmRatesPage'
 import VisitReportsPage from '@/pages/visits-n2/VisitReportsPage'
+import NotificationsPage from '@/pages/notifications/NotificationsPage'
 import { GlobalNotifications } from '@/components/GlobalNotifications'
 import { SlaResponseAlerts } from '@/components/SlaResponseAlerts'
+import { ConsumptionAlerts } from '@/components/ConsumptionAlerts'
 import { useAuth } from '@/hooks/use-auth'
 
 function RootRedirect() {
@@ -123,6 +125,7 @@ const App = () => (
           <Sonner />
           <GlobalNotifications />
           <SlaResponseAlerts />
+          <ConsumptionAlerts />
           <Routes>
             {/* Public Auth Routes */}
             <Route path="/login" element={<Login />} />
@@ -192,6 +195,7 @@ const App = () => (
               <Route path="/settings" element={<SettingsPage />} />
               <Route path="/settings/sla" element={<SlaSettings />} />
               <Route path="/settings/ticket-templates" element={<TicketTemplates />} />
+              <Route path="/notifications" element={<NotificationsPage />} />
               <Route path="/operator-dashboard" element={<OperatorDashboard />} />
               <Route path="/manager-dashboard" element={<ManagerDashboard />} />
               <Route path="/contracts/consumption" element={<ContractConsumptionDashboard />} />

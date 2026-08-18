@@ -333,6 +333,7 @@ export default function Layout() {
       show: permissions.isAdmin,
     },
     { label: 'Central de Aprovações', path: '/approval-center', icon: FileCheck, show: true },
+    { label: 'Notificações', path: '/notifications', icon: Bell, show: true },
     { label: 'Configurações Gerais', path: '/settings', icon: Settings, show: permissions.isAdmin },
   ]
   const relatoriosSubmenuItems = [
@@ -894,6 +895,13 @@ export default function Layout() {
                     <span className="text-xs text-primary font-normal">{unreadCount} novas</span>
                   )}
                 </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={() => navigate('/notifications')}
+                  className="text-primary text-xs justify-center"
+                >
+                  Ver todas as notificações
+                </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <div className="max-h-64 overflow-y-auto divide-y divide-border">
                   {notifications.length === 0 ? (

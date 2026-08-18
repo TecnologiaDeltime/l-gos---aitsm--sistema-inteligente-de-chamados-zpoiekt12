@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-18T01:41:29.844Z",
+  "generatedAt": "2026-08-18T01:55:02.627Z",
   "collections": [
     {
       "name": "users",
@@ -8110,6 +8110,109 @@
         }
       ],
       "indexes": ["CREATE INDEX idx_sla_alert_settings_company ON sla_alert_settings (company)"]
+    },
+    {
+      "name": "consumption_alert_configs",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != ''",
+        "view": "@request.auth.id != ''",
+        "create": "@request.auth.id != '' && (@request.auth.role = \"admin\" || @request.auth.role = \"gestor\")",
+        "update": "@request.auth.id != '' && (@request.auth.role = \"admin\" || @request.auth.role = \"gestor\")",
+        "delete": "@request.auth.id != '' && @request.auth.role = \"admin\""
+      },
+      "fields": [
+        {
+          "name": "company",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "companies"
+        },
+        {
+          "name": "enabled",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "notify_admins",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "notify_focal_points",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "notify_ticket_responsible",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "notify_quality_team",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "notify_company_responsible",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "quality_team_emails",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "threshold_80_enabled",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "threshold_90_enabled",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "threshold_100_enabled",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "last_notified_level_pcts",
+          "type": "json",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": [
+        "CREATE INDEX idx_consumption_alert_configs_company ON consumption_alert_configs (company)"
+      ]
     }
   ]
 }
