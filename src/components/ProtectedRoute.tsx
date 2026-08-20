@@ -1,9 +1,23 @@
 import { ReactNode } from 'react'
-import { Navigate } from 'react-router-dom'
+import { Navigate, useLocation } from 'react-router-dom'
 import { useAuth } from '@/hooks/use-auth'
+import { usePermissions } from '@/hooks/use-permissions'
+import { ModuleKey } from '@/types/profiles'
 
-export function ProtectedRoute({ children }: { children: ReactNode }) {
+interface ProtectedRouteProps {
+  children: ReactNode
+  requiredModule?: ModuleKey
+  requireWrite?: boolean
+}
+
+export function ProtectedRoute({
+  children,
+  requiredModule,
+  requireWrite = false,
+}: ProtectedRouteProps) {
   const { isAuthenticated, loading } = useAuth()
+  const { canReadModule, canWriteModule, isModuleHidden } = usePermissions()
+  const location = useLocation()
 
   if (loading) {
     return (
@@ -14,7 +28,19 @@ export function ProtectedRoute({ children }: { children: ReactNode }) {
   }
 
   if (!isAuthenticated) {
-    return <Navigate to="/login" replace />
+    return <Navigate to="/login" state={{ from: location }} replace />
+  }
+
+  if (requiredModule) {
+    if (isModuleHidden(requiredModule)) {
+      return <Navigate to="/dashboard" replace />
+    }
+    if (requireWrite && !canWriteModule(requiredModule)) {
+      return <Navigate to="/dashboard" replace />
+    }
+    if (!requireWrite && !canReadModule(requiredModule)) {
+      return <Navigate to="/dashboard" replace />
+    }
   }
 
   return <>{children}</>

@@ -5,6 +5,8 @@ export interface UserRecord {
   id: string
   email: string
   name?: string
+  first_name?: string
+  last_name?: string
   role?: 'admin' | 'gestor' | 'tecnico' | 'cliente_gestor' | 'cliente_solicitante' | 'auditor'
   company?: string
   phone?: string
@@ -12,6 +14,15 @@ export interface UserRecord {
   avatar?: string
   active?: boolean
   unit?: string
+  team?: string
+  type?: 'Interno' | 'Externo'
+  extension?: string
+  mobile?: string
+  profile_id?: string
+  expand?: {
+    profile_id?: any
+    company?: any
+  }
 }
 
 interface AuthContextType {
@@ -46,7 +57,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     if (pb.authStore.isValid) {
       pb.collection('users')
-        .authRefresh()
+        .authRefresh({ expand: 'profile_id,company' })
         .catch(() => pb.authStore.clear())
         .finally(() => setLoading(false))
     } else {
@@ -71,7 +82,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const signIn = async (email: string, password: string) => {
     try {
-      await pb.collection('users').authWithPassword(email, password)
+      await pb.collection('users').authWithPassword(email, password, {
+        expand: 'profile_id,company',
+      })
       return { error: null }
     } catch (error) {
       return { error }

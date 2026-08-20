@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { UserPlus, UserCheck } from 'lucide-react'
+import { UserPlus, UserCheck, ArrowRight, Shield } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { getUsers, UserItem } from '@/services/users'
+import { usePermissions } from '@/hooks/use-permissions'
 
 export default function TeamList() {
   const [users, setUsers] = useState<UserItem[]>([])
+  const { canManageOperators, canManageProfiles } = usePermissions()
 
   useEffect(() => {
     getUsers()
@@ -16,12 +18,36 @@ export default function TeamList() {
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
-        <h2 className="text-lg font-bold">Equipe e Usuários</h2>
-        <Link to="/team/new">
-          <Button className="bg-blue-600 hover:bg-blue-700">
-            <UserPlus className="mr-2 h-4 w-4" /> Novo Usuário
-          </Button>
-        </Link>
+        <div>
+          <h2 className="text-lg font-bold">Equipe e Operadores</h2>
+          <p className="text-xs text-muted-foreground">
+            Visão geral dos colaboradores e operadores do sistema
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          {canManageOperators && (
+            <Link to="/operators">
+              <Button variant="outline" size="sm" className="gap-1.5 text-xs">
+                <UserCheck className="h-4 w-4" />
+                Gerenciar Operadores
+                <ArrowRight className="h-3.5 w-3.5" />
+              </Button>
+            </Link>
+          )}
+          {canManageProfiles && (
+            <Link to="/profiles">
+              <Button variant="outline" size="sm" className="gap-1.5 text-xs">
+                <Shield className="h-4 w-4" />
+                Perfis de Acesso
+              </Button>
+            </Link>
+          )}
+          <Link to="/team/new">
+            <Button size="sm" className="bg-primary hover:bg-primary/90 text-primary-foreground">
+              <UserPlus className="mr-1.5 h-4 w-4" /> Novo Usuário
+            </Button>
+          </Link>
+        </div>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">

@@ -86,6 +86,7 @@ export default function Layout() {
   const [configuracoesMenuOpen, setConfiguracoesMenuOpen] = useState(false)
   const [relatoriosMenuOpen, setRelatoriosMenuOpen] = useState(false)
   const [cmdbMenuOpen, setCmdbMenuOpen] = useState(false)
+  const [adminMenuOpen, setAdminMenuOpen] = useState(false)
 
   useEffect(() => {
     if (user) {
@@ -158,42 +159,63 @@ export default function Layout() {
       label: 'Cadastro de Clientes',
       path: '/clients',
       icon: Building2,
-      show: permissions.canManageClients,
+      show: permissions.canReadModule('clients'),
     },
-    { label: 'Contrato', path: '/contracts', icon: FileText, show: permissions.canManageContracts },
+    {
+      label: 'Contrato',
+      path: '/contracts',
+      icon: FileText,
+      show: permissions.canReadModule('clients'),
+    },
     {
       label: 'Horas Clientes',
       path: '/horas-clientes',
       icon: Hourglass,
-      show: permissions.canManageContracts,
+      show: permissions.canReadModule('clients'),
     },
     {
       label: 'Consumo de Contratos',
       path: '/contracts/consumption',
       icon: Gauge,
-      show: permissions.canManageContracts,
+      show: permissions.canReadModule('clients'),
     },
     {
       label: 'Dashboard de Contratos',
       path: '/contracts/dashboard',
       icon: CalendarClock,
-      show: permissions.canManageContracts,
+      show: permissions.canReadModule('clients'),
     },
   ]
 
-  const clientGroupVisible = permissions.canManageClients || permissions.canManageContracts
+  const clientGroupVisible =
+    !permissions.isModuleHidden('clients') && clientSubmenuItems.some((i) => i.show)
 
   const chamadosSubmenuItems = [
-    { label: 'Fila de Tickets', path: '/tickets', icon: Ticket, show: true },
+    {
+      label: 'Fila de Tickets',
+      path: '/tickets',
+      icon: Ticket,
+      show: permissions.canReadModule('tickets'),
+    },
     {
       label: 'Hierarquia de Tickets',
       path: '/tickets/tree',
       icon: Network,
-      show: permissions.isTecnico || permissions.isClienteGestor,
+      show: permissions.canReadModule('tickets_children'),
     },
-    { label: 'Abrir Chamado', path: '/chamados/novo', icon: PlusCircle, show: true },
+    {
+      label: 'Abrir Chamado',
+      path: '/chamados/novo',
+      icon: PlusCircle,
+      show: permissions.canWriteModule('tickets'),
+    },
     { label: 'Aprovações', path: '/aprovacoes', icon: FileCheck, show: true },
-    { label: 'Categorias', path: '/categorias', icon: Tags, show: permissions.canManageCategories },
+    {
+      label: 'Categorias',
+      path: '/categorias',
+      icon: Tags,
+      show: permissions.canManageCategories,
+    },
     {
       label: 'Catálogo de Atividades',
       path: '/catalogo',
@@ -207,57 +229,95 @@ export default function Layout() {
       label: 'Dashboard Gerencial',
       path: '/dashboard-gerencial',
       icon: LayoutDashboard,
-      show: true,
+      show: permissions.canReadModule('dashboard'),
     },
-    { label: 'Painel de Tickets', path: '/dashboard', icon: LayoutDashboard, show: true },
+    {
+      label: 'Painel de Tickets',
+      path: '/dashboard',
+      icon: LayoutDashboard,
+      show: permissions.canReadModule('dashboard'),
+    },
   ]
 
-  const chamadosGroupVisible = chamadosSubmenuItems.some((i) => i.show)
+  const chamadosGroupVisible =
+    !permissions.isModuleHidden('tickets') && chamadosSubmenuItems.some((i) => i.show)
 
   const cmdbSubmenuItems = [
-    { label: 'Ativos', path: '/cmdb/assets', icon: Server, show: permissions.canViewCmdb },
+    {
+      label: 'Ativos',
+      path: '/cmdb/assets',
+      icon: Server,
+      show: permissions.canReadModule('cmdb'),
+    },
     {
       label: 'Itens de Configuração',
       path: '/cmdb/configuration-items',
       icon: Boxes,
-      show: permissions.canViewCmdb,
+      show: permissions.canReadModule('cmdb'),
     },
   ]
-  const cmdbGroupVisible = permissions.canViewCmdb
+  const cmdbGroupVisible =
+    !permissions.isModuleHidden('cmdb') && cmdbSubmenuItems.some((i) => i.show)
 
   const changesSubmenuItems = [
-    { label: 'Dashboard de Mudanças', path: '/changes', icon: LayoutDashboard, show: true },
-    { label: 'Requisições de Mudança (RDM)', path: '/changes/list', icon: FileText, show: true },
+    {
+      label: 'Dashboard de Mudanças',
+      path: '/changes',
+      icon: LayoutDashboard,
+      show: permissions.canReadModule('changes'),
+    },
+    {
+      label: 'Requisições de Mudança (RDM)',
+      path: '/changes/list',
+      icon: FileText,
+      show: permissions.canReadModule('changes'),
+    },
     { label: 'Minhas Mudanças', path: '/changes/my', icon: User, show: true },
-    { label: 'Mudanças Pendentes de Aprovação', path: '/changes/pending', icon: Clock, show: true },
-    { label: 'Calendário de Mudanças', path: '/changes/calendar', icon: CalendarClock, show: true },
-    { label: 'Comitê de Mudanças', path: '/changes/committee', icon: Users, show: true },
+    {
+      label: 'Mudanças Pendentes de Aprovação',
+      path: '/changes/pending',
+      icon: Clock,
+      show: permissions.canReadModule('changes'),
+    },
+    {
+      label: 'Calendário de Mudanças',
+      path: '/changes/calendar',
+      icon: CalendarClock,
+      show: permissions.canReadModule('changes'),
+    },
+    {
+      label: 'Comitê de Mudanças',
+      path: '/changes/committee',
+      icon: Users,
+      show: permissions.canReadModule('changes'),
+    },
     {
       label: 'Tipos de Mudança',
       path: '/changes/types',
       icon: Tags,
-      show: permissions.isAdmin || permissions.isGestor,
+      show: permissions.canWriteModule('changes'),
     },
     {
       label: 'Catálogo de Mudança Padrão',
       path: '/changes/templates',
       icon: FileCheck,
-      show: permissions.isAdmin || permissions.isGestor,
+      show: permissions.canWriteModule('changes'),
     },
     {
       label: 'Relatórios',
       path: '/changes/reports',
       icon: BarChart3,
-      show: permissions.canViewReports,
+      show: permissions.canReadModule('reports'),
     },
     {
       label: 'Configurações',
       path: '/changes/settings',
       icon: Settings,
-      show: permissions.isAdmin,
+      show: permissions.canWriteModule('settings'),
     },
   ]
-  const changesGroupVisible = changesSubmenuItems.some((i) => i.show)
+  const changesGroupVisible =
+    !permissions.isModuleHidden('changes') && changesSubmenuItems.some((i) => i.show)
 
   const problemsSubmenuItems = [
     { label: 'Dashboard de Problemas', path: '/problems', icon: LayoutDashboard, show: true },
@@ -318,12 +378,30 @@ export default function Layout() {
   ]
   const visitsN2GroupVisible = true
 
+  const adminSubmenuItems = [
+    {
+      label: 'Operadores',
+      path: '/operators',
+      icon: Users,
+      show: permissions.canReadModule('operators') || permissions.isAdmin,
+    },
+    {
+      label: 'Perfis de Acesso',
+      path: '/profiles',
+      icon: Shield,
+      show: permissions.canReadModule('profiles') || permissions.isAdmin,
+    },
+  ]
+  const adminGroupVisible =
+    (!permissions.isModuleHidden('operators') || !permissions.isModuleHidden('profiles')) &&
+    adminSubmenuItems.some((i) => i.show)
+
   const configuracoesSubmenuItems = [
     {
       label: 'Configurações de SLA',
       path: '/settings/sla',
       icon: Clock,
-      show: permissions.isAdmin,
+      show: permissions.canWriteModule('settings'),
     },
     {
       label: 'Central de Automações',
@@ -332,7 +410,6 @@ export default function Layout() {
       show: permissions.canManageAutomations,
     },
     { label: 'Filas', path: '/queues', icon: Inbox, show: permissions.canManageQueues },
-    { label: 'Equipe', path: '/team', icon: Users, show: permissions.canManageTeam },
     {
       label: 'Bloqueio de Clientes',
       path: '/blocking',
@@ -340,54 +417,67 @@ export default function Layout() {
       show: permissions.isAdmin,
     },
     { label: 'Central de Aprovações', path: '/approval-center', icon: FileCheck, show: true },
-    { label: 'Notificações', path: '/notifications', icon: Bell, show: true },
-    { label: 'Configurações Gerais', path: '/settings', icon: Settings, show: permissions.isAdmin },
+    {
+      label: 'Notificações',
+      path: '/notifications',
+      icon: Bell,
+      show: !permissions.isModuleHidden('notifications'),
+    },
+    {
+      label: 'Configurações Gerais',
+      path: '/settings',
+      icon: Settings,
+      show: permissions.canWriteModule('settings'),
+    },
   ]
   const relatoriosSubmenuItems = [
     {
       label: 'Relatórios Gerenciais',
       path: '/reports',
       icon: BarChart3,
-      show: permissions.canViewReports,
+      show: permissions.canReadModule('reports'),
     },
     {
       label: 'Relatórios por Filial',
       path: '/reports/unit',
       icon: BarChart3,
-      show: permissions.canAccessUnitReports,
+      show: permissions.canAccessUnitReports && permissions.canReadModule('reports'),
     },
     {
       label: 'Dashboard de SLA',
       path: '/sla-dashboard',
       icon: BarChart3,
-      show: permissions.canViewReports,
+      show: permissions.canReadModule('sla_dashboard'),
     },
     {
       label: 'Metas de SLA',
       path: '/sla-goals',
       icon: BarChart3,
-      show: permissions.canViewReports,
+      show: permissions.canReadModule('sla_dashboard'),
     },
     {
       label: 'Atividades Recorrentes',
       path: '/recurrent-activities',
       icon: BarChart3,
-      show: permissions.canViewReports,
+      show: permissions.canReadModule('reports'),
     },
     {
       label: 'Relatórios Agendados',
       path: '/scheduled-reports',
       icon: BarChart3,
-      show: permissions.canViewReports,
+      show: permissions.canReadModule('reports'),
     },
     {
       label: 'Extração de Clientes',
       path: '/reports/clients',
       icon: BarChart3,
-      show: permissions.canViewReports,
+      show: permissions.canReadModule('reports'),
     },
   ]
-  const relatoriosGroupVisible = relatoriosSubmenuItems.some((i) => i.show)
+  const relatoriosGroupVisible =
+    !permissions.isModuleHidden('reports') &&
+    !permissions.isModuleHidden('sla_dashboard') &&
+    relatoriosSubmenuItems.some((i) => i.show)
 
   const configuracoesGroupVisible = configuracoesSubmenuItems.some((i) => i.show)
 
@@ -780,6 +870,53 @@ export default function Layout() {
           </div>
         )}
         {navAfterClient.map(renderNavItem)}
+
+        {/* Grupo Administração (Operadores e Perfis de Acesso) */}
+        {adminGroupVisible && (
+          <div key="administracao-group">
+            <div className="flex items-center">
+              <button
+                onClick={() => setAdminMenuOpen(!adminMenuOpen)}
+                className={`flex flex-1 items-center gap-3 px-4 py-2.5 text-sm font-medium transition-all duration-200 border-l-2 ${
+                  adminSubmenuItems.some((i) => i.show && location.pathname === i.path)
+                    ? 'border-primary bg-primary/10 text-primary'
+                    : 'border-transparent text-muted-foreground hover:bg-secondary/50 hover:text-foreground'
+                }`}
+              >
+                <Shield className="h-[18px] w-[18px] shrink-0 text-primary" />
+                <span className="truncate">Administração</span>
+                {adminMenuOpen ? (
+                  <ChevronDown className="ml-auto h-4 w-4" />
+                ) : (
+                  <ChevronRight className="ml-auto h-4 w-4" />
+                )}
+              </button>
+            </div>
+            {adminMenuOpen &&
+              adminSubmenuItems
+                .filter((i) => i.show)
+                .map((sub) => {
+                  const SubIcon = sub.icon
+                  const subActive = location.pathname === sub.path
+                  return (
+                    <Link
+                      key={sub.path}
+                      to={sub.path}
+                      onClick={() => setMobileOpen(false)}
+                      className={`flex items-center gap-3 pl-10 pr-4 py-2 text-[13px] font-medium transition-all duration-200 border-l-2 ${
+                        subActive
+                          ? 'border-primary bg-primary/10 text-primary'
+                          : 'border-transparent text-muted-foreground hover:bg-secondary/50 hover:text-foreground'
+                      }`}
+                    >
+                      <SubIcon className="h-4 w-4 shrink-0" />
+                      <span className="truncate">{sub.label}</span>
+                    </Link>
+                  )
+                })}
+          </div>
+        )}
+
         {configuracoesGroupVisible && (
           <div key="configuracoes-group">
             <div className="flex items-center">
@@ -864,6 +1001,7 @@ export default function Layout() {
                 ...problemsSubmenuItems,
                 ...visitsN2SubmenuItems,
                 ...relatoriosSubmenuItems,
+                ...adminSubmenuItems,
                 ...configuracoesSubmenuItems,
               ].find((i) => i.path === location.pathname)?.label || 'Painel'}
             </h1>

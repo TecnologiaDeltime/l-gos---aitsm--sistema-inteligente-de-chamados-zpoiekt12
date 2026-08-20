@@ -33,6 +33,8 @@ import RecurrentActivities from '@/pages/reports/RecurrentActivities'
 import SlaGoalsPage from '@/pages/reports/SlaGoalsPage'
 import ScheduledReportsPage from '@/pages/reports/ScheduledReportsPage'
 import KnowledgeBase from '@/pages/knowledge/KnowledgeBase'
+import ProfilesPage from '@/pages/profiles/ProfilesPage'
+import OperatorsPage from '@/pages/operators/OperatorsPage'
 import SettingsPage from '@/pages/settings/SettingsPage'
 import SlaSettings from '@/pages/settings/SlaSettings'
 import TicketTemplates from '@/pages/settings/TicketTemplates'
@@ -173,6 +175,24 @@ const App = () => (
               <Route path="/contracts/new" element={<ContractDetail />} />
               <Route path="/contracts/:id" element={<ContractView />} />
               <Route path="/contracts/:id/edit" element={<ContractEdit />} />
+              {/* Perfis de Acesso & Cadastro de Operadores */}
+              <Route
+                path="/profiles"
+                element={
+                  <ProtectedRoute requiredModule="profiles">
+                    <ProfilesPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/operators"
+                element={
+                  <ProtectedRoute requiredModule="operators">
+                    <OperatorsPage />
+                  </ProtectedRoute>
+                }
+              />
+
               <Route path="/team" element={<TeamList />} />
               <Route path="/team/new" element={<TeamDetail />} />
               <Route path="/queues" element={<QueueManagement />} />
