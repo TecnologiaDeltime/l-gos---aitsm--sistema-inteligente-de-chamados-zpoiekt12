@@ -59,7 +59,7 @@ export function OperatorPerformanceSection({ data }: OperatorPerformanceSectionP
   const opNames = new Set<string>()
   monthlyData.forEach((d) => Object.keys(d).forEach((k) => k !== 'month' && opNames.add(k)))
   opNames.forEach((name, i) => {
-    chartConfig[name] = { label: name, color: `hsl(var(--chart-${(i % 5) + 1}))` }
+    chartConfig[name] = { label: name, color: `hsl(var(--chart-${(Number(i) % 5) + 1}))` }
   })
 
   const selectedPerf = perfData.find((p) => p.opId === selectedOp)

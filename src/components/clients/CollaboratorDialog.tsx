@@ -137,8 +137,8 @@ export function CollaboratorDialog({
             entity_type: 'client_contacts',
             entity_id: contact.id,
             description: `Colaborador "${form.full_name}" atualizado`,
-            old_values: contact as Record<string, unknown>,
-            new_values: payload as Record<string, unknown>,
+            old_values: contact as unknown as Record<string, unknown>,
+            new_values: payload as unknown as Record<string, unknown>,
           })
       } else {
         const created = await createClientContact(payload)
@@ -149,7 +149,7 @@ export function CollaboratorDialog({
             entity_type: 'client_contacts',
             entity_id: created.id,
             description: `Colaborador "${form.full_name}" criado`,
-            new_values: payload as Record<string, unknown>,
+            new_values: payload as unknown as Record<string, unknown>,
           })
       }
       toast({ title: contact ? 'Colaborador atualizado!' : 'Colaborador adicionado!' })

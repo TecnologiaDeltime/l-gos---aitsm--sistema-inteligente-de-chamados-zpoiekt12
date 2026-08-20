@@ -106,7 +106,13 @@ export function InteractionEditDialog({
                 min={0}
                 value={duration}
                 onChange={(e) => setDuration(e.target.value)}
+                disabled={interaction?.origin === 'Cronômetro'}
               />
+              {interaction?.origin === 'Cronômetro' && (
+                <p className="text-xs text-muted-foreground">
+                  Horas de cronômetro não podem ser editadas.
+                </p>
+              )}
               {fieldErrors.duration_minutes && (
                 <p className="text-xs text-red-500">{fieldErrors.duration_minutes}</p>
               )}

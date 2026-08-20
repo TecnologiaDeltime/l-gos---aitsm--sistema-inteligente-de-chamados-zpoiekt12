@@ -3,6 +3,7 @@ import pb from '@/lib/pocketbase/client'
 export interface TechnicalVisitRecord {
   id: string
   ticket: string
+  client?: string
   equipment?: string
   technician?: string
   client_address?: string

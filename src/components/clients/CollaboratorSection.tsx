@@ -114,7 +114,7 @@ export function CollaboratorSection({ clientId }: { clientId?: string }) {
         entity_type: 'client_contacts',
         entity_id: deleteId,
         description: `Colaborador "${contact?.full_name}" excluído`,
-        old_values: contact as Record<string, unknown>,
+        old_values: contact as unknown as Record<string, unknown>,
       })
       toast({ title: 'Colaborador excluído com sucesso!' })
     } catch {

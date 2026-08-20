@@ -125,7 +125,7 @@ export function SectorSection({ clientId, pendingSectors, onPendingSectorsChange
         entity_type: 'company_departments',
         entity_id: deleteId,
         description: `Setor "${dept?.name}" excluído`,
-        old_values: dept as Record<string, unknown>,
+        old_values: dept as unknown as Record<string, unknown>,
       })
       toast({ title: 'Setor excluído com sucesso!' })
     } catch {

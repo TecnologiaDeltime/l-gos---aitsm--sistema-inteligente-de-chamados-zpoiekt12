@@ -46,7 +46,7 @@ export function TemplateEditDialog({
   const { toast } = useToast()
   const [name, setName] = useState('')
   const [content, setContent] = useState('')
-  const [type, setType] = useState('Resolução')
+  const [type, setType] = useState<'Resolução' | 'Comentário' | 'Ambos'>('Resolução')
   const [active, setActive] = useState(true)
   const [saving, setSaving] = useState(false)
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({})
@@ -113,7 +113,10 @@ export function TemplateEditDialog({
             <Label className="text-sm font-medium">
               Tipo <span className="text-red-500">*</span>
             </Label>
-            <Select value={type} onValueChange={setType}>
+            <Select
+              value={type}
+              onValueChange={(v) => setType(v as 'Resolução' | 'Comentário' | 'Ambos')}
+            >
               <SelectTrigger className="w-full">
                 <SelectValue />
               </SelectTrigger>

@@ -80,8 +80,8 @@ export function SectorDialog({ open, onOpenChange, clientId, sectors, sector, on
             entity_type: 'company_departments',
             entity_id: sector.id,
             description: `Setor "${name}" atualizado`,
-            old_values: sector as Record<string, unknown>,
-            new_values: payload as Record<string, unknown>,
+            old_values: sector as unknown as Record<string, unknown>,
+            new_values: payload as unknown as Record<string, unknown>,
           })
       } else {
         const created = await createCompanyDepartment({ company: clientId, ...payload })
@@ -92,7 +92,7 @@ export function SectorDialog({ open, onOpenChange, clientId, sectors, sector, on
             entity_type: 'company_departments',
             entity_id: created.id,
             description: `Setor "${name}" criado`,
-            new_values: payload as Record<string, unknown>,
+            new_values: payload as unknown as Record<string, unknown>,
           })
       }
       toast({ title: sector ? 'Setor atualizado!' : 'Setor adicionado!' })

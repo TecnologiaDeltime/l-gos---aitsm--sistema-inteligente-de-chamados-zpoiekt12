@@ -111,6 +111,7 @@ export interface RecurringVisitTemplateRecord {
 export interface TechnicianAvailabilityRecord {
   id: string
   technician: string
+  expand?: any
   date?: string
   shift_start?: string
   shift_end?: string

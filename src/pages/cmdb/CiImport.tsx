@@ -135,7 +135,11 @@ export default function CiImport() {
     const existing = await getEquipments().catch(() => [])
     const serials = new Set(existing.map((e) => e.serial_number).filter(Boolean))
     const pats = new Set(existing.map((e) => e.patrimony_number).filter(Boolean))
-    const eqMap = new Map(existing.map((e) => [e.serial_number, e.name]))
+    const eqMap = new Map<string, string>(
+      existing
+        .filter((e) => !!e.serial_number)
+        .map((e) => [e.serial_number as string, e.name || '']),
+    )
 
     const parsed: ParsedRow[] = dataRows.map((cells) => {
       const data: Record<string, string> = {}

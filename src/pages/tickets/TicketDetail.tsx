@@ -606,13 +606,15 @@ export default function TicketDetail() {
                       </span>
                       {(perms.isTecnico || perms.isAdmin || perms.isGestor) && (
                         <>
-                          <button
-                            onClick={() => handleEditInteraction(i)}
-                            className="text-slate-400 hover:text-blue-600 transition-colors"
-                            title="Editar interação"
-                          >
-                            <Pencil className="h-3.5 w-3.5" />
-                          </button>
+                          {i.origin !== 'Cronômetro' && (
+                            <button
+                              onClick={() => handleEditInteraction(i)}
+                              className="text-slate-400 hover:text-blue-600 transition-colors"
+                              title="Editar interação"
+                            >
+                              <Pencil className="h-3.5 w-3.5" />
+                            </button>
+                          )}
                           <button
                             onClick={() => setDeleteTarget(i)}
                             className="text-slate-400 hover:text-red-600 transition-colors"

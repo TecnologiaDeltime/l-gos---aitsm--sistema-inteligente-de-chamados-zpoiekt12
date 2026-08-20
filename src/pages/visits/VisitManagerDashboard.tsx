@@ -162,7 +162,7 @@ export default function VisitManagerDashboard() {
             {Object.entries(techStatusCount).map(([status, count]) => (
               <div key={status} className="flex justify-between text-xs">
                 <span className="text-slate-500">{status}</span>
-                <Badge>{count}</Badge>
+                <Badge>{count as React.ReactNode}</Badge>
               </div>
             ))}
             {activeTechs.length === 0 && (

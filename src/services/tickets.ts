@@ -30,6 +30,7 @@ export interface TicketRecord {
   sla_response_start?: string
   sla_solution_at?: string
   resolution_date?: string
+  closure_date?: string
   sla_status?: string
   sla_paused?: boolean
   work_hours?: number

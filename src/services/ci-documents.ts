@@ -41,4 +41,4 @@ export const uploadDocument = (
 export const deleteDocument = (id: string) => pb.collection('ci_documents').delete(id)
 
 export const getDocumentUrl = (record: CiDocumentRecord) =>
-  pb.files.getUrl(record, record.file, { download: 1 })
+  pb.files.getUrl(record, record.file, { download: true })

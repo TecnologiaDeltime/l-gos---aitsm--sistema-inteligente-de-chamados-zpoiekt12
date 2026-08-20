@@ -112,7 +112,7 @@ export function FocalPointSection({
         entity_type: 'client_contacts',
         entity_id: deleteId,
         description: `Ponto focal "${fp?.full_name}" excluído`,
-        old_values: fp as Record<string, unknown>,
+        old_values: fp as unknown as Record<string, unknown>,
       })
       toast({ title: 'Ponto focal excluído!' })
     } catch {

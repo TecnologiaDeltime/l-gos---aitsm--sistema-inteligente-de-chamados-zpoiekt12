@@ -89,7 +89,10 @@ export function useSlaNotifications() {
           description: `Chamado #${ticket.number}: ${ticket.title} – ${ticket.priority}`,
           duration: 10000,
           icon: <AlertTriangle className="h-5 w-5 text-amber-500" />,
-          onClick: () => navigate(`/tickets/${ticket.id}`),
+          action: {
+            label: 'Abrir',
+            onClick: () => navigate(`/tickets/${ticket.id}`),
+          },
         })
       }
     }
@@ -123,7 +126,10 @@ export function useSlaNotifications() {
             description: `Chamado #${record.number}: ${record.title} – ${record.priority}`,
             duration: 10000,
             icon: <Inbox className="h-5 w-5 text-blue-500" />,
-            onClick: () => navigate(`/tickets/${record.id}`),
+            action: {
+              label: 'Abrir',
+              onClick: () => navigate(`/tickets/${record.id}`),
+            },
           })
           if (isAssigned && !CLOSED_TICKET_STATUSES.has(record.status)) {
             assignedTicketsRef.current = [...assignedTicketsRef.current, record]
