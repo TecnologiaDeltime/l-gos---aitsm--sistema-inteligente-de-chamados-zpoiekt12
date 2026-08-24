@@ -75,7 +75,9 @@ export function ProfileDialog({ open, onOpenChange, profile, onSave }: ProfileDi
     }
   }
 
-  const handleApplyPreset = (preset: 'admin' | 'tech' | 'viewer') => {
+  const handleApplyPreset = (
+    preset: 'admin' | 'tech' | 'viewer' | 'qualidade' | 'helpdesk' | 'campo',
+  ) => {
     if (isSystem) return
     if (preset === 'admin') {
       setPermissions(getDefaultPermissions(true))
@@ -99,6 +101,54 @@ export function ProfileDialog({ open, onOpenChange, profile, onSave }: ProfileDi
       p.profiles = { read: false, write: false, hidden: true }
       p.sla_dashboard = { read: true, write: false, hidden: false }
       p.notifications = { read: true, write: true, hidden: false }
+      p.time_tracking = { read: true, write: true, hidden: false }
+      setPermissions(p)
+    } else if (preset === 'qualidade') {
+      const p = getDefaultPermissions(false)
+      p.dashboard = { read: true, write: false, hidden: false }
+      p.tickets = { read: true, write: false, hidden: false }
+      p.tickets_children = { read: true, write: false, hidden: false }
+      p.cmdb = { read: false, write: false, hidden: true }
+      p.changes = { read: false, write: false, hidden: true }
+      p.reports = { read: true, write: false, hidden: false }
+      p.settings = { read: false, write: false, hidden: true }
+      p.clients = { read: false, write: false, hidden: true }
+      p.operators = { read: false, write: false, hidden: true }
+      p.profiles = { read: false, write: false, hidden: true }
+      p.sla_dashboard = { read: true, write: false, hidden: false }
+      p.notifications = { read: true, write: false, hidden: false }
+      p.time_tracking = { read: false, write: false, hidden: true }
+      setPermissions(p)
+    } else if (preset === 'helpdesk') {
+      const p = getDefaultPermissions(false)
+      p.dashboard = { read: true, write: false, hidden: false }
+      p.tickets = { read: true, write: true, hidden: false }
+      p.tickets_children = { read: true, write: true, hidden: false }
+      p.cmdb = { read: true, write: false, hidden: false }
+      p.changes = { read: false, write: false, hidden: true }
+      p.reports = { read: true, write: false, hidden: false }
+      p.settings = { read: false, write: false, hidden: true }
+      p.clients = { read: false, write: false, hidden: true }
+      p.operators = { read: false, write: false, hidden: true }
+      p.profiles = { read: false, write: false, hidden: true }
+      p.sla_dashboard = { read: true, write: false, hidden: false }
+      p.notifications = { read: true, write: false, hidden: false }
+      p.time_tracking = { read: true, write: true, hidden: false }
+      setPermissions(p)
+    } else if (preset === 'campo') {
+      const p = getDefaultPermissions(false)
+      p.dashboard = { read: true, write: false, hidden: false }
+      p.tickets = { read: true, write: true, hidden: false }
+      p.tickets_children = { read: true, write: true, hidden: false }
+      p.cmdb = { read: true, write: false, hidden: false }
+      p.changes = { read: false, write: false, hidden: true }
+      p.reports = { read: false, write: false, hidden: true }
+      p.settings = { read: false, write: false, hidden: true }
+      p.clients = { read: false, write: false, hidden: true }
+      p.operators = { read: false, write: false, hidden: true }
+      p.profiles = { read: false, write: false, hidden: true }
+      p.sla_dashboard = { read: false, write: false, hidden: true }
+      p.notifications = { read: true, write: false, hidden: false }
       p.time_tracking = { read: true, write: true, hidden: false }
       setPermissions(p)
     }
@@ -185,9 +235,27 @@ export function ProfileDialog({ open, onOpenChange, profile, onSave }: ProfileDi
                     variant="outline"
                     size="sm"
                     className="h-7 text-xs"
-                    onClick={() => handleApplyPreset('tech')}
+                    onClick={() => handleApplyPreset('helpdesk')}
                   >
-                    Técnico Padrão
+                    Help Desk
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-7 text-xs"
+                    onClick={() => handleApplyPreset('campo')}
+                  >
+                    Campo
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-7 text-xs"
+                    onClick={() => handleApplyPreset('qualidade')}
+                  >
+                    Qualidade
                   </Button>
                   <Button
                     type="button"
