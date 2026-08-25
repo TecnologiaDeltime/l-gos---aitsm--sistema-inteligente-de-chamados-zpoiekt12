@@ -44,6 +44,7 @@ import {
   RefreshCw,
   DollarSign,
   Network,
+  FileSearch,
 } from 'lucide-react'
 import { useAuth } from '@/hooks/use-auth'
 import { useTheme } from '@/hooks/use-theme'
@@ -435,6 +436,12 @@ export default function Layout() {
       label: 'Relatórios Gerenciais',
       path: '/reports',
       icon: BarChart3,
+      show: permissions.canReadModule('reports'),
+    },
+    {
+      label: 'Auditoria de Alertas',
+      path: '/reports/alert-audit',
+      icon: FileSearch,
       show: permissions.canReadModule('reports'),
     },
     {

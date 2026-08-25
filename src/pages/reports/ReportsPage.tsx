@@ -46,6 +46,11 @@ interface InteractionRow {
 /** Outros relatórios disponíveis no sistema, para acesso rápido. */
 const OTHER_REPORTS = [
   {
+    title: 'Auditoria de Alertas',
+    desc: 'Auditoria e engajamento de operadores com alertas de SLA, chamados parados e horas.',
+    path: '/reports/alert-audit',
+  },
+  {
     title: 'Dashboard de SLA',
     desc: 'Cumprimento de prazos de resposta e solução por cliente e técnico.',
     path: '/sla-dashboard',

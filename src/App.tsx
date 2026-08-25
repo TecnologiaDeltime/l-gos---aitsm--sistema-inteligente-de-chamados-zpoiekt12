@@ -112,6 +112,8 @@ import { GlobalNotifications } from '@/components/GlobalNotifications'
 import { SlaResponseAlerts } from '@/components/SlaResponseAlerts'
 import { ConsumptionAlerts } from '@/components/ConsumptionAlerts'
 import { StaleTicketAlerts } from '@/components/StaleTicketAlerts'
+import { AlertNotificationPopup } from '@/components/AlertNotificationPopup'
+import AlertAuditPage from '@/pages/reports/AlertAuditPage'
 import { useAuth } from '@/hooks/use-auth'
 
 function RootRedirect() {
@@ -128,9 +130,7 @@ const App = () => (
           <Toaster />
           <Sonner />
           <GlobalNotifications />
-          <SlaResponseAlerts />
-          <ConsumptionAlerts />
-          <StaleTicketAlerts />
+          <AlertNotificationPopup />
           <Routes>
             {/* Public Auth Routes */}
             <Route path="/login" element={<Login />} />
@@ -201,6 +201,7 @@ const App = () => (
               <Route path="/sla-dashboard" element={<SlaDashboard />} />
               <Route path="/recurrent-activities" element={<RecurrentActivities />} />
               <Route path="/reports" element={<ReportsPage />} />
+              <Route path="/reports/alert-audit" element={<AlertAuditPage />} />
               <Route path="/sla-goals" element={<SlaGoalsPage />} />
               <Route path="/scheduled-reports" element={<ScheduledReportsPage />} />
               <Route path="/reports/unit" element={<UnitReportsPage />} />
