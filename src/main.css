@@ -398,3 +398,61 @@
     background-color: rgb(148 163 184 / 0.6);
   }
 }
+
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 12mm 10mm 12mm 10mm;
+  }
+
+  /* Ocultar elementos de layout: sidebar, header do sistema, toasts, gaveta de IA, botões de ação */
+  aside,
+  header,
+  nav,
+  .print\:hidden,
+  [data-sonner-toaster],
+  section[aria-label='Notifications alt+T'],
+  button.print\:hidden {
+    display: none !important;
+  }
+
+  /* Ajustar container principal para largura cheia sem scroll */
+  body,
+  html,
+  #root {
+    background: #ffffff !important;
+    color: #0f172a !important;
+    font-size: 11pt !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  main {
+    padding: 0 !important;
+    margin: 0 !important;
+    overflow: visible !important;
+    display: block !important;
+    width: 100% !important;
+  }
+
+  .report-container {
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* Evitar quebra feia de páginas em blocos de cartões */
+  .print\:break-inside-avoid {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+
+  /* Assegurar cores de background em caixas no PDF */
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+}

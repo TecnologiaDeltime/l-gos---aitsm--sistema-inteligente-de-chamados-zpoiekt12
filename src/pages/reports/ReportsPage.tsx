@@ -46,6 +46,11 @@ interface InteractionRow {
 /** Outros relatórios disponíveis no sistema, para acesso rápido. */
 const OTHER_REPORTS = [
   {
+    title: 'Funcionalidades Implantadas',
+    desc: 'Relatório executivo e inventário detalhado de todas as funcionalidades entregues, com exportação para PDF e CSV.',
+    path: '/reports/implemented-features',
+  },
+  {
     title: 'Auditoria de Alertas',
     desc: 'Auditoria e engajamento de operadores com alertas de SLA, chamados parados e horas.',
     path: '/reports/alert-audit',

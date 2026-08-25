@@ -439,6 +439,12 @@ export default function Layout() {
       show: permissions.canReadModule('reports'),
     },
     {
+      label: 'Funcionalidades Implantadas',
+      path: '/reports/implemented-features',
+      icon: FileText,
+      show: permissions.canReadModule('reports'),
+    },
+    {
       label: 'Auditoria de Alertas',
       path: '/reports/alert-audit',
       icon: FileSearch,
