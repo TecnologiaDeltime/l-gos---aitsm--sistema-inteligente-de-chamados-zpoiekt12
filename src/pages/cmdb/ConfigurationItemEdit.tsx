@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, Building2, Loader2, Save } from 'lucide-react'
+import { ArrowLeft, Building2, GitBranch, Loader2, Save } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -22,6 +22,7 @@ import {
   ConfigurationItemStatus,
 } from '@/services/configuration-items'
 import { getCompanies } from '@/services/companies'
+import { getCompanyUnitsByCompany, type CompanyUnitRecord } from '@/services/company-units'
 import { useToast } from '@/hooks/use-toast'
 
 export default function ConfigurationItemEdit() {
@@ -29,6 +30,8 @@ export default function ConfigurationItemEdit() {
   const navigate = useNavigate()
   const { toast } = useToast()
   const [companies, setCompanies] = useState<any[]>([])
+  const [units, setUnits] = useState<CompanyUnitRecord[]>([])
+  const [loadingUnits, setLoadingUnits] = useState(false)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
 
@@ -42,6 +45,7 @@ export default function ConfigurationItemEdit() {
     status: ConfigurationItemStatus
     observations: string
     company: string
+    unit: string
   }>({
     name: '',
     type: '',
@@ -52,13 +56,22 @@ export default function ConfigurationItemEdit() {
     status: 'Ativo',
     observations: '',
     company: '',
+    unit: '',
   })
 
   useEffect(() => {
     if (!id) return
     Promise.all([getConfigurationItem(id), getCompanies().catch(() => [])])
-      .then(([item, compList]) => {
+      .then(async ([item, compList]) => {
         setCompanies(compList)
+        if (item.company) {
+          try {
+            const unitList = await getCompanyUnitsByCompany(item.company)
+            setUnits(unitList)
+          } catch {
+            setUnits([])
+          }
+        }
         setForm({
           name: item.name || '',
           type: (item.type as ConfigurationItemType) || '',
@@ -69,6 +82,7 @@ export default function ConfigurationItemEdit() {
           status: item.status || 'Ativo',
           observations: item.observations || '',
           company: item.company || '',
+          unit: item.unit || '',
         })
       })
       .catch(() => {
@@ -81,6 +95,23 @@ export default function ConfigurationItemEdit() {
       })
       .finally(() => setLoading(false))
   }, [id])
+
+  const handleCompanyChange = async (companyId: string) => {
+    setForm((f) => ({ ...f, company: companyId, unit: '' }))
+    if (!companyId) {
+      setUnits([])
+      return
+    }
+    setLoadingUnits(true)
+    try {
+      const data = await getCompanyUnitsByCompany(companyId)
+      setUnits(data)
+    } catch {
+      setUnits([])
+    } finally {
+      setLoadingUnits(false)
+    }
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -110,6 +141,7 @@ export default function ConfigurationItemEdit() {
         status: form.status,
         observations: form.observations.trim() || undefined,
         company: form.company,
+        unit: form.unit && form.unit !== 'headquarters' ? form.unit : null,
       })
       toast({ title: 'Item de configuração atualizado com sucesso!' })
       navigate(`/cmdb/configuration-items/${id}`)
@@ -160,10 +192,7 @@ export default function ConfigurationItemEdit() {
               <Label className="text-xs font-semibold">
                 Empresa / Cliente <span className="text-red-500">*</span>
               </Label>
-              <Select
-                value={form.company}
-                onValueChange={(val) => setForm((f) => ({ ...f, company: val }))}
-              >
+              <Select value={form.company} onValueChange={handleCompanyChange}>
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione a empresa..." />
                 </SelectTrigger>
@@ -173,6 +202,40 @@ export default function ConfigurationItemEdit() {
                       <span className="flex items-center gap-1.5">
                         <Building2 className="h-3.5 w-3.5 text-muted-foreground" />
                         {c.trade_name || c.legal_name}
+                      </span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Filial */}
+            <div className="space-y-1.5">
+              <Label className="text-xs font-semibold">Filial</Label>
+              <Select
+                value={form.unit || 'headquarters'}
+                onValueChange={(val) =>
+                  setForm((f) => ({ ...f, unit: val === 'headquarters' ? '' : val }))
+                }
+                disabled={!form.company || loadingUnits}
+              >
+                <SelectTrigger>
+                  <SelectValue
+                    placeholder={!form.company ? 'Selecione uma empresa primeiro...' : 'Sede'}
+                  />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="headquarters">
+                    <span className="flex items-center gap-1.5">
+                      <Building2 className="h-3.5 w-3.5 text-muted-foreground" />
+                      Sede
+                    </span>
+                  </SelectItem>
+                  {units.map((u) => (
+                    <SelectItem key={u.id} value={u.id}>
+                      <span className="flex items-center gap-1.5">
+                        <GitBranch className="h-3.5 w-3.5 text-muted-foreground" />
+                        {u.name}
                       </span>
                     </SelectItem>
                   ))}

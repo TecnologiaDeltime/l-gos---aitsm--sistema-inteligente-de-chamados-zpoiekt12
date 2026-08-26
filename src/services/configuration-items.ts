@@ -11,6 +11,7 @@ export interface ConfigurationItemRecord {
   status: ConfigurationItemStatus
   observations?: string
   company: string
+  unit?: string | null
   created: string
   updated: string
   expand?: {
@@ -19,6 +20,10 @@ export interface ConfigurationItemRecord {
       trade_name: string
       legal_name?: string
       code?: string
+    }
+    unit?: {
+      id: string
+      name: string
     }
     [key: string]: any
   }
@@ -106,7 +111,7 @@ export const getConfigurationItems = (filters?: ConfigurationItemFilters) => {
   return pb.collection('configuration_items').getFullList<ConfigurationItemRecord>({
     filter,
     sort: '-updated',
-    expand: 'company',
+    expand: 'company,unit',
   })
 }
 
@@ -114,13 +119,13 @@ export const getConfigurationItemsByCompany = (companyId: string) => {
   return pb.collection('configuration_items').getFullList<ConfigurationItemRecord>({
     filter: `company = "${companyId}"`,
     sort: 'name',
-    expand: 'company',
+    expand: 'company,unit',
   })
 }
 
 export const getConfigurationItem = (id: string) => {
   return pb.collection('configuration_items').getOne<ConfigurationItemRecord>(id, {
-    expand: 'company',
+    expand: 'company,unit',
   })
 }
 
@@ -129,6 +134,7 @@ export const createConfigurationItem = (
     name: string
     type: ConfigurationItemType
     company: string
+    unit?: string | null
   },
 ) => {
   return pb.collection('configuration_items').create<ConfigurationItemRecord>(data)

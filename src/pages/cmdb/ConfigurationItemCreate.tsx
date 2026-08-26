@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowLeft, Building2, Loader2, Save } from 'lucide-react'
+import { ArrowLeft, Building2, GitBranch, Loader2, Save } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -21,12 +21,15 @@ import {
   ConfigurationItemStatus,
 } from '@/services/configuration-items'
 import { getCompanies } from '@/services/companies'
+import { getCompanyUnitsByCompany, type CompanyUnitRecord } from '@/services/company-units'
 import { useToast } from '@/hooks/use-toast'
 
 export default function ConfigurationItemCreate() {
   const navigate = useNavigate()
   const { toast } = useToast()
   const [companies, setCompanies] = useState<any[]>([])
+  const [units, setUnits] = useState<CompanyUnitRecord[]>([])
+  const [loadingUnits, setLoadingUnits] = useState(false)
   const [saving, setSaving] = useState(false)
   const [loadingCompanies, setLoadingCompanies] = useState(true)
 
@@ -40,6 +43,7 @@ export default function ConfigurationItemCreate() {
     status: ConfigurationItemStatus
     observations: string
     company: string
+    unit: string
   }>({
     name: '',
     type: '',
@@ -50,6 +54,7 @@ export default function ConfigurationItemCreate() {
     status: 'Ativo',
     observations: '',
     company: '',
+    unit: '',
   })
 
   useEffect(() => {
@@ -63,6 +68,30 @@ export default function ConfigurationItemCreate() {
       .catch(() => {})
       .finally(() => setLoadingCompanies(false))
   }, [])
+
+  useEffect(() => {
+    if (!form.company) {
+      setUnits([])
+      setForm((f) => ({ ...f, unit: '' }))
+      return
+    }
+
+    setLoadingUnits(true)
+    getCompanyUnitsByCompany(form.company)
+      .then((data) => {
+        setUnits(data)
+      })
+      .catch(() => {
+        setUnits([])
+      })
+      .finally(() => {
+        setLoadingUnits(false)
+      })
+  }, [form.company])
+
+  const handleCompanyChange = (companyId: string) => {
+    setForm((f) => ({ ...f, company: companyId, unit: '' }))
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -91,6 +120,7 @@ export default function ConfigurationItemCreate() {
         status: form.status,
         observations: form.observations.trim() || undefined,
         company: form.company,
+        unit: form.unit && form.unit !== 'headquarters' ? form.unit : null,
       })
       toast({ title: 'Item de configuração criado com sucesso!' })
       navigate('/cmdb/configuration-items')
@@ -131,7 +161,7 @@ export default function ConfigurationItemCreate() {
               </Label>
               <Select
                 value={form.company}
-                onValueChange={(val) => setForm((f) => ({ ...f, company: val }))}
+                onValueChange={handleCompanyChange}
                 disabled={loadingCompanies}
               >
                 <SelectTrigger>
@@ -143,6 +173,40 @@ export default function ConfigurationItemCreate() {
                       <span className="flex items-center gap-1.5">
                         <Building2 className="h-3.5 w-3.5 text-muted-foreground" />
                         {c.trade_name || c.legal_name}
+                      </span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Filial */}
+            <div className="space-y-1.5">
+              <Label className="text-xs font-semibold">Filial</Label>
+              <Select
+                value={form.unit || 'headquarters'}
+                onValueChange={(val) =>
+                  setForm((f) => ({ ...f, unit: val === 'headquarters' ? '' : val }))
+                }
+                disabled={!form.company || loadingUnits}
+              >
+                <SelectTrigger>
+                  <SelectValue
+                    placeholder={!form.company ? 'Selecione uma empresa primeiro...' : 'Sede'}
+                  />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="headquarters">
+                    <span className="flex items-center gap-1.5">
+                      <Building2 className="h-3.5 w-3.5 text-muted-foreground" />
+                      Sede
+                    </span>
+                  </SelectItem>
+                  {units.map((u) => (
+                    <SelectItem key={u.id} value={u.id}>
+                      <span className="flex items-center gap-1.5">
+                        <GitBranch className="h-3.5 w-3.5 text-muted-foreground" />
+                        {u.name}
                       </span>
                     </SelectItem>
                   ))}

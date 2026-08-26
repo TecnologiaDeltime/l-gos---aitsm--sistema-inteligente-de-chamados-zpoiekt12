@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { Search, Plus, Boxes, ArrowUpDown, Building2 } from 'lucide-react'
+import { Search, Plus, Boxes, ArrowUpDown, Building2, GitBranch } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
@@ -72,6 +72,7 @@ export default function ConfigurationItemList() {
             item.serial_number,
             item.location,
             item.expand?.company?.trade_name,
+            item.expand?.unit?.name,
           ].some((v) => v?.toLowerCase().includes(s))
         }
         return true
@@ -205,7 +206,10 @@ export default function ConfigurationItemList() {
                     <Building2 className="h-3 w-3" />
                     {item.expand?.company?.trade_name || '—'}
                   </span>
-                  <span>{item.location || 'Sem local'}</span>
+                  <span className="flex items-center gap-1">
+                    <GitBranch className="h-3 w-3" />
+                    {item.expand?.unit?.name || 'Sede'}
+                  </span>
                 </div>
               </CardContent>
             </Card>
@@ -246,6 +250,7 @@ export default function ConfigurationItemList() {
                 <th className="p-3">Nº Série</th>
                 <th className="p-3">Localização</th>
                 <th className="p-3">Empresa</th>
+                <th className="p-3">Filial</th>
                 <th className="p-3">Status</th>
                 <th
                   className="p-3 cursor-pointer hover:bg-muted/70"
@@ -260,13 +265,13 @@ export default function ConfigurationItemList() {
             <tbody className="divide-y divide-border">
               {loading ? (
                 <tr>
-                  <td colSpan={8} className="p-8 text-center text-muted-foreground">
+                  <td colSpan={9} className="p-8 text-center text-muted-foreground">
                     Carregando itens...
                   </td>
                 </tr>
               ) : filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="p-8 text-center text-muted-foreground">
+                  <td colSpan={9} className="p-8 text-center text-muted-foreground">
                     Nenhum item de configuração encontrado.
                   </td>
                 </tr>
@@ -287,6 +292,7 @@ export default function ConfigurationItemList() {
                     <td className="p-3 font-mono">{item.serial_number || '—'}</td>
                     <td className="p-3">{item.location || '—'}</td>
                     <td className="p-3">{item.expand?.company?.trade_name || '—'}</td>
+                    <td className="p-3">{item.expand?.unit?.name || 'Sede'}</td>
                     <td className="p-3">
                       <CiStatusBadge status={item.status} />
                     </td>

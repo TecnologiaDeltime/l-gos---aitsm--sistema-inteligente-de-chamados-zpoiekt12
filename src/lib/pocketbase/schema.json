@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-26T17:39:11.855Z",
+  "generatedAt": "2026-08-26T18:07:16.975Z",
   "collections": [
     {
       "name": "users",
@@ -8575,12 +8575,20 @@
           "required": false,
           "system": false,
           "autodateTriggers": ["onCreate", "onUpdate"]
+        },
+        {
+          "name": "unit",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "company_units"
         }
       ],
       "indexes": [
         "CREATE INDEX idx_ci_company ON configuration_items (company)",
         "CREATE INDEX idx_ci_type ON configuration_items (type)",
-        "CREATE INDEX idx_ci_status ON configuration_items (status)"
+        "CREATE INDEX idx_ci_status ON configuration_items (status)",
+        "CREATE INDEX `idx_ci_unit` ON `configuration_items` (unit)"
       ]
     }
   ]

@@ -3,6 +3,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom'
 import {
   ArrowLeft,
   Building2,
+  GitBranch,
   Edit,
   Trash2,
   Loader2,
@@ -226,6 +227,13 @@ export default function ConfigurationItemDetail() {
                 <div className="flex items-center gap-1.5 font-medium text-foreground">
                   <Building2 className="h-4 w-4 text-muted-foreground" />
                   {item.expand?.company?.trade_name || item.expand?.company?.legal_name || '—'}
+                </div>
+              </div>
+              <div>
+                <span className="font-semibold text-muted-foreground block mb-1">Filial</span>
+                <div className="flex items-center gap-1.5 font-medium text-foreground">
+                  <GitBranch className="h-4 w-4 text-muted-foreground" />
+                  {item.expand?.unit?.name || 'Sede'}
                 </div>
               </div>
               <div className="border-t pt-3 space-y-2 text-muted-foreground">
