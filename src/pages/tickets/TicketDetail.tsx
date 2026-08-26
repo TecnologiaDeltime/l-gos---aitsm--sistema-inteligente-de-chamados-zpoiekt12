@@ -9,6 +9,7 @@ import {
   PauseCircle,
   PlayCircle,
   Server,
+  Boxes,
   FileCheck,
   MapPin,
   FileText,
@@ -923,10 +924,26 @@ export default function TicketDetail() {
                 <Server className="h-4 w-4 text-muted-foreground" /> Ativo:{' '}
                 <Link
                   to={`/cmdb/assets/${ticket.equipment}`}
-                  className="text-primary hover:underline"
+                  className="text-primary hover:underline font-medium"
                 >
                   {ticket.expand.equipment.name}
                 </Link>
+              </div>
+            )}
+            {ticket.configuration_item && (
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <Boxes className="h-4 w-4 text-muted-foreground" /> Item de Configuração:{' '}
+                <Link
+                  to={`/cmdb/configuration-items/${ticket.configuration_item}`}
+                  className="text-primary hover:underline font-medium"
+                >
+                  {ticket.expand?.configuration_item?.name || 'Ver Item'}
+                </Link>
+                {ticket.expand?.configuration_item?.type && (
+                  <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4">
+                    {ticket.expand.configuration_item.type}
+                  </Badge>
+                )}
               </div>
             )}
           </div>

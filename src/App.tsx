@@ -42,6 +42,10 @@ import CmdbDashboard from '@/pages/cmdb/CmdbDashboard'
 import CiList from '@/pages/cmdb/CiList'
 import CiCreate from '@/pages/cmdb/CiCreate'
 import CiDetail from '@/pages/cmdb/CiDetail'
+import ConfigurationItemList from '@/pages/cmdb/ConfigurationItemList'
+import ConfigurationItemCreate from '@/pages/cmdb/ConfigurationItemCreate'
+import ConfigurationItemDetail from '@/pages/cmdb/ConfigurationItemDetail'
+import ConfigurationItemEdit from '@/pages/cmdb/ConfigurationItemEdit'
 import CiImport from '@/pages/cmdb/CiImport'
 import CiTypes from '@/pages/cmdb/CiTypes'
 import ApprovalList from '@/pages/approvals/ApprovalList'
@@ -211,9 +215,15 @@ const App = () => (
               <Route path="/knowledge-base" element={<KnowledgeBase />} />
               <Route path="/cmdb" element={<CmdbDashboard />} />
               <Route path="/cmdb/assets" element={<CiList />} />
-              <Route path="/cmdb/configuration-items" element={<CiList />} />
               <Route path="/cmdb/assets/new" element={<CiCreate />} />
               <Route path="/cmdb/assets/:id" element={<CiDetail />} />
+              <Route path="/cmdb/configuration-items" element={<ConfigurationItemList />} />
+              <Route path="/cmdb/configuration-items/new" element={<ConfigurationItemCreate />} />
+              <Route path="/cmdb/configuration-items/:id" element={<ConfigurationItemDetail />} />
+              <Route
+                path="/cmdb/configuration-items/:id/edit"
+                element={<ConfigurationItemEdit />}
+              />
               <Route path="/cmdb/import" element={<CiImport />} />
               <Route path="/cmdb/types" element={<CiTypes />} />
               <Route path="/approvals" element={<ApprovalList />} />

@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-25T21:19:12.395Z",
+  "generatedAt": "2026-08-26T17:39:11.855Z",
   "collections": [
     {
       "name": "users",
@@ -1451,6 +1451,13 @@
           "type": "date",
           "required": false,
           "system": false
+        },
+        {
+          "name": "configuration_item",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "configuration_items"
         }
       ],
       "indexes": [
@@ -1462,7 +1469,8 @@
         "CREATE INDEX idx_tickets_sla_status ON tickets (sla_status)",
         "CREATE INDEX `idx_tickets_parent_ticket` ON `tickets` (parent_ticket_id)",
         "CREATE INDEX `idx_tickets_association_group` ON `tickets` (association_group_id)",
-        "CREATE INDEX `idx_tickets_last_stale_alert` ON `tickets` (last_stale_alert_at)"
+        "CREATE INDEX `idx_tickets_last_stale_alert` ON `tickets` (last_stale_alert_at)",
+        "CREATE INDEX `idx_tickets_ci` ON `tickets` (configuration_item)"
       ]
     },
     {
@@ -8467,6 +8475,113 @@
         }
       ],
       "indexes": []
+    },
+    {
+      "name": "configuration_items",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != ''",
+        "view": "@request.auth.id != ''",
+        "create": "@request.auth.id != '' && (@request.auth.role = 'admin' || @request.auth.role = 'gestor' || @request.auth.role = 'tecnico')",
+        "update": "@request.auth.id != '' && (@request.auth.role = 'admin' || @request.auth.role = 'gestor' || @request.auth.role = 'tecnico')",
+        "delete": "@request.auth.id != '' && (@request.auth.role = 'admin' || @request.auth.role = 'gestor' || @request.auth.role = 'tecnico')"
+      },
+      "fields": [
+        {
+          "name": "name",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "type",
+          "type": "select",
+          "required": true,
+          "system": false,
+          "selectValues": [
+            "Impressora",
+            "Roteador",
+            "Access Point",
+            "Switch",
+            "Servidor",
+            "Storage/NAS",
+            "Firewall",
+            "No-Break",
+            "Telefone IP",
+            "Scanner",
+            "Projetor",
+            "Monitor",
+            "Estabilizador",
+            "Câmera IP",
+            "Controladora",
+            "Rack",
+            "Outros"
+          ]
+        },
+        {
+          "name": "brand",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "model",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "serial_number",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "location",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "status",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["Ativo", "Inativo", "Em Manutenção", "Descartado", "Reserva"]
+        },
+        {
+          "name": "observations",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "company",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "companies"
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": [
+        "CREATE INDEX idx_ci_company ON configuration_items (company)",
+        "CREATE INDEX idx_ci_type ON configuration_items (type)",
+        "CREATE INDEX idx_ci_status ON configuration_items (status)"
+      ]
     }
   ]
 }

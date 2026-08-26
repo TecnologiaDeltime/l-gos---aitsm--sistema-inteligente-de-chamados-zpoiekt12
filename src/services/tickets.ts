@@ -15,6 +15,7 @@ export interface TicketRecord {
   subcategory?: string
   service?: string
   equipment?: string
+  configuration_item?: string
   title: string
   description: string
   source?: string
@@ -66,7 +67,8 @@ export const getTickets = (filter?: string, sort: string = '-created') =>
   pb.collection('tickets').getFullList<TicketRecord>({
     filter,
     sort,
-    expand: 'company,category,subcategory,assigned_to,queue,contract,equipment,parent_ticket_id',
+    expand:
+      'company,category,subcategory,assigned_to,queue,contract,equipment,configuration_item,parent_ticket_id',
   })
 
 /**
@@ -228,7 +230,7 @@ export const getTicketsWithLastInteraction = async (
 export const getTicket = (id: string) =>
   pb.collection('tickets').getOne<TicketRecord>(id, {
     expand:
-      'company,unit,department,contract,contract.company,category,subcategory,equipment,queue,assigned_to,closed_by,parent_ticket_id,association_group_id',
+      'company,unit,department,contract,contract.company,category,subcategory,equipment,configuration_item,queue,assigned_to,closed_by,parent_ticket_id,association_group_id',
   })
 
 export const createTicket = (data: Partial<TicketRecord>) =>

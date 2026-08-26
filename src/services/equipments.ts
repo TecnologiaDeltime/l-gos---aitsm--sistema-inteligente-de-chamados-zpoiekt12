@@ -41,6 +41,7 @@ export interface EquipmentFilters {
   manufacturer?: string
   hostname?: string
   device_type?: string
+  deviceType?: string
   owner?: string
   search?: string
 }
@@ -82,8 +83,8 @@ export const getEquipments = (filters?: EquipmentFilters) => {
     parts.push(`manufacturer = "${filters.manufacturer}"`)
   if (filters?.hostname && filters.hostname !== 'all')
     parts.push(`hostname = "${filters.hostname}"`)
-  if (filters?.device_type && filters.device_type !== 'all')
-    parts.push(`device_type = "${filters.device_type}"`)
+  const devType = filters?.deviceType || filters?.device_type
+  if (devType && devType !== 'all') parts.push(`device_type = "${devType}"`)
   if (filters?.owner && filters.owner !== 'all') parts.push(`owner = "${filters.owner}"`)
   if (filters?.search) {
     const s = filters.search.replace(/"/g, '')

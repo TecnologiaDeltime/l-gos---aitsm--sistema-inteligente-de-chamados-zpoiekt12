@@ -27,7 +27,13 @@ import { getCompanies, getCompanyDepartments, type CompanyRecord } from '@/servi
 import { getContracts, type ContractRecord, QUEUE_LEVEL_TO_HOURS_KEY } from '@/services/contracts'
 import { getCategories, type CategoryRecord } from '@/services/categories'
 import { getEquipments, type EquipmentRecord } from '@/services/equipments'
+import {
+  getConfigurationItemsByCompany,
+  type ConfigurationItemRecord,
+} from '@/services/configuration-items'
 import { getClientContacts, type ClientContactRecord } from '@/services/client-contacts'
+import { useAuth } from '@/hooks/use-auth'
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { getCompanyUnitsByCompany, type CompanyUnitRecord } from '@/services/company-units'
 import { createTicket } from '@/services/tickets'
 import { getQueues, type QueueRecord, QUEUE_LEVELS } from '@/services/queues'
@@ -103,8 +109,10 @@ export default function TicketCreate() {
 
   const [companies, setCompanies] = useState<CompanyRecord[]>([])
   const [contracts, setContracts] = useState<ContractRecord[]>([])
+  const { user } = useAuth()
   const [categories, setCategories] = useState<CategoryRecord[]>([])
   const [equipments, setEquipments] = useState<EquipmentRecord[]>([])
+  const [configurationItems, setConfigurationItems] = useState<ConfigurationItemRecord[]>([])
   const [contacts, setContacts] = useState<ClientContactRecord[]>([])
   const [units, setUnits] = useState<CompanyUnitRecord[]>([])
 
@@ -120,7 +128,9 @@ export default function TicketCreate() {
   const [autoImpact, setAutoImpact] = useState('')
   const [autoUrgency, setAutoUrgency] = useState('')
   const [autoPriority, setAutoPriority] = useState('')
+  const [itemType, setItemType] = useState<'none' | 'asset' | 'ci'>('none')
   const [equipment, setEquipment] = useState('')
+  const [configurationItem, setConfigurationItem] = useState('')
   const [contract, setContract] = useState('')
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
@@ -221,22 +231,26 @@ export default function TicketCreate() {
       setContacts([])
       setUnits([])
       setEquipments([])
+      setConfigurationItems([])
       return
     }
     const load = async () => {
       try {
-        const [c, u, eq] = await Promise.all([
+        const [c, u, eq, ciList] = await Promise.all([
           getClientContacts(company),
           getCompanyUnitsByCompany(company),
           getEquipments({ company } as never).catch(() => []),
+          getConfigurationItemsByCompany(company).catch(() => []),
         ])
         setContacts(c)
         setUnits(u)
         setEquipments(eq as EquipmentRecord[])
+        setConfigurationItems(ciList as ConfigurationItemRecord[])
       } catch {
         setContacts([])
         setUnits([])
         setEquipments([])
+        setConfigurationItems([])
       }
     }
     load()
@@ -294,22 +308,61 @@ export default function TicketCreate() {
         }
         const matchedEquipment = equipments.find(
           (eq) =>
-            (eq.device_type === 'Desktop' || eq.device_type === 'Notebook') &&
+            (!eq.device_type ||
+              ['Desktop', 'Notebook', 'Tablet', 'Celular'].includes(eq.device_type)) &&
             ((eq.responsible_user &&
               eq.responsible_user.trim().toLowerCase() === c.full_name.trim().toLowerCase()) ||
               (eq.owner && eq.owner.trim().toLowerCase() === c.full_name.trim().toLowerCase())),
         )
-        setEquipment(matchedEquipment ? matchedEquipment.id : '')
+        if (matchedEquipment) {
+          setEquipment(matchedEquipment.id)
+          setItemType('asset')
+        }
       } else {
         setRequesterName('')
         setRequesterEmail('')
         setRequesterPhone('')
         setDepartment('')
-        setEquipment('')
       }
     },
     [contacts, equipments],
   )
+
+  // Filtragem de ativos conforme regra de Ponto Focal
+  const availableEquipments = useMemo(() => {
+    // Apenas dispositivos (Desktop, Notebook, Tablet, Celular)
+    const deviceAssets = equipments.filter(
+      (eq) =>
+        !eq.device_type || ['Desktop', 'Notebook', 'Tablet', 'Celular'].includes(eq.device_type),
+    )
+
+    // Verifica se o operador logado é ponto focal nos contatos da empresa
+    const userEmail = (user?.email || '').trim().toLowerCase()
+    const userName = (user?.name || '').trim().toLowerCase()
+    const isCurrentUserFocalPoint = contacts.some(
+      (c) =>
+        c.is_focal_point &&
+        ((c.email && c.email.trim().toLowerCase() === userEmail) ||
+          (c.full_name && c.full_name.trim().toLowerCase() === userName)),
+    )
+
+    if (isCurrentUserFocalPoint) {
+      // Ponto focal vê todos os ativos da empresa
+      return deviceAssets
+    }
+
+    // Não é ponto focal: filtra apenas os do solicitante selecionado (se houver solicitante)
+    if (!requesterName) {
+      return deviceAssets
+    }
+
+    const reqName = requesterName.trim().toLowerCase()
+    return deviceAssets.filter(
+      (eq) =>
+        (eq.responsible_user && eq.responsible_user.trim().toLowerCase() === reqName) ||
+        (eq.owner && eq.owner.trim().toLowerCase() === reqName),
+    )
+  }, [equipments, contacts, user, requesterName])
 
   const handleMainCategoryChange = (id: string) => {
     setMainCategory(id)
@@ -389,7 +442,8 @@ export default function TicketCreate() {
         type,
         category: mainCategory || undefined,
         subcategory: subActivity || undefined,
-        equipment: equipment || undefined,
+        equipment: itemType === 'asset' && equipment ? equipment : undefined,
+        configuration_item: itemType === 'ci' && configurationItem ? configurationItem : undefined,
         contract: contract || undefined,
         queue: queueId || undefined,
         impact: autoImpact || 'Médio',
@@ -630,20 +684,92 @@ export default function TicketCreate() {
                 </div>
               </div>
             )}
-            <div className="space-y-2">
-              <FieldLabel>Ativo / Equipamento</FieldLabel>
-              <Select value={equipment} onValueChange={setEquipment}>
-                <SelectTrigger className="rounded-lg">
-                  <SelectValue placeholder="Selecione o equipamento (opcional)" />
-                </SelectTrigger>
-                <SelectContent>
-                  {equipments.map((eq) => (
-                    <SelectItem key={eq.id} value={eq.id}>
-                      {eq.name} {eq.hostname ? `(${eq.hostname})` : ''}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            {/* Tipo de Item (Nenhum, Ativo, Item de Configuração) */}
+            <div className="space-y-3 rounded-lg border p-3.5 bg-slate-50/50 dark:bg-slate-800/30">
+              <FieldLabel>Tipo de Item</FieldLabel>
+              <RadioGroup
+                value={itemType}
+                onValueChange={(val: 'none' | 'asset' | 'ci') => {
+                  setItemType(val)
+                  if (val === 'none') {
+                    setEquipment('')
+                    setConfigurationItem('')
+                  } else if (val === 'asset') {
+                    setConfigurationItem('')
+                  } else if (val === 'ci') {
+                    setEquipment('')
+                  }
+                }}
+                className="flex flex-col sm:flex-row gap-4"
+              >
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="none" id="item-type-none" />
+                  <label htmlFor="item-type-none" className="text-xs font-medium cursor-pointer">
+                    Nenhum
+                  </label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="asset" id="item-type-asset" />
+                  <label htmlFor="item-type-asset" className="text-xs font-medium cursor-pointer">
+                    Ativo (computador, notebook, celular)
+                  </label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="ci" id="item-type-ci" />
+                  <label htmlFor="item-type-ci" className="text-xs font-medium cursor-pointer">
+                    Item de Configuração (impressora, rede, switch)
+                  </label>
+                </div>
+              </RadioGroup>
+
+              {itemType === 'asset' && (
+                <div className="space-y-1.5 pt-2">
+                  <FieldLabel>Ativo do Solicitante / Empresa</FieldLabel>
+                  <Select value={equipment} onValueChange={setEquipment}>
+                    <SelectTrigger className="rounded-lg">
+                      <SelectValue
+                        placeholder={
+                          availableEquipments.length === 0
+                            ? 'Nenhum ativo disponível'
+                            : 'Selecione o ativo...'
+                        }
+                      />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {availableEquipments.map((eq) => (
+                        <SelectItem key={eq.id} value={eq.id}>
+                          {eq.name} {eq.device_type ? `[${eq.device_type}]` : ''}{' '}
+                          {eq.hostname ? `(${eq.hostname})` : ''}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
+              {itemType === 'ci' && (
+                <div className="space-y-1.5 pt-2">
+                  <FieldLabel>Item de Configuração de Infraestrutura</FieldLabel>
+                  <Select value={configurationItem} onValueChange={setConfigurationItem}>
+                    <SelectTrigger className="rounded-lg">
+                      <SelectValue
+                        placeholder={
+                          configurationItems.length === 0
+                            ? 'Nenhum item de configuração cadastrado para esta empresa'
+                            : 'Selecione o item de configuração...'
+                        }
+                      />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {configurationItems.map((ci) => (
+                        <SelectItem key={ci.id} value={ci.id}>
+                          {ci.name} · {ci.type} {ci.brand ? `(${ci.brand})` : ''}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
@@ -757,6 +883,19 @@ export default function TicketCreate() {
                 {subActivity && ' · Atividade selecionada'}
                 {contract && ' · Contrato vinculado'}
                 {queueId && ' · Fila vinculada'}
+                {itemType === 'asset' && equipment && (
+                  <> · Ativo: {equipments.find((e) => e.id === equipment)?.name || 'Selecionado'}</>
+                )}
+                {itemType === 'ci' && configurationItem && (
+                  <>
+                    {' '}
+                    · CI:{' '}
+                    {(() => {
+                      const foundCi = configurationItems.find((c) => c.id === configurationItem)
+                      return foundCi ? `${foundCi.name} (${foundCi.type})` : 'Selecionado'
+                    })()}
+                  </>
+                )}
               </p>
             </div>
           </div>
