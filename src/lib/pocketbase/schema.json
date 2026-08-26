@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-26T18:07:16.975Z",
+  "generatedAt": "2026-08-26T18:31:22.524Z",
   "collections": [
     {
       "name": "users",
@@ -1458,6 +1458,12 @@
           "required": false,
           "system": false,
           "collectionRef": "configuration_items"
+        },
+        {
+          "name": "triage_suggestions",
+          "type": "json",
+          "required": false,
+          "system": false
         }
       ],
       "indexes": [
@@ -8589,6 +8595,195 @@
         "CREATE INDEX idx_ci_type ON configuration_items (type)",
         "CREATE INDEX idx_ci_status ON configuration_items (status)",
         "CREATE INDEX `idx_ci_unit` ON `configuration_items` (unit)"
+      ]
+    },
+    {
+      "name": "email_config",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != '' && (@request.auth.role = 'admin' || @request.auth.role = 'gestor')",
+        "view": "@request.auth.id != '' && (@request.auth.role = 'admin' || @request.auth.role = 'gestor')",
+        "create": "@request.auth.id != '' && (@request.auth.role = 'admin' || @request.auth.role = 'gestor')",
+        "update": "@request.auth.id != '' && (@request.auth.role = 'admin' || @request.auth.role = 'gestor')",
+        "delete": "@request.auth.id != '' && (@request.auth.role = 'admin' || @request.auth.role = 'gestor')"
+      },
+      "fields": [
+        {
+          "name": "imap_host",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "imap_port",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "imap_user",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "imap_ssl",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "check_interval_minutes",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "enabled",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "last_check_at",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "last_check_status",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "last_check_error",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "webhook_token",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": []
+    },
+    {
+      "name": "retained_tickets",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != '' && (@request.auth.role = 'admin' || @request.auth.role = 'gestor')",
+        "view": "@request.auth.id != '' && (@request.auth.role = 'admin' || @request.auth.role = 'gestor')",
+        "create": "@request.auth.id != ''",
+        "update": "@request.auth.id != '' && (@request.auth.role = 'admin' || @request.auth.role = 'gestor')",
+        "delete": "@request.auth.id != '' && (@request.auth.role = 'admin' || @request.auth.role = 'gestor')"
+      },
+      "fields": [
+        {
+          "name": "from_email",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "from_name",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "subject",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "body",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "domain",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "reason",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "status",
+          "type": "select",
+          "required": true,
+          "system": false,
+          "selectValues": ["Pendente", "Liberado", "Excluído"]
+        },
+        {
+          "name": "ticket",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "tickets"
+        },
+        {
+          "name": "reviewed_by",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "reviewed_at",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "review_notes",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": [
+        "CREATE INDEX idx_retained_status ON retained_tickets (status)",
+        "CREATE INDEX idx_retained_domain ON retained_tickets (domain)",
+        "CREATE INDEX idx_retained_from ON retained_tickets (from_email)"
       ]
     }
   ]

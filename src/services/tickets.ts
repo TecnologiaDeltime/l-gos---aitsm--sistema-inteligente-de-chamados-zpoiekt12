@@ -43,6 +43,15 @@ export interface TicketRecord {
   updated: string
   /** Última interação do chamado (expand via getTicketsWithLastInteraction). */
   last_interaction_at?: string
+  triage_suggestions?: {
+    type?: string
+    category?: string
+    category_name?: string
+    service?: string
+    confidence?: number
+    reason?: string
+    source?: string
+  }
   expand?: any
 }
 

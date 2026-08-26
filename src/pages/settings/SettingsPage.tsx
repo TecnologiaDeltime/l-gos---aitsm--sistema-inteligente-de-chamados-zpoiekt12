@@ -7,7 +7,24 @@ import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
 import { useToast } from '@/hooks/use-toast'
 import { Link } from 'react-router-dom'
-import { FileText, Bell, Save } from 'lucide-react'
+import {
+  FileText,
+  Bell,
+  Save,
+  Mail,
+  CheckCircle2,
+  AlertCircle,
+  RefreshCw,
+  Copy,
+  Check,
+} from 'lucide-react'
+import {
+  getEmailConfig,
+  saveEmailConfig,
+  testEmailConnection,
+  ingestEmailWebhook,
+  EmailConfigRecord,
+} from '@/services/email-config'
 import {
   getVoiceAlertsEnabled,
   setVoiceAlertsEnabled,
@@ -54,6 +71,24 @@ export default function SettingsPage() {
   const [staleSaving, setStaleSaving] = useState(false)
   const [stale, setStale] = useState<StaleTicketAlertSettings | null>(null)
 
+  // Estado da Caixa de E-mail de Entrada (IMAP)
+  const [emailConfigLoading, setEmailConfigLoading] = useState(true)
+  const [emailConfigSaving, setEmailConfigSaving] = useState(false)
+  const [emailConfig, setEmailConfig] = useState<EmailConfigRecord | null>(null)
+  const [imapPassword, setImapPassword] = useState('')
+  const [testingConnection, setTestingConnection] = useState(false)
+  const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null)
+  const [copiedWebhook, setCopiedWebhook] = useState(false)
+
+  // Estado do Teste de Ingestão de E-mail (Simulação)
+  const [simFrom, setSimFrom] = useState('cliente@acme.com.br')
+  const [simFromName, setSimFromName] = useState('João da Silva')
+  const [simSubject, setSimSubject] = useState('Computador não liga após atualização')
+  const [simBody, setSimBody] = useState(
+    'Olá equipe de suporte, meu computador reiniciou e agora fica apenas na tela preta. Podem me ajudar?',
+  )
+  const [simulatingEmail, setSimulatingEmail] = useState(false)
+
   useEffect(() => {
     setVoiceEnabled(getVoiceAlertsEnabled())
     setSlaThreshold(getSlaThresholdMinutes())
@@ -69,6 +104,26 @@ export default function SettingsPage() {
       .then((s) => setStale(s))
       .catch(() => {})
       .finally(() => setStaleLoading(false))
+    getEmailConfig()
+      .then((cfg) => {
+        if (cfg) {
+          setEmailConfig(cfg)
+        } else {
+          setEmailConfig({
+            id: '',
+            imap_host: 'imap.gmail.com',
+            imap_port: 993,
+            imap_user: 'suporte@empresa.com.br',
+            imap_ssl: true,
+            check_interval_minutes: 2,
+            enabled: false,
+            created: '',
+            updated: '',
+          })
+        }
+      })
+      .catch(() => {})
+      .finally(() => setEmailConfigLoading(false))
   }, [])
   const handleConsumptionSave = async () => {
     if (!consumption) return
@@ -93,6 +148,101 @@ export default function SettingsPage() {
     } finally {
       setConsumptionSaving(false)
     }
+  }
+
+  const handleEmailConfigSave = async () => {
+    if (!emailConfig) return
+    setEmailConfigSaving(true)
+    try {
+      const saved = await saveEmailConfig({
+        imap_host: emailConfig.imap_host,
+        imap_port: emailConfig.imap_port,
+        imap_user: emailConfig.imap_user,
+        imap_ssl: emailConfig.imap_ssl,
+        check_interval_minutes: emailConfig.check_interval_minutes,
+        enabled: emailConfig.enabled,
+      })
+      setEmailConfig(saved)
+      toast({ title: 'Configurações da caixa de e-mail salvas com sucesso!' })
+    } catch {
+      toast({ title: 'Erro ao salvar configurações de e-mail', variant: 'destructive' })
+    } finally {
+      setEmailConfigSaving(false)
+    }
+  }
+
+  const handleTestConnection = async () => {
+    if (!emailConfig) return
+    setTestingConnection(true)
+    setTestResult(null)
+    try {
+      const res: any = await testEmailConnection({
+        imap_host: emailConfig.imap_host,
+        imap_port: emailConfig.imap_port,
+        imap_user: emailConfig.imap_user,
+        imap_password: imapPassword,
+        imap_ssl: emailConfig.imap_ssl,
+      })
+      setTestResult({
+        success: true,
+        message: res.message || 'Conexão validada com sucesso!',
+      })
+      toast({ title: 'Conexão IMAP testada com sucesso!' })
+    } catch (err: any) {
+      setTestResult({
+        success: false,
+        message: err.message || 'Falha ao conectar ao servidor IMAP.',
+      })
+      toast({ title: 'Erro no teste de conexão', variant: 'destructive' })
+    } finally {
+      setTestingConnection(false)
+    }
+  }
+
+  const handleSimulateIngest = async () => {
+    if (!simFrom || !simSubject) {
+      toast({ title: 'Informe o remetente e o assunto para o teste', variant: 'destructive' })
+      return
+    }
+    setSimulatingEmail(true)
+    try {
+      const res: any = await ingestEmailWebhook({
+        from: simFrom,
+        from_name: simFromName,
+        subject: simSubject,
+        body: simBody,
+        token: emailConfig?.webhook_token,
+      })
+      if (res.status === 'created') {
+        toast({
+          title: `Chamado #${res.ticket_number || 'Criado'} gerado via e-mail!`,
+          description: res.message,
+        })
+      } else if (res.status === 'retained') {
+        toast({
+          title: 'Chamado retido para moderação!',
+          description: 'O domínio do e-mail não pertence à lista de clientes autorizados.',
+        })
+      } else {
+        toast({ title: 'Processado com sucesso!', description: res.message })
+      }
+    } catch (err: any) {
+      toast({
+        title: 'Erro ao processar e-mail simulado',
+        description: err.message || 'Falha na ingestão.',
+        variant: 'destructive',
+      })
+    } finally {
+      setSimulatingEmail(false)
+    }
+  }
+
+  const handleCopyWebhookUrl = () => {
+    const url = `${window.location.origin}/backend/v1/emails/ingest`
+    navigator.clipboard.writeText(url)
+    setCopiedWebhook(true)
+    toast({ title: 'URL do Webhook copiada para a área de transferência!' })
+    setTimeout(() => setCopiedWebhook(false), 2500)
   }
 
   const handleStaleSave = async () => {
@@ -622,6 +772,314 @@ export default function SettingsPage() {
           ) : (
             <p className="text-xs text-red-500">
               Não foi possível carregar as configurações de alertas de chamados sem atualização.
+            </p>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Seção 1: Caixa de E-mail de Entrada (IMAP) */}
+      <Card className="itsm-card border-blue-200 dark:border-blue-900 shadow-sm">
+        <CardHeader className="border-b border-slate-200 dark:border-slate-800">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-base font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+              <Mail className="h-5 w-5 text-blue-600" />
+              Caixa de E-mail de Entrada (IMAP)
+            </CardTitle>
+            {emailConfig?.enabled && (
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
+                <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                Ingestão Ativa
+              </span>
+            )}
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-6 p-6">
+          <p className="text-xs text-slate-500">
+            Configure a caixa de correio eletrônico que receberá solicitações de clientes e gerará
+            automaticamente os chamados no sistema através do agente de ingestão.
+          </p>
+
+          {emailConfigLoading ? (
+            <p className="text-xs text-slate-400">Carregando configurações de e-mail...</p>
+          ) : emailConfig ? (
+            <>
+              {/* Toggle Mestre */}
+              <div className="flex items-center justify-between rounded-lg bg-slate-50 dark:bg-slate-900/50 p-3.5 border border-slate-200 dark:border-slate-800">
+                <div className="space-y-0.5">
+                  <Label className="text-sm font-semibold text-slate-800 dark:text-slate-200">
+                    Habilitar Leitura Automática de E-mails
+                  </Label>
+                  <p className="text-xs text-slate-500">
+                    Quando ativo, o agente verifica a caixa periodicamente e converte novas
+                    mensagens em tickets.
+                  </p>
+                </div>
+                <Switch
+                  checked={emailConfig.enabled}
+                  onCheckedChange={(c) => setEmailConfig({ ...emailConfig, enabled: c })}
+                  disabled={!permissions.isGestor}
+                />
+              </div>
+
+              {/* Grid de Campos IMAP */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium text-slate-700 dark:text-slate-300">
+                    Servidor IMAP (Host)
+                  </Label>
+                  <Input
+                    type="text"
+                    placeholder="imap.gmail.com ou imap.office365.com"
+                    value={emailConfig.imap_host}
+                    onChange={(e) => setEmailConfig({ ...emailConfig, imap_host: e.target.value })}
+                    className="itsm-input"
+                    disabled={!permissions.isGestor}
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium text-slate-700 dark:text-slate-300">
+                    Porta IMAP
+                  </Label>
+                  <Input
+                    type="number"
+                    placeholder="993"
+                    value={emailConfig.imap_port}
+                    onChange={(e) =>
+                      setEmailConfig({
+                        ...emailConfig,
+                        imap_port: parseInt(e.target.value, 10) || 993,
+                      })
+                    }
+                    className="itsm-input"
+                    disabled={!permissions.isGestor}
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium text-slate-700 dark:text-slate-300">
+                    Usuário / E-mail da Caixa
+                  </Label>
+                  <Input
+                    type="email"
+                    placeholder="suporte@empresa.com.br"
+                    value={emailConfig.imap_user}
+                    onChange={(e) => setEmailConfig({ ...emailConfig, imap_user: e.target.value })}
+                    className="itsm-input"
+                    disabled={!permissions.isGestor}
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium text-slate-700 dark:text-slate-300">
+                    Senha da Caixa (App Password)
+                  </Label>
+                  <Input
+                    type="password"
+                    placeholder="••••••••••••"
+                    value={imapPassword}
+                    onChange={(e) => setImapPassword(e.target.value)}
+                    className="itsm-input"
+                    disabled={!permissions.isGestor}
+                  />
+                  <p className="text-[11px] text-slate-400">
+                    Para Gmail/Office365, utilize uma Senha de Aplicativo dedicada.
+                  </p>
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium text-slate-700 dark:text-slate-300">
+                    Intervalo de Verificação (minutos)
+                  </Label>
+                  <Input
+                    type="number"
+                    min={1}
+                    max={60}
+                    value={emailConfig.check_interval_minutes}
+                    onChange={(e) =>
+                      setEmailConfig({
+                        ...emailConfig,
+                        check_interval_minutes: parseInt(e.target.value, 10) || 2,
+                      })
+                    }
+                    className="itsm-input"
+                    disabled={!permissions.isGestor}
+                  />
+                  <p className="text-[11px] text-slate-400">
+                    Padrão recomendado: a cada 2 minutos.
+                  </p>
+                </div>
+
+                <div className="flex items-center justify-between pt-6">
+                  <div className="space-y-0.5">
+                    <Label className="text-xs font-medium text-slate-700 dark:text-slate-300">
+                      Conexão Segura SSL/TLS
+                    </Label>
+                    <p className="text-[11px] text-slate-400">Padrão ativado para porta 993</p>
+                  </div>
+                  <Switch
+                    checked={emailConfig.imap_ssl}
+                    onCheckedChange={(c) => setEmailConfig({ ...emailConfig, imap_ssl: c })}
+                    disabled={!permissions.isGestor}
+                  />
+                </div>
+              </div>
+
+              {/* Botões de Ação */}
+              {permissions.isGestor && (
+                <div className="flex flex-wrap items-center gap-3 pt-2 border-t border-slate-100 dark:border-slate-800">
+                  <Button
+                    onClick={handleEmailConfigSave}
+                    disabled={emailConfigSaving}
+                    className="bg-blue-600 hover:bg-blue-700"
+                  >
+                    <Save className="mr-1.5 h-4 w-4" />
+                    {emailConfigSaving ? 'Salvando...' : 'Salvar Configurações de E-mail'}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={handleTestConnection}
+                    disabled={testingConnection || !emailConfig.imap_host}
+                  >
+                    <RefreshCw
+                      className={`mr-1.5 h-4 w-4 ${testingConnection ? 'animate-spin' : ''}`}
+                    />
+                    {testingConnection ? 'Testando Conexão...' : 'Testar Conexão IMAP'}
+                  </Button>
+                </div>
+              )}
+
+              {/* Resultado do Teste */}
+              {testResult && (
+                <div
+                  className={`p-3 rounded-lg border text-xs flex items-start gap-2 ${
+                    testResult.success
+                      ? 'bg-emerald-50 border-emerald-200 text-emerald-800 dark:bg-emerald-950/40 dark:border-emerald-800 dark:text-emerald-300'
+                      : 'bg-red-50 border-red-200 text-red-800 dark:bg-red-950/40 dark:border-red-800 dark:text-red-300'
+                  }`}
+                >
+                  {testResult.success ? (
+                    <CheckCircle2 className="h-4 w-4 shrink-0 mt-0.5" />
+                  ) : (
+                    <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+                  )}
+                  <span>{testResult.message}</span>
+                </div>
+              )}
+
+              {/* Endpoint Webhook & Integração Externa */}
+              <div className="space-y-3 pt-4 border-t border-slate-100 dark:border-slate-800">
+                <div className="space-y-1">
+                  <Label className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                    Endpoint Webhook HTTP (Encaminhamento / Ingestão Direta)
+                  </Label>
+                  <p className="text-xs text-slate-500">
+                    Caso prefira configurar um encaminhamento automático (e.g. AWS SES, Mailgun,
+                    Sendgrid, Zapier ou servidor de correio da empresa), envie um POST JSON para o
+                    webhook abaixo:
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Input
+                    readOnly
+                    value={`${window.location.origin}/backend/v1/emails/ingest`}
+                    className="itsm-input bg-slate-50 text-xs font-mono"
+                  />
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={handleCopyWebhookUrl}
+                    className="shrink-0"
+                  >
+                    {copiedWebhook ? (
+                      <Check className="h-4 w-4 text-emerald-600" />
+                    ) : (
+                      <Copy className="h-4 w-4" />
+                    )}
+                  </Button>
+                </div>
+              </div>
+
+              {/* Simulador de Ingestão de E-mail */}
+              <div className="space-y-3 pt-4 border-t border-slate-100 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-900/40 p-4 rounded-xl border">
+                <div className="space-y-0.5">
+                  <Label className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                    <RefreshCw className="h-3.5 w-3.5 text-blue-500" />
+                    Testar Ingestão de E-mail (Simulador)
+                  </Label>
+                  <p className="text-[11px] text-slate-500">
+                    Simula o recebimento de um e-mail para validar as regras de domínio permitido,
+                    cruzamento com solicitante e geração do chamado com triagem de IA.
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
+                  <div className="space-y-1">
+                    <Label className="text-[11px] font-medium text-slate-600 dark:text-slate-400">
+                      De (E-mail Remetente)
+                    </Label>
+                    <Input
+                      type="email"
+                      value={simFrom}
+                      onChange={(e) => setSimFrom(e.target.value)}
+                      placeholder="solicitante@empresa.com.br"
+                      className="h-8 text-xs"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-[11px] font-medium text-slate-600 dark:text-slate-400">
+                      Nome do Remetente (Opcional)
+                    </Label>
+                    <Input
+                      type="text"
+                      value={simFromName}
+                      onChange={(e) => setSimFromName(e.target.value)}
+                      placeholder="Nome do Solicitante"
+                      className="h-8 text-xs"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <Label className="text-[11px] font-medium text-slate-600 dark:text-slate-400">
+                    Assunto do E-mail
+                  </Label>
+                  <Input
+                    type="text"
+                    value={simSubject}
+                    onChange={(e) => setSimSubject(e.target.value)}
+                    placeholder="Assunto da solicitação"
+                    className="h-8 text-xs"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <Label className="text-[11px] font-medium text-slate-600 dark:text-slate-400">
+                    Corpo da Mensagem
+                  </Label>
+                  <textarea
+                    rows={3}
+                    value={simBody}
+                    onChange={(e) => setSimBody(e.target.value)}
+                    placeholder="Descreva o problema ou solicitação..."
+                    className="w-full text-xs rounded-md border border-input bg-background p-2 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                  />
+                </div>
+
+                <Button
+                  size="sm"
+                  onClick={handleSimulateIngest}
+                  disabled={simulatingEmail || !simFrom || !simSubject}
+                  className="bg-indigo-600 hover:bg-indigo-700 text-white"
+                >
+                  <Mail className="mr-1.5 h-3.5 w-3.5" />
+                  {simulatingEmail ? 'Simulando Recebimento...' : 'Simular Recebimento de E-mail'}
+                </Button>
+              </div>
+            </>
+          ) : (
+            <p className="text-xs text-red-500">
+              Não foi possível carregar as configurações de e-mail.
             </p>
           )}
         </CardContent>

@@ -19,6 +19,7 @@ import {
   LogOut,
   Menu,
   Shield,
+  ShieldAlert,
   User,
   CheckCheck,
   Upload,
@@ -203,6 +204,12 @@ export default function Layout() {
       path: '/tickets/tree',
       icon: Network,
       show: permissions.canReadModule('tickets_children'),
+    },
+    {
+      label: 'Chamados Retidos',
+      path: '/tickets/retained',
+      icon: ShieldAlert,
+      show: permissions.isAdmin || permissions.isGestor,
     },
     {
       label: 'Abrir Chamado',

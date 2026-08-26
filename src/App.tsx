@@ -14,6 +14,7 @@ import TicketList from '@/pages/tickets/TicketList'
 import TicketDetail from '@/pages/tickets/TicketDetail'
 import TicketCreate from '@/pages/tickets/TicketCreate'
 import TicketTree from '@/pages/tickets/TicketTree'
+import RetainedTickets from '@/pages/tickets/RetainedTickets'
 import ClientList from '@/pages/clients/ClientList'
 import ClientDetail from '@/pages/clients/ClientDetail'
 import ClientEdit from '@/pages/clients/ClientEdit'
@@ -167,6 +168,7 @@ const App = () => (
               <Route path="/tickets" element={<TicketList />} />
               <Route path="/tickets/new" element={<TicketCreate />} />
               <Route path="/tickets/tree" element={<TicketTree />} />
+              <Route path="/tickets/retained" element={<RetainedTickets />} />
               <Route path="/tickets/:id" element={<TicketDetail />} />
               <Route path="/chamados/novo" element={<TicketCreate />} />
               <Route path="/aprovacoes" element={<ApprovalList />} />

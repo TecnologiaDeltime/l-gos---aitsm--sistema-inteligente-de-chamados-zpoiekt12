@@ -86,7 +86,7 @@ import { ApprovalDialog } from '@/components/ApprovalDialog'
 import { VisitDialog } from '@/components/VisitDialog'
 import { SlaPauseDialog, STATUS_BY_REASON } from '@/components/SlaPauseDialog'
 import { formatMinutes, formatHours } from '@/lib/duration'
-import { Inbox } from 'lucide-react'
+import { Inbox, Sparkles, Check, CheckCheck } from 'lucide-react'
 import { useAuth } from '@/hooks/use-auth'
 import { usePermissions } from '@/hooks/use-permissions'
 import { useRealtime } from '@/hooks/use-realtime'
@@ -135,8 +135,7 @@ export default function TicketDetail() {
   const [associatedTickets, setAssociatedTickets] = useState<AssociatedTicket[]>([])
   const [showBatchResolve, setShowBatchResolve] = useState(false)
   const [resolveBlockMessage, setResolveBlockMessage] = useState<string | null>(null)
-  // Indica se o usuário já confirmou o encerramento apesar do alerta (não usado
-  // para bypass — o encerramento é sempre bloqueado enquanto houver pendentes).
+  const [applyingTriage, setApplyingTriage] = useState(false)
 
   const loadData = () => {
     if (!id) return
@@ -392,6 +391,29 @@ export default function TicketDetail() {
     setEditOpen(true)
   }
 
+  const handleApplyTriage = async () => {
+    if (!id || !ticket?.triage_suggestions) return
+    const sugg = ticket.triage_suggestions
+    setApplyingTriage(true)
+    try {
+      const payload: Partial<TicketRecord> = {}
+      if (sugg.type) payload.type = sugg.type
+      if (sugg.category) payload.category = sugg.category
+      if (sugg.service) payload.service = sugg.service
+
+      await updateTicket(id, payload as any)
+      toast({
+        title: 'Sugestões de Triagem aplicadas com sucesso!',
+        description: `Tipo: ${sugg.type || '-'} | Categoria: ${sugg.category_name || sugg.service || '-'}`,
+      })
+      loadData()
+    } catch {
+      toast({ title: 'Erro ao aplicar sugestões de triagem', variant: 'destructive' })
+    } finally {
+      setApplyingTriage(false)
+    }
+  }
+
   const handleContractChange = async (newContractId: string) => {
     if (!id) return
     const actualId = newContractId === '_none' ? '' : newContractId
@@ -444,6 +466,78 @@ export default function TicketDetail() {
                 </span>
               )}
             </Link>
+          )}
+
+          {/* Banner de Sugestões de Triagem da IA */}
+          {ticket.triage_suggestions && (
+            <div className="rounded-xl border border-indigo-200 bg-indigo-50/70 dark:border-indigo-900/60 dark:bg-indigo-950/30 p-4 space-y-3">
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2 text-indigo-950 dark:text-indigo-200">
+                  <Sparkles className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
+                  <span className="font-semibold text-xs uppercase tracking-wider">
+                    Sugestões de Triagem Inteligente (IA)
+                  </span>
+                  {ticket.triage_suggestions.confidence && (
+                    <Badge
+                      variant="outline"
+                      className="bg-indigo-100/70 dark:bg-indigo-900/70 text-indigo-700 dark:text-indigo-300 text-[10px] border-indigo-300 dark:border-indigo-800"
+                    >
+                      Confiança: {Math.round(ticket.triage_suggestions.confidence * 100)}%
+                    </Badge>
+                  )}
+                </div>
+                <Button
+                  size="sm"
+                  onClick={handleApplyTriage}
+                  disabled={applyingTriage}
+                  className="h-7 text-xs bg-indigo-600 hover:bg-indigo-700 text-white shadow-none"
+                >
+                  <CheckCheck className="mr-1 h-3.5 w-3.5" />
+                  {applyingTriage ? 'Aplicando...' : 'Aplicar Sugestão'}
+                </Button>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
+                {ticket.triage_suggestions.type && (
+                  <div className="bg-white/80 dark:bg-slate-900/80 p-2 rounded-md border border-indigo-100 dark:border-indigo-900/40">
+                    <span className="text-slate-400 block text-[10px] font-medium">
+                      Tipo Sugerido
+                    </span>
+                    <span className="font-semibold text-slate-800 dark:text-slate-200">
+                      {ticket.triage_suggestions.type}
+                    </span>
+                  </div>
+                )}
+                {(ticket.triage_suggestions.category_name ||
+                  ticket.triage_suggestions.category) && (
+                  <div className="bg-white/80 dark:bg-slate-900/80 p-2 rounded-md border border-indigo-100 dark:border-indigo-900/40">
+                    <span className="text-slate-400 block text-[10px] font-medium">
+                      Categoria Sugerida
+                    </span>
+                    <span className="font-semibold text-slate-800 dark:text-slate-200">
+                      {ticket.triage_suggestions.category_name ||
+                        ticket.triage_suggestions.category}
+                    </span>
+                  </div>
+                )}
+                {ticket.triage_suggestions.service && (
+                  <div className="bg-white/80 dark:bg-slate-900/80 p-2 rounded-md border border-indigo-100 dark:border-indigo-900/40">
+                    <span className="text-slate-400 block text-[10px] font-medium">
+                      Serviço / Atividade
+                    </span>
+                    <span className="font-semibold text-slate-800 dark:text-slate-200">
+                      {ticket.triage_suggestions.service}
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              {ticket.triage_suggestions.reason && (
+                <p className="text-[11px] text-indigo-900/80 dark:text-indigo-300/80 italic">
+                  💡 {ticket.triage_suggestions.reason}
+                </p>
+              )}
+            </div>
           )}
           <div className="flex flex-wrap items-center justify-between gap-2">
             <h2 className="text-xl font-bold text-foreground">
