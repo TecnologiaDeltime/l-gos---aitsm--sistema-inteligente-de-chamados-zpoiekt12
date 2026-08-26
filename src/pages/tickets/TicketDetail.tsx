@@ -22,6 +22,10 @@ import {
   GitBranch,
   ArrowUpRight,
   Link2,
+  Paperclip,
+  Download,
+  FileIcon,
+  UploadCloud,
 } from 'lucide-react'
 import { ChildTicketDialog, checkPendingChildren } from '@/components/ChildTicketDialog'
 import { PendingChildrenAlert } from '@/components/PendingChildrenAlert'
@@ -78,6 +82,13 @@ import { getActiveContracts, ContractRecord } from '@/services/contracts'
 import { getCategoryById, CategoryRecord } from '@/services/categories'
 import { calculateSlaDeadlines } from '@/lib/sla-utils'
 import { getTicketVisits } from '@/services/technical-visits'
+import {
+  getTicketAttachments,
+  uploadAttachment,
+  deleteAttachment,
+  getAttachmentFileUrl,
+  type TicketAttachmentRecord,
+} from '@/services/attachments'
 import { PriorityBadge } from '@/components/PriorityBadge'
 import { StatusBadge } from '@/components/StatusBadge'
 import { SlaDetailBlock } from '@/components/SlaDetailBlock'
@@ -101,6 +112,9 @@ export default function TicketDetail() {
   const [interactions, setInteractions] = useState<any[]>([])
   const [visits, setVisits] = useState<any[]>([])
   const [history, setHistory] = useState<any[]>([])
+  const [attachments, setAttachments] = useState<TicketAttachmentRecord[]>([])
+  const [uploadingAttachment, setUploadingAttachment] = useState(false)
+  const [deletingAttachmentId, setDeletingAttachmentId] = useState<string | null>(null)
   const [comment, setComment] = useState('')
   const [isInternal, setIsInternal] = useState(false)
   const [timeSpent, setTimeSpent] = useState('')
@@ -160,6 +174,9 @@ export default function TicketDetail() {
     getTicketHistory(id)
       .then(setHistory)
       .catch(() => {})
+    getTicketAttachments(id)
+      .then(setAttachments)
+      .catch(() => {})
     getChildTickets(id)
       .then(setChildTickets)
       .catch(() => {})
@@ -182,6 +199,7 @@ export default function TicketDetail() {
   useRealtime('ticket_interactions', () => loadData())
   useRealtime('technical_visits', () => loadData())
   useRealtime('ticket_history', () => loadData())
+  useRealtime('ticket_attachments', () => loadData())
 
   useEffect(() => {
     if (!timerRunning || !timerStart) return
@@ -389,6 +407,52 @@ export default function TicketDetail() {
   const handleEditInteraction = (interaction: any) => {
     setEditTarget(interaction)
     setEditOpen(true)
+  }
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file || !id || !user) return
+
+    setUploadingAttachment(true)
+    try {
+      await uploadAttachment(id, file, user.id)
+      toast({ title: 'Arquivo anexado com sucesso!' })
+      e.target.value = ''
+      loadData()
+    } catch (err) {
+      toast({
+        title: 'Erro ao anexar arquivo',
+        description: getErrorMessage(err),
+        variant: 'destructive',
+      })
+    } finally {
+      setUploadingAttachment(false)
+    }
+  }
+
+  const handleDeleteAttachment = async (attId: string) => {
+    setDeletingAttachmentId(attId)
+    try {
+      await deleteAttachment(attId)
+      toast({ title: 'Anexo removido!' })
+      loadData()
+    } catch (err) {
+      toast({
+        title: 'Erro ao remover anexo',
+        description: getErrorMessage(err),
+        variant: 'destructive',
+      })
+    } finally {
+      setDeletingAttachmentId(null)
+    }
+  }
+
+  const formatFileSize = (bytes?: number): string => {
+    if (!bytes || bytes === 0) return '0 B'
+    const k = 1024
+    const sizes = ['B', 'KB', 'MB', 'GB']
+    const i = Math.floor(Math.log(bytes) / Math.log(k))
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i]
   }
 
   const handleApplyTriage = async () => {
@@ -670,6 +734,7 @@ export default function TicketDetail() {
         <Tabs defaultValue="interactions" className="w-full">
           <TabsList className="w-full justify-start border-b rounded-none p-0 bg-transparent">
             <TabsTrigger value="interactions">Interações ({interactions.length})</TabsTrigger>
+            <TabsTrigger value="attachments">Anexos ({attachments.length})</TabsTrigger>
             <TabsTrigger value="visits">Visitas ({visits.length})</TabsTrigger>
             <TabsTrigger value="history">Histórico</TabsTrigger>
           </TabsList>
@@ -687,9 +752,27 @@ export default function TicketDetail() {
                   className="rounded-lg border border-border p-4 text-xs space-y-1 bg-card"
                 >
                   <div className="flex justify-between items-center">
-                    <span className="font-bold text-foreground">
-                      {i.expand?.author?.name || 'Usuário'}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-foreground">
+                        {i.expand?.author?.name || 'Usuário'}
+                      </span>
+                      {i.origin === 'Automático' && (
+                        <Badge
+                          variant="outline"
+                          className="text-[10px] bg-sky-50 text-sky-700 border-sky-200 dark:bg-sky-950/50 dark:text-sky-300 dark:border-sky-800"
+                        >
+                          E-mail
+                        </Badge>
+                      )}
+                      {i.origin === 'Cronômetro' && (
+                        <Badge
+                          variant="outline"
+                          className="text-[10px] bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/50 dark:text-amber-300 dark:border-amber-800"
+                        >
+                          Cronômetro
+                        </Badge>
+                      )}
+                    </div>
                     <div className="flex items-center gap-2">
                       {i.type === 'Interno' && (
                         <Badge variant="outline" className="text-[10px]">
@@ -698,7 +781,7 @@ export default function TicketDetail() {
                       )}
                       <span className="text-slate-400">
                         {new Date(i.created).toLocaleString('pt-BR')}
-                      </span>
+                      </span>{' '}
                       {(perms.isTecnico || perms.isAdmin || perms.isGestor) && (
                         <>
                           {i.origin !== 'Cronômetro' && (
@@ -860,6 +943,127 @@ export default function TicketDetail() {
                 </Button>
               </div>
             </div>
+          </TabsContent>
+          <TabsContent value="attachments" className="pt-4 space-y-4">
+            <div className="flex items-center justify-between rounded-lg border border-border bg-card p-4">
+              <div>
+                <h4 className="text-sm font-semibold text-foreground">Arquivos e Documentos</h4>
+                <p className="text-xs text-muted-foreground">
+                  Anexos vinculados ao chamado ou recebidos via e-mail.
+                </p>
+              </div>
+              <div>
+                <input
+                  type="file"
+                  id="ticket-file-upload"
+                  className="hidden"
+                  onChange={handleFileUpload}
+                  disabled={uploadingAttachment}
+                />
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={uploadingAttachment}
+                  onClick={() => document.getElementById('ticket-file-upload')?.click()}
+                  className="text-xs"
+                >
+                  {uploadingAttachment ? (
+                    <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <UploadCloud className="mr-1.5 h-3.5 w-3.5 text-blue-600" />
+                  )}
+                  {uploadingAttachment ? 'Enviando...' : 'Anexar arquivo'}
+                </Button>
+              </div>
+            </div>
+
+            {attachments.length === 0 ? (
+              <div className="text-center py-8 border border-dashed rounded-lg text-slate-500 text-xs">
+                <Paperclip className="h-8 w-8 mx-auto text-slate-400 mb-2" />
+                Nenhum arquivo anexado a este chamado ainda.
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {attachments.map((att) => {
+                  const fileUrl = getAttachmentFileUrl(att)
+                  const isImage =
+                    (att.file_type || '').startsWith('image/') ||
+                    /\.(jpg|jpeg|png|gif|webp)$/i.test(att.file_name || att.file)
+                  return (
+                    <div
+                      key={att.id}
+                      className="rounded-lg border border-border bg-card p-3 flex flex-col justify-between gap-3 text-xs"
+                    >
+                      <div className="flex items-start gap-3">
+                        <div className="h-10 w-10 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center shrink-0 border">
+                          {isImage && fileUrl ? (
+                            <img
+                              src={fileUrl}
+                              alt={att.file_name || 'Anexo'}
+                              className="h-10 w-10 object-cover rounded-lg"
+                            />
+                          ) : (
+                            <FileIcon className="h-5 w-5 text-slate-500" />
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p
+                            className="font-semibold text-foreground truncate"
+                            title={att.file_name || att.file}
+                          >
+                            {att.file_name || att.file}
+                          </p>
+                          <div className="flex items-center gap-2 text-[11px] text-muted-foreground mt-0.5">
+                            <span>{formatFileSize(att.file_size)}</span>
+                            <span>•</span>
+                            <span>{new Date(att.created).toLocaleDateString('pt-BR')}</span>
+                          </div>
+                          {att.expand?.uploaded_by && (
+                            <p className="text-[10px] text-slate-400 mt-0.5 truncate">
+                              Por: {att.expand.uploaded_by.name || att.expand.uploaded_by.email}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between border-t pt-2 mt-1">
+                        {fileUrl ? (
+                          <a
+                            href={fileUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1 text-xs text-blue-600 hover:underline font-medium"
+                          >
+                            <Download className="h-3.5 w-3.5" /> Baixar / Visualizar
+                          </a>
+                        ) : (
+                          <span className="text-slate-400 text-[11px]">Arquivo indisponível</span>
+                        )}
+
+                        {(perms.isAdmin ||
+                          perms.isGestor ||
+                          perms.isTecnico ||
+                          att.uploaded_by === user?.id) && (
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteAttachment(att.id)}
+                            disabled={deletingAttachmentId === att.id}
+                            className="text-slate-400 hover:text-red-600 transition-colors p-1"
+                            title="Remover anexo"
+                          >
+                            {deletingAttachmentId === att.id ? (
+                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                            ) : (
+                              <Trash2 className="h-3.5 w-3.5" />
+                            )}
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
           </TabsContent>
           <TabsContent value="visits" className="pt-4 space-y-3">
             {visits.length === 0 ? (

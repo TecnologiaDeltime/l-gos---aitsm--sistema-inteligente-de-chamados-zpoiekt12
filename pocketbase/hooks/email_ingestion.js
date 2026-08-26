@@ -8,6 +8,45 @@ routerAdd('POST', '/backend/v1/emails/ingest', (e) => {
     var subject = (body.subject || body.title || '').trim()
     var emailBody = (body.body || body.description || body.text || '').trim()
     var token = (body.token || '').trim()
+    var attachments = Array.isArray(body.attachments) ? body.attachments : []
+
+    // Helper inline para decodificar base64 em Uint8Array
+    var base64ToUint8 = function (base64Str) {
+      if (!base64Str) return null
+      // Remove possível cabeçalho data:...;base64,
+      var clean = base64Str.replace(/^data:[^;]+;base64,/, '').replace(/[\s\r\n]+/g, '')
+      clean = clean.replace(/=/g, '')
+      while (clean.length % 4 !== 0) {
+        clean += 'A'
+      }
+      var chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'
+      var len = (clean.length * 3) / 4
+      var byteArray = new Uint8Array(len)
+      var byteIdx = 0
+      var charIdx = 0
+
+      while (charIdx < clean.length) {
+        var enc1 = chars.indexOf(clean.charAt(charIdx++))
+        var enc2 = chars.indexOf(clean.charAt(charIdx++))
+        var enc3 = chars.indexOf(clean.charAt(charIdx++))
+        var enc4 = chars.indexOf(clean.charAt(charIdx++))
+        if (enc1 === -1 || enc2 === -1 || enc3 === -1 || enc4 === -1) {
+          break
+        }
+        var bits24 = (enc1 << 18) | (enc2 << 12) | (enc3 << 6) | enc4
+        var b1 = (bits24 >> 16) & 0xff
+        var b2 = (bits24 >> 8) & 0xff
+        var b3 = bits24 & 0xff
+        byteArray[byteIdx++] = b1
+        if (enc3 !== 64) {
+          byteArray[byteIdx++] = b2
+          if (enc4 !== 64) {
+            byteArray[byteIdx++] = b3
+          }
+        }
+      }
+      return byteArray.subarray(0, byteIdx)
+    }
 
     // Se enviado token, valida contra email_config ou autorização
     var authUser = e.auth
@@ -60,7 +99,6 @@ routerAdd('POST', '/backend/v1/emails/ingest', (e) => {
     var matchedCompanyId = ''
 
     if (domain) {
-      // Remover o '@' se pesquisar variantes
       var plainDomain = domain.startsWith('@') ? domain.substring(1) : domain
       var domainWithAt = '@' + plainDomain
 
@@ -85,7 +123,6 @@ routerAdd('POST', '/backend/v1/emails/ingest', (e) => {
 
     // 3. Se domínio NÃO estiver em nenhuma lista de domínios permitidos:
     if (!domainAllowed) {
-      // Salvar em retained_tickets
       var retainedCol = $app.findCollectionByNameOrId('retained_tickets')
       var retained = new Record(retainedCol)
       retained.set('from_email', from)
@@ -100,7 +137,6 @@ routerAdd('POST', '/backend/v1/emails/ingest', (e) => {
       retained.set('status', 'Pendente')
       $app.save(retained)
 
-      // Registrar também tentativa bloqueada para auditoria histórica
       try {
         var blockedAttemptsCol = $app.findCollectionByNameOrId('blocked_attempts')
         var bAttempt = new Record(blockedAttemptsCol)
@@ -163,10 +199,228 @@ routerAdd('POST', '/backend/v1/emails/ingest', (e) => {
           requesterPhone =
             contact.getString('phone') || contact.getString('cell_phone') || requesterPhone
           userUnitId = contact.getString('unit') || userUnitId
+          if (contact.getString('user')) {
+            userId = contact.getString('user')
+          }
         }
       } catch (_) {}
     }
 
+    // Se ainda não temos um userId válido, obter o ID do admin padrão do sistema para uploaded_by
+    var defaultAdminId = userId
+    if (!defaultAdminId) {
+      try {
+        var adminRecord = $app.findAuthRecordByEmail('_pb_users_auth_', 'inovacao@deltime.com.br')
+        defaultAdminId = adminRecord.id
+      } catch (_) {
+        try {
+          var anyAdmins = $app.findRecordsByFilter(
+            '_pb_users_auth_',
+            'role = "admin" || role = "gestor"',
+            '',
+            1,
+            0,
+          )
+          if (anyAdmins.length > 0) {
+            defaultAdminId = anyAdmins[0].id
+          }
+        } catch (_) {}
+      }
+    }
+    var uploadedByUserId = userId || defaultAdminId
+
+    // Helper interno para salvar anexos do e-mail vinculados a ticket e opcionalmente a interaction
+    var saveEmailAttachments = function (ticketRecordId, interactionRecordId) {
+      var savedCount = 0
+      if (!attachments || attachments.length === 0) return savedCount
+
+      var attachCol = $app.findCollectionByNameOrId('ticket_attachments')
+      for (var a = 0; a < attachments.length; a++) {
+        var att = attachments[a]
+        if (!att) continue
+        var filename = (att.filename || att.name || 'anexo_' + (a + 1) + '.bin').trim()
+        var contentType = att.content_type || att.type || 'application/octet-stream'
+        var dataBase64 = att.data_base64 || att.base64 || att.data || ''
+        var fileUrl = att.url || ''
+
+        try {
+          var attachRec = new Record(attachCol)
+          attachRec.set('ticket', ticketRecordId)
+          if (interactionRecordId) {
+            attachRec.set('interaction', interactionRecordId)
+          }
+          attachRec.set('file_name', filename)
+          attachRec.set('file_type', contentType)
+          attachRec.set('uploaded_by', uploadedByUserId)
+
+          var fileObj = null
+          if (dataBase64) {
+            var byteData = base64ToUint8(dataBase64)
+            if (byteData && byteData.length > 0) {
+              fileObj = $filesystem.fileFromBytes(byteData, filename)
+              attachRec.set('file_size', byteData.length)
+            }
+          } else if (fileUrl) {
+            try {
+              fileObj = $filesystem.fileFromURL(fileUrl)
+            } catch (_) {}
+            if (att.size || att.file_size) {
+              attachRec.set('file_size', att.size || att.file_size)
+            }
+          }
+
+          if (fileObj) {
+            attachRec.set('file', fileObj)
+          }
+
+          $app.save(attachRec)
+          savedCount++
+        } catch (attErr) {
+          $app
+            .logger()
+            .error(
+              'email_ingestion: save attachment error',
+              'file',
+              filename,
+              'err',
+              attErr.message,
+            )
+        }
+      }
+      return savedCount
+    }
+
+    // -------------------------------------------------------------
+    // DETECÇÃO DE RESPOSTA (REPLY DETECTION)
+    // -------------------------------------------------------------
+    var isReply = false
+    var extractedTicketNumber = ''
+
+    // Padrão de reply no assunto: Re:, RES:, Fwd:, ENC:, R:
+    var replyPrefixRegex = /^\s*(re|res|fwd|fw|enc|r)\s*:\s*/i
+    var hasReplyPrefix = replyPrefixRegex.test(subject)
+
+    // Extração do número do ticket do assunto
+    // Regex principal: # followed by 1 to 6 digits, or Ticket #NNNN or #[NNNN]
+    var matchNum = subject.match(/(?:ticket\s*#?|#)\s*\[?(\d{1,6})\]?/i)
+    if (matchNum && matchNum[1]) {
+      extractedTicketNumber = matchNum[1]
+    }
+
+    // Se temos padrão de reply ou menção explícita de Ticket #NNNN / #NNNN
+    if (extractedTicketNumber && (hasReplyPrefix || /ticket\s*#?\s*\d+/i.test(subject))) {
+      // Tentar localizar o ticket pelo número
+      var existingTickets = []
+      try {
+        existingTickets = $app.findRecordsByFilter(
+          'tickets',
+          'number = "' +
+            extractedTicketNumber +
+            '" || number = "#' +
+            extractedTicketNumber +
+            '" || id = "' +
+            extractedTicketNumber +
+            '"',
+          '-created',
+          1,
+          0,
+        )
+      } catch (_) {}
+
+      if (existingTickets.length > 0) {
+        var existingTicket = existingTickets[0]
+        isReply = true
+
+        var currentStatus = existingTicket.getString('status')
+        var isClosed =
+          currentStatus === 'Fechado' ||
+          currentStatus === 'Resolvido' ||
+          currentStatus === 'Cancelado' ||
+          currentStatus === 'Encerrado'
+
+        // Se o ticket estava fechado/resolvido/cancelado, reabre (prática recomendada ITSM)
+        if (isClosed) {
+          existingTicket.set('status', 'Reaberto')
+          var currentReopen = existingTicket.getInt('reopen_count') || 0
+          existingTicket.set('reopen_count', currentReopen + 1)
+          $app.save(existingTicket)
+
+          // Registrar no histórico a reabertura via resposta de e-mail
+          try {
+            var historyCol = $app.findCollectionByNameOrId('ticket_history')
+            var hist = new Record(historyCol)
+            hist.set('ticket', existingTicket.id)
+            hist.set('user', uploadedByUserId)
+            hist.set('action', 'Reabertura via E-mail')
+            hist.set('field', 'status')
+            hist.set('old_value', currentStatus)
+            hist.set('new_value', 'Reaberto')
+            $app.save(hist)
+          } catch (_) {}
+        }
+
+        // Determinar tipo da interação: se remetente for o solicitante do ticket => "Público", senão => "Interno" ou "Público"
+        var ticketRequesterEmail = (existingTicket.getString('requester_email') || '').toLowerCase()
+        var interactionType =
+          from.toLowerCase() === ticketRequesterEmail ||
+          from.toLowerCase().indexOf(ticketRequesterEmail) !== -1
+            ? 'Público'
+            : 'Público'
+
+        // Criar registro na coleção ticket_interactions
+        var interactionsCol = $app.findCollectionByNameOrId('ticket_interactions')
+        var interaction = new Record(interactionsCol)
+        interaction.set('ticket', existingTicket.id)
+        interaction.set('author', uploadedByUserId)
+        interaction.set('type', interactionType)
+        interaction.set('content', cleanBody)
+        interaction.set('origin', 'Automático')
+        interaction.set('billing_status', 'Não Faturável')
+        $app.save(interaction)
+
+        // Salvar anexos do reply se houver
+        var savedAttachs = saveEmailAttachments(existingTicket.id, interaction.id)
+
+        // Notificar o operador responsável pelo chamado
+        var assignedToId = existingTicket.getString('assigned_to')
+        if (assignedToId && assignedToId !== uploadedByUserId) {
+          try {
+            var notifsCol = $app.findCollectionByNameOrId('notifications')
+            var notif = new Record(notifsCol)
+            notif.set('user', assignedToId)
+            notif.set('ticket', existingTicket.id)
+            notif.set('title', 'Nova resposta no Chamado #' + existingTicket.getString('number'))
+            notif.set(
+              'message',
+              requesterName +
+                ' respondeu por e-mail: ' +
+                cleanBody.substring(0, 120) +
+                (cleanBody.length > 120 ? '...' : ''),
+            )
+            notif.set('type', 'Interação')
+            notif.set('read', false)
+            $app.save(notif)
+          } catch (_) {}
+        }
+
+        return e.json(200, {
+          status: 'replied',
+          message:
+            'Resposta adicionada como interação ao chamado #' +
+            existingTicket.getString('number') +
+            (isClosed ? ' (Chamado reaberto)' : ''),
+          ticket_id: existingTicket.id,
+          ticket_number: existingTicket.getString('number'),
+          interaction_id: interaction.id,
+          reopened: isClosed,
+          attachments_count: savedAttachs,
+        })
+      }
+    }
+
+    // -------------------------------------------------------------
+    // NOVO TICKET (FLUXO PADRÃO)
+    // -------------------------------------------------------------
     // Buscar contrato ativo da empresa
     if (userCompanyId) {
       try {
@@ -183,7 +437,7 @@ routerAdd('POST', '/backend/v1/emails/ingest', (e) => {
       } catch (_) {}
     }
 
-    // 5. Criar Ticket
+    // Criar Ticket
     var ticketsCol = $app.findCollectionByNameOrId('tickets')
     var ticket = new Record(ticketsCol)
     ticket.set('title', subject)
@@ -204,8 +458,10 @@ routerAdd('POST', '/backend/v1/emails/ingest', (e) => {
 
     $app.save(ticket)
 
-    // 6. Triage Automática (se houver categorias ou AI)
-    // Executará também via trigger/lógica inline para salvar triage_suggestions
+    // Processar e salvar anexos do novo ticket
+    var ticketAttachmentsCount = saveEmailAttachments(ticket.id, null)
+
+    // Triage Automática (se houver categorias ou AI)
     var triageSuggestion = null
     try {
       var categories = $app.findRecordsByFilter('tkt_categories', 'active = true', 'name', 100, 0)
@@ -328,6 +584,7 @@ routerAdd('POST', '/backend/v1/emails/ingest', (e) => {
       message: 'Chamado criado com sucesso a partir do e-mail!',
       ticket_id: ticket.id,
       ticket_number: ticket.getString('number'),
+      attachments_count: ticketAttachmentsCount,
       triage_suggestions: triageSuggestion,
     })
   } catch (err) {

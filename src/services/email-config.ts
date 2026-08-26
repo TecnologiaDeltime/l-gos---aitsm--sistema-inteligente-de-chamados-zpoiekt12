@@ -51,14 +51,37 @@ export const testEmailConnection = async (data: {
   imap_host: string
   imap_port: number
   imap_user: string
+  imap_pass?: string
   imap_password?: string
-  imap_ssl: boolean
+  imap_ssl?: boolean
 }) => {
-  return pb.send('/backend/v1/emails/test-connection', {
-    method: 'POST',
-    body: JSON.stringify(data),
-    headers: { 'Content-Type': 'application/json' },
-  })
+  return pb.send<{ success: boolean; message: string; tested_at?: string; status?: string }>(
+    '/backend/v1/emails/test-connection',
+    {
+      method: 'POST',
+      body: data,
+    },
+  )
+}
+
+export interface IngestAttachmentPayload {
+  filename: string
+  content_type?: string
+  data_base64?: string
+  url?: string
+  file_size?: number
+}
+
+export interface IngestEmailResponse {
+  status: 'created' | 'replied' | 'retained'
+  message: string
+  ticket_id?: string
+  ticket_number?: string
+  interaction_id?: string
+  reopened?: boolean
+  attachments_count?: number
+  retained_id?: string
+  triage_suggestions?: any
 }
 
 export const ingestEmailWebhook = async (data: {
@@ -67,10 +90,10 @@ export const ingestEmailWebhook = async (data: {
   subject: string
   body: string
   token?: string
-}) => {
-  return pb.send('/backend/v1/emails/ingest', {
+  attachments?: IngestAttachmentPayload[]
+}): Promise<IngestEmailResponse> => {
+  return pb.send<IngestEmailResponse>('/backend/v1/emails/ingest', {
     method: 'POST',
-    body: JSON.stringify(data),
-    headers: { 'Content-Type': 'application/json' },
+    body: data,
   })
 }

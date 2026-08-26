@@ -87,6 +87,9 @@ export default function SettingsPage() {
   const [simBody, setSimBody] = useState(
     'Olá equipe de suporte, meu computador reiniciou e agora fica apenas na tela preta. Podem me ajudar?',
   )
+  const [simAttachments, setSimAttachments] = useState<
+    Array<{ filename: string; content_type: string; data_base64: string; size: number }>
+  >([])
   const [simulatingEmail, setSimulatingEmail] = useState(false)
 
   useEffect(() => {
@@ -199,6 +202,33 @@ export default function SettingsPage() {
     }
   }
 
+  const handleSimFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files
+    if (!files || files.length === 0) return
+
+    Array.from(files).forEach((file) => {
+      const reader = new FileReader()
+      reader.onload = () => {
+        const base64 = reader.result as string
+        setSimAttachments((prev) => [
+          ...prev,
+          {
+            filename: file.name,
+            content_type: file.type || 'application/octet-stream',
+            data_base64: base64,
+            size: file.size,
+          },
+        ])
+      }
+      reader.readAsDataURL(file)
+    })
+    e.target.value = ''
+  }
+
+  const handleRemoveSimAttachment = (index: number) => {
+    setSimAttachments((prev) => prev.filter((_, i) => i !== index))
+  }
+
   const handleSimulateIngest = async () => {
     if (!simFrom || !simSubject) {
       toast({ title: 'Informe o remetente e o assunto para o teste', variant: 'destructive' })
@@ -206,17 +236,28 @@ export default function SettingsPage() {
     }
     setSimulatingEmail(true)
     try {
-      const res: any = await ingestEmailWebhook({
+      const res = await ingestEmailWebhook({
         from: simFrom,
         from_name: simFromName,
         subject: simSubject,
         body: simBody,
         token: emailConfig?.webhook_token,
+        attachments: simAttachments.map((a) => ({
+          filename: a.filename,
+          content_type: a.content_type,
+          data_base64: a.data_base64,
+          file_size: a.size,
+        })),
       })
       if (res.status === 'created') {
         toast({
           title: `Chamado #${res.ticket_number || 'Criado'} gerado via e-mail!`,
-          description: res.message,
+          description: `${res.message} ${res.attachments_count ? `(${res.attachments_count} anexo(s))` : ''}`,
+        })
+      } else if (res.status === 'replied') {
+        toast({
+          title: `Resposta vinculada ao Chamado #${res.ticket_number}!`,
+          description: `${res.message} ${res.attachments_count ? `(${res.attachments_count} anexo(s))` : ''}`,
         })
       } else if (res.status === 'retained') {
         toast({
@@ -1064,6 +1105,83 @@ export default function SettingsPage() {
                     placeholder="Descreva o problema ou solicitação..."
                     className="w-full text-xs rounded-md border border-input bg-background p-2 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                   />
+                </div>
+
+                {/* Anexos simulados */}
+                <div className="space-y-1.5 pt-1">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-[11px] font-medium text-slate-600 dark:text-slate-400">
+                      Anexos do E-mail ({simAttachments.length})
+                    </Label>
+                    <div>
+                      <input
+                        type="file"
+                        id="sim-file-upload"
+                        className="hidden"
+                        multiple
+                        onChange={handleSimFileChange}
+                      />
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="ghost"
+                        className="h-6 text-[11px] px-2 text-indigo-600 dark:text-indigo-400"
+                        onClick={() => document.getElementById('sim-file-upload')?.click()}
+                      >
+                        + Adicionar Anexo
+                      </Button>
+                    </div>
+                  </div>
+
+                  {simAttachments.length > 0 && (
+                    <div className="flex flex-wrap gap-2 pt-1">
+                      {simAttachments.map((att, idx) => (
+                        <div
+                          key={idx}
+                          className="flex items-center gap-1.5 px-2 py-1 rounded bg-slate-200 dark:bg-slate-800 text-[11px] text-foreground"
+                        >
+                          <span className="truncate max-w-[150px]">{att.filename}</span>
+                          <span className="text-slate-400 text-[10px]">
+                            ({Math.round(att.size / 1024)} KB)
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveSimAttachment(idx)}
+                            className="text-slate-400 hover:text-red-500 font-bold ml-1"
+                          >
+                            ×
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex flex-wrap gap-2 pt-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="text-xs h-7"
+                    onClick={() => {
+                      setSimSubject('Problema com impressão na filial')
+                      setSimBody('A impressora de rede parou de responder às requisições.')
+                    }}
+                  >
+                    Exemplo: Novo Chamado
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="text-xs h-7"
+                    onClick={() => {
+                      setSimSubject('Re: Ticket #1001 - Erro ao conectar VPN')
+                      setSimBody('Boa tarde, reiniciei o modem e o erro continua. Segue evidência.')
+                    }}
+                  >
+                    Exemplo: Resposta (Reply #1001)
+                  </Button>
                 </div>
 
                 <Button
