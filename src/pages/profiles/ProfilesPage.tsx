@@ -41,7 +41,7 @@ import { ProfileDialog } from '@/components/profiles/ProfileDialog'
 import { getProfiles, createProfile, updateProfile, deleteProfile } from '@/services/profiles'
 import { getOperators } from '@/services/operators'
 import { ProfileRecord, SYSTEM_MODULES, ModuleKey } from '@/types/profiles'
-import pb from '@/lib/pocketbase/client'
+import { useRealtime } from '@/hooks/use-realtime'
 
 export default function ProfilesPage() {
   const { toast } = useToast()
@@ -84,18 +84,14 @@ export default function ProfilesPage() {
 
   useEffect(() => {
     loadData()
-
-    // Realtime subscription on profiles
-    const unsubscribePromise = pb.collection('profiles').subscribe('*', () => {
-      getProfiles()
-        .then(setProfiles)
-        .catch(() => {})
-    })
-
-    return () => {
-      unsubscribePromise.then((unsub) => unsub()).catch(() => {})
-    }
   }, [])
+
+  // Realtime subscription resiliente na coleção profiles
+  useRealtime('profiles', () => {
+    getProfiles()
+      .then(setProfiles)
+      .catch(() => {})
+  })
 
   const filteredProfiles = useMemo(() => {
     if (!search.trim()) return profiles

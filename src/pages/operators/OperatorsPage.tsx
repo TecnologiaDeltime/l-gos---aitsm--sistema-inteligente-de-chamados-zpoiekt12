@@ -63,7 +63,7 @@ import {
 import { getProfiles } from '@/services/profiles'
 import { OperatorItem, CreateOperatorData, UpdateOperatorData } from '@/types/operators'
 import { ProfileRecord } from '@/types/profiles'
-import pb from '@/lib/pocketbase/client'
+import { useRealtime } from '@/hooks/use-realtime'
 
 const DEFAULT_TEAMS = [
   'Suporte N1',
@@ -124,18 +124,14 @@ export default function OperatorsPage() {
 
   useEffect(() => {
     loadData()
-
-    // Realtime subscription on users collection
-    const unsubscribePromise = pb.collection('users').subscribe('*', () => {
-      getOperators()
-        .then(setOperators)
-        .catch(() => {})
-    })
-
-    return () => {
-      unsubscribePromise.then((unsub) => unsub()).catch(() => {})
-    }
   }, [])
+
+  // Realtime subscription resiliente na coleção users
+  useRealtime('users', () => {
+    getOperators()
+      .then(setOperators)
+      .catch(() => {})
+  })
 
   // Teams list combining default and existing
   const availableTeams = useMemo(() => {
