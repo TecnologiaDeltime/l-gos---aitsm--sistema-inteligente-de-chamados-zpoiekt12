@@ -53,21 +53,16 @@ import {
 import {
   BarChart,
   Bar,
-  LineChart,
-  Line,
   AreaChart,
   Area,
   XAxis,
   YAxis,
   CartesianGrid,
   Tooltip,
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
   Legend,
   LabelList,
 } from 'recharts'
+import { PrintChartContainer } from '@/components/reports/PrintChartContainer'
 
 const CHART_COLORS = [
   '#2563eb', // blue-600
@@ -272,21 +267,23 @@ export default function MonthlyClientReportPage() {
 
   return (
     <div className="space-y-6 print:m-0 print:p-0 print:space-y-0">
-      {/* Estilos ABNT para impressão */}
+      {/* Estilos ABNT para impressão com suporte a páginas paisagem e retrato */}
       <style>{`
         @media print {
           @page {
             size: A4 portrait;
-            margin-top: 3cm;
-            margin-left: 3cm;
-            margin-bottom: 2cm;
-            margin-right: 2cm;
+            margin: 20mm 15mm 20mm 20mm;
+          }
+
+          @page landscape-section {
+            size: A4 landscape;
+            margin: 15mm 15mm 15mm 20mm;
           }
 
           body {
             font-family: 'Times New Roman', Times, serif !important;
-            font-size: 12pt !important;
-            line-height: 1.5 !important;
+            font-size: 11pt !important;
+            line-height: 1.4 !important;
             color: #000000 !important;
             background: #ffffff !important;
             -webkit-print-color-adjust: exact !important;
@@ -319,7 +316,7 @@ export default function MonthlyClientReportPage() {
           }
 
           .abnt-cover-header {
-            font-size: 14pt;
+            font-size: 13pt;
             font-weight: bold;
             text-transform: uppercase;
             letter-spacing: 0.5px;
@@ -337,19 +334,19 @@ export default function MonthlyClientReportPage() {
           }
 
           .abnt-cover-subtitle {
-            font-size: 13pt;
+            font-size: 12pt;
             font-weight: normal;
           }
 
           .abnt-cover-footer {
-            font-size: 12pt;
+            font-size: 11pt;
           }
 
-          /* Seções principais numeradas */
+          /* Seções principais */
           .abnt-section {
             page-break-before: always;
             break-before: page;
-            padding-top: 0.5cm;
+            padding-top: 0.3cm;
           }
 
           .abnt-section:first-of-type {
@@ -357,62 +354,74 @@ export default function MonthlyClientReportPage() {
             break-before: auto;
           }
 
+          /* Seção em formato Paisagem (Chrome/Edge page property) */
+          .abnt-section-landscape {
+            page: landscape-section !important;
+            page-break-before: always !important;
+            break-before: page !important;
+            page-break-after: always !important;
+            break-after: page !important;
+            width: 100% !important;
+            max-width: 100% !important;
+          }
+
           .abnt-section-title {
-            font-size: 14pt !important;
+            font-size: 13pt !important;
             font-weight: bold !important;
             text-transform: uppercase;
-            margin-bottom: 0.6cm !important;
+            margin-bottom: 0.4cm !important;
             color: #000000 !important;
             border-bottom: 1.5pt solid #000000;
-            padding-bottom: 4pt;
+            padding-bottom: 3pt;
           }
 
           .abnt-section-subtitle {
-            font-size: 12pt !important;
+            font-size: 11pt !important;
             font-weight: bold !important;
-            margin-top: 0.4cm !important;
-            margin-bottom: 0.3cm !important;
+            margin-top: 0.3cm !important;
+            margin-bottom: 0.2cm !important;
           }
 
           .abnt-paragraph {
             text-align: justify;
             text-indent: 1.25cm;
-            margin-bottom: 0.4cm;
-            font-size: 12pt !important;
+            margin-bottom: 0.35cm;
+            font-size: 11pt !important;
           }
 
-          /* Títulos de Tabelas e Figuras ABNT (acima, tamanho 10pt-11pt) */
+          /* Títulos de Tabelas e Figuras ABNT (acima, tamanho 9.5pt-10pt) */
           .abnt-caption-top {
-            font-size: 10pt !important;
+            font-size: 9.5pt !important;
             font-weight: bold;
-            margin-bottom: 4pt;
+            margin-bottom: 3pt;
             text-align: left;
+            color: #111827 !important;
           }
 
           .abnt-source-bottom {
-            font-size: 10pt !important;
+            font-size: 8.5pt !important;
             font-style: italic;
-            margin-top: 4pt;
+            margin-top: 3pt;
             text-align: left;
-            color: #333333;
+            color: #4b5563 !important;
           }
 
           /* Quebra evitada dentro de figuras e tabelas */
           .abnt-avoid-break {
             break-inside: avoid !important;
             page-break-inside: avoid !important;
-            margin-bottom: 0.8cm;
+            margin-bottom: 0.5cm;
           }
 
           table {
             width: 100% !important;
             border-collapse: collapse !important;
-            font-size: 10pt !important;
+            font-size: 9pt !important;
           }
 
           th, td {
             border: 1pt solid #444444 !important;
-            padding: 4pt 6pt !important;
+            padding: 3.5pt 5pt !important;
             color: #000000 !important;
           }
 
@@ -426,10 +435,17 @@ export default function MonthlyClientReportPage() {
           .abnt-chart-box {
             width: 100% !important;
             max-width: 100% !important;
-            overflow: hidden !important;
-            border: 1pt solid #cccccc;
-            padding: 8pt;
+            overflow: visible !important;
+            border: 1pt solid #cbd5e1;
+            padding: 6pt 4pt;
             background: #ffffff !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+          }
+
+          .abnt-chart-box svg {
+            overflow: visible !important;
           }
 
           .abnt-header-print {
@@ -437,9 +453,9 @@ export default function MonthlyClientReportPage() {
             justify-content: space-between;
             align-items: center;
             border-bottom: 1pt solid #000000;
-            padding-bottom: 6pt;
-            margin-bottom: 0.6cm;
-            font-size: 9pt;
+            padding-bottom: 4pt;
+            margin-bottom: 0.4cm;
+            font-size: 8.5pt;
             text-transform: uppercase;
           }
         }
@@ -727,29 +743,31 @@ export default function MonthlyClientReportPage() {
                 Figura 1 – Comparativo de Horas Contratadas versus Horas Utilizadas por Acordo de
                 Atendimento
               </p>
-              <div className="abnt-chart-box h-80 w-full rounded-lg bg-slate-50/50 dark:bg-slate-800/30 p-2">
-                <ResponsiveContainer width="100%" height="100%">
+              <div className="abnt-chart-box w-full rounded-lg bg-slate-50/50 dark:bg-slate-800/30 p-2">
+                <PrintChartContainer screenHeight={320} printHeight={300} landscape={false}>
                   <BarChart
                     data={agreementsChartData}
-                    margin={{ top: 30, right: 20, left: 10, bottom: 25 }}
+                    margin={{ top: 32, right: 24, left: 14, bottom: 45 }}
                   >
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
                     <XAxis
                       dataKey="name"
-                      tick={{ fontSize: 11 }}
+                      tick={{ fontSize: 10 }}
                       interval={0}
                       angle={-15}
                       textAnchor="end"
+                      height={40}
                     />
                     <YAxis
-                      tick={{ fontSize: 11 }}
+                      tick={{ fontSize: 10 }}
                       unit="h"
-                      label={{ value: 'Horas', angle: -90, position: 'insideLeft', fontSize: 11 }}
+                      label={{ value: 'Horas', angle: -90, position: 'insideLeft', fontSize: 10 }}
                     />
                     <Tooltip
                       formatter={(v: any) => [`${Number(v).toFixed(2)}h`, '']}
                       contentStyle={{ fontSize: 12 }}
                     />
-                    <Legend wrapperStyle={{ fontSize: 12, paddingTop: 6 }} />
+                    <Legend wrapperStyle={{ fontSize: 11, paddingTop: 4 }} />
                     <Bar
                       dataKey="Contratado"
                       fill="#3b82f6"
@@ -760,7 +778,7 @@ export default function MonthlyClientReportPage() {
                         dataKey="Contratado"
                         position="top"
                         formatter={formatHoursLabel}
-                        style={{ fontSize: 11, fontWeight: 600, fill: '#1e293b' }}
+                        style={{ fontSize: 10, fontWeight: 600, fill: '#1e293b' }}
                       />
                     </Bar>
                     <Bar
@@ -773,11 +791,11 @@ export default function MonthlyClientReportPage() {
                         dataKey="Utilizado"
                         position="top"
                         formatter={formatHoursLabel}
-                        style={{ fontSize: 11, fontWeight: 600, fill: '#1e293b' }}
+                        style={{ fontSize: 10, fontWeight: 600, fill: '#1e293b' }}
                       />
                     </Bar>
                   </BarChart>
-                </ResponsiveContainer>
+                </PrintChartContainer>
               </div>
               <p className="abnt-source-bottom">
                 Fonte: Elaborado pelo autor com base nos registros do ServiceOne ITSM (
@@ -892,15 +910,16 @@ export default function MonthlyClientReportPage() {
                   <p className="abnt-caption-top">
                     Figura 2 – Distribuição das Horas de Atendimento por Departamento da Empresa
                   </p>
-                  <div className="abnt-chart-box h-80 w-full rounded-lg bg-slate-50/50 dark:bg-slate-800/30 p-2">
-                    <ResponsiveContainer width="100%" height="100%">
+                  <div className="abnt-chart-box w-full rounded-lg bg-slate-50/50 dark:bg-slate-800/30 p-2">
+                    <PrintChartContainer screenHeight={320} printHeight={300} landscape={false}>
                       <BarChart
                         layout="vertical"
                         data={sectorsChartData}
-                        margin={{ top: 10, right: 50, left: 100, bottom: 10 }}
+                        margin={{ top: 12, right: 75, left: 120, bottom: 10 }}
                       >
-                        <XAxis type="number" unit="h" tick={{ fontSize: 11 }} />
-                        <YAxis type="category" dataKey="name" tick={{ fontSize: 11 }} width={95} />
+                        <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#e2e8f0" />
+                        <XAxis type="number" unit="h" tick={{ fontSize: 10 }} />
+                        <YAxis type="category" dataKey="name" tick={{ fontSize: 10 }} width={115} />
                         <Tooltip
                           formatter={(v: any, name: any) => [
                             name === 'Horas' ? `${Number(v).toFixed(2)}h` : v,
@@ -908,7 +927,7 @@ export default function MonthlyClientReportPage() {
                           ]}
                           contentStyle={{ fontSize: 12 }}
                         />
-                        <Legend wrapperStyle={{ fontSize: 12 }} />
+                        <Legend wrapperStyle={{ fontSize: 11 }} />
                         <Bar
                           dataKey="Horas"
                           fill="#6366f1"
@@ -919,11 +938,11 @@ export default function MonthlyClientReportPage() {
                             dataKey="Horas"
                             position="right"
                             formatter={formatHoursLabel}
-                            style={{ fontSize: 11, fontWeight: 600, fill: '#1e293b' }}
+                            style={{ fontSize: 10, fontWeight: 600, fill: '#1e293b' }}
                           />
                         </Bar>
                       </BarChart>
-                    </ResponsiveContainer>
+                    </PrintChartContainer>
                   </div>
                   <p className="abnt-source-bottom">
                     Fonte: Apuração por centro de custo/departamento — ServiceOne.
@@ -998,25 +1017,36 @@ export default function MonthlyClientReportPage() {
                   <p className="abnt-caption-top">
                     Figura 3 – Ranking dos Maiores Solicitantes por Volume de Horas de Suporte
                   </p>
-                  <div className="abnt-chart-box h-80 w-full rounded-lg bg-slate-50/50 dark:bg-slate-800/30 p-2">
-                    <ResponsiveContainer width="100%" height="100%">
+                  <div className="abnt-chart-box w-full rounded-lg bg-slate-50/50 dark:bg-slate-800/30 p-2">
+                    <PrintChartContainer screenHeight={320} printHeight={300} landscape={false}>
                       <BarChart
                         data={requestersChartData}
-                        margin={{ top: 30, right: 20, left: 10, bottom: 25 }}
+                        margin={{ top: 32, right: 24, left: 14, bottom: 45 }}
                       >
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
                         <XAxis
                           dataKey="name"
-                          tick={{ fontSize: 11 }}
+                          tick={{ fontSize: 10 }}
                           interval={0}
                           angle={-15}
                           textAnchor="end"
+                          height={40}
                         />
-                        <YAxis tick={{ fontSize: 11 }} unit="h" />
+                        <YAxis
+                          tick={{ fontSize: 10 }}
+                          unit="h"
+                          label={{
+                            value: 'Horas',
+                            angle: -90,
+                            position: 'insideLeft',
+                            fontSize: 10,
+                          }}
+                        />
                         <Tooltip
                           formatter={(v: any) => [`${Number(v).toFixed(2)}h`, 'Horas Consumidas']}
                           contentStyle={{ fontSize: 12 }}
                         />
-                        <Legend wrapperStyle={{ fontSize: 12 }} />
+                        <Legend wrapperStyle={{ fontSize: 11, paddingTop: 4 }} />
                         <Bar
                           dataKey="Horas"
                           fill="#0284c7"
@@ -1027,11 +1057,11 @@ export default function MonthlyClientReportPage() {
                             dataKey="Horas"
                             position="top"
                             formatter={formatHoursLabel}
-                            style={{ fontSize: 11, fontWeight: 600, fill: '#1e293b' }}
+                            style={{ fontSize: 10, fontWeight: 600, fill: '#1e293b' }}
                           />
                         </Bar>
                       </BarChart>
-                    </ResponsiveContainer>
+                    </PrintChartContainer>
                   </div>
                   <p className="abnt-source-bottom">
                     Fonte: Registros de abertura de chamados e apontamentos técnicos (ServiceOne).
@@ -1110,20 +1140,22 @@ export default function MonthlyClientReportPage() {
                   <p className="abnt-caption-top">
                     Figura 4 – Volume de Chamados por Categoria de Atividade Técnica
                   </p>
-                  <div className="abnt-chart-box h-80 w-full rounded-lg bg-slate-50/50 dark:bg-slate-800/30 p-2">
-                    <ResponsiveContainer width="100%" height="100%">
+                  <div className="abnt-chart-box w-full rounded-lg bg-slate-50/50 dark:bg-slate-800/30 p-2">
+                    <PrintChartContainer screenHeight={320} printHeight={300} landscape={false}>
                       <BarChart
                         data={activitiesChartData}
-                        margin={{ top: 30, right: 20, left: 10, bottom: 25 }}
+                        margin={{ top: 32, right: 24, left: 14, bottom: 45 }}
                       >
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
                         <XAxis
                           dataKey="name"
-                          tick={{ fontSize: 11 }}
+                          tick={{ fontSize: 10 }}
                           interval={0}
                           angle={-15}
                           textAnchor="end"
+                          height={40}
                         />
-                        <YAxis tick={{ fontSize: 11 }} />
+                        <YAxis tick={{ fontSize: 10 }} />
                         <Tooltip
                           formatter={(v: any, name: any) => [
                             name === 'Horas' ? `${Number(v).toFixed(2)}h` : v,
@@ -1131,7 +1163,7 @@ export default function MonthlyClientReportPage() {
                           ]}
                           contentStyle={{ fontSize: 12 }}
                         />
-                        <Legend wrapperStyle={{ fontSize: 12 }} />
+                        <Legend wrapperStyle={{ fontSize: 11, paddingTop: 4 }} />
                         <Bar
                           dataKey="Chamados"
                           fill="#8b5cf6"
@@ -1142,7 +1174,7 @@ export default function MonthlyClientReportPage() {
                             dataKey="Chamados"
                             position="top"
                             formatter={formatCountLabel}
-                            style={{ fontSize: 11, fontWeight: 600, fill: '#1e293b' }}
+                            style={{ fontSize: 10, fontWeight: 600, fill: '#1e293b' }}
                           />
                         </Bar>
                         <Bar
@@ -1155,11 +1187,11 @@ export default function MonthlyClientReportPage() {
                             dataKey="Horas"
                             position="top"
                             formatter={formatHoursLabel}
-                            style={{ fontSize: 11, fontWeight: 600, fill: '#1e293b' }}
+                            style={{ fontSize: 10, fontWeight: 600, fill: '#1e293b' }}
                           />
                         </Bar>
                       </BarChart>
-                    </ResponsiveContainer>
+                    </PrintChartContainer>
                   </div>
                   <p className="abnt-source-bottom">
                     Fonte: Catálogo de Atividades e Categorias do ITSM.
@@ -1367,16 +1399,17 @@ export default function MonthlyClientReportPage() {
                 <p className="abnt-caption-top">
                   Figura 5 – Composição do Parque de Ativos e Movimentações por Categoria
                 </p>
-                <div className="abnt-chart-box h-72 w-full rounded-lg bg-slate-50/50 dark:bg-slate-800/30 p-2">
-                  <ResponsiveContainer width="100%" height="100%">
+                <div className="abnt-chart-box w-full rounded-lg bg-slate-50/50 dark:bg-slate-800/30 p-2">
+                  <PrintChartContainer screenHeight={288} printHeight={280} landscape={false}>
                     <BarChart
                       data={reportData.assets.byType}
-                      margin={{ top: 30, right: 20, left: 10, bottom: 20 }}
+                      margin={{ top: 32, right: 24, left: 14, bottom: 25 }}
                     >
-                      <XAxis dataKey="type" tick={{ fontSize: 11 }} />
-                      <YAxis tick={{ fontSize: 11 }} />
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                      <XAxis dataKey="type" tick={{ fontSize: 10 }} />
+                      <YAxis tick={{ fontSize: 10 }} />
                       <Tooltip contentStyle={{ fontSize: 12 }} />
-                      <Legend wrapperStyle={{ fontSize: 12 }} />
+                      <Legend wrapperStyle={{ fontSize: 11, paddingTop: 4 }} />
                       <Bar
                         dataKey="total"
                         fill="#3b82f6"
@@ -1387,7 +1420,7 @@ export default function MonthlyClientReportPage() {
                           dataKey="total"
                           position="top"
                           formatter={formatCountLabel}
-                          style={{ fontSize: 11, fontWeight: 600, fill: '#1e293b' }}
+                          style={{ fontSize: 10, fontWeight: 600, fill: '#1e293b' }}
                         />
                       </Bar>
                       <Bar
@@ -1400,7 +1433,7 @@ export default function MonthlyClientReportPage() {
                           dataKey="entered"
                           position="top"
                           formatter={formatCountLabel}
-                          style={{ fontSize: 11, fontWeight: 600, fill: '#1e293b' }}
+                          style={{ fontSize: 10, fontWeight: 600, fill: '#1e293b' }}
                         />
                       </Bar>
                       <Bar
@@ -1413,11 +1446,11 @@ export default function MonthlyClientReportPage() {
                           dataKey="exited"
                           position="top"
                           formatter={formatCountLabel}
-                          style={{ fontSize: 11, fontWeight: 600, fill: '#1e293b' }}
+                          style={{ fontSize: 10, fontWeight: 600, fill: '#1e293b' }}
                         />
                       </Bar>
                     </BarChart>
-                  </ResponsiveContainer>
+                  </PrintChartContainer>
                 </div>
                 <p className="abnt-source-bottom">
                   Fonte: Módulo de Gestão de Ativos (Equipments) do ServiceOne.
@@ -1538,9 +1571,9 @@ export default function MonthlyClientReportPage() {
           </section>
 
           {/* ============================================================== */}
-          {/* SEÇÃO 7: COMPARATIVO COM MESES ANTERIORES                      */}
+          {/* SEÇÃO 7: COMPARATIVO COM MESES ANTERIORES (PÁGINA PAISAGEM)     */}
           {/* ============================================================== */}
-          <section className="abnt-section bg-white dark:bg-slate-900 border rounded-xl p-6 shadow-xs print:border-none print:shadow-none print:p-0">
+          <section className="abnt-section abnt-section-landscape bg-white dark:bg-slate-900 border rounded-xl p-6 shadow-xs print:border-none print:shadow-none print:p-0">
             <h3 className="abnt-section-title text-lg font-bold flex items-center gap-2 mb-4 text-slate-900 dark:text-slate-100">
               <TrendingUp className="h-5 w-5 text-blue-600 print:hidden" />
               7. Comparativo com Meses Anteriores
@@ -1566,16 +1599,21 @@ export default function MonthlyClientReportPage() {
               </div>
             ) : (
               <>
-                {/* Gráfico 6: Evolução de Consumo de Horas nos Últimos 6 Meses */}
+                {/* Gráfico 6: Evolução de Consumo de Horas nos Últimos 6 Meses (Otimizado para Paisagem A4) */}
                 <div className="abnt-avoid-break mb-6">
                   <p className="abnt-caption-top">
                     Figura 6 – Evolução do consumo de horas nos últimos 6 meses
                   </p>
-                  <div className="abnt-chart-box h-80 w-full rounded-lg bg-slate-50/50 dark:bg-slate-800/30 p-2">
-                    <ResponsiveContainer width="100%" height="100%">
+                  <div className="abnt-chart-box w-full rounded-lg bg-slate-50/50 dark:bg-slate-800/30 p-2">
+                    <PrintChartContainer
+                      screenHeight={320}
+                      printHeight={290}
+                      printWidth={920}
+                      landscape={true}
+                    >
                       <AreaChart
                         data={comparisonChartData}
-                        margin={{ top: 30, right: 30, left: 10, bottom: 20 }}
+                        margin={{ top: 32, right: 35, left: 16, bottom: 25 }}
                       >
                         <defs>
                           <linearGradient id="colorHours" x1="0" y1="0" x2="0" y2="1">
@@ -1584,15 +1622,15 @@ export default function MonthlyClientReportPage() {
                           </linearGradient>
                         </defs>
                         <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                        <XAxis dataKey="name" tick={{ fontSize: 11 }} />
+                        <XAxis dataKey="name" tick={{ fontSize: 10 }} />
                         <YAxis
-                          tick={{ fontSize: 11 }}
+                          tick={{ fontSize: 10 }}
                           unit="h"
                           label={{
                             value: 'Horas',
                             angle: -90,
                             position: 'insideLeft',
-                            fontSize: 11,
+                            fontSize: 10,
                           }}
                         />
                         <Tooltip
@@ -1602,7 +1640,7 @@ export default function MonthlyClientReportPage() {
                           ]}
                           contentStyle={{ fontSize: 12 }}
                         />
-                        <Legend wrapperStyle={{ fontSize: 12, paddingTop: 6 }} />
+                        <Legend wrapperStyle={{ fontSize: 11, paddingTop: 4 }} />
                         <Area
                           type="monotone"
                           dataKey="Horas Utilizadas"
@@ -1619,17 +1657,17 @@ export default function MonthlyClientReportPage() {
                             position="top"
                             offset={10}
                             formatter={formatHoursLabel}
-                            style={{ fontSize: 11, fontWeight: 600, fill: '#1e293b' }}
+                            style={{ fontSize: 10, fontWeight: 600, fill: '#1e293b' }}
                           />
                         </Area>
                       </AreaChart>
-                    </ResponsiveContainer>
+                    </PrintChartContainer>
                   </div>
                   <p className="abnt-source-bottom">
                     Fonte: Registros históricos de interações e apontamentos de horas (ServiceOne).
                   </p>
                 </div>
-                {/* Quadro 7: Comparativo mensal de consumo */}
+                {/* Quadro 7: Comparativo mensal de consumo (Layout Expandido em Paisagem) */}
                 <div className="abnt-avoid-break">
                   <p className="abnt-caption-top">Quadro 7 – Comparativo mensal de consumo</p>
                   <div className="border rounded-lg overflow-hidden">
