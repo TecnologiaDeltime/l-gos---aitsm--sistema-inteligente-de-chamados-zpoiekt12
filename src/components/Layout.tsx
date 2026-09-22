@@ -200,6 +200,12 @@ export default function Layout() {
       show: permissions.canReadModule('tickets'),
     },
     {
+      label: 'Tickets Programados',
+      path: '/tickets/scheduled',
+      icon: CalendarClock,
+      show: permissions.canReadModule('tickets'),
+    },
+    {
       label: 'Hierarquia de Tickets',
       path: '/tickets/tree',
       icon: Network,

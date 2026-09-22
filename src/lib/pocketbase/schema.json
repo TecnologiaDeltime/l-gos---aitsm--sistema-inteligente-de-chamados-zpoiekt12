@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-22T02:44:45.578Z",
+  "generatedAt": "2026-09-22T03:02:35.527Z",
   "collections": [
     {
       "name": "users",
@@ -1223,7 +1223,7 @@
           "type": "select",
           "required": false,
           "system": false,
-          "selectValues": ["Portal", "E-mail", "Manual", "API"]
+          "selectValues": ["Portal", "E-mail", "Manual", "API", "Programado"]
         },
         {
           "name": "impact",
@@ -8784,6 +8784,250 @@
         "CREATE INDEX idx_retained_status ON retained_tickets (status)",
         "CREATE INDEX idx_retained_domain ON retained_tickets (domain)",
         "CREATE INDEX idx_retained_from ON retained_tickets (from_email)"
+      ]
+    },
+    {
+      "name": "scheduled_tickets",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != ''",
+        "view": "@request.auth.id != ''",
+        "create": "@request.auth.id != ''",
+        "update": "@request.auth.id != ''",
+        "delete": "@request.auth.id != ''"
+      },
+      "fields": [
+        {
+          "name": "title",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "description",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "company",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "companies"
+        },
+        {
+          "name": "unit",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "company_units"
+        },
+        {
+          "name": "department",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "company_departments"
+        },
+        {
+          "name": "contract",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "contracts"
+        },
+        {
+          "name": "requester_name",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "requester_email",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "requester_phone",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "type",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": [
+            "Incidente",
+            "Requisição de Serviço",
+            "Problema",
+            "Mudança",
+            "Projeto",
+            "Tarefa Interna",
+            "Visita Técnica",
+            "Dúvida"
+          ]
+        },
+        {
+          "name": "category",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "tkt_categories"
+        },
+        {
+          "name": "subcategory",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "tkt_categories"
+        },
+        {
+          "name": "equipment",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "equipments"
+        },
+        {
+          "name": "queue",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "queues"
+        },
+        {
+          "name": "assigned_to",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "priority",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["Crítica", "Alta", "Média", "Baixa"]
+        },
+        {
+          "name": "impact",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["Alto", "Médio", "Baixo"]
+        },
+        {
+          "name": "urgency",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["Alta", "Média", "Baixa"]
+        },
+        {
+          "name": "scheduled_date",
+          "type": "date",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "status",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["agendado", "processado", "cancelado", "erro"]
+        },
+        {
+          "name": "recurrence_type",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["none", "daily", "weekly", "monthly"]
+        },
+        {
+          "name": "recurrence_days_of_week",
+          "type": "json",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "recurrence_day_of_month",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "recurrence_end_date",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "advance_notice_minutes",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "notice_sent",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "notice_sent_at",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created_by",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "last_executed_at",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "last_ticket_created",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "tickets"
+        },
+        {
+          "name": "error_message",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": [
+        "CREATE INDEX idx_sched_status ON scheduled_tickets (status)",
+        "CREATE INDEX idx_sched_date ON scheduled_tickets (scheduled_date)",
+        "CREATE INDEX idx_sched_company ON scheduled_tickets (company)"
       ]
     }
   ]
