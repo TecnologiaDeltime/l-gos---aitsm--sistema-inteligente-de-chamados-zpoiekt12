@@ -32,17 +32,11 @@ import { ContractRecord, getContracts } from '@/services/contracts'
 import { CategoryRecord } from '@/services/categories'
 import { QueueRecord } from '@/services/queues'
 import { UserItem } from '@/services/users'
+import { computePriority } from '@/lib/itil-matrix'
+import { PriorityBadge } from '@/components/PriorityBadge'
+import { Badge } from '@/components/ui/badge'
 import { useAuth } from '@/hooks/use-auth'
-import {
-  CalendarClock,
-  Repeat,
-  Bell,
-  Building2,
-  FileText,
-  User,
-  AlertCircle,
-  Loader2,
-} from 'lucide-react'
+import { CalendarClock, Repeat, Bell, Building2, User, Sparkles, Loader2 } from 'lucide-react'
 
 interface ScheduledTicketDialogProps {
   open: boolean
@@ -88,7 +82,7 @@ export const ScheduledTicketDialog: React.FC<ScheduledTicketDialogProps> = ({
   const [requesterName, setRequesterName] = useState('')
   const [requesterEmail, setRequesterEmail] = useState('')
   const [requesterPhone, setRequesterPhone] = useState('')
-  const [type, setType] = useState('Incidente')
+  const [type, setType] = useState('Requisição de Serviço')
   const [categoryId, setCategoryId] = useState('')
   const [subcategoryId, setSubcategoryId] = useState('')
   const [queueId, setQueueId] = useState('')
@@ -129,14 +123,32 @@ export const ScheduledTicketDialog: React.FC<ScheduledTicketDialogProps> = ({
       setRequesterName(editingTicket.requester_name || '')
       setRequesterEmail(editingTicket.requester_email || '')
       setRequesterPhone(editingTicket.requester_phone || '')
-      setType(editingTicket.type || 'Incidente')
+      // Se era Incidente ou Problema (legado), ajusta para Requisição de Serviço
+      const savedType = editingTicket.type
+      if (!savedType || savedType === 'Incidente' || savedType === 'Problema') {
+        setType('Requisição de Serviço')
+      } else {
+        setType(savedType)
+      }
       setCategoryId(editingTicket.category || '')
       setSubcategoryId(editingTicket.subcategory || '')
       setQueueId(editingTicket.queue || '')
       setAssignedTo(editingTicket.assigned_to || '')
-      setPriority(editingTicket.priority || 'Média')
-      setImpact(editingTicket.impact || 'Médio')
-      setUrgency(editingTicket.urgency || 'Média')
+
+      // Carregar prioridade/urgência/impacto da atividade se existir ou do agendamento
+      const subCat = categories.find((c) => c.id === editingTicket.subcategory)
+      if (subCat) {
+        const subImp = subCat.impact || editingTicket.impact || 'Médio'
+        const subUrg = subCat.urgency || editingTicket.urgency || 'Média'
+        const subPrio = subCat.priority || computePriority(subImp, subUrg)
+        setImpact(subImp)
+        setUrgency(subUrg)
+        setPriority(subPrio)
+      } else {
+        setPriority(editingTicket.priority || 'Média')
+        setImpact(editingTicket.impact || 'Médio')
+        setUrgency(editingTicket.urgency || 'Média')
+      }
 
       // Formatar datetime para input local (YYYY-MM-DDTHH:mm)
       if (editingTicket.scheduled_date) {
@@ -175,7 +187,7 @@ export const ScheduledTicketDialog: React.FC<ScheduledTicketDialogProps> = ({
       setRequesterName(user?.name || '')
       setRequesterEmail(user?.email || '')
       setRequesterPhone('')
-      setType('Incidente')
+      setType('Requisição de Serviço')
       setCategoryId('')
       setSubcategoryId('')
       setQueueId('')
@@ -225,6 +237,43 @@ export const ScheduledTicketDialog: React.FC<ScheduledTicketDialogProps> = ({
   const subcategories = categories.filter(
     (c) => c.parent && (!categoryId || c.parent === categoryId),
   )
+
+  // Quando o usuário troca a categoria principal
+  const handleCategoryChange = (newCatId: string) => {
+    setCategoryId(newCatId)
+    // Se a subcategoria atual não pertence à nova categoria, reseta subcategoria
+    if (subcategoryId) {
+      const currentSub = categories.find((c) => c.id === subcategoryId)
+      if (currentSub && currentSub.parent !== newCatId) {
+        setSubcategoryId('')
+        setPriority('Média')
+        setImpact('Médio')
+        setUrgency('Média')
+      }
+    }
+  }
+
+  // Quando o usuário seleciona uma Atividade (subcategoria) do catálogo
+  const handleSubcategoryChange = (newSubId: string) => {
+    setSubcategoryId(newSubId)
+    const selectedSub = categories.find((c) => c.id === newSubId)
+    if (selectedSub) {
+      // Se a categoria principal ainda não estiver setada, preenche com o pai da subcategoria
+      if (selectedSub.parent && (!categoryId || categoryId !== selectedSub.parent)) {
+        setCategoryId(selectedSub.parent)
+      }
+      const imp = selectedSub.impact || 'Médio'
+      const urg = selectedSub.urgency || 'Média'
+      const prio = selectedSub.priority || computePriority(imp, urg)
+      setImpact(imp)
+      setUrgency(urg)
+      setPriority(prio)
+    } else {
+      setImpact('Médio')
+      setUrgency('Média')
+      setPriority('Média')
+    }
+  }
 
   const toggleWeekday = (day: number) => {
     if (recurrenceDaysOfWeek.includes(day)) {
@@ -432,13 +481,11 @@ export const ScheduledTicketDialog: React.FC<ScheduledTicketDialogProps> = ({
                   Tipo de Chamado
                 </Label>
                 <Select value={type} onValueChange={setType}>
-                  <SelectTrigger className="mt-1">
+                  <SelectTrigger className="mt-1 bg-background">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Incidente">Incidente</SelectItem>
                     <SelectItem value="Requisição de Serviço">Requisição de Serviço</SelectItem>
-                    <SelectItem value="Problema">Problema</SelectItem>
                     <SelectItem value="Mudança">Mudança</SelectItem>
                     <SelectItem value="Projeto">Projeto</SelectItem>
                     <SelectItem value="Tarefa Interna">Tarefa Interna</SelectItem>
@@ -446,6 +493,9 @@ export const ScheduledTicketDialog: React.FC<ScheduledTicketDialogProps> = ({
                     <SelectItem value="Dúvida">Dúvida</SelectItem>
                   </SelectContent>
                 </Select>
+                <span className="text-[11px] text-muted-foreground">
+                  Chamados programáveis (Incidente e Problema não se aplicam a agendamento).
+                </span>
               </div>
             </div>
           </div>
@@ -771,14 +821,14 @@ export const ScheduledTicketDialog: React.FC<ScheduledTicketDialogProps> = ({
             )}
           </div>
 
-          {/* Seção 5: Atribuição, Prioridade e Fila */}
+          {/* Seção 5: Atribuição, Atividade do Catálogo e Prioridade Automática */}
           <div className="rounded-lg border p-4 bg-muted/20 space-y-4">
             <div className="flex items-center gap-2 text-sm font-semibold text-foreground border-b pb-2">
               <User className="h-4 w-4 text-primary" />
-              Atribuição e Fila de Atendimento
+              Atribuição e Atividade do Catálogo
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <Label className="text-xs font-semibold uppercase text-muted-foreground">
                   Fila de Atendimento
@@ -817,26 +867,9 @@ export const ScheduledTicketDialog: React.FC<ScheduledTicketDialogProps> = ({
 
               <div>
                 <Label className="text-xs font-semibold uppercase text-muted-foreground">
-                  Prioridade
+                  Categoria Principal
                 </Label>
-                <Select value={priority} onValueChange={setPriority}>
-                  <SelectTrigger className="mt-1 bg-background">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Crítica">Crítica</SelectItem>
-                    <SelectItem value="Alta">Alta</SelectItem>
-                    <SelectItem value="Média">Média</SelectItem>
-                    <SelectItem value="Baixa">Baixa</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div>
-                <Label className="text-xs font-semibold uppercase text-muted-foreground">
-                  Categoria
-                </Label>
-                <Select value={categoryId} onValueChange={setCategoryId}>
+                <Select value={categoryId} onValueChange={handleCategoryChange}>
                   <SelectTrigger className="mt-1 bg-background">
                     <SelectValue placeholder="Selecione a categoria" />
                   </SelectTrigger>
@@ -854,17 +887,19 @@ export const ScheduledTicketDialog: React.FC<ScheduledTicketDialogProps> = ({
 
               <div>
                 <Label className="text-xs font-semibold uppercase text-muted-foreground">
-                  Subcategoria
+                  Atividade do Catálogo / Subcategoria
                 </Label>
                 <Select
                   value={subcategoryId}
-                  onValueChange={setSubcategoryId}
+                  onValueChange={handleSubcategoryChange}
                   disabled={subcategories.length === 0}
                 >
                   <SelectTrigger className="mt-1 bg-background">
                     <SelectValue
                       placeholder={
-                        subcategories.length === 0 ? 'Nenhuma subcategoria' : 'Selecione'
+                        subcategories.length === 0
+                          ? 'Nenhuma atividade disponível'
+                          : 'Selecione a atividade...'
                       }
                     />
                   </SelectTrigger>
@@ -876,34 +911,48 @@ export const ScheduledTicketDialog: React.FC<ScheduledTicketDialogProps> = ({
                     ))}
                   </SelectContent>
                 </Select>
+                <span className="text-[11px] text-muted-foreground">
+                  A prioridade e a urgência são definidas automaticamente pela atividade.
+                </span>
+              </div>
+            </div>
+
+            {/* Painel Informativo de Prioridade, Urgência e Impacto definidos pela Atividade */}
+            <div className="rounded-lg border bg-background/80 p-3.5 space-y-2">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+                  <Sparkles className="h-3.5 w-3.5 text-primary" />
+                  <span>Prioridade e Urgência</span>
+                </div>
+                <Badge variant="secondary" className="text-[10px] font-normal">
+                  {subcategoryId ? 'Definido pela atividade' : 'Padrão do sistema'}
+                </Badge>
               </div>
 
-              <div>
-                <Label className="text-xs font-semibold uppercase text-muted-foreground">
-                  Urgência / Impacto
-                </Label>
-                <div className="flex gap-2 mt-1">
-                  <Select value={urgency} onValueChange={setUrgency}>
-                    <SelectTrigger className="bg-background">
-                      <SelectValue placeholder="Urgência" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Alta">Urg. Alta</SelectItem>
-                      <SelectItem value="Média">Urg. Média</SelectItem>
-                      <SelectItem value="Baixa">Urg. Baixa</SelectItem>
-                    </SelectContent>
-                  </Select>
+              <div className="grid grid-cols-3 gap-3 pt-1">
+                <div className="space-y-1">
+                  <span className="text-[11px] font-semibold text-muted-foreground uppercase block">
+                    Prioridade
+                  </span>
+                  <PriorityBadge priority={priority} />
+                </div>
 
-                  <Select value={impact} onValueChange={setImpact}>
-                    <SelectTrigger className="bg-background">
-                      <SelectValue placeholder="Impacto" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Alto">Imp. Alto</SelectItem>
-                      <SelectItem value="Médio">Imp. Médio</SelectItem>
-                      <SelectItem value="Baixo">Imp. Baixo</SelectItem>
-                    </SelectContent>
-                  </Select>
+                <div className="space-y-1">
+                  <span className="text-[11px] font-semibold text-muted-foreground uppercase block">
+                    Urgência
+                  </span>
+                  <Badge variant="outline" className="text-xs font-normal">
+                    {urgency || 'Média'}
+                  </Badge>
+                </div>
+
+                <div className="space-y-1">
+                  <span className="text-[11px] font-semibold text-muted-foreground uppercase block">
+                    Impacto
+                  </span>
+                  <Badge variant="outline" className="text-xs font-normal">
+                    {impact || 'Médio'}
+                  </Badge>
                 </div>
               </div>
             </div>

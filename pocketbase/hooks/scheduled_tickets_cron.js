@@ -1,6 +1,20 @@
 // Cron: processa agendamentos de tickets (abertura programada, recorrência e aviso prévio)
 // Executa a cada 5 minutos.
 cronAdd('scheduled_tickets_cron', '*/5 * * * *', function () {
+  var computePriorityFromMatrix = function (impact, urgency) {
+    var matrix = {
+      'Alto|Alta': 'Crítica',
+      'Alto|Média': 'Alta',
+      'Alto|Baixa': 'Média',
+      'Médio|Alta': 'Alta',
+      'Médio|Média': 'Média',
+      'Médio|Baixa': 'Baixa',
+      'Baixo|Alta': 'Média',
+      'Baixo|Média': 'Baixa',
+      'Baixo|Baixa': 'Baixa',
+    }
+    return matrix[(impact || 'Médio') + '|' + (urgency || 'Média')] || 'Média'
+  }
   var now = new Date()
   var nowIso = now.toISOString()
   var nowMs = now.getTime()
@@ -195,9 +209,32 @@ cronAdd('scheduled_tickets_cron', '*/5 * * * *', function () {
         if (sched.getString('queue')) newTicket.set('queue', sched.getString('queue'))
         if (sched.getString('assigned_to'))
           newTicket.set('assigned_to', sched.getString('assigned_to'))
-        newTicket.set('priority', sched.getString('priority') || 'Média')
-        newTicket.set('impact', sched.getString('impact') || 'Médio')
-        newTicket.set('urgency', sched.getString('urgency') || 'Média')
+
+        // Prioridade, urgência e impacto derivados da subcategoria (atividade) ou do agendamento
+        var subCatId = sched.getString('subcategory')
+        var finalImpact = sched.getString('impact') || 'Médio'
+        var finalUrgency = sched.getString('urgency') || 'Média'
+        var finalPriority = sched.getString('priority') || 'Média'
+
+        if (subCatId) {
+          try {
+            var subCatRec = $app.findRecordById('tkt_categories', subCatId)
+            var catImpact = subCatRec.getString('impact')
+            var catUrgency = subCatRec.getString('urgency')
+            var catPriority = subCatRec.getString('priority')
+            if (catImpact) finalImpact = catImpact
+            if (catUrgency) finalUrgency = catUrgency
+            if (catPriority) {
+              finalPriority = catPriority
+            } else if (catImpact || catUrgency) {
+              finalPriority = computePriorityFromMatrix(finalImpact, finalUrgency)
+            }
+          } catch (_) {}
+        }
+
+        newTicket.set('priority', finalPriority)
+        newTicket.set('impact', finalImpact)
+        newTicket.set('urgency', finalUrgency)
         newTicket.set('status', 'Novo')
         newTicket.set('source', 'Programado')
 
