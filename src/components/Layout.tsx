@@ -488,6 +488,12 @@ export default function Layout() {
       show: permissions.canReadModule('reports'),
     },
     {
+      label: 'Relatório Mensal do Cliente',
+      path: '/reports/monthly-client',
+      icon: BarChart3,
+      show: permissions.canReadModule('reports'),
+    },
+    {
       label: 'Extração de Clientes',
       path: '/reports/clients',
       icon: BarChart3,

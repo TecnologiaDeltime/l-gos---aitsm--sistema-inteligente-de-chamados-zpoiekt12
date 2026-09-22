@@ -46,6 +46,16 @@ interface InteractionRow {
 /** Outros relatórios disponíveis no sistema, para acesso rápido. */
 const OTHER_REPORTS = [
   {
+    title: 'Relatório Mensal do Cliente',
+    desc: 'Extração gráfica e executiva de horas por acordo, setores, solicitantes, atividades e movimentação de ativos nas normas ABNT.',
+    path: '/reports/monthly-client',
+  },
+  {
+    title: 'Extração de Clientes',
+    desc: 'Relatório dinâmico com seleção flexível de colunas cadastrais, contatos, unidades e contratos para conferência e exportação.',
+    path: '/reports/clients',
+  },
+  {
     title: 'Funcionalidades Implantadas',
     desc: 'Relatório executivo e inventário detalhado de todas as funcionalidades entregues, com exportação para PDF e CSV.',
     path: '/reports/implemented-features',
