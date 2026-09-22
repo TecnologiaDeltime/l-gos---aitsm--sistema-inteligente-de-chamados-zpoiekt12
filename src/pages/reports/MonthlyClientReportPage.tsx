@@ -66,6 +66,7 @@ import {
   Pie,
   Cell,
   Legend,
+  LabelList,
 } from 'recharts'
 
 const CHART_COLORS = [
@@ -112,6 +113,19 @@ function formatMonthLabel(monthKey: string): string {
   return `${MONTH_NAMES_FULL[m - 1]} de ${y}`
 }
 
+function formatHoursLabel(value: any): string {
+  if (value === null || value === undefined || isNaN(Number(value))) return ''
+  const num = Number(value)
+  if (num === 0) return '0h'
+  return `${num.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}h`
+}
+
+function formatCountLabel(value: any): string {
+  if (value === null || value === undefined || isNaN(Number(value))) return ''
+  const num = Number(value)
+  if (num === 0) return '0'
+  return String(num)
+}
 export default function MonthlyClientReportPage() {
   const { toast } = useToast()
   const [searchParams, setSearchParams] = useSearchParams()
@@ -713,11 +727,11 @@ export default function MonthlyClientReportPage() {
                 Figura 1 – Comparativo de Horas Contratadas versus Horas Utilizadas por Acordo de
                 Atendimento
               </p>
-              <div className="abnt-chart-box h-72 w-full rounded-lg bg-slate-50/50 dark:bg-slate-800/30 p-2">
+              <div className="abnt-chart-box h-80 w-full rounded-lg bg-slate-50/50 dark:bg-slate-800/30 p-2">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart
                     data={agreementsChartData}
-                    margin={{ top: 20, right: 20, left: 10, bottom: 25 }}
+                    margin={{ top: 30, right: 20, left: 10, bottom: 25 }}
                   >
                     <XAxis
                       dataKey="name"
@@ -741,13 +755,27 @@ export default function MonthlyClientReportPage() {
                       fill="#3b82f6"
                       name="Horas Contratadas"
                       radius={[4, 4, 0, 0]}
-                    />
+                    >
+                      <LabelList
+                        dataKey="Contratado"
+                        position="top"
+                        formatter={formatHoursLabel}
+                        style={{ fontSize: 11, fontWeight: 600, fill: '#1e293b' }}
+                      />
+                    </Bar>
                     <Bar
                       dataKey="Utilizado"
                       fill="#10b981"
                       name="Horas Utilizadas"
                       radius={[4, 4, 0, 0]}
-                    />
+                    >
+                      <LabelList
+                        dataKey="Utilizado"
+                        position="top"
+                        formatter={formatHoursLabel}
+                        style={{ fontSize: 11, fontWeight: 600, fill: '#1e293b' }}
+                      />
+                    </Bar>
                   </BarChart>
                 </ResponsiveContainer>
               </div>
@@ -864,12 +892,12 @@ export default function MonthlyClientReportPage() {
                   <p className="abnt-caption-top">
                     Figura 2 – Distribuição das Horas de Atendimento por Departamento da Empresa
                   </p>
-                  <div className="abnt-chart-box h-72 w-full rounded-lg bg-slate-50/50 dark:bg-slate-800/30 p-2">
+                  <div className="abnt-chart-box h-80 w-full rounded-lg bg-slate-50/50 dark:bg-slate-800/30 p-2">
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart
                         layout="vertical"
                         data={sectorsChartData}
-                        margin={{ top: 10, right: 30, left: 100, bottom: 10 }}
+                        margin={{ top: 10, right: 50, left: 100, bottom: 10 }}
                       >
                         <XAxis type="number" unit="h" tick={{ fontSize: 11 }} />
                         <YAxis type="category" dataKey="name" tick={{ fontSize: 11 }} width={95} />
@@ -886,7 +914,14 @@ export default function MonthlyClientReportPage() {
                           fill="#6366f1"
                           name="Horas Consumidas"
                           radius={[0, 4, 4, 0]}
-                        />
+                        >
+                          <LabelList
+                            dataKey="Horas"
+                            position="right"
+                            formatter={formatHoursLabel}
+                            style={{ fontSize: 11, fontWeight: 600, fill: '#1e293b' }}
+                          />
+                        </Bar>
                       </BarChart>
                     </ResponsiveContainer>
                   </div>
@@ -894,7 +929,6 @@ export default function MonthlyClientReportPage() {
                     Fonte: Apuração por centro de custo/departamento — ServiceOne.
                   </p>
                 </div>
-
                 {/* Tabela de Apoio 2 */}
                 <div className="abnt-avoid-break">
                   <p className="abnt-caption-top">
@@ -964,11 +998,11 @@ export default function MonthlyClientReportPage() {
                   <p className="abnt-caption-top">
                     Figura 3 – Ranking dos Maiores Solicitantes por Volume de Horas de Suporte
                   </p>
-                  <div className="abnt-chart-box h-72 w-full rounded-lg bg-slate-50/50 dark:bg-slate-800/30 p-2">
+                  <div className="abnt-chart-box h-80 w-full rounded-lg bg-slate-50/50 dark:bg-slate-800/30 p-2">
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart
                         data={requestersChartData}
-                        margin={{ top: 20, right: 20, left: 10, bottom: 25 }}
+                        margin={{ top: 30, right: 20, left: 10, bottom: 25 }}
                       >
                         <XAxis
                           dataKey="name"
@@ -988,7 +1022,14 @@ export default function MonthlyClientReportPage() {
                           fill="#0284c7"
                           name="Horas Utilizadas"
                           radius={[4, 4, 0, 0]}
-                        />
+                        >
+                          <LabelList
+                            dataKey="Horas"
+                            position="top"
+                            formatter={formatHoursLabel}
+                            style={{ fontSize: 11, fontWeight: 600, fill: '#1e293b' }}
+                          />
+                        </Bar>
                       </BarChart>
                     </ResponsiveContainer>
                   </div>
@@ -996,7 +1037,6 @@ export default function MonthlyClientReportPage() {
                     Fonte: Registros de abertura de chamados e apontamentos técnicos (ServiceOne).
                   </p>
                 </div>
-
                 {/* Tabela de Apoio 3 */}
                 <div className="abnt-avoid-break">
                   <p className="abnt-caption-top">
@@ -1070,11 +1110,11 @@ export default function MonthlyClientReportPage() {
                   <p className="abnt-caption-top">
                     Figura 4 – Volume de Chamados por Categoria de Atividade Técnica
                   </p>
-                  <div className="abnt-chart-box h-72 w-full rounded-lg bg-slate-50/50 dark:bg-slate-800/30 p-2">
+                  <div className="abnt-chart-box h-80 w-full rounded-lg bg-slate-50/50 dark:bg-slate-800/30 p-2">
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart
                         data={activitiesChartData}
-                        margin={{ top: 20, right: 20, left: 10, bottom: 25 }}
+                        margin={{ top: 30, right: 20, left: 10, bottom: 25 }}
                       >
                         <XAxis
                           dataKey="name"
@@ -1097,13 +1137,27 @@ export default function MonthlyClientReportPage() {
                           fill="#8b5cf6"
                           name="Qtd. Chamados"
                           radius={[4, 4, 0, 0]}
-                        />
+                        >
+                          <LabelList
+                            dataKey="Chamados"
+                            position="top"
+                            formatter={formatCountLabel}
+                            style={{ fontSize: 11, fontWeight: 600, fill: '#1e293b' }}
+                          />
+                        </Bar>
                         <Bar
                           dataKey="Horas"
                           fill="#f59e0b"
                           name="Horas Dedicadas"
                           radius={[4, 4, 0, 0]}
-                        />
+                        >
+                          <LabelList
+                            dataKey="Horas"
+                            position="top"
+                            formatter={formatHoursLabel}
+                            style={{ fontSize: 11, fontWeight: 600, fill: '#1e293b' }}
+                          />
+                        </Bar>
                       </BarChart>
                     </ResponsiveContainer>
                   </div>
@@ -1111,7 +1165,6 @@ export default function MonthlyClientReportPage() {
                     Fonte: Catálogo de Atividades e Categorias do ITSM.
                   </p>
                 </div>
-
                 {/* Tabela de Apoio 4 */}
                 <div className="abnt-avoid-break">
                   <p className="abnt-caption-top">
@@ -1314,11 +1367,11 @@ export default function MonthlyClientReportPage() {
                 <p className="abnt-caption-top">
                   Figura 5 – Composição do Parque de Ativos e Movimentações por Categoria
                 </p>
-                <div className="abnt-chart-box h-64 w-full rounded-lg bg-slate-50/50 dark:bg-slate-800/30 p-2">
+                <div className="abnt-chart-box h-72 w-full rounded-lg bg-slate-50/50 dark:bg-slate-800/30 p-2">
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart
                       data={reportData.assets.byType}
-                      margin={{ top: 20, right: 20, left: 10, bottom: 20 }}
+                      margin={{ top: 30, right: 20, left: 10, bottom: 20 }}
                     >
                       <XAxis dataKey="type" tick={{ fontSize: 11 }} />
                       <YAxis tick={{ fontSize: 11 }} />
@@ -1329,19 +1382,40 @@ export default function MonthlyClientReportPage() {
                         fill="#3b82f6"
                         name="Total de Ativos"
                         radius={[4, 4, 0, 0]}
-                      />
+                      >
+                        <LabelList
+                          dataKey="total"
+                          position="top"
+                          formatter={formatCountLabel}
+                          style={{ fontSize: 11, fontWeight: 600, fill: '#1e293b' }}
+                        />
+                      </Bar>
                       <Bar
                         dataKey="entered"
                         fill="#10b981"
                         name="Entradas (Mês)"
                         radius={[4, 4, 0, 0]}
-                      />
+                      >
+                        <LabelList
+                          dataKey="entered"
+                          position="top"
+                          formatter={formatCountLabel}
+                          style={{ fontSize: 11, fontWeight: 600, fill: '#1e293b' }}
+                        />
+                      </Bar>
                       <Bar
                         dataKey="exited"
                         fill="#ef4444"
                         name="Saídas (Mês)"
                         radius={[4, 4, 0, 0]}
-                      />
+                      >
+                        <LabelList
+                          dataKey="exited"
+                          position="top"
+                          formatter={formatCountLabel}
+                          style={{ fontSize: 11, fontWeight: 600, fill: '#1e293b' }}
+                        />
+                      </Bar>
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
@@ -1497,11 +1571,11 @@ export default function MonthlyClientReportPage() {
                   <p className="abnt-caption-top">
                     Figura 6 – Evolução do consumo de horas nos últimos 6 meses
                   </p>
-                  <div className="abnt-chart-box h-72 w-full rounded-lg bg-slate-50/50 dark:bg-slate-800/30 p-2">
+                  <div className="abnt-chart-box h-80 w-full rounded-lg bg-slate-50/50 dark:bg-slate-800/30 p-2">
                     <ResponsiveContainer width="100%" height="100%">
                       <AreaChart
                         data={comparisonChartData}
-                        margin={{ top: 20, right: 30, left: 10, bottom: 20 }}
+                        margin={{ top: 30, right: 30, left: 10, bottom: 20 }}
                       >
                         <defs>
                           <linearGradient id="colorHours" x1="0" y1="0" x2="0" y2="1">
@@ -1539,7 +1613,15 @@ export default function MonthlyClientReportPage() {
                           name="Horas Utilizadas"
                           dot={{ r: 4, strokeWidth: 2, fill: '#ffffff', stroke: '#2563eb' }}
                           activeDot={{ r: 6 }}
-                        />
+                        >
+                          <LabelList
+                            dataKey="Horas Utilizadas"
+                            position="top"
+                            offset={10}
+                            formatter={formatHoursLabel}
+                            style={{ fontSize: 11, fontWeight: 600, fill: '#1e293b' }}
+                          />
+                        </Area>
                       </AreaChart>
                     </ResponsiveContainer>
                   </div>
@@ -1547,7 +1629,6 @@ export default function MonthlyClientReportPage() {
                     Fonte: Registros históricos de interações e apontamentos de horas (ServiceOne).
                   </p>
                 </div>
-
                 {/* Quadro 7: Comparativo mensal de consumo */}
                 <div className="abnt-avoid-break">
                   <p className="abnt-caption-top">Quadro 7 – Comparativo mensal de consumo</p>
