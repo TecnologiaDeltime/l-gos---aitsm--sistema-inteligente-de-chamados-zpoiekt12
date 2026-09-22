@@ -19,6 +19,9 @@ import {
   Layers,
   ArrowUpRight,
   TrendingUp,
+  TrendingDown,
+  Minus,
+  LineChart as LineChartIcon,
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -42,6 +45,7 @@ import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useToast } from '@/hooks/use-toast'
 import { getCompanies, type CompanyRecord } from '@/services/companies'
+import { formatHours } from '@/lib/duration'
 import {
   fetchMonthlyClientReportData,
   type MonthlyClientReportData,
@@ -49,8 +53,13 @@ import {
 import {
   BarChart,
   Bar,
+  LineChart,
+  Line,
+  AreaChart,
+  Area,
   XAxis,
   YAxis,
+  CartesianGrid,
   Tooltip,
   ResponsiveContainer,
   PieChart,
@@ -233,6 +242,18 @@ export default function MonthlyClientReportPage() {
         value: Math.max(0, reportData.assets.activeCount - reportData.assets.enteredCount),
       },
     ].filter((i) => i.value > 0)
+  }, [reportData])
+
+  const comparisonChartData = useMemo(() => {
+    if (!reportData?.comparison) return []
+    return reportData.comparison.items.map((item) => ({
+      name: item.label,
+      monthKey: item.monthKey,
+      'Horas Utilizadas': item.horasUtilizadasDecimal,
+      'Chamados Abertos': item.chamadosAbertos,
+      'Chamados Resolvidos': item.chamadosResolvidos,
+      isRef: item.isReferenceMonth,
+    }))
   }, [reportData])
 
   return (
@@ -1442,6 +1463,220 @@ export default function MonthlyClientReportPage() {
             </div>
           </section>
 
+          {/* ============================================================== */}
+          {/* SEÇÃO 7: COMPARATIVO COM MESES ANTERIORES                      */}
+          {/* ============================================================== */}
+          <section className="abnt-section bg-white dark:bg-slate-900 border rounded-xl p-6 shadow-xs print:border-none print:shadow-none print:p-0">
+            <h3 className="abnt-section-title text-lg font-bold flex items-center gap-2 mb-4 text-slate-900 dark:text-slate-100">
+              <TrendingUp className="h-5 w-5 text-blue-600 print:hidden" />
+              7. Comparativo com Meses Anteriores
+            </h3>
+
+            <p className="abnt-paragraph text-sm text-slate-700 dark:text-slate-300 leading-relaxed mb-4">
+              Apresenta a análise evolutiva do consumo de horas técnicas e do fluxo de abertura e
+              resolução de chamados ao longo dos últimos 6 (seis) meses, permitindo diagnosticar a
+              tendência de demanda, a estabilidade das operações e os períodos de pico técnico da
+              organização.
+            </p>
+
+            {/* Texto analítico ABNT gerado dos dados */}
+            {reportData.comparison?.summaryText && (
+              <p className="abnt-paragraph text-sm text-slate-700 dark:text-slate-300 leading-relaxed mb-6 font-serif">
+                {reportData.comparison.summaryText}
+              </p>
+            )}
+
+            {!reportData.comparison || !reportData.comparison.hasData ? (
+              <div className="border rounded-lg p-6 text-center bg-slate-50/50 dark:bg-slate-800/30 text-xs text-muted-foreground my-4">
+                Sem dados de consumo nos últimos 6 meses para este cliente.
+              </div>
+            ) : (
+              <>
+                {/* Gráfico 6: Evolução de Consumo de Horas nos Últimos 6 Meses */}
+                <div className="abnt-avoid-break mb-6">
+                  <p className="abnt-caption-top">
+                    Figura 6 – Evolução do consumo de horas nos últimos 6 meses
+                  </p>
+                  <div className="abnt-chart-box h-72 w-full rounded-lg bg-slate-50/50 dark:bg-slate-800/30 p-2">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <AreaChart
+                        data={comparisonChartData}
+                        margin={{ top: 20, right: 30, left: 10, bottom: 20 }}
+                      >
+                        <defs>
+                          <linearGradient id="colorHours" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#2563eb" stopOpacity={0.4} />
+                            <stop offset="95%" stopColor="#2563eb" stopOpacity={0.02} />
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                        <XAxis dataKey="name" tick={{ fontSize: 11 }} />
+                        <YAxis
+                          tick={{ fontSize: 11 }}
+                          unit="h"
+                          label={{
+                            value: 'Horas',
+                            angle: -90,
+                            position: 'insideLeft',
+                            fontSize: 11,
+                          }}
+                        />
+                        <Tooltip
+                          formatter={(v: any, name: any) => [
+                            name === 'Horas Utilizadas' ? `${Number(v).toFixed(2)}h` : v,
+                            name,
+                          ]}
+                          contentStyle={{ fontSize: 12 }}
+                        />
+                        <Legend wrapperStyle={{ fontSize: 12, paddingTop: 6 }} />
+                        <Area
+                          type="monotone"
+                          dataKey="Horas Utilizadas"
+                          stroke="#2563eb"
+                          strokeWidth={2.5}
+                          fillOpacity={1}
+                          fill="url(#colorHours)"
+                          name="Horas Utilizadas"
+                          dot={{ r: 4, strokeWidth: 2, fill: '#ffffff', stroke: '#2563eb' }}
+                          activeDot={{ r: 6 }}
+                        />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  </div>
+                  <p className="abnt-source-bottom">
+                    Fonte: Registros históricos de interações e apontamentos de horas (ServiceOne).
+                  </p>
+                </div>
+
+                {/* Quadro 7: Comparativo mensal de consumo */}
+                <div className="abnt-avoid-break">
+                  <p className="abnt-caption-top">Quadro 7 – Comparativo mensal de consumo</p>
+                  <div className="border rounded-lg overflow-hidden">
+                    <Table>
+                      <TableHeader className="bg-slate-100 dark:bg-slate-800">
+                        <TableRow>
+                          <TableHead className="text-xs font-bold">Mês</TableHead>
+                          <TableHead className="text-xs font-bold text-right">
+                            Horas Utilizadas (HH:MM:SS)
+                          </TableHead>
+                          <TableHead className="text-xs font-bold text-right">
+                            Horas (Decimal)
+                          </TableHead>
+                          <TableHead className="text-xs font-bold text-center">
+                            Chamados Abertos
+                          </TableHead>
+                          <TableHead className="text-xs font-bold text-center">
+                            Chamados Resolvidos
+                          </TableHead>
+                          <TableHead className="text-xs font-bold text-right">
+                            Variação vs. Mês Anterior
+                          </TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {reportData.comparison.items.map((row) => {
+                          const isSelected = row.isReferenceMonth
+                          const variacao = row.variacaoPercent
+                          const isPositive = variacao !== null && variacao > 0
+                          const isNegative = variacao !== null && variacao < 0
+
+                          return (
+                            <TableRow
+                              key={row.monthKey}
+                              className={
+                                isSelected
+                                  ? 'bg-blue-50/70 dark:bg-blue-950/40 font-semibold border-l-4 border-l-blue-600 print:bg-slate-100'
+                                  : undefined
+                              }
+                            >
+                              <TableCell className="text-xs">
+                                <div className="flex items-center gap-1.5">
+                                  <span>{row.label}</span>
+                                  {isSelected && (
+                                    <Badge
+                                      variant="outline"
+                                      className="text-[9px] px-1.5 py-0 h-4 border-blue-400 text-blue-700 bg-blue-100/60 dark:bg-blue-900/40"
+                                    >
+                                      Mês Selecionado
+                                    </Badge>
+                                  )}
+                                </div>
+                              </TableCell>
+                              <TableCell className="text-xs text-right font-mono font-semibold">
+                                {row.horasUtilizadasFormatted}
+                              </TableCell>
+                              <TableCell className="text-xs text-right font-mono text-muted-foreground">
+                                {row.horasUtilizadasDecimal.toFixed(2)}h
+                              </TableCell>
+                              <TableCell className="text-xs text-center font-mono">
+                                {row.chamadosAbertos}
+                              </TableCell>
+                              <TableCell className="text-xs text-center font-mono">
+                                {row.chamadosResolvidos}
+                              </TableCell>
+                              <TableCell className="text-xs text-right font-mono">
+                                {variacao === null ? (
+                                  <span className="text-muted-foreground">—</span>
+                                ) : (
+                                  <span
+                                    className={`inline-flex items-center justify-end gap-1 font-semibold ${
+                                      isPositive
+                                        ? 'text-red-600 dark:text-red-400'
+                                        : isNegative
+                                          ? 'text-emerald-600 dark:text-emerald-400'
+                                          : 'text-slate-600 dark:text-slate-400'
+                                    }`}
+                                    style={{
+                                      WebkitPrintColorAdjust: 'exact',
+                                      printColorAdjust: 'exact',
+                                    }}
+                                  >
+                                    {isPositive && (
+                                      <span className="text-red-600 font-bold">▲</span>
+                                    )}
+                                    {isNegative && (
+                                      <span className="text-emerald-600 font-bold">▼</span>
+                                    )}
+                                    {!isPositive && !isNegative && (
+                                      <span className="text-slate-500 font-bold">―</span>
+                                    )}
+                                    {Math.abs(variacao).toFixed(1)}%
+                                  </span>
+                                )}
+                              </TableCell>
+                            </TableRow>
+                          )
+                        })}
+
+                        {/* Linha Consolidada do Semestre */}
+                        <TableRow className="bg-slate-100/70 dark:bg-slate-800/80 font-bold border-t-2">
+                          <TableCell className="text-xs">TOTAL DO SEMESTRE</TableCell>
+                          <TableCell className="text-xs text-right font-mono">
+                            {formatHours(reportData.comparison.totalHours6Months)}
+                          </TableCell>
+                          <TableCell className="text-xs text-right font-mono text-blue-700 dark:text-blue-400">
+                            {reportData.comparison.totalHours6Months.toFixed(2)}h
+                          </TableCell>
+                          <TableCell className="text-xs text-center font-mono">
+                            {reportData.comparison.totalOpened6Months}
+                          </TableCell>
+                          <TableCell className="text-xs text-center font-mono">
+                            {reportData.comparison.totalResolved6Months}
+                          </TableCell>
+                          <TableCell className="text-xs text-right font-mono text-muted-foreground text-[11px]">
+                            Média: {reportData.comparison.averageHours.toFixed(1)}h/mês
+                          </TableCell>
+                        </TableRow>
+                      </TableBody>
+                    </Table>
+                  </div>
+                  <p className="abnt-source-bottom">
+                    Fonte: Série histórica consolidada dos últimos 6 meses (ServiceOne ITSM).
+                  </p>
+                </div>
+              </>
+            )}
+          </section>
           {/* Rodapé / Assinaturas do Relatório */}
           <div className="abnt-avoid-break border-t-2 pt-6 mt-8 print:block">
             <div className="grid grid-cols-2 gap-8 text-center text-xs">

@@ -4,6 +4,32 @@ import { getContracts, type ContractRecord, CONTRACT_HOURS_LEVELS } from '@/serv
 import { getCategories, type CategoryRecord } from '@/services/categories'
 import { getQueues, type QueueRecord } from '@/services/queues'
 import { getMonthRange } from '@/services/client-hours'
+import { formatMinutes } from '@/lib/duration'
+
+export interface MonthlyComparisonItem {
+  monthKey: string
+  label: string
+  horasUtilizadasFormatted: string
+  horasUtilizadasDecimal: number
+  chamadosAbertos: number
+  chamadosResolvidos: number
+  variacaoPercent: number | null
+  isReferenceMonth: boolean
+}
+
+export interface MonthlyComparisonAnalysis {
+  items: MonthlyComparisonItem[]
+  hasData: boolean
+  referenceMonth: MonthlyComparisonItem | null
+  averageHours: number
+  peakMonth: MonthlyComparisonItem | null
+  lowestMonth: MonthlyComparisonItem | null
+  totalHours6Months: number
+  totalOpened6Months: number
+  totalResolved6Months: number
+  trendDirection: 'up' | 'down' | 'stable'
+  summaryText: string
+}
 
 export interface AgreementUsageItem {
   key: string
@@ -95,6 +121,281 @@ export interface MonthlyClientReportData {
   activities: ActivityDemandItem[]
   study: TechnicalStudyData
   assets: AssetMovementSummary
+  comparison?: MonthlyComparisonAnalysis
+}
+
+const SHORT_MONTH_NAMES = [
+  'jan',
+  'fev',
+  'mar',
+  'abr',
+  'mai',
+  'jun',
+  'jul',
+  'ago',
+  'set',
+  'out',
+  'nov',
+  'dez',
+]
+
+/**
+ * Retorna os últimos N meses (formato YYYY-MM) terminando em endMonth, ordenados cronologicamente.
+ */
+export function getLastNMonths(endMonth: string, n = 6): string[] {
+  const [yStr, mStr] = endMonth.split('-')
+  const y = parseInt(yStr, 10)
+  const m = parseInt(mStr, 10) - 1
+  const result: string[] = []
+
+  for (let i = n - 1; i >= 0; i--) {
+    const d = new Date(y, m - i, 1)
+    const year = d.getFullYear()
+    const month = String(d.getMonth() + 1).padStart(2, '0')
+    result.push(`${year}-${month}`)
+  }
+
+  return result
+}
+
+/**
+ * Busca histórico comparativo dos últimos N meses para uma empresa,
+ * calculando consumo de horas, chamados abertos e chamados resolvidos por mês.
+ */
+export async function fetchMonthlyComparison(
+  companyId: string,
+  endMonth: string,
+  months = 6,
+): Promise<MonthlyComparisonAnalysis> {
+  const monthKeys = getLastNMonths(endMonth, months)
+  const oldestMonth = monthKeys[0]
+  const newestMonth = monthKeys[monthKeys.length - 1]
+
+  const oldestRange = getMonthRange(oldestMonth)
+  const newestRange = getMonthRange(newestMonth)
+  const overallStart = oldestRange.start
+  const overallEnd = newestRange.end
+
+  // 1. Busca todos os chamados da empresa
+  const tickets = await pb
+    .collection('tickets')
+    .getFullList({
+      filter: `company = "${companyId}"`,
+      sort: 'created',
+      fields: 'id,created,status,resolution_date',
+    })
+    .catch(() => [] as any[])
+
+  const ticketIds = tickets.map((t) => t.id)
+
+  // 2. Busca todas as interações no período de 6 meses
+  const allInteractions: any[] = []
+  if (ticketIds.length > 0) {
+    const batchSize = 50
+    for (let i = 0; i < ticketIds.length; i += batchSize) {
+      const batch = ticketIds.slice(i, i + batchSize)
+      const ticketFilter = batch.map((id) => `ticket = "${id}"`).join(' || ')
+      const inters = await pb
+        .collection('ticket_interactions')
+        .getFullList({
+          filter: `(${ticketFilter}) && created >= "${overallStart}" && created <= "${overallEnd}"`,
+          sort: 'created',
+          fields: 'duration_minutes,created',
+        })
+        .catch(() => [] as any[])
+      allInteractions.push(...inters)
+    }
+  }
+
+  // 3. Agrega por mês
+  const items: MonthlyComparisonItem[] = monthKeys.map((mKey, idx) => {
+    const { start, end } = getMonthRange(mKey)
+    const [y, m] = mKey.split('-')
+    const monthNum = parseInt(m, 10)
+    const label = `${SHORT_MONTH_NAMES[monthNum - 1]}/${y}`
+
+    // Interações no mês
+    const monthInters = allInteractions.filter((i) => {
+      const c = i.created || ''
+      return c >= start && c <= end
+    })
+
+    const totalMinutes = monthInters.reduce((acc, curr) => {
+      return acc + (Number(curr.duration_minutes) || 0)
+    }, 0)
+
+    const decimalHours = Math.round((totalMinutes / 60) * 100) / 100
+    const formattedHours = formatMinutes(totalMinutes)
+
+    // Chamados abertos no mês
+    const chamadosAbertos = tickets.filter((t) => {
+      const c = t.created || ''
+      return c >= start && c <= end
+    }).length
+
+    // Chamados resolvidos no mês (status Resolvido/Fechado ou resolution_date no período)
+    const chamadosResolvidos = tickets.filter((t) => {
+      const resDate = t.resolution_date || ''
+      if (resDate) {
+        return resDate >= start && resDate <= end
+      }
+      // Se não tiver resolution_date explícito mas o status for Resolvido/Fechado e foi criado no mês
+      const c = t.created || ''
+      const isResolved =
+        (t.status || '').toLowerCase() === 'resolvido' ||
+        (t.status || '').toLowerCase() === 'fechado'
+      return isResolved && c >= start && c <= end
+    }).length
+
+    return {
+      monthKey: mKey,
+      label,
+      horasUtilizadasFormatted: formattedHours,
+      horasUtilizadasDecimal: decimalHours,
+      chamadosAbertos,
+      chamadosResolvidos,
+      variacaoPercent: null,
+      isReferenceMonth: mKey === endMonth,
+    }
+  })
+
+  // Calcula variação vs. mês anterior
+  for (let i = 1; i < items.length; i++) {
+    const prev = items[i - 1].horasUtilizadasDecimal
+    const curr = items[i].horasUtilizadasDecimal
+    if (prev > 0) {
+      items[i].variacaoPercent = Math.round(((curr - prev) / prev) * 1000) / 10
+    } else if (curr > 0) {
+      items[i].variacaoPercent = 100
+    } else {
+      items[i].variacaoPercent = 0
+    }
+  }
+
+  const hasData = items.some(
+    (i) => i.horasUtilizadasDecimal > 0 || i.chamadosAbertos > 0 || i.chamadosResolvidos > 0,
+  )
+
+  const referenceMonth =
+    items.find((i) => i.monthKey === endMonth) || items[items.length - 1] || null
+
+  const totalHours6Months =
+    Math.round(items.reduce((acc, curr) => acc + curr.horasUtilizadasDecimal, 0) * 100) / 100
+  const totalOpened6Months = items.reduce((acc, curr) => acc + curr.chamadosAbertos, 0)
+  const totalResolved6Months = items.reduce((acc, curr) => acc + curr.chamadosResolvidos, 0)
+  const averageHours =
+    items.length > 0 ? Math.round((totalHours6Months / items.length) * 100) / 100 : 0
+
+  let peakMonth: MonthlyComparisonItem | null = null
+  let lowestMonth: MonthlyComparisonItem | null = null
+
+  if (hasData) {
+    peakMonth = [...items].sort((a, b) => b.horasUtilizadasDecimal - a.horasUtilizadasDecimal)[0]
+    lowestMonth = [...items].sort((a, b) => a.horasUtilizadasDecimal - b.horasUtilizadasDecimal)[0]
+  }
+
+  // Análise de tendência
+  let trendDirection: 'up' | 'down' | 'stable' = 'stable'
+  if (items.length >= 2) {
+    const last3 = items.slice(-3)
+    const first3 = items.slice(0, 3)
+    const avgRecent =
+      last3.reduce((acc, c) => acc + c.horasUtilizadasDecimal, 0) / (last3.length || 1)
+    const avgPast =
+      first3.reduce((acc, c) => acc + c.horasUtilizadasDecimal, 0) / (first3.length || 1)
+
+    if (avgRecent > avgPast * 1.1) {
+      trendDirection = 'up'
+    } else if (avgRecent < avgPast * 0.9) {
+      trendDirection = 'down'
+    }
+  }
+
+  // Gera texto analítico
+  const summarySentences: string[] = []
+  if (!hasData) {
+    summarySentences.push(
+      'Não foram identificados registros de apontamento de horas ou abertura de chamados no período consolidado dos últimos 6 meses para este cliente.',
+    )
+  } else {
+    summarySentences.push(
+      `Na análise evolutiva dos últimos ${months} meses, a organização acumulou um consumo de ${totalHours6Months.toFixed(
+        1,
+      )} horas de suporte técnico e ${totalOpened6Months} chamado(s) aberto(s), com média mensal de ${averageHours.toFixed(
+        1,
+      )} horas.`,
+    )
+
+    if (referenceMonth) {
+      if (referenceMonth.variacaoPercent !== null) {
+        if (referenceMonth.variacaoPercent > 0) {
+          summarySentences.push(
+            `No mês de referência (${referenceMonth.label}), houve elevação de ${referenceMonth.variacaoPercent.toFixed(
+              1,
+            )}% no consumo de horas em relação ao mês anterior, totalizando ${referenceMonth.horasUtilizadasDecimal.toFixed(
+              1,
+            )}h.`,
+          )
+        } else if (referenceMonth.variacaoPercent < 0) {
+          summarySentences.push(
+            `No mês de referência (${referenceMonth.label}), observou-se redução de ${Math.abs(
+              referenceMonth.variacaoPercent,
+            ).toFixed(
+              1,
+            )}% na utilização de horas frente ao mês anterior, registrando ${referenceMonth.horasUtilizadasDecimal.toFixed(
+              1,
+            )}h.`,
+          )
+        } else {
+          summarySentences.push(
+            `No mês de referência (${referenceMonth.label}), o consumo de horas manteve-se estável em relação ao mês anterior, totalizando ${referenceMonth.horasUtilizadasDecimal.toFixed(
+              1,
+            )}h.`,
+          )
+        }
+      }
+
+      if (averageHours > 0) {
+        const diffFromAvg = referenceMonth.horasUtilizadasDecimal - averageHours
+        const diffPct = Math.round((Math.abs(diffFromAvg) / averageHours) * 100)
+        if (diffFromAvg > 0.5) {
+          summarySentences.push(
+            `O volume apurado no mês ficou ${diffPct}% acima da média histórica do semestre.`,
+          )
+        } else if (diffFromAvg < -0.5) {
+          summarySentences.push(
+            `O volume apurado no mês ficou ${diffPct}% abaixo da média histórica semestral.`,
+          )
+        } else {
+          summarySentences.push(
+            'O volume do mês de referência alinhou-se com a média histórica semestral do contrato.',
+          )
+        }
+      }
+    }
+
+    if (peakMonth && peakMonth.horasUtilizadasDecimal > 0) {
+      summarySentences.push(
+        `O pico de consumo técnico do período ocorreu em ${peakMonth.label}, atingindo ${peakMonth.horasUtilizadasDecimal.toFixed(
+          1,
+        )}h (${peakMonth.chamadosAbertos} chamados abertos).`,
+      )
+    }
+  }
+
+  return {
+    items,
+    hasData,
+    referenceMonth,
+    averageHours,
+    peakMonth,
+    lowestMonth,
+    totalHours6Months,
+    totalOpened6Months,
+    totalResolved6Months,
+    trendDirection,
+    summaryText: summarySentences.join(' '),
+  }
 }
 
 export async function fetchMonthlyClientReportData(
@@ -666,5 +967,6 @@ export async function fetchMonthlyClientReportData(
     activities,
     study,
     assets,
+    comparison: await fetchMonthlyComparison(companyId, monthKey, 6).catch(() => undefined),
   }
 }
