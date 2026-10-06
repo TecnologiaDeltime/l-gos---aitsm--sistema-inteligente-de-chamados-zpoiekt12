@@ -71,6 +71,17 @@
     "zod": "^4.4.3",
     "@radix-ui/react-compose-refs": "file:./src/shims/react-compose-refs-pkg"
   },
+  "pnpm": {
+    "overrides": {
+      "@radix-ui/react-compose-refs": "file:./src/shims/react-compose-refs-pkg"
+    }
+  },
+  "overrides": {
+    "@radix-ui/react-compose-refs": "file:./src/shims/react-compose-refs-pkg"
+  },
+  "resolutions": {
+    "@radix-ui/react-compose-refs": "file:./src/shims/react-compose-refs-pkg"
+  },
   "devDependencies": {
     "@tailwindcss/typography": "^0.5.20",
     "@types/node": "^26.0.0",
