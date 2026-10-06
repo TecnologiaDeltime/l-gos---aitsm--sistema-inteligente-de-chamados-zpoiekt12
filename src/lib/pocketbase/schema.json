@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-06T22:01:17.261Z",
+  "generatedAt": "2026-10-06T23:21:26.567Z",
   "collections": [
     {
       "name": "users",
@@ -2309,9 +2309,43 @@
           "required": false,
           "system": false,
           "autodateTriggers": ["onCreate", "onUpdate"]
+        },
+        {
+          "name": "content_html",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "attachment",
+          "type": "file",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "attachment_name",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "tokens",
+          "type": "json",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "activity",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "tkt_categories"
         }
       ],
-      "indexes": ["CREATE INDEX idx_kb_category ON knowledge_articles (category)"]
+      "indexes": [
+        "CREATE INDEX idx_kb_category ON knowledge_articles (category)",
+        "CREATE INDEX `idx_kb_activity` ON `knowledge_articles` (activity)"
+      ]
     },
     {
       "name": "ci_relationships",

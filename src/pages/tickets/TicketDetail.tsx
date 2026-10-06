@@ -97,7 +97,9 @@ import { ApprovalDialog } from '@/components/ApprovalDialog'
 import { VisitDialog } from '@/components/VisitDialog'
 import { SlaPauseDialog, STATUS_BY_REASON } from '@/components/SlaPauseDialog'
 import { formatMinutes, formatHours } from '@/lib/duration'
-import { Inbox, Sparkles, Check, CheckCheck } from 'lucide-react'
+import { Inbox, Sparkles, Check, CheckCheck, BookOpen, ExternalLink } from 'lucide-react'
+import { getKnowledgeArticles, KnowledgeArticle } from '@/services/knowledge'
+import { ArticleDetailDialog } from '@/components/knowledge/ArticleDetailDialog'
 import { useAuth } from '@/hooks/use-auth'
 import { usePermissions } from '@/hooks/use-permissions'
 import { useRealtime } from '@/hooks/use-realtime'
@@ -150,6 +152,9 @@ export default function TicketDetail() {
   const [showBatchResolve, setShowBatchResolve] = useState(false)
   const [resolveBlockMessage, setResolveBlockMessage] = useState<string | null>(null)
   const [applyingTriage, setApplyingTriage] = useState(false)
+  const [suggestedArticles, setSuggestedArticles] = useState<KnowledgeArticle[]>([])
+  const [selectedKbArticle, setSelectedKbArticle] = useState<KnowledgeArticle | null>(null)
+  const [kbDetailOpen, setKbDetailOpen] = useState(false)
 
   const loadData = () => {
     if (!id) return
@@ -187,6 +192,45 @@ export default function TicketDetail() {
   useEffect(() => {
     loadData()
   }, [id])
+
+  // Busca procedimentos/artigos sugeridos da Base de Conhecimento com base em tokens, categoria ou atividade do ticket
+  useEffect(() => {
+    if (!ticket) return
+    getKnowledgeArticles()
+      .then((allArticles) => {
+        const ticketText = `${ticket.title} ${ticket.description || ''}`.toLowerCase()
+        const ticketSubcategory = ticket.subcategory || ''
+        const ticketCategory = ticket.category || ''
+
+        const matched = allArticles.filter((art) => {
+          // 1. Casamento direto por atividade/categoria
+          if (
+            ticketSubcategory &&
+            (art.activity === ticketSubcategory || art.category === ticketSubcategory)
+          ) {
+            return true
+          }
+          if (
+            ticketCategory &&
+            (art.activity === ticketCategory || art.category === ticketCategory)
+          ) {
+            return true
+          }
+
+          // 2. Casamento por tokens do artigo no título/descrição do chamado
+          const tokens = Array.isArray(art.tokens)
+            ? art.tokens
+            : art.tags
+              ? art.tags.split(',').map((t) => t.trim().toLowerCase())
+              : []
+
+          return tokens.some((t) => t.length >= 3 && ticketText.includes(t))
+        })
+
+        setSuggestedArticles(matched.slice(0, 3))
+      })
+      .catch(() => {})
+  }, [ticket?.id, ticket?.subcategory, ticket?.category, ticket?.title])
   useEffect(() => {
     getActiveContracts()
       .then(setContracts)
@@ -601,6 +645,60 @@ export default function TicketDetail() {
                   💡 {ticket.triage_suggestions.reason}
                 </p>
               )}
+            </div>
+          )}
+
+          {/* Artigos Sugeridos da Base de Conhecimento vinculados por Tokens / Atividade */}
+          {suggestedArticles.length > 0 && (
+            <div className="rounded-xl border border-blue-200 bg-blue-50/60 dark:border-blue-900/60 dark:bg-blue-950/30 p-3.5 space-y-2">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-1.5 text-blue-950 dark:text-blue-200">
+                  <BookOpen className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                  <span className="font-semibold text-xs uppercase tracking-wider">
+                    Procedimentos Recomendados da Base de Conhecimento
+                  </span>
+                  <Badge
+                    variant="outline"
+                    className="bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300 text-[10px] border-blue-300"
+                  >
+                    {suggestedArticles.length} relacionado(s)
+                  </Badge>
+                </div>
+                <Link
+                  to="/knowledge-base"
+                  className="text-[11px] text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1 font-medium"
+                >
+                  Ver Base Completa
+                  <ExternalLink className="h-3 w-3" />
+                </Link>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1">
+                {suggestedArticles.map((art) => (
+                  <button
+                    key={art.id}
+                    type="button"
+                    onClick={() => {
+                      setSelectedKbArticle(art)
+                      setKbDetailOpen(true)
+                    }}
+                    className="text-left p-2.5 rounded-lg bg-white dark:bg-slate-900 border border-blue-100 dark:border-blue-900/50 hover:border-blue-300 dark:hover:border-blue-700 transition-all shadow-xs flex flex-col justify-between"
+                  >
+                    <div>
+                      <h5 className="font-semibold text-xs text-slate-900 dark:text-slate-100 line-clamp-1 hover:text-blue-600">
+                        {art.title}
+                      </h5>
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400 line-clamp-2 mt-0.5">
+                        {art.summary || art.content.slice(0, 100)}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-1 pt-1.5 text-[10px] text-blue-600 font-medium">
+                      <span>Abrir procedimento</span>
+                      <ExternalLink className="h-2.5 w-2.5" />
+                    </div>
+                  </button>
+                ))}
+              </div>
             </div>
           )}
           <div className="flex flex-wrap items-center justify-between gap-2">
@@ -1488,6 +1586,13 @@ export default function TicketDetail() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Modal para visualizar artigo sugerido diretamente no chamado */}
+      <ArticleDetailDialog
+        article={selectedKbArticle}
+        open={kbDetailOpen}
+        onOpenChange={setKbDetailOpen}
+      />
     </div>
   )
 }
