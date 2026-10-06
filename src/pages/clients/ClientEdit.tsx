@@ -5,13 +5,6 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Skeleton } from '@/components/ui/skeleton'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
 import { Loader2, ArrowLeft, Save, AlertCircle } from 'lucide-react'
 import {
   getCompany,
@@ -390,15 +383,14 @@ export default function ClientEdit() {
 
         <div className="space-y-1">
           <Label className="text-xs">Status</Label>
-          <Select value={form.status || 'Ativo'} onValueChange={(v) => set('status', v)}>
-            <SelectTrigger className={inputCls}>
-              <SelectValue placeholder="Selecione o status">{form.status || 'Ativo'}</SelectValue>
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="Ativo">Ativo</SelectItem>
-              <SelectItem value="Inativo">Inativo</SelectItem>
-            </SelectContent>
-          </Select>
+          <select
+            className="h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100"
+            value={form.status || 'Ativo'}
+            onChange={(e) => set('status', e.target.value)}
+          >
+            <option value="Ativo">Ativo</option>
+            <option value="Inativo">Inativo</option>
+          </select>
         </div>
 
         <div className="space-y-1">
