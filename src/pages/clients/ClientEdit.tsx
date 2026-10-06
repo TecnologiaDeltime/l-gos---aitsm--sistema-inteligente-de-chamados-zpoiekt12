@@ -62,41 +62,48 @@ export default function ClientEdit() {
   const [original, setOriginal] = useState<CompanyRecord | null>(null)
   const [form, setForm] = useState<Record<string, string>>(EMPTY_FORM)
 
-  const loadCompany = useCallback(async () => {
+  useEffect(() => {
     if (!id) return
+    let isCancelled = false
     setLoading(true)
     setFetchError(null)
-    try {
-      const data = await getCompany(id)
-      setOriginal(data)
-      setForm({
-        code: data.code || '',
-        legal_name: data.legal_name || '',
-        trade_name: data.trade_name || '',
-        document: data.document || '',
-        address_street: data.address_street || '',
-        address_number: data.address_number || '',
-        address_neighborhood: data.address_neighborhood || '',
-        address_city: data.address_city || '',
-        address_state: data.address_state || '',
-        address_zipcode: data.address_zipcode || '',
-        phone: data.phone || '',
-        email: data.email || '',
-        status: data.status || 'Ativo',
-        notes: data.notes || '',
-        site: (data as any).site || '',
-        address_complement: (data as any).address_complement || '',
+
+    getCompany(id)
+      .then((data) => {
+        if (isCancelled) return
+        setOriginal(data)
+        setForm({
+          code: data.code || '',
+          legal_name: data.legal_name || '',
+          trade_name: data.trade_name || '',
+          document: data.document || '',
+          address_street: data.address_street || '',
+          address_number: data.address_number || '',
+          address_neighborhood: data.address_neighborhood || '',
+          address_city: data.address_city || '',
+          address_state: data.address_state || '',
+          address_zipcode: data.address_zipcode || '',
+          phone: data.phone || '',
+          email: data.email || '',
+          status: data.status || 'Ativo',
+          notes: data.notes || '',
+          site: (data as any).site || '',
+          address_complement: (data as any).address_complement || '',
+        })
       })
-    } catch {
-      setFetchError('Não foi possível carregar os dados do cliente.')
-    } finally {
-      setLoading(false)
+      .catch(() => {
+        if (isCancelled) return
+        setFetchError('Não foi possível carregar os dados do cliente.')
+      })
+      .finally(() => {
+        if (isCancelled) return
+        setLoading(false)
+      })
+
+    return () => {
+      isCancelled = true
     }
   }, [id])
-
-  useEffect(() => {
-    loadCompany()
-  }, [loadCompany])
 
   const set = (key: string, value: string) => {
     setForm((prev) => ({ ...prev, [key]: value }))
@@ -383,9 +390,9 @@ export default function ClientEdit() {
 
         <div className="space-y-1">
           <Label className="text-xs">Status</Label>
-          <Select value={form.status} onValueChange={(v) => set('status', v)}>
+          <Select value={form.status || 'Ativo'} onValueChange={(v) => set('status', v)}>
             <SelectTrigger className={inputCls}>
-              <SelectValue />
+              <SelectValue placeholder="Selecione o status">{form.status || 'Ativo'}</SelectValue>
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="Ativo">Ativo</SelectItem>
