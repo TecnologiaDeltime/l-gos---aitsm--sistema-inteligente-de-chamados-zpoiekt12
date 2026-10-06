@@ -214,36 +214,62 @@ export function ActivityCatalogDialog({
                   <span className="text-xs text-slate-400">Selecione impacto e urgência</span>
                 )}
               </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <Label className="text-xs">SLA Resposta (minutos) *</Label>
-                  <Input
-                    type="number"
-                    min={1}
-                    value={slaResponse}
-                    onChange={(e) => setSlaResponse(e.target.value)}
-                    placeholder="30"
-                  />
+              <div className="rounded-lg border border-blue-200 bg-blue-50/50 p-3 space-y-2 dark:border-blue-900/50 dark:bg-blue-950/30">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-blue-900 dark:text-blue-200">
+                    SLA da Atividade (Precedência Máxima)
+                  </span>
+                  <span className="text-[10px] uppercase font-bold text-blue-600 dark:text-blue-400 bg-blue-100 dark:bg-blue-900/60 px-1.5 py-0.5 rounded">
+                    1º na Precedência
+                  </span>
                 </div>
-                <div className="space-y-1">
-                  <Label className="text-xs">SLA Solução (minutos) *</Label>
-                  <Input
-                    type="number"
-                    min={1}
-                    value={slaSolution}
-                    onChange={(e) => setSlaSolution(e.target.value)}
-                    placeholder="240"
-                  />
+                <p className="text-[11px] text-blue-800/80 dark:text-blue-300/80">
+                  A configuração de SLA definida na atividade tem prioridade sobre as regras do
+                  Cliente e do Contrato.
+                </p>
+                <div className="grid grid-cols-2 gap-3 pt-1">
+                  <div className="space-y-1">
+                    <Label className="text-xs">SLA Resposta (minutos) *</Label>
+                    <Input
+                      type="number"
+                      min={1}
+                      value={slaResponse}
+                      onChange={(e) => setSlaResponse(e.target.value)}
+                      placeholder="30"
+                    />
+                    <span className="text-[10px] text-muted-foreground">
+                      Até Iniciar Atendimento
+                    </span>
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs">SLA Solução (minutos) *</Label>
+                    <Input
+                      type="number"
+                      min={1}
+                      value={slaSolution}
+                      onChange={(e) => setSlaSolution(e.target.value)}
+                      placeholder="240"
+                    />
+                    <span className="text-[10px] text-muted-foreground">
+                      Até a Resolução do Chamado
+                    </span>
+                  </div>
                 </div>
               </div>
             </>
           ) : (
             <div className="rounded-lg border border-slate-200 dark:border-slate-800 p-3 space-y-2 bg-slate-50/50 dark:bg-slate-900/50">
-              <span className="text-xs font-semibold text-slate-700 dark:text-slate-300 block">
-                SLA Padrão da Categoria (opcional)
-              </span>
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-slate-700 dark:text-slate-300 block">
+                  SLA Padrão da Categoria (opcional)
+                </span>
+                <span className="text-[10px] uppercase font-bold text-slate-500 bg-slate-200 dark:bg-slate-800 px-1.5 py-0.5 rounded">
+                  1º na Precedência
+                </span>
+              </div>
               <p className="text-[11px] text-slate-500">
-                Pode ser herdado por atividades filhas que não definirem SLA específico.
+                Pode ser herdado por atividades filhas que não definirem SLA específico. Tem
+                precedência sobre o cliente.
               </p>
               <div className="grid grid-cols-2 gap-3 pt-1">
                 <div className="space-y-1">

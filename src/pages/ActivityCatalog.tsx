@@ -95,7 +95,8 @@ export default function ActivityCatalog() {
         <div>
           <h2 className="text-lg font-bold">Catálogo de Atividades</h2>
           <p className="text-sm text-slate-500">
-            Gerencie categorias e subatividades com prioridade ITIL e SLAs
+            Gerencie categorias e subatividades com prioridade ITIL e SLAs (precedência sobre o
+            cliente)
           </p>
         </div>
         <Button onClick={handleAddMain} className="bg-blue-600 hover:bg-blue-700" size="sm">

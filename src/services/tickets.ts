@@ -284,6 +284,16 @@ export const batchDelegateTickets = (
 export const startService = (id: string) =>
   pb.send(`/backend/v1/tickets/${id}/start`, { method: 'POST' })
 
+export const pauseTicketSla = (id: string, reason: string, justification: string) =>
+  pb.send(`/backend/v1/tickets/${id}/pause-sla`, {
+    method: 'POST',
+    body: JSON.stringify({ reason, justification }),
+    headers: { 'Content-Type': 'application/json' },
+  })
+
+export const resumeTicketSla = (id: string) =>
+  pb.send(`/backend/v1/tickets/${id}/resume-sla`, { method: 'POST' })
+
 export const getTicketInteractions = (ticketId: string) =>
   pb.collection('ticket_interactions').getFullList({
     filter: `ticket = "${ticketId}"`,

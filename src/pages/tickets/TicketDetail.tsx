@@ -70,8 +70,12 @@ import {
   updateTicket,
   createSlaPause,
   startService,
+  pauseTicketSla,
+  resumeTicketSla,
+  getSlaPauses,
   getTicketHistory,
   TicketRecord,
+  SlaPauseRecord,
 } from '@/services/tickets'
 import { HOUR_TYPES, BILLING_STATUSES } from '@/services/ticket-interactions'
 import { getErrorMessage } from '@/lib/pocketbase/errors'
@@ -120,6 +124,7 @@ export default function TicketDetail() {
   const [interactions, setInteractions] = useState<any[]>([])
   const [visits, setVisits] = useState<any[]>([])
   const [history, setHistory] = useState<any[]>([])
+  const [slaPauses, setSlaPauses] = useState<SlaPauseRecord[]>([])
   const [attachments, setAttachments] = useState<TicketAttachmentRecord[]>([])
   const [uploadingAttachment, setUploadingAttachment] = useState(false)
   const [deletingAttachmentId, setDeletingAttachmentId] = useState<string | null>(null)
@@ -188,6 +193,9 @@ export default function TicketDetail() {
     getTicketHistory(id)
       .then(setHistory)
       .catch(() => {})
+    getSlaPauses(id)
+      .then(setSlaPauses)
+      .catch(() => setSlaPauses([]))
     getTicketAttachments(id)
       .then(setAttachments)
       .catch(() => {})
@@ -286,6 +294,13 @@ export default function TicketDetail() {
   useRealtime('technical_visits', () => loadData())
   useRealtime('ticket_history', () => loadData())
   useRealtime('ticket_attachments', () => loadData())
+  useRealtime('sla_pauses', () => {
+    if (id) {
+      getSlaPauses(id)
+        .then(setSlaPauses)
+        .catch(() => {})
+    }
+  })
   useRealtime('ticket_views', () => {
     if (id) {
       getTicketViews(id)
@@ -396,32 +411,32 @@ export default function TicketDetail() {
 
   const handlePauseSla = async (reason: string, justification: string) => {
     if (!id || !user) return
-    const newStatus = STATUS_BY_REASON[reason] || 'Aguardando Cliente'
-    await createSlaPause({
-      ticket: id,
-      reason,
-      justification,
-      paused_by: user.id,
-      paused_at: new Date().toISOString(),
-    })
-    await updateTicket(id, {
-      sla_paused: true,
-      sla_status: 'Pausado',
-      status: newStatus,
-    })
-    loadData()
-    toast({ title: `SLA Pausado — Motivo: ${reason}` })
+    try {
+      await pauseTicketSla(id, reason, justification)
+      loadData()
+      toast({ title: `SLA Pausado — Motivo: ${reason}` })
+    } catch (err) {
+      toast({
+        title: 'Erro ao pausar SLA',
+        description: getErrorMessage(err),
+        variant: 'destructive',
+      })
+    }
   }
 
   const handleResumeSla = async () => {
     if (!id) return
-    await updateTicket(id, {
-      sla_paused: false,
-      sla_status: 'Dentro do Prazo',
-      status: 'Em Atendimento',
-    })
-    loadData()
-    toast({ title: 'SLA Retomado' })
+    try {
+      await resumeTicketSla(id)
+      loadData()
+      toast({ title: 'SLA Retomado com sucesso!' })
+    } catch (err) {
+      toast({
+        title: 'Erro ao retomar SLA',
+        description: getErrorMessage(err),
+        variant: 'destructive',
+      })
+    }
   }
 
   const handleResolveClick = async () => {
@@ -883,6 +898,7 @@ export default function TicketDetail() {
             <TabsTrigger value="interactions">Interações ({interactions.length})</TabsTrigger>
             <TabsTrigger value="attachments">Anexos ({attachments.length})</TabsTrigger>
             <TabsTrigger value="visits">Visitas ({visits.length})</TabsTrigger>
+            <TabsTrigger value="sla-audit">Auditoria de SLA ({slaPauses.length})</TabsTrigger>
             <TabsTrigger value="history">Histórico</TabsTrigger>
           </TabsList>
           <TabsContent value="interactions" className="pt-4 space-y-4">
@@ -1244,6 +1260,145 @@ export default function TicketDetail() {
               ))
             )}
           </TabsContent>
+          <TabsContent value="sla-audit" className="pt-4 space-y-4">
+            <div className="rounded-lg border border-border bg-card p-4 space-y-2">
+              <div className="flex items-center justify-between">
+                <h4 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                  <Clock className="h-4 w-4 text-blue-600" /> Linha do Tempo e Auditoria de SLA
+                </h4>
+                {ticket.sla_paused && (
+                  <Badge
+                    variant="outline"
+                    className="bg-amber-50 text-amber-700 border-amber-300 dark:bg-amber-950 dark:text-amber-300"
+                  >
+                    SLA Atualmente Pausado
+                  </Badge>
+                )}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Registro detalhado de início de atendimento, pausas com justificativa, retomadas e
+                conclusão de metas.
+              </p>
+            </div>
+
+            {/* Resumo de Marcos de SLA */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="rounded-lg border bg-muted/40 p-3 text-xs space-y-1">
+                <span className="text-[11px] text-muted-foreground block font-medium">
+                  Abertura do Chamado
+                </span>
+                <span className="font-semibold text-foreground">
+                  {new Date(ticket.created).toLocaleString('pt-BR')}
+                </span>
+                <p className="text-[10px] text-muted-foreground">
+                  SLA Resposta e Solução iniciados
+                </p>
+              </div>
+              <div className="rounded-lg border bg-muted/40 p-3 text-xs space-y-1">
+                <span className="text-[11px] text-muted-foreground block font-medium">
+                  Primeira Resposta
+                </span>
+                {ticket.sla_response_start ? (
+                  <>
+                    <span className="font-semibold text-emerald-600 dark:text-emerald-400">
+                      {new Date(ticket.sla_response_start).toLocaleString('pt-BR')}
+                    </span>
+                    <p className="text-[10px] text-muted-foreground">
+                      Atendimento iniciado pelo operador
+                    </p>
+                  </>
+                ) : (
+                  <span className="font-medium text-amber-600 dark:text-amber-400">
+                    Aguardando Início de Atendimento
+                  </span>
+                )}
+              </div>
+              <div className="rounded-lg border bg-muted/40 p-3 text-xs space-y-1">
+                <span className="text-[11px] text-muted-foreground block font-medium">
+                  Tempo Total em Pausa
+                </span>
+                <span className="font-semibold text-foreground">
+                  {ticket.sla_pause_total_minutes
+                    ? `${ticket.sla_pause_total_minutes} min`
+                    : '0 min'}
+                </span>
+                <p className="text-[10px] text-muted-foreground">Prorrogado no prazo de solução</p>
+              </div>
+            </div>
+
+            {/* Lista de Pausas e Retomadas */}
+            <div className="space-y-3">
+              <h5 className="text-xs font-semibold text-foreground tracking-wide uppercase">
+                Pausas Registradas ({slaPauses.length})
+              </h5>
+              {slaPauses.length === 0 ? (
+                <div className="text-center py-6 border border-dashed rounded-lg text-slate-500 text-xs">
+                  Nenhuma pausa de SLA foi registrada neste chamado.
+                </div>
+              ) : (
+                slaPauses.map((pause, idx) => (
+                  <div
+                    key={pause.id || idx}
+                    className="rounded-lg border border-border p-3.5 text-xs space-y-2 bg-card"
+                  >
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <Badge
+                          variant="outline"
+                          className="bg-amber-50 text-amber-800 border-amber-300 dark:bg-amber-950 dark:text-amber-300 font-semibold"
+                        >
+                          Pausa: {pause.reason}
+                        </Badge>
+                        {pause.resumed_at ? (
+                          <Badge
+                            variant="outline"
+                            className="bg-emerald-50 text-emerald-700 border-emerald-300 dark:bg-emerald-950 dark:text-emerald-300"
+                          >
+                            Retomado ({pause.duration_minutes || 0} min)
+                          </Badge>
+                        ) : (
+                          <Badge
+                            variant="outline"
+                            className="bg-amber-100 text-amber-800 animate-pulse border-amber-400"
+                          >
+                            Em Pausa
+                          </Badge>
+                        )}
+                      </div>
+                      <span className="text-[11px] text-muted-foreground">
+                        Início: {new Date(pause.paused_at || pause.created).toLocaleString('pt-BR')}
+                      </span>
+                    </div>
+
+                    <div className="rounded bg-muted/50 p-2 text-foreground text-xs">
+                      <span className="font-medium text-slate-500 dark:text-slate-400">
+                        Justificativa:{' '}
+                      </span>
+                      {pause.justification}
+                    </div>
+
+                    <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-muted-foreground pt-1 border-t">
+                      <span>
+                        Pausado por:{' '}
+                        {pause.expand?.paused_by?.name ||
+                          pause.expand?.paused_by?.email ||
+                          'Operador'}
+                      </span>
+                      {pause.resumed_at && (
+                        <span>
+                          Retomado em: {new Date(pause.resumed_at).toLocaleString('pt-BR')}
+                          {pause.expand?.resumed_by?.name
+                            ? ` (por ${pause.expand.resumed_by.name})`
+                            : ''}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </TabsContent>
+
           <TabsContent value="history" className="pt-4 space-y-3">
             {history.length === 0 ? (
               <p className="text-center text-sm text-slate-500 p-4">Nenhum histórico registrado.</p>
@@ -1325,22 +1480,27 @@ export default function TicketDetail() {
           <SlaDetailBlock
             type="response"
             status={
-              categoryData && !categoryData.sla_response_minutes
+              categoryData && !categoryData.sla_response_minutes && !ticket.sla_response_deadline
                 ? 'Não definido'
                 : computeSlaResponseStatus(ticket)
             }
             deadline={ticket.sla_response_deadline}
             completedAt={ticket.sla_response_at}
+            startedAt={ticket.sla_response_start}
+            createdAt={ticket.created}
+            totalPauseMinutes={0}
           />
           <SlaDetailBlock
             type="solution"
             status={
-              categoryData && !categoryData.sla_solution_minutes
+              categoryData && !categoryData.sla_solution_minutes && !ticket.sla_solution_deadline
                 ? 'Não definido'
                 : computeSlaSolutionStatus(ticket)
             }
             deadline={ticket.sla_solution_deadline}
             completedAt={ticket.sla_solution_at}
+            createdAt={ticket.created}
+            totalPauseMinutes={ticket.sla_pause_total_minutes || 0}
           />
           <div className="pt-2 border-t space-y-2 text-xs">
             <div className="flex items-center gap-2 text-muted-foreground">

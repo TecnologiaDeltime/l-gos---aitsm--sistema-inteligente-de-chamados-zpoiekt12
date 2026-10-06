@@ -6,6 +6,9 @@ interface SlaDetailBlockProps {
   status: string
   deadline?: string
   completedAt?: string
+  startedAt?: string
+  createdAt?: string
+  totalPauseMinutes?: number
 }
 
 const STATUS_CONFIG: Record<
@@ -56,14 +59,49 @@ const STATUS_CONFIG: Record<
   },
 }
 
-export function SlaDetailBlock({ type, status, deadline, completedAt }: SlaDetailBlockProps) {
+export function SlaDetailBlock({
+  type,
+  status,
+  deadline,
+  completedAt,
+  startedAt,
+  createdAt,
+  totalPauseMinutes = 0,
+}: SlaDetailBlockProps) {
   const config = STATUS_CONFIG[status] || STATUS_CONFIG['Não definido']
   const { Icon } = config
   const label = type === 'response' ? 'SLA Resposta' : 'SLA Solução'
-  const barWidth = status === 'Pausado' || status === 'Não definido' ? 100 : config.percent
+
+  // Cálculo de percentual em tempo real
+  let computedPercent = config.percent
+  if (deadline && createdAt && status !== 'Pausado' && status !== 'Não definido') {
+    const startMs = new Date(createdAt).getTime()
+    const deadlineMs = new Date(deadline).getTime()
+    const endMs = completedAt ? new Date(completedAt).getTime() : Date.now()
+    const totalMs = deadlineMs - startMs
+    if (totalMs > 0) {
+      const elapsedMs = Math.max(0, endMs - startMs)
+      computedPercent = Math.min(100, Math.max(5, Math.round((elapsedMs / totalMs) * 100)))
+    }
+  }
+
+  const barWidth = status === 'Pausado' || status === 'Não definido' ? 100 : computedPercent
+
+  // Cálculo do tempo decorrido
+  let elapsedText = ''
+  if (createdAt) {
+    const startMs = new Date(createdAt).getTime()
+    const endMs = completedAt ? new Date(completedAt).getTime() : Date.now()
+    const grossMinutes = Math.max(0, Math.floor((endMs - startMs) / 60000))
+    const netMinutes =
+      type === 'solution' ? Math.max(0, grossMinutes - (totalPauseMinutes || 0)) : grossMinutes
+    const hours = Math.floor(netMinutes / 60)
+    const mins = netMinutes % 60
+    elapsedText = hours > 0 ? `${hours}h ${mins}min decorridos` : `${mins}min decorridos`
+  }
 
   return (
-    <div className="rounded-lg border p-3 space-y-2 dark:border-slate-700">
+    <div className="rounded-lg border p-3 space-y-2 dark:border-slate-700 bg-card">
       <div className="flex items-center justify-between">
         <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">{label}</span>
         <span className={`flex items-center gap-1 text-xs font-medium ${config.text}`}>
@@ -77,18 +115,31 @@ export function SlaDetailBlock({ type, status, deadline, completedAt }: SlaDetai
           style={{ width: `${barWidth}%` }}
         />
       </div>
-      <div className="flex items-center justify-between text-xs text-slate-500">
+      <div className="flex flex-wrap items-center justify-between gap-1 text-xs text-slate-500">
         <span>Prazo: {formatDeadline(deadline)}</span>
-        {status !== 'Pausado' && status !== 'Não definido' && (
-          <>
-            {completedAt ? (
-              <span className="text-slate-400">Concluído: {formatDeadline(completedAt)}</span>
-            ) : (
-              <span className={config.text}>{formatRemainingTime(deadline)}</span>
-            )}
-          </>
+        {completedAt ? (
+          <span className="text-slate-400 font-medium">
+            Concluído: {formatDeadline(completedAt)}
+          </span>
+        ) : status === 'Pausado' ? (
+          <span className="text-amber-600 font-medium">SLA Pausado</span>
+        ) : (
+          <span className={config.text}>{formatRemainingTime(deadline)}</span>
         )}
       </div>
+      {(elapsedText || startedAt) && (
+        <div className="flex flex-wrap items-center justify-between gap-1 pt-1 border-t border-slate-100 dark:border-slate-800 text-[11px] text-muted-foreground">
+          {startedAt ? (
+            <span>Início: {formatDeadline(startedAt)}</span>
+          ) : (
+            <span>{elapsedText}</span>
+          )}
+          {type === 'solution' && totalPauseMinutes > 0 && (
+            <span className="text-amber-600/90 font-medium">Pausas: {totalPauseMinutes}min</span>
+          )}
+          {startedAt && elapsedText && <span>{elapsedText}</span>}
+        </div>
+      )}
     </div>
   )
 }

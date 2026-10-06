@@ -77,6 +77,21 @@ onRecordCreate((e) => {
       } catch (_) {}
     }
 
+    // 1b. Categoria principal (se subcategoria não possuir SLA próprio)
+    var categoryId = e.record.getString('category')
+    if (!targetResp && !targetSol && categoryId) {
+      try {
+        var mainCat = $app.findRecordById('tkt_categories', categoryId)
+        var mainResp = mainCat.getInt('sla_response_minutes') || 0
+        var mainSol = mainCat.getInt('sla_solution_minutes') || 0
+        if (mainResp > 0 || mainSol > 0) {
+          targetResp = mainResp > 0 ? mainResp : 30
+          targetSol = mainSol > 0 ? mainSol : 240
+          slaSource = 'Atividade: ' + (mainCat.getString('name') || 'Catálogo')
+        }
+      } catch (_) {}
+    }
+
     if (!targetResp && !targetSol && companyId) {
       try {
         var comp = $app.findRecordById('companies', companyId)
