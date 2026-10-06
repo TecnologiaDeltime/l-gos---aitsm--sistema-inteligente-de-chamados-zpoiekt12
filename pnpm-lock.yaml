@@ -29,6 +29,9 @@ importers:
       '@radix-ui/react-collapsible':
         specifier: ^1.1.14
         version: 1.1.14(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
+      '@radix-ui/react-compose-refs':
+        specifier: file:./src/shims/react-compose-refs-pkg
+        version: file:src/shims/react-compose-refs-pkg
       '@radix-ui/react-context-menu':
         specifier: ^2.3.1
         version: 2.3.1(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
@@ -781,6 +784,9 @@ packages:
     peerDependenciesMeta:
       '@types/react':
         optional: true
+
+  '@radix-ui/react-compose-refs@file:src/shims/react-compose-refs-pkg':
+    resolution: {directory: src/shims/react-compose-refs-pkg, type: directory}
 
   '@radix-ui/react-context-menu@2.3.1':
     resolution: {integrity: sha512-XbrxS68W5dyiE4fAb96yvJwSVU5x66B20A99sD5Mk3xSWK/LqeOnx6TZnim1KieMjXS/CTFq8reOAjWxas2G8Q==}
@@ -2668,6 +2674,8 @@ snapshots:
       react: 19.2.7
     optionalDependencies:
       '@types/react': 19.2.17
+
+  '@radix-ui/react-compose-refs@file:src/shims/react-compose-refs-pkg': {}
 
   '@radix-ui/react-context-menu@2.3.1(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)':
     dependencies:
