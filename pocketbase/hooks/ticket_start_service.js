@@ -15,6 +15,9 @@ routerAdd(
 
     var now = new Date().toISOString()
     ticket.set('sla_response_start', now)
+    if (!ticket.getString('sla_response_at')) {
+      ticket.set('sla_response_at', now)
+    }
 
     var currentStatus = ticket.getString('status')
     if (currentStatus !== 'Em Atendimento') {
@@ -33,6 +36,20 @@ routerAdd(
     }
 
     $app.save(ticket)
+
+    try {
+      var historyCol = $app.findCollectionByNameOrId('ticket_history')
+      var hist = new Record(historyCol)
+      hist.set('ticket', id)
+      hist.set('user', userId)
+      hist.set('action', 'Iniciar Atendimento')
+      hist.set('field', 'sla_response_start')
+      hist.set('old_value', '')
+      hist.set('new_value', 'Atendimento iniciado — SLA Resposta congelado em ' + now)
+      $app.save(hist)
+    } catch (hErr) {
+      $app.logger().error('ticket_start_service: history logging failed', 'error', hErr.message)
+    }
 
     return e.json(200, {
       success: true,

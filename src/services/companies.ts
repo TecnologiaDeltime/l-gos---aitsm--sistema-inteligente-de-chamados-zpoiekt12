@@ -18,6 +18,8 @@ export interface CompanyRecord {
   site?: string
   status?: string
   notes?: string
+  sla_response_minutes?: number
+  sla_solution_minutes?: number
   created: string
   updated: string
 }

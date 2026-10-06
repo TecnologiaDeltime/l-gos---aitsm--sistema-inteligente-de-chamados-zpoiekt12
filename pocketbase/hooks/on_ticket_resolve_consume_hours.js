@@ -6,6 +6,19 @@ onRecordAfterUpdateSuccess((e) => {
   var oldStatus = original.getString('status')
   var newStatus = record.getString('status')
   if (oldStatus === newStatus) return e.next()
+
+  // Se passou para Resolvido e ainda não tem sla_solution_at, carimba o timestamp
+  if (newStatus === 'Resolvido' && !record.getString('sla_solution_at')) {
+    try {
+      var nowIso = new Date().toISOString()
+      record.set('sla_solution_at', nowIso)
+      if (!record.getString('resolution_date')) {
+        record.set('resolution_date', nowIso)
+      }
+      $app.save(record)
+    } catch (_) {}
+  }
+
   if (newStatus !== 'Resolvido' && newStatus !== 'Encerrado') return e.next()
   if (oldStatus === 'Resolvido' || oldStatus === 'Encerrado') return e.next()
 

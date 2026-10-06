@@ -72,10 +72,12 @@ export function ResolveTicketDialog({
     }
     setLoading(true)
     try {
+      const now = new Date().toISOString()
       await updateTicket(ticketId, {
         status: 'Resolvido',
         solution: solution.trim(),
-        resolution_date: new Date().toISOString(),
+        resolution_date: now,
+        sla_solution_at: now,
       })
 
       const truncated =

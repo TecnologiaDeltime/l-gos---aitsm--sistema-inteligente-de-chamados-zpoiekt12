@@ -76,6 +76,9 @@ export function ActivityCatalogDialog({
       toast({ title: 'Nome é obrigatório', variant: 'destructive' })
       return
     }
+    const resp = slaResponse ? parseInt(slaResponse, 10) : undefined
+    const sol = slaSolution ? parseInt(slaSolution, 10) : undefined
+
     if (isSub) {
       if (!impact || !urgency) {
         toast({
@@ -84,8 +87,6 @@ export function ActivityCatalogDialog({
         })
         return
       }
-      const resp = parseInt(slaResponse, 10)
-      const sol = parseInt(slaSolution, 10)
       if (!resp || resp < 1) {
         toast({ title: 'SLA Resposta deve ser um inteiro positivo', variant: 'destructive' })
         return
@@ -107,10 +108,14 @@ export function ActivityCatalogDialog({
               impact,
               urgency,
               priority: computedPriority,
-              sla_response_minutes: parseInt(slaResponse, 10),
-              sla_solution_minutes: parseInt(slaSolution, 10),
+              sla_response_minutes: resp,
+              sla_solution_minutes: sol,
             }
-          : {}),
+          : {
+              // Permite configurar SLA padrão também na categoria principal se desejado
+              sla_response_minutes: resp,
+              sla_solution_minutes: sol,
+            }),
       }
       if (editingCategory) {
         await updateCategory(editingCategory.id, data)
@@ -167,7 +172,7 @@ export function ActivityCatalogDialog({
               </SelectContent>
             </Select>
           </div>
-          {isSub && (
+          {isSub ? (
             <>
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
@@ -211,7 +216,7 @@ export function ActivityCatalogDialog({
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
-                  <Label className="text-xs">SLA Resposta (min) *</Label>
+                  <Label className="text-xs">SLA Resposta (minutos) *</Label>
                   <Input
                     type="number"
                     min={1}
@@ -221,7 +226,7 @@ export function ActivityCatalogDialog({
                   />
                 </div>
                 <div className="space-y-1">
-                  <Label className="text-xs">SLA Solução (min) *</Label>
+                  <Label className="text-xs">SLA Solução (minutos) *</Label>
                   <Input
                     type="number"
                     min={1}
@@ -232,6 +237,37 @@ export function ActivityCatalogDialog({
                 </div>
               </div>
             </>
+          ) : (
+            <div className="rounded-lg border border-slate-200 dark:border-slate-800 p-3 space-y-2 bg-slate-50/50 dark:bg-slate-900/50">
+              <span className="text-xs font-semibold text-slate-700 dark:text-slate-300 block">
+                SLA Padrão da Categoria (opcional)
+              </span>
+              <p className="text-[11px] text-slate-500">
+                Pode ser herdado por atividades filhas que não definirem SLA específico.
+              </p>
+              <div className="grid grid-cols-2 gap-3 pt-1">
+                <div className="space-y-1">
+                  <Label className="text-xs">SLA Resposta (min)</Label>
+                  <Input
+                    type="number"
+                    min={1}
+                    value={slaResponse}
+                    onChange={(e) => setSlaResponse(e.target.value)}
+                    placeholder="Ex: 30"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">SLA Solução (min)</Label>
+                  <Input
+                    type="number"
+                    min={1}
+                    value={slaSolution}
+                    onChange={(e) => setSlaSolution(e.target.value)}
+                    placeholder="Ex: 240"
+                  />
+                </div>
+              </div>
+            </div>
           )}
           <div className="flex items-center gap-2">
             <Checkbox checked={active} onCheckedChange={(v) => setActive(!!v)} id="active-check" />

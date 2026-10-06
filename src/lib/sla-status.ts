@@ -33,19 +33,17 @@ function computePercent(deadline: string, created?: string): number {
 }
 
 export function computeSlaResponseStatus(ticket: SlaTicketData): string {
-  if (ticket.sla_paused) return 'Pausado'
   if (!ticket.sla_response_deadline) return 'Não definido'
-
   const deadline = new Date(ticket.sla_response_deadline).getTime()
   if (isNaN(deadline)) return 'Não definido'
 
-  if (ticket.sla_response_at) {
-    return new Date(ticket.sla_response_at).getTime() <= deadline ? 'Dentro do Prazo' : 'Violado'
+  // Se já foi respondido (sla_response_at ou sla_response_start)
+  const respondedAt = ticket.sla_response_at || ticket.sla_response_start
+  if (respondedAt) {
+    return new Date(respondedAt).getTime() <= deadline ? 'Dentro do Prazo' : 'Violado'
   }
 
-  if (ticket.sla_response_start && IN_PROGRESS_STATUSES.has(ticket.status || '')) {
-    return 'Dentro do Prazo'
-  }
+  if (ticket.sla_paused) return 'Pausado'
 
   if (deadline < Date.now()) return 'Violado'
 
@@ -57,25 +55,31 @@ export function computeSlaResponseStatus(ticket: SlaTicketData): string {
 }
 
 export function computeSlaSolutionStatus(ticket: SlaTicketData): string {
-  if (ticket.sla_paused) return 'Pausado'
-  if (!ticket.sla_solution_deadline) return 'Não definido'
-
-  const deadline = new Date(ticket.sla_solution_deadline).getTime()
-  if (isNaN(deadline)) return 'Não definido'
-
   const solutionTime = ticket.sla_solution_at
     ? new Date(ticket.sla_solution_at).getTime()
     : ticket.resolution_date
       ? new Date(ticket.resolution_date).getTime()
       : null
 
-  if (solutionTime !== null && !isNaN(solutionTime)) {
+  if (!ticket.sla_solution_deadline) return 'Não definido'
+  const deadline = new Date(ticket.sla_solution_deadline).getTime()
+  if (isNaN(deadline)) return 'Não definido'
+
+  // Se já foi concluído (sla_solution_at ou resolution_date com status Resolvido/Encerrado)
+  if (
+    solutionTime !== null &&
+    !isNaN(solutionTime) &&
+    (ticket.status === 'Resolvido' || ticket.status === 'Encerrado')
+  ) {
     return solutionTime <= deadline ? 'Dentro do Prazo' : 'Violado'
   }
 
   if (ticket.status === 'Resolvido' || ticket.status === 'Encerrado') {
     return 'Dentro do Prazo'
   }
+
+  // Se estiver atualmente pausado
+  if (ticket.sla_paused) return 'Pausado'
 
   if (deadline < Date.now()) return 'Violado'
 

@@ -34,6 +34,8 @@ export interface TicketRecord {
   closure_date?: string
   sla_status?: string
   sla_paused?: boolean
+  sla_pause_total_minutes?: number
+  sla_source?: string
   work_hours?: number
   billable_hours?: number
   solution?: string
@@ -308,16 +310,38 @@ export const getTicketHistory = (ticketId: string) =>
     expand: 'user',
   })
 
+export interface SlaPauseRecord {
+  id: string
+  ticket: string
+  reason: string
+  justification: string
+  paused_by: string
+  resumed_by?: string
+  paused_at: string
+  resumed_at?: string
+  expected_resume_at?: string
+  duration_minutes?: number
+  created: string
+  updated: string
+  expand?: {
+    paused_by?: { id: string; name: string; email: string }
+    resumed_by?: { id: string; name: string; email: string }
+  }
+}
+
 export const createSlaPause = (data: {
   ticket: string
   reason: string
   justification: string
   paused_by: string
   paused_at: string
-}) => pb.collection('sla_pauses').create(data)
+}) => pb.collection('sla_pauses').create<SlaPauseRecord>(data)
+
+export const updateSlaPause = (id: string, data: Partial<SlaPauseRecord>) =>
+  pb.collection('sla_pauses').update<SlaPauseRecord>(id, data)
 
 export const getSlaPauses = (ticketId: string) =>
-  pb.collection('sla_pauses').getFullList({
+  pb.collection('sla_pauses').getFullList<SlaPauseRecord>({
     filter: `ticket = "${ticketId}"`,
     sort: '-created',
     expand: 'paused_by,resumed_by',

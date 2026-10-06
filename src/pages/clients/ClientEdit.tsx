@@ -60,7 +60,11 @@ export default function ClientEdit() {
   const [fetchError, setFetchError] = useState<string | null>(null)
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({})
   const [original, setOriginal] = useState<CompanyRecord | null>(null)
-  const [form, setForm] = useState<Record<string, string>>(EMPTY_FORM)
+  const [form, setForm] = useState<Record<string, string>>({
+    ...EMPTY_FORM,
+    sla_response_minutes: '',
+    sla_solution_minutes: '',
+  })
 
   useEffect(() => {
     if (!id) return
@@ -89,6 +93,8 @@ export default function ClientEdit() {
           notes: data.notes || '',
           site: (data as any).site || '',
           address_complement: (data as any).address_complement || '',
+          sla_response_minutes: data.sla_response_minutes ? String(data.sla_response_minutes) : '',
+          sla_solution_minutes: data.sla_solution_minutes ? String(data.sla_solution_minutes) : '',
         })
       })
       .catch(() => {
@@ -155,7 +161,15 @@ export default function ClientEdit() {
     setSaving(true)
     setFieldErrors({})
     try {
-      await updateCompany(id, form)
+      const payload: any = { ...form }
+      payload.sla_response_minutes = form.sla_response_minutes
+        ? parseInt(form.sla_response_minutes, 10)
+        : null
+      payload.sla_solution_minutes = form.sla_solution_minutes
+        ? parseInt(form.sla_solution_minutes, 10)
+        : null
+
+      await updateCompany(id, payload)
 
       const oldValues: Record<string, unknown> = {}
       const newValues: Record<string, unknown> = {}
@@ -399,6 +413,54 @@ export default function ClientEdit() {
               <SelectItem value="Inativo">Inativo</SelectItem>
             </SelectContent>
           </Select>
+        </div>
+
+        {/* Seção de Configuração de SLA do Cliente */}
+        <div className="rounded-lg border border-slate-200 dark:border-slate-800 p-4 space-y-3 bg-slate-50/60 dark:bg-slate-900/40">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                Configuração de SLA do Cliente
+              </h3>
+              <p className="text-xs text-slate-500">
+                Prazos padrão de atendimento para este cliente. Importante:{' '}
+                <strong className="text-slate-700 dark:text-slate-300">
+                  a configuração na Atividade do catálogo tem precedência
+                </strong>{' '}
+                quando existir no chamado.
+              </p>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
+            <div className="space-y-1">
+              <Label className="text-xs">SLA Resposta Alvo (minutos)</Label>
+              <Input
+                type="number"
+                min={1}
+                className={inputCls}
+                placeholder="Ex: 30 (padrão)"
+                value={form.sla_response_minutes || ''}
+                onChange={(e) => set('sla_response_minutes', e.target.value)}
+              />
+              <span className="text-[11px] text-slate-400">
+                Tempo até o operador iniciar o atendimento
+              </span>
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">SLA Solução Alvo (minutos)</Label>
+              <Input
+                type="number"
+                min={1}
+                className={inputCls}
+                placeholder="Ex: 240 (padrão)"
+                value={form.sla_solution_minutes || ''}
+                onChange={(e) => set('sla_solution_minutes', e.target.value)}
+              />
+              <span className="text-[11px] text-slate-400">
+                Tempo até a resolução final do chamado
+              </span>
+            </div>
+          </div>
         </div>
 
         <div className="space-y-1">
