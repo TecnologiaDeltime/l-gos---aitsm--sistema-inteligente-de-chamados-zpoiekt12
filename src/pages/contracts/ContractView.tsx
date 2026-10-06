@@ -11,16 +11,20 @@ import {
 } from '@/services/contracts'
 import { StatusBadge } from '@/components/StatusBadge'
 import { exportContractPdf } from '@/lib/pdf-export'
-import { formatHours, formatMinutes } from '@/lib/duration'
+import { formatHours, formatMinutes, formatSeconds } from '@/lib/duration'
+import { PeriodFilter, usePeriodFilter } from '@/components/contracts/PeriodFilter'
 import { useAuth } from '@/hooks/use-auth'
 import { useRealtime } from '@/hooks/use-realtime'
+import pb from '@/lib/pocketbase/client'
 
 export default function ContractView() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const { user } = useAuth()
+  const [periodFilter, setPeriodFilter] = usePeriodFilter()
   const [contract, setContract] = useState<ContractRecord | null>(null)
   const [tickets, setTickets] = useState<any[]>([])
+  const [periodInteractions, setPeriodInteractions] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
 
   const loadData = useCallback(async () => {
@@ -30,18 +34,41 @@ export default function ContractView() {
       setContract(c)
       const t = await getContractTickets(id)
       setTickets(t)
+
+      // Se houver tickets, busca as interações dentro do período filtrado
+      if (t.length > 0) {
+        const ticketIds = t.map((item: any) => item.id)
+        const batchSize = 50
+        const dateFilter = `created >= "${periodFilter.startIso}" && created <= "${periodFilter.endIso}"`
+        const allInteractions: any[] = []
+
+        for (let i = 0; i < ticketIds.length; i += batchSize) {
+          const batch = ticketIds.slice(i, i + batchSize)
+          const batchFilter = batch.map((tid) => `ticket = "${tid}"`).join(' || ')
+          const filter = `(${batchFilter}) && ${dateFilter}`
+          const list = await pb.collection('ticket_interactions').getFullList({
+            filter,
+            fields: 'id,ticket,duration_minutes,hour_type,created',
+          })
+          allInteractions.push(...list)
+        }
+        setPeriodInteractions(allInteractions)
+      } else {
+        setPeriodInteractions([])
+      }
     } catch {
       /* ignore */
     } finally {
       setLoading(false)
     }
-  }, [id])
+  }, [id, periodFilter.startIso, periodFilter.endIso])
 
   useEffect(() => {
     loadData()
   }, [loadData])
   useRealtime('contracts', () => loadData())
   useRealtime('tickets', () => loadData())
+  useRealtime('ticket_interactions', () => loadData())
 
   if (loading)
     return (
@@ -104,6 +131,15 @@ export default function ContractView() {
   ].filter((r) => Number(r.hours) > 0)
   const showDistribution = distributionRows.length > 0
 
+  // Consumo no período filtrado
+  const totalPeriodMinutes = periodInteractions.reduce(
+    (acc, it) => acc + (Number(it.duration_minutes) || 0),
+    0,
+  )
+  const totalPeriodHours = Math.round((totalPeriodMinutes / 60) * 100) / 100
+  const contractedMonthlyHours = contract.monthly_hours || 0
+  const periodBalance = Math.round((contractedMonthlyHours - totalPeriodHours) * 100) / 100
+
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       <div className="flex items-center justify-between">
@@ -151,6 +187,49 @@ export default function ContractView() {
           </Button>
         </div>
       )}
+
+      {/* Filtro de Período para consumo do contrato */}
+      <PeriodFilter value={periodFilter} onChange={setPeriodFilter} />
+
+      {/* Card de Consumo no Período Selecionado */}
+      <div className="rounded-xl border bg-white p-6 dark:bg-slate-900 space-y-4">
+        <div className="flex items-center justify-between">
+          <h3 className="text-sm font-semibold">Consumo de Horas no Período</h3>
+          <span className="text-xs text-blue-600 dark:text-blue-400 font-medium">
+            {periodFilter.formattedLabel}
+          </span>
+        </div>
+        <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+          <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-800/50 border">
+            <p className="text-xs text-slate-500">Horas Contratadas (Mensal)</p>
+            <p className="text-lg font-bold">{formatHours(contractedMonthlyHours)}</p>
+          </div>
+          <div className="p-3 rounded-lg bg-orange-50 dark:bg-orange-950/30 border border-orange-200 dark:border-orange-900">
+            <p className="text-xs text-orange-600 dark:text-orange-400">Consumido no Período</p>
+            <p className="text-lg font-bold text-orange-700 dark:text-orange-300">
+              {formatHours(totalPeriodHours)}
+            </p>
+          </div>
+          <div className="p-3 rounded-lg bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-900">
+            <p className="text-xs text-green-600 dark:text-green-400">Saldo no Período</p>
+            <p
+              className={`text-lg font-bold ${
+                periodBalance < 0
+                  ? 'text-red-600 dark:text-red-400'
+                  : 'text-green-700 dark:text-green-300'
+              }`}
+            >
+              {formatHours(periodBalance)}
+            </p>
+          </div>
+          <div className="p-3 rounded-lg bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900">
+            <p className="text-xs text-blue-600 dark:text-blue-400">Interações Registradas</p>
+            <p className="text-lg font-bold text-blue-700 dark:text-blue-300">
+              {periodInteractions.length} ({formatSeconds(totalPeriodMinutes * 60)})
+            </p>
+          </div>
+        </div>
+      </div>
 
       <div className="rounded-xl border bg-white p-6 dark:bg-slate-900">
         <h3 className="text-sm font-semibold mb-4">Dados do Contrato</h3>

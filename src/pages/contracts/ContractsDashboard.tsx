@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import { CalendarClock, FileText, TrendingDown } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -6,26 +6,57 @@ import { ChartContainer, type ChartConfig } from '@/components/ui/chart'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, Legend } from 'recharts'
 import { getContracts, ContractRecord } from '@/services/contracts'
 import { getTickets, TicketRecord } from '@/services/tickets'
+import { PeriodFilter, usePeriodFilter } from '@/components/contracts/PeriodFilter'
 import { useRealtime } from '@/hooks/use-realtime'
+import pb from '@/lib/pocketbase/client'
 
 export default function ContractsDashboard() {
+  const [periodFilter, setPeriodFilter] = usePeriodFilter()
   const [contracts, setContracts] = useState<ContractRecord[]>([])
   const [tickets, setTickets] = useState<TicketRecord[]>([])
+  const [interactionsByTicket, setInteractionsByTicket] = useState<Record<string, any[]>>({})
 
   const loadData = async () => {
     try {
       const [c, t] = await Promise.all([getContracts(), getTickets()])
       setContracts(c)
       setTickets(t)
+
+      // Carrega interações no período selecionado para os tickets existentes
+      if (t.length > 0) {
+        const ticketIds = t.map((item) => item.id)
+        const batchSize = 50
+        const interactionsMap: Record<string, any[]> = {}
+        const dateFilter = `created >= "${periodFilter.startIso}" && created <= "${periodFilter.endIso}"`
+
+        for (let i = 0; i < ticketIds.length; i += batchSize) {
+          const batch = ticketIds.slice(i, i + batchSize)
+          const batchTicketFilter = batch.map((id) => `ticket = "${id}"`).join(' || ')
+          const filter = `(${batchTicketFilter}) && ${dateFilter}`
+          const interactions = await pb
+            .collection('ticket_interactions')
+            .getFullList({ filter, fields: 'id,ticket,duration_minutes,hour_type,created' })
+          interactions.forEach((it: any) => {
+            if (!interactionsMap[it.ticket]) interactionsMap[it.ticket] = []
+            interactionsMap[it.ticket].push(it)
+          })
+        }
+        setInteractionsByTicket(interactionsMap)
+      } else {
+        setInteractionsByTicket({})
+      }
     } catch {
       /* ignore */
     }
   }
+
   useEffect(() => {
     loadData()
-  }, [])
+  }, [periodFilter.startIso, periodFilter.endIso])
+
   useRealtime('contracts', () => loadData())
   useRealtime('tickets', () => loadData())
+  useRealtime('ticket_interactions', () => loadData())
 
   const now = new Date()
   const active = contracts.filter((c) => c.status === 'Ativo')
@@ -66,20 +97,45 @@ export default function ContractsDashboard() {
           ? 'text-amber-700'
           : 'text-green-700'
 
-  const chartData = active
-    .filter((c) => (c.monthly_hours || 0) > 0)
-    .map((c) => {
-      const consumed = tickets
-        .filter(
-          (t) => t.contract === c.id && (t.status === 'Resolvido' || t.status === 'Encerrado'),
+  const chartData = useMemo(() => {
+    return active
+      .filter((c) => (c.monthly_hours || 0) > 0)
+      .map((c) => {
+        // Tickets vinculados diretamente ao contrato ou secundariamente à empresa
+        const contractTickets = tickets.filter(
+          (t) => t.contract === c.id || (!t.contract && t.company === c.company),
         )
-        .filter((t) => {
-          const d = new Date(t.created)
-          return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear()
+
+        // Consumo no período: soma das interações no período filtrado
+        let totalMinutes = 0
+        contractTickets.forEach((t) => {
+          const its = interactionsByTicket[t.id] || []
+          its.forEach((it) => {
+            totalMinutes += Number(it.duration_minutes) || 0
+          })
         })
-        .reduce((s, t) => s + (t.work_hours || 0), 0)
-      return { name: c.number, Total: c.monthly_hours || 0, Consumido: consumed }
-    })
+
+        // Se houver work_hours diretamente no ticket caso não haja interações com duration_minutes
+        if (totalMinutes === 0) {
+          const startMs = new Date(periodFilter.startIso.replace(' ', 'T')).getTime()
+          const endMs = new Date(periodFilter.endIso.replace(' ', 'T')).getTime()
+          const ticketHours = contractTickets
+            .filter((t) => {
+              const d = new Date(t.created).getTime()
+              return d >= startMs && d <= endMs
+            })
+            .reduce((s, t) => s + (t.work_hours || 0), 0)
+          totalMinutes = Math.round(ticketHours * 60)
+        }
+
+        const consumedHours = Math.round((totalMinutes / 60) * 100) / 100
+        return {
+          name: c.number,
+          Total: c.monthly_hours || 0,
+          Consumido: consumedHours,
+        }
+      })
+  }, [active, tickets, interactionsByTicket, periodFilter])
 
   const recentlyExpired = contracts
     .filter((c) => c.end_date && new Date(c.end_date) < now)
@@ -121,7 +177,16 @@ export default function ContractsDashboard() {
 
   return (
     <div className="space-y-6">
-      <h2 className="text-xl font-bold">Dashboard de Contratos</h2>
+      <div>
+        <h2 className="text-xl font-bold">Dashboard de Contratos</h2>
+        <p className="text-xs text-muted-foreground mt-0.5">
+          Visão geral de vencimentos, status e consumo de horas no período selecionado
+        </p>
+      </div>
+
+      {/* Filtro de Período */}
+      <PeriodFilter value={periodFilter} onChange={setPeriodFilter} />
+
       <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
         {kpis.map((k, i) => {
           const Icon = k.i
@@ -174,8 +239,16 @@ export default function ContractsDashboard() {
           </CardContent>
         </Card>
         <Card>
-          <CardHeader>
-            <CardTitle className="text-sm">Consumo de Horas (Mês Atual)</CardTitle>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <div>
+              <CardTitle className="text-sm">Consumo de Horas</CardTitle>
+              <p className="text-[11px] text-muted-foreground mt-0.5">
+                Período: {periodFilter.formattedLabel}
+              </p>
+            </div>
+            <span className="text-[10px] rounded-full border border-blue-200 bg-blue-50 px-2 py-0.5 font-medium text-blue-700 dark:border-blue-900 dark:bg-blue-950 dark:text-blue-300">
+              {periodFilter.mode === 'current_month' ? 'Mensal' : 'Customizado'}
+            </span>
           </CardHeader>
           <CardContent>
             {chartData.length === 0 ? (

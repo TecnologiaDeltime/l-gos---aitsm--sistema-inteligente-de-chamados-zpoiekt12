@@ -14,6 +14,7 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip } from 'recharts'
 import { getContracts, ContractRecord, CONTRACT_HOURS_LEVELS } from '@/services/contracts'
 import { getContractPeriods, ContractPeriodRecord } from '@/services/contract-periods'
 import { getQueues, QueueRecord } from '@/services/queues'
+import { PeriodFilter, usePeriodFilter } from '@/components/contracts/PeriodFilter'
 import { useRealtime } from '@/hooks/use-realtime'
 import { exportToCsv } from '@/lib/export-utils'
 import { formatHours, formatSeconds } from '@/lib/duration'
@@ -40,44 +41,56 @@ interface ContractRow {
 }
 
 export default function ContractConsumptionDashboard() {
+  const [periodFilter, setPeriodFilter] = usePeriodFilter()
   const [contracts, setContracts] = useState<ContractRecord[]>([])
   const [periods, setPeriods] = useState<ContractPeriodRecord[]>([])
   const [queues, setQueues] = useState<QueueRecord[]>([])
+  const [ticketsByContract, setTicketsByContract] = useState<Record<string, any[]>>({})
   const [ticketsByCompany, setTicketsByCompany] = useState<Record<string, any[]>>({})
   const [interactionsByTicket, setInteractionsByTicket] = useState<Record<string, any[]>>({})
   const [loadingLevels, setLoadingLevels] = useState(false)
 
   const loadData = async () => {
     try {
+      setLoadingLevels(true)
       const [c, p, q] = await Promise.all([getContracts(), getContractPeriods(), getQueues()])
       setContracts(c)
       setPeriods(p)
       setQueues(q)
-      // Pré-carrega tickets por empresa e interações por ticket para cálculo
-      // de consumo por nível em tempo real.
-      setLoadingLevels(true)
-      const ticketsMap: Record<string, any[]> = {}
+
+      // Carrega todos os tickets com contract, company e queue
+      const ticketsByCont: Record<string, any[]> = {}
+      const ticketsByComp: Record<string, any[]> = {}
       const allTickets: any[] = await pb
         .collection('tickets')
-        .getFullList({ fields: 'id,company,queue' })
+        .getFullList({ fields: 'id,contract,company,queue' })
+
       allTickets.forEach((t) => {
+        if (t.contract) {
+          if (!ticketsByCont[t.contract]) ticketsByCont[t.contract] = []
+          ticketsByCont[t.contract].push(t)
+        }
         if (t.company) {
-          if (!ticketsMap[t.company]) ticketsMap[t.company] = []
-          ticketsMap[t.company].push(t)
+          if (!ticketsByComp[t.company]) ticketsByComp[t.company] = []
+          ticketsByComp[t.company].push(t)
         }
       })
-      setTicketsByCompany(ticketsMap)
+      setTicketsByContract(ticketsByCont)
+      setTicketsByCompany(ticketsByComp)
 
-      // Busca interações em lotes de 50 tickets (limite de filtro do PB).
+      // Busca interações dentro do período filtrado em lotes de 50 tickets
       const interactionsMap: Record<string, any[]> = {}
       const ticketIds = allTickets.map((t) => t.id)
       const batchSize = 50
+      const dateFilter = `created >= "${periodFilter.startIso}" && created <= "${periodFilter.endIso}"`
+
       for (let i = 0; i < ticketIds.length; i += batchSize) {
         const batch = ticketIds.slice(i, i + batchSize)
-        const filter = batch.map((id) => `ticket = "${id}"`).join(' || ')
+        const batchTicketFilter = batch.map((id) => `ticket = "${id}"`).join(' || ')
+        const filter = `(${batchTicketFilter}) && ${dateFilter}`
         const interactions = await pb
           .collection('ticket_interactions')
-          .getFullList({ filter, fields: 'id,ticket,duration_minutes' })
+          .getFullList({ filter, fields: 'id,ticket,duration_minutes,hour_type,created' })
         interactions.forEach((it: any) => {
           if (!interactionsMap[it.ticket]) interactionsMap[it.ticket] = []
           interactionsMap[it.ticket].push(it)
@@ -89,9 +102,11 @@ export default function ContractConsumptionDashboard() {
       setLoadingLevels(false)
     }
   }
+
   useEffect(() => {
     loadData()
-  }, [])
+  }, [periodFilter.startIso, periodFilter.endIso])
+
   useRealtime('contract_periods', () => loadData())
   useRealtime('ticket_interactions', () => loadData())
 
@@ -108,20 +123,32 @@ export default function ContractConsumptionDashboard() {
     return contracts.map((c) => {
       const ap = periods.find((p) => p.contract === c.id && p.status === 'Ativo')
       const contracted = ap?.contracted_hours || c.monthly_hours || 0
-      const consumed = ap?.consumed_hours || 0
-      const balance = contracted - consumed
+
+      // Tickets vinculados diretamente ao contrato ou secundariamente à empresa dele
+      const contractTickets = ticketsByContract[c.id] || []
+      const companyTickets = ticketsByCompany[c.company] || []
+      // Se houver tickets com contract = c.id, usa-os; caso contrário, usa tickets da empresa
+      const relevantTickets = contractTickets.length > 0 ? contractTickets : companyTickets
+
+      // Consumo no período filtrado: soma das interações dos tickets relevantes
+      let totalConsumedMinutes = 0
+      relevantTickets.forEach((t) => {
+        const its = interactionsByTicket[t.id] || []
+        its.forEach((it) => {
+          totalConsumedMinutes += Number(it.duration_minutes) || 0
+        })
+      })
+      const consumed = Math.round((totalConsumedMinutes / 60) * 100) / 100
+      const balance = Math.round((contracted - consumed) * 100) / 100
       const pct = contracted > 0 ? (consumed / contracted) * 100 : 0
 
-      // Cálculo por nível: horas contratadas (do contrato) vs horas consumidas
-      // (soma de duration_minutes das interações dos tickets da empresa cuja
-      // fila tenha o nível correspondente).
-      const companyTickets = ticketsByCompany[c.company] || []
+      // Cálculo por nível: horas contratadas vs consumidas no período filtrado
       const levels: LevelConsumption[] = CONTRACT_HOURS_LEVELS.map((lvl) => {
         const contractedHours = Number((c as any)[lvl.key]) || 0
         const contractedSeconds = Math.round(contractedHours * 3600)
 
         let consumedSeconds = 0
-        companyTickets.forEach((t) => {
+        relevantTickets.forEach((t) => {
           if (!t.queue) return
           const qLevel = queueLevelMap.get(t.queue)
           if (qLevel !== lvl.label) return
@@ -146,7 +173,7 @@ export default function ContractConsumptionDashboard() {
 
       return { contract: c, period: ap, contracted, consumed, balance, pct, levels }
     })
-  }, [contracts, periods, ticketsByCompany, interactionsByTicket, queueLevelMap])
+  }, [contracts, periods, ticketsByContract, ticketsByCompany, interactionsByTicket, queueLevelMap])
 
   const totalContracted = data.reduce((s, d) => s + d.contracted, 0)
   const totalConsumed = data.reduce((s, d) => s + d.consumed, 0)
@@ -224,23 +251,38 @@ export default function ContractConsumptionDashboard() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-xl font-bold">Consumo de Contratos</h2>
+        <div>
+          <h2 className="text-xl font-bold">Consumo de Contratos</h2>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Acompanhamento de saldo e utilização de horas no período de referência
+          </p>
+        </div>
         <Button
           size="sm"
           variant="outline"
           onClick={() =>
             exportToCsv(
-              'consumo-contratos.csv',
+              `consumo-contratos-${periodFilter.mode === 'current_month' ? periodFilter.month : `${periodFilter.startDate}_a_${periodFilter.endDate}`}.csv`,
               data.map((d) => ({
                 Código: d.contract.expand?.company?.code || '',
                 Cliente: d.contract.expand?.company?.trade_name || '',
+                Período: periodFilter.formattedLabel,
                 Contratado: d.contracted,
                 Consumido: d.consumed,
                 Saldo: d.balance,
                 Percentual: d.pct.toFixed(1) + '%',
                 Status: d.contract.status,
               })),
-              ['Código', 'Cliente', 'Contratado', 'Consumido', 'Saldo', 'Percentual', 'Status'],
+              [
+                'Código',
+                'Cliente',
+                'Período',
+                'Contratado',
+                'Consumido',
+                'Saldo',
+                'Percentual',
+                'Status',
+              ],
             )
           }
         >
@@ -248,6 +290,10 @@ export default function ContractConsumptionDashboard() {
           CSV
         </Button>
       </div>
+
+      {/* Filtro de Período */}
+      <PeriodFilter value={periodFilter} onChange={setPeriodFilter} />
+
       <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-6">
         {kpis.map((k, i) => {
           const Icon = k.icon
