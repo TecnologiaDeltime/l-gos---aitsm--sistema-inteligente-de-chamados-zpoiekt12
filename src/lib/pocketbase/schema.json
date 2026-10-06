@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-06T23:21:26.567Z",
+  "generatedAt": "2026-10-06T23:35:01.446Z",
   "collections": [
     {
       "name": "users",
@@ -9063,6 +9063,54 @@
         "CREATE INDEX idx_sched_date ON scheduled_tickets (scheduled_date)",
         "CREATE INDEX idx_sched_company ON scheduled_tickets (company)"
       ]
+    },
+    {
+      "name": "ticket_views",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != ''",
+        "view": "@request.auth.id != ''",
+        "create": "@request.auth.id != ''",
+        "update": "@request.auth.id != '' && user = @request.auth.id",
+        "delete": "@request.auth.id != '' && (user = @request.auth.id || @request.auth.role = 'admin')"
+      },
+      "fields": [
+        {
+          "name": "ticket",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "tickets"
+        },
+        {
+          "name": "user",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "viewed_at",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": []
     }
   ]
 }

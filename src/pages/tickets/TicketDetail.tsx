@@ -100,6 +100,12 @@ import { formatMinutes, formatHours } from '@/lib/duration'
 import { Inbox, Sparkles, Check, CheckCheck, BookOpen, ExternalLink } from 'lucide-react'
 import { getKnowledgeArticles, KnowledgeArticle } from '@/services/knowledge'
 import { ArticleDetailDialog } from '@/components/knowledge/ArticleDetailDialog'
+import { trackTicketView, getTicketViews, TicketViewRecord } from '@/services/ticket-views'
+import {
+  getConsolidatedTicketParticipants,
+  TicketParticipant,
+} from '@/services/ticket-participants'
+import { TicketParticipantsViewer } from '@/components/TicketParticipantsViewer'
 import { useAuth } from '@/hooks/use-auth'
 import { usePermissions } from '@/hooks/use-permissions'
 import { useRealtime } from '@/hooks/use-realtime'
@@ -155,6 +161,9 @@ export default function TicketDetail() {
   const [suggestedArticles, setSuggestedArticles] = useState<KnowledgeArticle[]>([])
   const [selectedKbArticle, setSelectedKbArticle] = useState<KnowledgeArticle | null>(null)
   const [kbDetailOpen, setKbDetailOpen] = useState(false)
+  const [views, setViews] = useState<TicketViewRecord[]>([])
+  const [participants, setParticipants] = useState<TicketParticipant[]>([])
+  const [loadingParticipants, setLoadingParticipants] = useState(false)
 
   const loadData = () => {
     if (!id) return
@@ -188,10 +197,43 @@ export default function TicketDetail() {
     getAssociatedTickets(id)
       .then(setAssociatedTickets)
       .catch(() => setAssociatedTickets([]))
+    getTicketViews(id)
+      .then(setViews)
+      .catch(() => {})
   }
   useEffect(() => {
     loadData()
   }, [id])
+
+  // Rastreia a visualização do usuário logado assim que o ticket é aberto
+  useEffect(() => {
+    if (!id || !user?.id) return
+    trackTicketView(id, user.id)
+      .then(() => {
+        getTicketViews(id)
+          .then(setViews)
+          .catch(() => {})
+      })
+      .catch(() => {})
+  }, [id, user?.id])
+
+  // Consolida e atualiza a lista de participantes sempre que ticket, interações, anexos ou views mudarem
+  useEffect(() => {
+    if (!ticket) return
+    let isCurrent = true
+    setLoadingParticipants(true)
+    getConsolidatedTicketParticipants(ticket, interactions, attachments, views)
+      .then((res) => {
+        if (isCurrent) setParticipants(res)
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (isCurrent) setLoadingParticipants(false)
+      })
+    return () => {
+      isCurrent = false
+    }
+  }, [ticket, interactions, attachments, views])
 
   // Busca procedimentos/artigos sugeridos da Base de Conhecimento com base em tokens, categoria ou atividade do ticket
   useEffect(() => {
@@ -244,6 +286,13 @@ export default function TicketDetail() {
   useRealtime('technical_visits', () => loadData())
   useRealtime('ticket_history', () => loadData())
   useRealtime('ticket_attachments', () => loadData())
+  useRealtime('ticket_views', () => {
+    if (id) {
+      getTicketViews(id)
+        .then(setViews)
+        .catch(() => {})
+    }
+  })
 
   useEffect(() => {
     if (!timerRunning || !timerStart) return
@@ -1592,6 +1641,13 @@ export default function TicketDetail() {
         article={selectedKbArticle}
         open={kbDetailOpen}
         onOpenChange={setKbDetailOpen}
+      />
+
+      {/* Visão no canto inferior direito: Todos aqueles que entraram no chamado */}
+      <TicketParticipantsViewer
+        participants={participants}
+        loading={loadingParticipants}
+        ticketNumber={ticket.number}
       />
     </div>
   )
