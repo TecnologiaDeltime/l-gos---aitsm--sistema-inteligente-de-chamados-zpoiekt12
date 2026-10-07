@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-06T23:49:40.141Z",
+  "generatedAt": "2026-10-07T00:06:14.025Z",
   "collections": [
     {
       "name": "users",
@@ -2063,7 +2063,8 @@
             "Aprovação",
             "Sistema",
             "Alerta",
-            "StaleTicket"
+            "StaleTicket",
+            "RetainedTicket"
           ]
         }
       ],
@@ -8481,7 +8482,13 @@
           "type": "select",
           "required": true,
           "system": false,
-          "selectValues": ["STALE_TICKET", "SLA_RESPONSE", "SLA_RESOLUTION", "CONSUMPTION"]
+          "selectValues": [
+            "STALE_TICKET",
+            "SLA_RESPONSE",
+            "SLA_RESOLUTION",
+            "CONSUMPTION",
+            "RETAINED_TICKETS"
+          ]
         },
         {
           "name": "ticket",
@@ -8830,6 +8837,12 @@
           "required": false,
           "system": false,
           "autodateTriggers": ["onCreate", "onUpdate"]
+        },
+        {
+          "name": "retention_notified",
+          "type": "bool",
+          "required": false,
+          "system": false
         }
       ],
       "indexes": [

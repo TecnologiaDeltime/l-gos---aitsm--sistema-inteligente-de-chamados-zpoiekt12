@@ -1,7 +1,8 @@
 import { useEffect, useState, useRef, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Hourglass, AlertTriangle, X, ExternalLink, Eye } from 'lucide-react'
+import { Hourglass, AlertTriangle, X, ExternalLink, Eye, ShieldAlert } from 'lucide-react'
 import { useAuth } from '@/hooks/use-auth'
+import { usePermissions } from '@/hooks/use-permissions'
 import { useRealtime } from '@/hooks/use-realtime'
 import { playTicketChime, initAudio } from '@/lib/ticket-alerts'
 import { getVoiceAlertsEnabled } from '@/lib/notification-settings'
@@ -9,6 +10,7 @@ import { createAlertAuditLog, AlertType, AlertAuditMetadata } from '@/services/a
 import { getTicket, TicketRecord } from '@/services/tickets'
 import { getStaleTicketAlertSettings } from '@/services/stale-ticket-alert-settings'
 import { getSlaAlertSettings } from '@/services/sla-alert-settings'
+import { getRetainedTickets } from '@/services/retained-tickets'
 import { Button } from '@/components/ui/button'
 
 export interface ActiveAlertPopup {
@@ -54,15 +56,22 @@ function formatCountdown(deadline?: string): string {
 
 export function AlertNotificationPopup() {
   const { user } = useAuth()
+  const perms = usePermissions()
   const navigate = useNavigate()
   const navigateRef = useRef(navigate)
   navigateRef.current = navigate
+
+  const isManagerOrAdmin = perms.isAdmin || perms.isGestor
 
   const [activeAlerts, setActiveAlerts] = useState<Record<string, ActiveAlertPopup>>({})
   const activeAlertsRef = useRef<Record<string, ActiveAlertPopup>>({})
   const knownIds = useRef<Set<string>>(new Set())
   const initializedRef = useRef(false)
   const [, setTick] = useState(0)
+
+  // Rastreamento para evitar repetição de voz e popup de chamados retidos
+  const lastRetainedSpokenCountRef = useRef<number>(0)
+  const lastRetainedNotifCountRef = useRef<number>(0)
 
   // Configurações globais
   const staleSettingsRef = useRef({ enabled: true, popup_enabled: true, voice_enabled: true })
@@ -165,10 +174,18 @@ export function AlertNotificationPopup() {
         }
       }
 
-      if (action === 'OPENED' && alert.ticketId) {
-        navigateRef.current(`/tickets/${alert.ticketId}`)
+      if (action === 'OPENED') {
+        if (alert.alertType === 'RETAINED_TICKETS') {
+          navigateRef.current('/tickets/retained')
+        } else if (alert.ticketId) {
+          navigateRef.current(`/tickets/${alert.ticketId}`)
+        }
       } else if (action === 'VIEWED') {
-        navigateRef.current('/horas-clientes')
+        if (alert.alertType === 'RETAINED_TICKETS') {
+          navigateRef.current('/tickets/retained')
+        } else {
+          navigateRef.current('/horas-clientes')
+        }
       }
     },
     [user?.id, removeAlert],
@@ -186,7 +203,12 @@ export function AlertNotificationPopup() {
       if (rec.user !== user.id) return
 
       const notifType = rec.type as string
-      if (notifType !== 'StaleTicket' && notifType !== 'SLA' && notifType !== 'Alerta') {
+      if (
+        notifType !== 'StaleTicket' &&
+        notifType !== 'SLA' &&
+        notifType !== 'Alerta' &&
+        notifType !== 'RetainedTicket'
+      ) {
         return
       }
 
@@ -374,9 +396,125 @@ export function AlertNotificationPopup() {
         showAlert(alertItem)
         playTicketChime('Alta')
       }
+
+      // ==========================================
+      // Caso 4: RetainedTicket (Chamados Retidos)
+      // ==========================================
+      else if (notifType === 'RetainedTicket') {
+        if (!isManagerOrAdmin) return
+
+        const countMatch = title.match(/(\d+)/) || message.match(/(\d+)/)
+        const pendingCount = countMatch ? parseInt(countMatch[1], 10) : 1
+
+        const alertItem: ActiveAlertPopup = {
+          notifId: rec.id,
+          alertType: 'RETAINED_TICKETS',
+          title: title || '⚠️ Chamados Retidos Aguardando Análise',
+          message:
+            message ||
+            (pendingCount === 1
+              ? 'Existe 1 chamado retido aguardando liberação ou descarte.'
+              : `Existem ${pendingCount} chamados retidos aguardando análise.`),
+          metadata: {
+            title,
+            message,
+            retainedCount: pendingCount,
+          },
+          createdTime: Date.now(),
+        }
+
+        showAlert(alertItem)
+        playTicketChime('Alta')
+
+        // Disparo por voz apenas se não estiver na página de chamados retidos e ainda não falado para essa contagem
+        const isOnRetainedPage = window.location.pathname === '/tickets/retained'
+        if (!isOnRetainedPage && lastRetainedSpokenCountRef.current !== pendingCount) {
+          lastRetainedSpokenCountRef.current = pendingCount
+          const speechText =
+            pendingCount === 1
+              ? 'Atenção. Existe 1 chamado retido aguardando análise.'
+              : `Atenção. Existem ${pendingCount} chamados retidos aguardando análise.`
+          speak(speechText)
+        }
+      }
     },
     !!user?.id,
   )
+
+  // ==========================================
+  // Fallback Polling a cada 5 minutos para chamados retidos pendentes
+  // ==========================================
+  useEffect(() => {
+    if (!user?.id || !isManagerOrAdmin) return
+
+    const checkPendingRetained = async () => {
+      try {
+        const pending = await getRetainedTickets('status = "Pendente"')
+        const count = pending.length
+        if (count > 0 && lastRetainedNotifCountRef.current !== count) {
+          // Se já existe um alerta ativo de chamados retidos, não duplicamos
+          const hasExisting = Object.values(activeAlertsRef.current).some(
+            (a) => a.alertType === 'RETAINED_TICKETS',
+          )
+          if (!hasExisting) {
+            lastRetainedNotifCountRef.current = count
+            const notifId = `retained-fallback-${count}-${Date.now()}`
+            const title =
+              count === 1
+                ? '⚠️ 1 chamado retido aguardando análise'
+                : `⚠️ ${count} chamados retidos aguardando análise`
+            const message =
+              count === 1
+                ? 'Existe 1 chamado retido por domínio não autorizado aguardando liberação ou descarte.'
+                : `Existem ${count} chamados retidos por domínio não autorizado aguardando liberação ou descarte.`
+
+            const alertItem: ActiveAlertPopup = {
+              notifId,
+              alertType: 'RETAINED_TICKETS',
+              title,
+              message,
+              metadata: {
+                title,
+                message,
+                retainedCount: count,
+              },
+              createdTime: Date.now(),
+            }
+
+            showAlert(alertItem)
+            playTicketChime('Alta')
+
+            const isOnRetainedPage = window.location.pathname === '/tickets/retained'
+            if (!isOnRetainedPage && lastRetainedSpokenCountRef.current !== count) {
+              lastRetainedSpokenCountRef.current = count
+              const speechText =
+                count === 1
+                  ? 'Atenção. Existe 1 chamado retido aguardando análise.'
+                  : `Atenção. Existem ${count} chamados retidos aguardando análise.`
+              speak(speechText)
+            }
+          }
+        } else if (count === 0) {
+          lastRetainedNotifCountRef.current = 0
+          lastRetainedSpokenCountRef.current = 0
+        }
+      } catch {
+        /* gracefully ignore polling errors */
+      }
+    }
+
+    // Checagem inicial após montagem e timer a cada 5 minutos (300.000 ms)
+    const initialTimer = setTimeout(() => {
+      checkPendingRetained()
+    }, 4000)
+
+    const interval = setInterval(checkPendingRetained, 5 * 60 * 1000)
+
+    return () => {
+      clearTimeout(initialTimer)
+      clearInterval(interval)
+    }
+  }, [user?.id, isManagerOrAdmin, showAlert])
 
   const pendingList = Object.values(activeAlerts)
   if (pendingList.length === 0) return null
@@ -426,6 +564,14 @@ export function AlertNotificationPopup() {
             <AlertTriangle className="mt-0.5 h-5 w-5 flex-shrink-0 text-orange-600 dark:text-orange-400" />
           )
           primaryBtnClass = 'bg-orange-600 hover:bg-orange-700 text-white'
+        } else if (alert.alertType === 'RETAINED_TICKETS') {
+          borderClass = 'border-amber-400 dark:border-amber-600 bg-amber-50 dark:bg-slate-900'
+          textTitleClass = 'text-amber-900 dark:text-amber-200'
+          badgeClass = 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'
+          icon = (
+            <ShieldAlert className="mt-0.5 h-5 w-5 flex-shrink-0 text-amber-600 dark:text-amber-400" />
+          )
+          primaryBtnClass = 'bg-amber-600 hover:bg-amber-700 text-white'
         }
 
         return (
@@ -457,6 +603,14 @@ export function AlertNotificationPopup() {
                       {alert.metadata.percentage}% consumido
                     </span>
                   )}
+                  {alert.alertType === 'RETAINED_TICKETS' &&
+                    alert.metadata.retainedCount != null && (
+                      <span
+                        className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${badgeClass}`}
+                      >
+                        {alert.metadata.retainedCount} aguardando
+                      </span>
+                    )}
                 </div>
 
                 <p className={`text-sm font-semibold leading-tight ${textTitleClass}`}>
@@ -499,6 +653,14 @@ export function AlertNotificationPopup() {
                   onClick={() => handleAction(alert, 'VIEWED')}
                 >
                   <Eye className="h-3.5 w-3.5 mr-1" /> Ver Detalhes
+                </Button>
+              ) : alert.alertType === 'RETAINED_TICKETS' ? (
+                <Button
+                  size="sm"
+                  className={`flex-1 h-8 text-xs font-medium ${primaryBtnClass}`}
+                  onClick={() => handleAction(alert, 'OPENED')}
+                >
+                  <ShieldAlert className="h-3.5 w-3.5 mr-1" /> Analisar Retidos
                 </Button>
               ) : (
                 <Button

@@ -9,6 +9,7 @@ export interface RetainedTicketRecord {
   domain?: string
   reason?: string
   status: 'Pendente' | 'Liberado' | 'Excluído'
+  retention_notified?: boolean
   ticket?: string
   reviewed_by?: string
   reviewed_at?: string
@@ -27,6 +28,13 @@ export const getRetainedTickets = async (filter?: string): Promise<RetainedTicke
     sort: '-created',
     expand: 'ticket,reviewed_by',
   })
+}
+
+export const getPendingRetainedTicketsCount = async (): Promise<number> => {
+  const result = await pb.collection('retained_tickets').getList(1, 1, {
+    filter: 'status = "Pendente"',
+  })
+  return result.totalItems
 }
 
 export const getRetainedTicket = async (id: string): Promise<RetainedTicketRecord> => {

@@ -1,6 +1,11 @@
 import pb from '@/lib/pocketbase/client'
 
-export type AlertType = 'STALE_TICKET' | 'SLA_RESPONSE' | 'SLA_RESOLUTION' | 'CONSUMPTION'
+export type AlertType =
+  | 'STALE_TICKET'
+  | 'SLA_RESPONSE'
+  | 'SLA_RESOLUTION'
+  | 'CONSUMPTION'
+  | 'RETAINED_TICKETS'
 export type AlertAuditAction = 'DISMISSED' | 'OPENED' | 'VIEWED'
 
 export interface AlertAuditMetadata {
@@ -14,6 +19,7 @@ export interface AlertAuditMetadata {
   clientName?: string
   title?: string
   message?: string
+  retainedCount?: number
   [key: string]: any
 }
 
