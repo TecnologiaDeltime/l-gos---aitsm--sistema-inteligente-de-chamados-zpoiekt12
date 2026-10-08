@@ -81,10 +81,10 @@ export default function TechnicianDashboardPage() {
   const [goals, setGoals] = useState<SlaGoalRecord[]>([])
   const [loading, setLoading] = useState(true)
 
-  // Filtro de mês: padrão é o mês atual (ou null se usuário limpar, mas com navegação)
+  // Filtro de mês: por padrão sempre traga o mês atual no filtro.
   // Estrutura do mês selecionado: { year, month } (month 0-11)
   const now = new Date()
-  const [selectedMonth, setSelectedMonth] = useState<{ year: number; month: number } | null>({
+  const [selectedMonth, setSelectedMonth] = useState<{ year: number; month: number }>({
     year: now.getFullYear(),
     month: now.getMonth(),
   })
@@ -151,33 +151,14 @@ export default function TechnicianDashboardPage() {
   }, [todayInteractions])
 
   // ==============================================================
-  // 2. Filtro do Mês e Horas das Interações no Mês Filtrado
-  // Se não houver filtro, usa o mês atual (ou último mês)
+  // 2. Filtro do Mês e Período Ativo
+  // "Todos os cartões devem mostrar dados conforme o filtro de mês, por padrão sempre traga o mês atual no filtro."
   // ==============================================================
   const activeMonthRange = useMemo(() => {
-    if (selectedMonth) {
-      const start = new Date(selectedMonth.year, selectedMonth.month, 1, 0, 0, 0, 0)
-      const end = new Date(selectedMonth.year, selectedMonth.month + 1, 0, 23, 59, 59, 999)
-      return { start, end, label: `${MONTH_NAMES[selectedMonth.month]} de ${selectedMonth.year}` }
-    }
-    // "se não houver filtro mostre do ultimo mês"
-    const lastMonthDate = new Date(todayYear, todayMonth - 1, 1)
-    const start = new Date(lastMonthDate.getFullYear(), lastMonthDate.getMonth(), 1, 0, 0, 0, 0)
-    const end = new Date(
-      lastMonthDate.getFullYear(),
-      lastMonthDate.getMonth() + 1,
-      0,
-      23,
-      59,
-      59,
-      999,
-    )
-    return {
-      start,
-      end,
-      label: `Último mês (${MONTH_NAMES[lastMonthDate.getMonth()]} de ${lastMonthDate.getFullYear()})`,
-    }
-  }, [selectedMonth, todayYear, todayMonth])
+    const start = new Date(selectedMonth.year, selectedMonth.month, 1, 0, 0, 0, 0)
+    const end = new Date(selectedMonth.year, selectedMonth.month + 1, 0, 23, 59, 59, 999)
+    return { start, end, label: `${MONTH_NAMES[selectedMonth.month]} de ${selectedMonth.year}` }
+  }, [selectedMonth])
 
   // Interações no período do filtro
   const filteredInteractions = useMemo(() => {
@@ -188,6 +169,7 @@ export default function TechnicianDashboardPage() {
     })
   }, [interactions, activeMonthRange])
 
+  // Total de minutos de interações no período filtrado
   const filteredInteractionsMinutes = useMemo(() => {
     return filteredInteractions.reduce((s, i) => s + (i.duration_minutes || 0), 0)
   }, [filteredInteractions])
@@ -201,7 +183,7 @@ export default function TechnicianDashboardPage() {
     })
   }, [tickets, activeMonthRange])
 
-  // Chamados resolvidos no período do filtro (para métrica de resolução)
+  // Chamados resolvidos no período do filtro
   const filteredResolvedTickets = useMemo(() => {
     return tickets.filter((t) => {
       if (!['Resolvido', 'Encerrado'].includes(t.status)) return false
@@ -212,6 +194,17 @@ export default function TechnicianDashboardPage() {
       return d >= activeMonthRange.start && d <= activeMonthRange.end
     })
   }, [tickets, activeMonthRange])
+
+  // Visitas concluídas/feitas no período do filtro
+  const filteredCompletedVisits = useMemo(() => {
+    return visits.filter((v) => {
+      if (v.status !== 'Concluída') return false
+      const vDateStr = v.checkout_at || v.scheduled_date || v.created
+      if (!vDateStr) return false
+      const d = new Date(vDateStr)
+      return d >= activeMonthRange.start && d <= activeMonthRange.end
+    })
+  }, [visits, activeMonthRange])
 
   // ==============================================================
   // 3. Tempo médio de atendimento e Tempo médio de resolução
@@ -270,10 +263,104 @@ export default function TechnicianDashboardPage() {
   }, [filteredInteractions, filteredResolvedTickets])
 
   // ==============================================================
-  // 4. Últimos 3 meses (interações, chamados resolvidos, visitas)
+  // 4. SLA - Visões comparativas no período filtrado
+  // a) Chamados resolvidos DENTRO do SLA vs. FORA do SLA (SLA Solução)
+  // b) Chamados iniciados DENTRO do SLA vs. FORA do SLA (SLA Resposta)
+  // ==============================================================
+  const slaComparisons = useMemo(() => {
+    // 1. Resolução (considera chamados resolvidos no período)
+    let solWithin = 0
+    let solOutside = 0
+
+    filteredResolvedTickets.forEach((t) => {
+      const resDateStr = t.sla_solution_at || t.resolution_date || t.closure_date
+      if (t.sla_solution_deadline) {
+        if (resDateStr) {
+          const resMs = new Date(resDateStr).getTime()
+          const dlMs = new Date(t.sla_solution_deadline).getTime()
+          if (resMs <= dlMs) {
+            solWithin += 1
+          } else {
+            solOutside += 1
+          }
+        } else {
+          // Sem data de resolução explícita, recorre ao sla_status
+          if (t.sla_status === 'Violado') {
+            solOutside += 1
+          } else {
+            solWithin += 1
+          }
+        }
+      } else {
+        // Sem deadline de solução cadastrado: verificar se marcou Violado
+        if (t.sla_status === 'Violado') {
+          solOutside += 1
+        } else {
+          solWithin += 1
+        }
+      }
+    })
+
+    const solTotal = solWithin + solOutside
+    const solPct = solTotal > 0 ? (solWithin / solTotal) * 100 : 100
+
+    // 2. Iniciados / Primeira Resposta (considera chamados iniciados no período filtrado)
+    // Chamados do técnico com data de início (sla_response_start ou sla_response_at) no período
+    const startedTicketsInPeriod = tickets.filter((t) => {
+      const startStr = t.sla_response_start || t.sla_response_at
+      if (!startStr) return false
+      const d = new Date(startStr)
+      return d >= activeMonthRange.start && d <= activeMonthRange.end
+    })
+
+    let respWithin = 0
+    let respOutside = 0
+
+    startedTicketsInPeriod.forEach((t) => {
+      const startStr = t.sla_response_start || t.sla_response_at
+      if (!startStr) return
+      if (t.sla_response_deadline) {
+        const startMs = new Date(startStr).getTime()
+        const dlMs = new Date(t.sla_response_deadline).getTime()
+        if (startMs <= dlMs) {
+          respWithin += 1
+        } else {
+          respOutside += 1
+        }
+      } else {
+        // Se não houver deadline de resposta cadastrado
+        if (t.sla_status === 'Violado') {
+          respOutside += 1
+        } else {
+          respWithin += 1
+        }
+      }
+    })
+
+    const respTotal = respWithin + respOutside
+    const respPct = respTotal > 0 ? (respWithin / respTotal) * 100 : 100
+
+    return {
+      solution: {
+        within: solWithin,
+        outside: solOutside,
+        total: solTotal,
+        adherencePct: solPct,
+      },
+      response: {
+        within: respWithin,
+        outside: respOutside,
+        total: respTotal,
+        adherencePct: respPct,
+      },
+    }
+  }, [filteredResolvedTickets, tickets, activeMonthRange])
+
+  // ==============================================================
+  // 5. Últimos 3 meses (interações em relação ao mês selecionado)
   // ==============================================================
   const last3MonthsData = useMemo(() => {
-    // Gera os 3 meses: mês atual, mês -1, mês -2
+    // Gera 3 meses terminando no mês atualmente selecionado
     const months: Array<{
       year: number
       month: number
@@ -286,7 +373,7 @@ export default function TechnicianDashboardPage() {
     }> = []
 
     for (let i = 2; i >= 0; i--) {
-      const d = new Date(todayYear, todayMonth - i, 1)
+      const d = new Date(selectedMonth.year, selectedMonth.month - i, 1)
       const y = d.getFullYear()
       const m = d.getMonth()
       const start = new Date(y, m, 1, 0, 0, 0, 0)
@@ -318,36 +405,7 @@ export default function TechnicianDashboardPage() {
       ...m,
       Horas: Number(m.hours.toFixed(2)),
     }))
-  }, [interactions, todayYear, todayMonth])
-
-  // Início e fim da janela de 3 meses para contar resolvidos e visitas
-  const threeMonthsWindow = useMemo(() => {
-    const start = new Date(todayYear, todayMonth - 2, 1, 0, 0, 0, 0)
-    const end = new Date(todayYear, todayMonth + 1, 0, 23, 59, 59, 999)
-    return { start, end }
-  }, [todayYear, todayMonth])
-
-  // Total de chamados resolvidos dos últimos 3 meses
-  const totalResolved3Months = useMemo(() => {
-    return tickets.filter((t) => {
-      if (!['Resolvido', 'Encerrado'].includes(t.status)) return false
-      const resDateStr = t.resolution_date || t.closure_date || t.updated || t.created
-      if (!resDateStr) return false
-      const d = new Date(resDateStr)
-      return d >= threeMonthsWindow.start && d <= threeMonthsWindow.end
-    }).length
-  }, [tickets, threeMonthsWindow])
-
-  // Quantidade de visitas realizadas dos últimos 3 meses
-  const totalVisitsCompleted3Months = useMemo(() => {
-    return visits.filter((v) => {
-      if (v.status !== 'Concluída') return false
-      const vDateStr = v.checkout_at || v.scheduled_date || v.created
-      if (!vDateStr) return false
-      const d = new Date(vDateStr)
-      return d >= threeMonthsWindow.start && d <= threeMonthsWindow.end
-    }).length
-  }, [visits, threeMonthsWindow])
+  }, [interactions, selectedMonth])
 
   // ==============================================================
   // 5. Metas do Técnico mostrando SOMENTE os percentuais de atuação dele
@@ -455,8 +513,7 @@ export default function TechnicianDashboardPage() {
 
   // Controles de navegação de mês
   const handlePrevMonth = () => {
-    setSelectedMonth((prev) => {
-      const base = prev || { year: todayYear, month: todayMonth }
+    setSelectedMonth((base) => {
       if (base.month === 0) {
         return { year: base.year - 1, month: 11 }
       }
@@ -465,8 +522,7 @@ export default function TechnicianDashboardPage() {
   }
 
   const handleNextMonth = () => {
-    setSelectedMonth((prev) => {
-      const base = prev || { year: todayYear, month: todayMonth }
+    setSelectedMonth((base) => {
       if (base.month === 11) {
         return { year: base.year + 1, month: 0 }
       }
@@ -478,12 +534,8 @@ export default function TechnicianDashboardPage() {
     setSelectedMonth({ year: todayYear, month: todayMonth })
   }
 
-  const handleClearMonthFilter = () => {
-    setSelectedMonth(null)
-  }
-
   const isCurrentMonthSelected =
-    selectedMonth && selectedMonth.year === todayYear && selectedMonth.month === todayMonth
+    selectedMonth.year === todayYear && selectedMonth.month === todayMonth
 
   return (
     <div className="space-y-6">
@@ -512,9 +564,7 @@ export default function TechnicianDashboardPage() {
             <div className="min-w-[150px] text-center px-2">
               <span className="text-xs font-semibold text-slate-900 dark:text-slate-100 flex items-center justify-center gap-1">
                 <CalendarDays className="h-3.5 w-3.5 text-blue-600" />
-                {selectedMonth
-                  ? `${MONTH_NAMES[selectedMonth.month]} / ${selectedMonth.year}`
-                  : 'Sem filtro (Último mês)'}
+                {`${MONTH_NAMES[selectedMonth.month]} / ${selectedMonth.year}`}
               </span>
             </div>
             <Button
@@ -534,39 +584,27 @@ export default function TechnicianDashboardPage() {
             <Button
               variant={isCurrentMonthSelected ? 'secondary' : 'outline'}
               size="sm"
-              className="h-7 text-xs px-2.5"
+              className="h-7 text-xs px-2.5 font-medium"
               onClick={handleCurrentMonth}
             >
               Mês Atual
             </Button>
-            {selectedMonth !== null && (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-7 text-xs px-2 text-slate-500 hover:text-slate-800"
-                onClick={handleClearMonthFilter}
-                title="Remover filtro de mês específico"
-              >
-                Limpar
-              </Button>
-            )}
           </div>
         </div>
       </div>
 
       {/* ============================================================== */}
       {/* Indicadores Principais (KPIs)                                  */}
-      {/* Exatamente conforme o pedido do usuário:                      */}
-      {/* - MANTIDO: "Visitas Hoje"                                     */}
-      {/* - MANTIDO: "Horas Hoje" (bloco de horas do dia)               */}
-      {/* - ADICIONADO: "Horas Interações (Mês Selecionado)"            */}
-      {/* - ADICIONADO: "Total Resolvidos (Últimos 3 Meses)"            */}
-      {/* - ADICIONADO: "Visitas Realizadas (Últimos 3 Meses)"          */}
-      {/* - REMOVIDO: "Check-out", "Despesas Pendentes", "Km Hoje",     */}
-      {/*   "Reembolsos"                                                */}
+      {/* Conforme pedido do usuário:                                   */}
+      {/* - Visitas Hoje (mantido, dia corrente)                         */}
+      {/* - Horas Hoje (mantido, dia corrente)                          */}
+      {/* - Horas Acumuladas (adicionado, período do filtro)             */}
+      {/* - Total de horas (substitui 'Horas Interações (Mês)')          */}
+      {/* - Total Resolvidos (substitui 'Resolvidos (3 Meses)')          */}
+      {/* - Visitas Realizadas (conforme período do filtro)              */}
       {/* ============================================================== */}
-      <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-5">
-        {/* 1. Visitas Hoje (MANTIDO) */}
+      <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-6">
+        {/* 1. Visitas Hoje (mantido) */}
         <Card className="border border-slate-200 dark:border-slate-800">
           <CardContent className="p-4">
             <div className="p-2 rounded-lg bg-blue-50 dark:bg-blue-950/50 w-fit mb-2">
@@ -580,7 +618,7 @@ export default function TechnicianDashboardPage() {
           </CardContent>
         </Card>
 
-        {/* 2. Horas Hoje (MANTIDO - horas do dia) */}
+        {/* 2. Horas Hoje (mantido - horas do dia corrente) */}
         <Card className="border border-slate-200 dark:border-slate-800">
           <CardContent className="p-4">
             <div className="p-2 rounded-lg bg-indigo-50 dark:bg-indigo-950/50 w-fit mb-2">
@@ -594,14 +632,32 @@ export default function TechnicianDashboardPage() {
           </CardContent>
         </Card>
 
-        {/* 3. Horas Interações (Filtro por mês) */}
+        {/* 3. Horas Acumuladas (novo - acumuladas no período do filtro) */}
+        <Card className="border border-amber-200 bg-amber-50/20 dark:border-amber-900 dark:bg-amber-950/10">
+          <CardContent className="p-4">
+            <div className="p-2 rounded-lg bg-amber-100 dark:bg-amber-900/60 w-fit mb-2">
+              <Clock className="h-4 w-4 text-amber-700 dark:text-amber-300" />
+            </div>
+            <p className="text-[11px] font-medium text-amber-900 dark:text-amber-200">
+              Horas Acumuladas
+            </p>
+            <p className="text-2xl font-bold tracking-tight text-amber-950 dark:text-amber-100">
+              {formatHours(filteredInteractionsMinutes / 60)}
+            </p>
+            <p className="text-[10px] text-amber-700/80 dark:text-amber-300/80 mt-0.5 truncate">
+              {activeMonthRange.label}
+            </p>
+          </CardContent>
+        </Card>
+
+        {/* 4. Total de horas (substitui 'Horas Interações (Mês)') */}
         <Card className="border border-blue-200 bg-blue-50/20 dark:border-blue-900 dark:bg-blue-950/10">
           <CardContent className="p-4">
             <div className="p-2 rounded-lg bg-blue-100 dark:bg-blue-900/60 w-fit mb-2">
               <Timer className="h-4 w-4 text-blue-700 dark:text-blue-300" />
             </div>
             <p className="text-[11px] font-medium text-blue-900 dark:text-blue-200">
-              Horas Interações (Mês)
+              Total de horas
             </p>
             <p className="text-2xl font-bold tracking-tight text-blue-950 dark:text-blue-100">
               {formatMinutes(filteredInteractionsMinutes)}
@@ -612,31 +668,158 @@ export default function TechnicianDashboardPage() {
           </CardContent>
         </Card>
 
-        {/* 4. Total de Chamados Resolvidos (Últimos 3 meses) */}
+        {/* 5. Total Resolvidos (substitui 'Resolvidos (3 Meses)' - segue o período do filtro) */}
         <Card className="border border-slate-200 dark:border-slate-800">
           <CardContent className="p-4">
             <div className="p-2 rounded-lg bg-emerald-50 dark:bg-emerald-950/50 w-fit mb-2">
               <CheckCircle className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
             </div>
-            <p className="text-[11px] font-medium text-slate-500">Resolvidos (3 Meses)</p>
+            <p className="text-[11px] font-medium text-slate-500">Total Resolvidos</p>
             <p className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
-              {totalResolved3Months}
+              {filteredResolvedTickets.length}
             </p>
-            <p className="text-[10px] text-slate-400 mt-0.5">Últimos 3 meses consolidados</p>
+            <p className="text-[10px] text-slate-400 mt-0.5 truncate">{activeMonthRange.label}</p>
           </CardContent>
         </Card>
 
-        {/* 5. Quantidade de Visitas Realizadas (Últimos 3 meses) */}
+        {/* 6. Visitas Realizadas (no período do filtro) */}
         <Card className="border border-slate-200 dark:border-slate-800">
           <CardContent className="p-4">
             <div className="p-2 rounded-lg bg-purple-50 dark:bg-purple-950/50 w-fit mb-2">
               <CheckCircle2 className="h-4 w-4 text-purple-600 dark:text-purple-400" />
             </div>
-            <p className="text-[11px] font-medium text-slate-500">Visitas Feitas (3 Meses)</p>
+            <p className="text-[11px] font-medium text-slate-500">Visitas Realizadas</p>
             <p className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
-              {totalVisitsCompleted3Months}
+              {filteredCompletedVisits.length}
             </p>
-            <p className="text-[10px] text-slate-400 mt-0.5">Concluídas nos últimos 3 meses</p>
+            <p className="text-[10px] text-slate-400 mt-0.5 truncate">{activeMonthRange.label}</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* ============================================================== */}
+      {/* SLA: Visões Comparativas (Dentro vs. Fora do SLA)              */}
+      {/* - Total de chamados Resolvidos dentro do SLA X fora do SLA     */}
+      {/* - Total de chamados iniciados dentro do SLA X fora do SLA      */}
+      {/* ============================================================== */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Chamados Resolvidos: Dentro vs. Fora do SLA */}
+        <Card className="border border-slate-200 dark:border-slate-800">
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                Chamados Resolvidos: SLA Solução
+              </CardTitle>
+              <Badge variant="outline" className="text-[10px]">
+                {activeMonthRange.label}
+              </Badge>
+            </div>
+            <CardDescription className="text-xs">
+              Cumprimento do SLA de Solução nos chamados solucionados no período
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4 pt-1">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="p-3 rounded-lg border border-emerald-200 bg-emerald-50/50 dark:border-emerald-900/40 dark:bg-emerald-950/20">
+                <p className="text-[11px] font-medium text-emerald-800 dark:text-emerald-300">
+                  Dentro do SLA
+                </p>
+                <p className="text-2xl font-bold tracking-tight text-emerald-700 dark:text-emerald-300">
+                  {slaComparisons.solution.within}
+                </p>
+                <p className="text-[10px] text-emerald-600/80 dark:text-emerald-400/80 mt-0.5">
+                  Solucionados no prazo
+                </p>
+              </div>
+
+              <div className="p-3 rounded-lg border border-rose-200 bg-rose-50/50 dark:border-rose-900/40 dark:bg-rose-950/20">
+                <p className="text-[11px] font-medium text-rose-800 dark:text-rose-300">
+                  Fora do SLA
+                </p>
+                <p className="text-2xl font-bold tracking-tight text-rose-700 dark:text-rose-300">
+                  {slaComparisons.solution.outside}
+                </p>
+                <p className="text-[10px] text-rose-600/80 dark:text-rose-400/80 mt-0.5">
+                  Prazo excedido
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-1.5 pt-1 border-t">
+              <div className="flex items-center justify-between text-xs">
+                <span className="font-medium text-slate-700 dark:text-slate-300">
+                  Aderência ao SLA de Solução
+                </span>
+                <span className="font-bold text-slate-900 dark:text-slate-100">
+                  {slaComparisons.solution.adherencePct.toFixed(1)}%
+                  <span className="text-[10px] text-slate-500 font-normal ml-1">
+                    ({slaComparisons.solution.within}/{slaComparisons.solution.total} resolvidos)
+                  </span>
+                </span>
+              </div>
+              <Progress value={slaComparisons.solution.adherencePct} className="h-2" />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Chamados Iniciados: Dentro vs. Fora do SLA */}
+        <Card className="border border-slate-200 dark:border-slate-800">
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                <Timer className="h-4 w-4 text-blue-600" />
+                Chamados Iniciados: SLA Resposta
+              </CardTitle>
+              <Badge variant="outline" className="text-[10px]">
+                {activeMonthRange.label}
+              </Badge>
+            </div>
+            <CardDescription className="text-xs">
+              Cumprimento do SLA de Resposta nos atendimentos iniciados no período
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4 pt-1">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="p-3 rounded-lg border border-emerald-200 bg-emerald-50/50 dark:border-emerald-900/40 dark:bg-emerald-950/20">
+                <p className="text-[11px] font-medium text-emerald-800 dark:text-emerald-300">
+                  Dentro do SLA
+                </p>
+                <p className="text-2xl font-bold tracking-tight text-emerald-700 dark:text-emerald-300">
+                  {slaComparisons.response.within}
+                </p>
+                <p className="text-[10px] text-emerald-600/80 dark:text-emerald-400/80 mt-0.5">
+                  Iniciados no prazo
+                </p>
+              </div>
+
+              <div className="p-3 rounded-lg border border-rose-200 bg-rose-50/50 dark:border-rose-900/40 dark:bg-rose-950/20">
+                <p className="text-[11px] font-medium text-rose-800 dark:text-rose-300">
+                  Fora do SLA
+                </p>
+                <p className="text-2xl font-bold tracking-tight text-rose-700 dark:text-rose-300">
+                  {slaComparisons.response.outside}
+                </p>
+                <p className="text-[10px] text-rose-600/80 dark:text-rose-400/80 mt-0.5">
+                  Início após o prazo
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-1.5 pt-1 border-t">
+              <div className="flex items-center justify-between text-xs">
+                <span className="font-medium text-slate-700 dark:text-slate-300">
+                  Aderência ao SLA de Resposta
+                </span>
+                <span className="font-bold text-slate-900 dark:text-slate-100">
+                  {slaComparisons.response.adherencePct.toFixed(1)}%
+                  <span className="text-[10px] text-slate-500 font-normal ml-1">
+                    ({slaComparisons.response.within}/{slaComparisons.response.total} iniciados)
+                  </span>
+                </span>
+              </div>
+              <Progress value={slaComparisons.response.adherencePct} className="h-2" />
+            </div>
           </CardContent>
         </Card>
       </div>
