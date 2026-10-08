@@ -6,7 +6,7 @@ export type AlertType =
   | 'SLA_RESOLUTION'
   | 'CONSUMPTION'
   | 'RETAINED_TICKETS'
-export type AlertAuditAction = 'DISMISSED' | 'OPENED' | 'VIEWED'
+export type AlertAuditAction = 'DISMISSED' | 'OPENED' | 'VIEWED' | 'MUTE_ALERTS' | 'UNMUTE_ALERTS'
 
 export interface AlertAuditMetadata {
   hoursStale?: number
@@ -20,6 +20,10 @@ export interface AlertAuditMetadata {
   title?: string
   message?: string
   retainedCount?: number
+  muted?: boolean
+  operatorName?: string
+  operatorEmail?: string
+  reason?: string
   [key: string]: any
 }
 

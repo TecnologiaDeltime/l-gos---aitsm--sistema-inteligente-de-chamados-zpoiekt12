@@ -6,17 +6,26 @@ import { getQueues } from '@/services/queues'
 import { getTickets, TicketRecord } from '@/services/tickets'
 import { useAuth } from '@/hooks/use-auth'
 import { useRealtime } from '@/hooks/use-realtime'
-import { getVoiceAlertsEnabled, getSlaThresholdMinutes } from '@/lib/notification-settings'
+import {
+  getVoiceAlertsEnabled,
+  getSlaThresholdMinutes,
+  getOperatorAlertsMuted,
+} from '@/lib/notification-settings'
 
 function speak(text: string) {
   if (document.visibilityState !== 'visible') return
+  if (getOperatorAlertsMuted()) return
   if (!getVoiceAlertsEnabled()) return
   if (!('speechSynthesis' in window)) return
-  window.speechSynthesis.cancel()
-  const utterance = new SpeechSynthesisUtterance(text)
-  utterance.lang = 'pt-BR'
-  utterance.rate = 1
-  window.speechSynthesis.speak(utterance)
+  try {
+    window.speechSynthesis.cancel()
+    const utterance = new SpeechSynthesisUtterance(text)
+    utterance.lang = 'pt-BR'
+    utterance.rate = 1
+    window.speechSynthesis.speak(utterance)
+  } catch {
+    /* ignore */
+  }
 }
 
 const RESOLVED_SLA_STATUSES = new Set(['Violado', 'Resolvido'])
@@ -68,6 +77,7 @@ export function useSlaNotifications() {
 
   const checkSla = useCallback(() => {
     if (!user?.id) return
+    if (getOperatorAlertsMuted() || user?.alerts_muted) return
     const threshold = getSlaThresholdMinutes()
     const now = Date.now()
     const thresholdMs = threshold * 60000
@@ -112,6 +122,7 @@ export function useSlaNotifications() {
     'tickets',
     (e) => {
       if (!user?.id) return
+      if (getOperatorAlertsMuted() || user?.alerts_muted) return
       const record = e.record as unknown as TicketRecord
 
       if (e.action === 'create') {

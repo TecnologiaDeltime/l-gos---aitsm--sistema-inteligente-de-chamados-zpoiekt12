@@ -5,7 +5,7 @@ import { useAuth } from '@/hooks/use-auth'
 import { usePermissions } from '@/hooks/use-permissions'
 import { useRealtime } from '@/hooks/use-realtime'
 import { playTicketChime, initAudio } from '@/lib/ticket-alerts'
-import { getVoiceAlertsEnabled } from '@/lib/notification-settings'
+import { getVoiceAlertsEnabled, getOperatorAlertsMuted } from '@/lib/notification-settings'
 import { createAlertAuditLog, AlertType, AlertAuditMetadata } from '@/services/alert-audit'
 import { getTicket, TicketRecord } from '@/services/tickets'
 import { getStaleTicketAlertSettings } from '@/services/stale-ticket-alert-settings'
@@ -27,6 +27,7 @@ export interface ActiveAlertPopup {
 
 function speak(text: string) {
   if (document.visibilityState !== 'visible') return
+  if (getOperatorAlertsMuted()) return
   if (!getVoiceAlertsEnabled()) return
   if (!('speechSynthesis' in window)) return
   try {
@@ -64,6 +65,27 @@ export function AlertNotificationPopup() {
   const isManagerOrAdmin = perms.isAdmin || perms.isGestor
 
   const [activeAlerts, setActiveAlerts] = useState<Record<string, ActiveAlertPopup>>({})
+  const [isMuted, setIsMuted] = useState<boolean>(() => {
+    if (user?.alerts_muted !== undefined) return Boolean(user.alerts_muted)
+    return getOperatorAlertsMuted()
+  })
+
+  useEffect(() => {
+    if (user?.alerts_muted !== undefined) {
+      setIsMuted(Boolean(user.alerts_muted))
+    }
+  }, [user?.alerts_muted])
+
+  useEffect(() => {
+    const handleSync = (e: Event) => {
+      const customEvent = e as CustomEvent<{ muted: boolean }>
+      if (customEvent.detail && typeof customEvent.detail.muted === 'boolean') {
+        setIsMuted(customEvent.detail.muted)
+      }
+    }
+    window.addEventListener('itsm:alerts-muted-changed', handleSync)
+    return () => window.removeEventListener('itsm:alerts-muted-changed', handleSync)
+  }, [])
   const activeAlertsRef = useRef<Record<string, ActiveAlertPopup>>({})
   const knownIds = useRef<Set<string>>(new Set())
   const initializedRef = useRef(false)
@@ -195,6 +217,7 @@ export function AlertNotificationPopup() {
   useRealtime(
     'notifications',
     (e) => {
+      if (getOperatorAlertsMuted() || user?.alerts_muted) return
       if (!user?.id) return
       if (!initializedRef.current) return
       if (e.action !== 'create') return
@@ -448,6 +471,7 @@ export function AlertNotificationPopup() {
     if (!user?.id || !isManagerOrAdmin) return
 
     const checkPendingRetained = async () => {
+      if (getOperatorAlertsMuted() || user?.alerts_muted) return
       try {
         const pending = await getRetainedTickets('status = "Pendente"')
         const count = pending.length
@@ -515,6 +539,9 @@ export function AlertNotificationPopup() {
       clearInterval(interval)
     }
   }, [user?.id, isManagerOrAdmin, showAlert])
+
+  // Se o operador silenciou os alertas, nenhuma notificação popup em tela é renderizada
+  if (isMuted || getOperatorAlertsMuted()) return null
 
   const pendingList = Object.values(activeAlerts)
   if (pendingList.length === 0) return null

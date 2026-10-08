@@ -7,7 +7,7 @@ import { useRealtime } from '@/hooks/use-realtime'
 import { getStaleTicketAlertSettings } from '@/services/stale-ticket-alert-settings'
 import { getTicket, TicketRecord } from '@/services/tickets'
 import { playTicketChime, initAudio } from '@/lib/ticket-alerts'
-import { getVoiceAlertsEnabled } from '@/lib/notification-settings'
+import { getVoiceAlertsEnabled, getOperatorAlertsMuted } from '@/lib/notification-settings'
 
 interface ActiveAlert {
   notifId: string
@@ -21,13 +21,18 @@ interface ActiveAlert {
 
 function speak(text: string) {
   if (document.visibilityState !== 'visible') return
+  if (getOperatorAlertsMuted()) return
   if (!getVoiceAlertsEnabled()) return
   if (!('speechSynthesis' in window)) return
-  window.speechSynthesis.cancel()
-  const utterance = new SpeechSynthesisUtterance(text)
-  utterance.lang = 'pt-BR'
-  utterance.rate = 1
-  window.speechSynthesis.speak(utterance)
+  try {
+    window.speechSynthesis.cancel()
+    const utterance = new SpeechSynthesisUtterance(text)
+    utterance.lang = 'pt-BR'
+    utterance.rate = 1
+    window.speechSynthesis.speak(utterance)
+  } catch {
+    /* ignore */
+  }
 }
 
 /**
@@ -88,6 +93,7 @@ export function StaleTicketAlerts() {
   useRealtime(
     'notifications',
     (e) => {
+      if (getOperatorAlertsMuted() || user?.alerts_muted) return
       if (!user?.id) return
       if (e.action !== 'create') return
       const rec = e.record as unknown as any
@@ -163,6 +169,7 @@ export function StaleTicketAlerts() {
     !!user?.id,
   )
 
+  if (getOperatorAlertsMuted() || user?.alerts_muted) return null
   const pendingCount = Object.keys(activeAlerts).length
   if (pendingCount === 0) return null
 

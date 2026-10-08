@@ -10,6 +10,7 @@ export interface UserItem {
   company?: string
   active?: boolean
   unit?: string
+  alerts_muted?: boolean
   created: string
   expand?: any
 }

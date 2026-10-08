@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-07T00:06:14.025Z",
+  "generatedAt": "2026-10-08T12:06:56.224Z",
   "collections": [
     {
       "name": "users",
@@ -127,6 +127,12 @@
           "required": false,
           "system": false,
           "collectionRef": "profiles"
+        },
+        {
+          "name": "alerts_muted",
+          "type": "bool",
+          "required": false,
+          "system": false
         }
       ],
       "indexes": [
@@ -8516,7 +8522,7 @@
           "type": "select",
           "required": true,
           "system": false,
-          "selectValues": ["DISMISSED", "OPENED", "VIEWED"]
+          "selectValues": ["DISMISSED", "OPENED", "VIEWED", "MUTE_ALERTS", "UNMUTE_ALERTS"]
         },
         {
           "name": "metadata",

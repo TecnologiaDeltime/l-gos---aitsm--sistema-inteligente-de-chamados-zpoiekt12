@@ -5,6 +5,9 @@ let isPlaying = false
 const SOUND_ENABLED_KEY = 'itsm_ticket_sound_enabled'
 
 export function isSoundEnabled(): boolean {
+  if (localStorage.getItem('itsm_operator_alerts_muted') === 'true') {
+    return false
+  }
   return localStorage.getItem(SOUND_ENABLED_KEY) !== 'false'
 }
 

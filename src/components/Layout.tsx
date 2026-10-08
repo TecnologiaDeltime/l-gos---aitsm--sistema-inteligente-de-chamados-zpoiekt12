@@ -46,11 +46,16 @@ import {
   DollarSign,
   Network,
   FileSearch,
+  Volume2,
+  VolumeX,
 } from 'lucide-react'
 import { useAuth } from '@/hooks/use-auth'
 import { useTheme } from '@/hooks/use-theme'
 import { usePermissions } from '@/hooks/use-permissions'
 import { useIsMobile } from '@/hooks/use-mobile'
+import { useAlertMute } from '@/hooks/use-alert-mute'
+import { useToast } from '@/hooks/use-toast'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import {
@@ -74,9 +79,12 @@ export default function Layout() {
   const { user, signOut } = useAuth()
   const { theme, toggleTheme } = useTheme()
   const permissions = usePermissions()
-  const isMobile = useIsMobile()
-  const location = useLocation()
   const navigate = useNavigate()
+  const location = useLocation()
+  const isMobile = useIsMobile()
+  const { isMuted, toggleMute, loading: muteLoading } = useAlertMute()
+  const { toast } = useToast()
+
   const [notifications, setNotifications] = useState<NotificationRecord[]>([])
   const [mobileOpen, setMobileOpen] = useState(false)
   const [clientMenuOpen, setClientMenuOpen] = useState(false)
@@ -1053,6 +1061,53 @@ export default function Layout() {
                 <Moon className="h-5 w-5 text-primary" />
               )}
             </Button>
+
+            {/* Botão de silenciar voz e alertas de tela ao lado do sino de notificações */}
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  disabled={muteLoading}
+                  onClick={async () => {
+                    await toggleMute()
+                    if (!isMuted) {
+                      toast({
+                        title: 'Notificações Silenciadas',
+                        description: 'A voz e os popups de alerta foram desativados para você.',
+                      })
+                    } else {
+                      toast({
+                        title: 'Notificações Ativadas',
+                        description: 'A voz e os popups de alerta foram reativados.',
+                      })
+                    }
+                  }}
+                  className={`relative transition-colors duration-200 ${
+                    isMuted
+                      ? 'text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30'
+                      : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                  aria-label={isMuted ? 'Ativar notificações' : 'Silenciar notificações'}
+                >
+                  {isMuted ? (
+                    <VolumeX className="h-5 w-5 text-red-500 animate-in fade-in zoom-in-75 duration-200" />
+                  ) : (
+                    <Volume2 className="h-5 w-5" />
+                  )}
+                  {isMuted && (
+                    <span className="absolute -bottom-0.5 -right-0.5 flex h-2 w-2 rounded-full bg-red-500" />
+                  )}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom">
+                <p className="text-xs">
+                  {isMuted
+                    ? 'Ativar notificações (Voz e popups silenciados)'
+                    : 'Silenciar notificações (Desativa voz e popups)'}
+                </p>
+              </TooltipContent>
+            </Tooltip>
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>

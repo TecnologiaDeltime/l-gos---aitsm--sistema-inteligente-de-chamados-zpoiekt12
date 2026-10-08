@@ -14,6 +14,9 @@ import {
   Layers,
   Search,
   Info,
+  ShieldAlert,
+  VolumeX,
+  Volume2,
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -189,6 +192,15 @@ export default function AlertAuditPage() {
             <TrendingUp className="h-3 w-3 mr-1 text-orange-600" /> Consumo de Horas
           </Badge>
         )
+      case 'RETAINED_TICKETS':
+        return (
+          <Badge
+            variant="outline"
+            className="bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-950 dark:text-amber-300 dark:border-amber-800"
+          >
+            <ShieldAlert className="h-3 w-3 mr-1 text-amber-600" /> Chamados Retidos
+          </Badge>
+        )
       default:
         return <Badge variant="outline">{type}</Badge>
     }
@@ -215,6 +227,18 @@ export default function AlertAuditPage() {
             <Clock className="h-3 w-3 mr-1" /> Dispensado
           </Badge>
         )
+      case 'MUTE_ALERTS':
+        return (
+          <Badge className="bg-rose-500 hover:bg-rose-600 text-white font-medium">
+            <VolumeX className="h-3 w-3 mr-1" /> Silenciou Notificações
+          </Badge>
+        )
+      case 'UNMUTE_ALERTS':
+        return (
+          <Badge className="bg-teal-600 hover:bg-teal-700 text-white font-medium">
+            <Volume2 className="h-3 w-3 mr-1" /> Reativou Notificações
+          </Badge>
+        )
       default:
         return <Badge variant="secondary">{action}</Badge>
     }
@@ -224,6 +248,17 @@ export default function AlertAuditPage() {
   const renderMetadataSummary = (log: AlertAuditLogRecord) => {
     const meta = log.metadata || {}
     const items: string[] = []
+
+    if (log.action === 'MUTE_ALERTS' || log.action === 'UNMUTE_ALERTS') {
+      return (
+        <span className="text-xs font-medium text-slate-700 dark:text-slate-300">
+          {meta.message ||
+            (log.action === 'MUTE_ALERTS'
+              ? 'Silenciou a voz e popups em tela'
+              : 'Reativou som, voz e popups')}
+        </span>
+      )
+    }
 
     if (log.alert_type === 'STALE_TICKET') {
       if (meta.hoursStale != null) items.push(`${meta.hoursStale}h parado`)
@@ -235,6 +270,8 @@ export default function AlertAuditPage() {
       if (meta.percentage != null) items.push(`${meta.percentage}% consumido`)
       if (meta.level) items.push(meta.level)
       if (meta.contractNumber) items.push(`Contrato: ${meta.contractNumber}`)
+    } else if (log.alert_type === 'RETAINED_TICKETS') {
+      if (meta.retainedCount != null) items.push(`${meta.retainedCount} retido(s) pendente(s)`)
     }
 
     if (items.length === 0) {
@@ -269,12 +306,17 @@ export default function AlertAuditPage() {
       const meta = log.metadata || {}
 
       let detailsStr = ''
-      if (log.alert_type === 'STALE_TICKET') {
+      if (log.action === 'MUTE_ALERTS' || log.action === 'UNMUTE_ALERTS') {
+        detailsStr =
+          log.action === 'MUTE_ALERTS' ? 'Silenciou notificações' : 'Reativou notificações'
+      } else if (log.alert_type === 'STALE_TICKET') {
         detailsStr = `${meta.hoursStale || '—'}h sem atualização`
       } else if (log.alert_type === 'SLA_RESPONSE' || log.alert_type === 'SLA_RESOLUTION') {
         detailsStr = `${meta.remainingMinutes || '—'} min restantes`
       } else if (log.alert_type === 'CONSUMPTION') {
         detailsStr = `${meta.percentage || '—'}% - ${meta.level || 'Geral'}`
+      } else if (log.alert_type === 'RETAINED_TICKETS') {
+        detailsStr = `${meta.retainedCount || '1'} chamado(s) retido(s)`
       }
 
       return {
@@ -375,6 +417,7 @@ export default function AlertAuditPage() {
                   <SelectItem value="SLA_RESPONSE">SLA Resposta</SelectItem>
                   <SelectItem value="SLA_RESOLUTION">SLA Solução</SelectItem>
                   <SelectItem value="CONSUMPTION">Consumo de Horas</SelectItem>
+                  <SelectItem value="RETAINED_TICKETS">Chamados Retidos</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -390,6 +433,8 @@ export default function AlertAuditPage() {
                   <SelectItem value="OPENED">Abertas</SelectItem>
                   <SelectItem value="VIEWED">Visualizadas</SelectItem>
                   <SelectItem value="DISMISSED">Dispensadas</SelectItem>
+                  <SelectItem value="MUTE_ALERTS">Silenciou Notificações</SelectItem>
+                  <SelectItem value="UNMUTE_ALERTS">Reativou Notificações</SelectItem>
                 </SelectContent>
               </Select>
             </div>

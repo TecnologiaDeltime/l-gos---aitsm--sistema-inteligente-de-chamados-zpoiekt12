@@ -19,6 +19,7 @@ export interface UserRecord {
   extension?: string
   mobile?: string
   profile_id?: string
+  alerts_muted?: boolean
   expand?: {
     profile_id?: any
     company?: any

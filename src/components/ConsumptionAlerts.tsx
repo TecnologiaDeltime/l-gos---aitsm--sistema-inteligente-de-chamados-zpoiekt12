@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { AlertTriangle, X } from 'lucide-react'
 import { useAuth } from '@/hooks/use-auth'
 import { useRealtime } from '@/hooks/use-realtime'
+import { getOperatorAlertsMuted } from '@/lib/notification-settings'
 
 interface ConsumptionAlert {
   id: string
@@ -47,6 +48,7 @@ export function ConsumptionAlerts() {
   useRealtime(
     'notifications',
     (e) => {
+      if (getOperatorAlertsMuted() || user?.alerts_muted) return
       if (!user?.id) return
       if (!initializedRef.current) return
       if (e.action !== 'create') return
@@ -67,6 +69,7 @@ export function ConsumptionAlerts() {
     !!user?.id,
   )
 
+  if (getOperatorAlertsMuted() || user?.alerts_muted) return null
   if (Object.keys(active).length === 0) return null
 
   return (
