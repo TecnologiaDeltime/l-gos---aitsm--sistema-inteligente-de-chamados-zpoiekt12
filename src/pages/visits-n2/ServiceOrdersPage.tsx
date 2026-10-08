@@ -48,7 +48,7 @@ export default function ServiceOrdersPage() {
                   </div>
                   <div className="text-xs text-slate-500">
                     {o.generated_at ? new Date(o.generated_at).toLocaleString('pt-BR') : '-'} ·
-                    Técnico: {o.expand?.technician?.name || '-'} · Ticket:{' '}
+                    Operador: {o.expand?.technician?.name || '-'} · Ticket:{' '}
                     {o.expand?.ticket?.number || '-'}
                   </div>
                 </div>

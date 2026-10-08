@@ -67,7 +67,7 @@ const OTHER_REPORTS = [
   },
   {
     title: 'Dashboard de SLA',
-    desc: 'Cumprimento de prazos de resposta e solução por cliente e técnico.',
+    desc: 'Cumprimento de prazos de resposta e solução por cliente e operador.',
     path: '/sla-dashboard',
   },
   {

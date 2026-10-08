@@ -102,12 +102,13 @@ export default function ExpensesPage() {
               exportToCsv(
                 'despesas.csv',
                 expenses.map((e) => ({
+                  Operador: techs.find((t) => t.id === e.technician)?.name || '',
                   Tipo: e.expense_type,
                   Valor: e.value,
                   Data: e.expense_date,
                   Status: e.approval_status,
                 })),
-                ['Tipo', 'Valor', 'Data', 'Status'],
+                ['Operador', 'Tipo', 'Valor', 'Data', 'Status'],
               )
             }
           >
@@ -124,7 +125,7 @@ export default function ExpensesPage() {
             <table className="w-full text-left text-xs">
               <thead className="bg-slate-50 border-y">
                 <tr>
-                  <th className="p-3">Técnico</th>
+                  <th className="p-3">Operador</th>
                   <th className="p-3">Tipo</th>
                   <th className="p-3">Valor</th>
                   <th className="p-3">Data</th>

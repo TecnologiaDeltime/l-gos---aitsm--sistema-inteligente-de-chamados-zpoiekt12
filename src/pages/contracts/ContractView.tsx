@@ -271,7 +271,7 @@ export default function ContractView() {
                   <th className="p-2.5">Número</th>
                   <th className="p-2.5">Título</th>
                   <th className="p-2.5">Status</th>
-                  <th className="p-2.5">Técnico</th>
+                  <th className="p-2.5">Operador</th>
                   <th className="p-2.5">Criado em</th>
                 </tr>
               </thead>

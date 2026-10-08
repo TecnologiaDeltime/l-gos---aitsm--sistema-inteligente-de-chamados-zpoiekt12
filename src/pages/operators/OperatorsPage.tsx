@@ -289,7 +289,7 @@ export default function OperatorsPage() {
     // Fallback role
     if (op.role === 'admin') return 'Administrador'
     if (op.role === 'gestor') return 'Supervisor / Gestor'
-    if (op.role === 'tecnico') return 'Técnico'
+    if (op.role === 'tecnico') return 'Operador'
     return op.role || 'Operador'
   }
 

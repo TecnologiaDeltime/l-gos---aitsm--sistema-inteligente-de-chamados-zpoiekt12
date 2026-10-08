@@ -63,7 +63,7 @@ export default function TechnicianAvailabilityPage() {
   return (
     <div className="space-y-4">
       <h2 className="text-lg font-bold flex items-center gap-2">
-        <Calendar className="h-5 w-5" /> Disponibilidade de Técnicos
+        <Calendar className="h-5 w-5" /> Disponibilidade de Operadores
       </h2>
       <div className="grid gap-4 md:grid-cols-2">
         <Card>
@@ -75,7 +75,7 @@ export default function TechnicianAvailabilityPage() {
               <table className="w-full text-left text-xs">
                 <thead className="bg-slate-50 border-y">
                   <tr>
-                    <th className="p-3">Técnico</th>
+                    <th className="p-3">Operador</th>
                     <th className="p-3">Data</th>
                     <th className="p-3">Turno</th>
                     <th className="p-3">Status</th>

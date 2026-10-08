@@ -796,7 +796,7 @@ export default function TicketCreate() {
                 </Select>
               </div>
               <div className="space-y-2">
-                <FieldLabel>Operador / Técnico *</FieldLabel>
+                <FieldLabel>Operador *</FieldLabel>
                 <Select value={assignedTo} onValueChange={setAssignedTo}>
                   <SelectTrigger className="rounded-lg">
                     <SelectValue placeholder="Selecione o operador" />

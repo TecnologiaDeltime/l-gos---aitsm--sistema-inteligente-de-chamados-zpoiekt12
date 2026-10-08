@@ -101,7 +101,7 @@ export function DashboardFilters({ filters, options, onUpdate, onClear }: Dashbo
           options={TICKET_TYPES.map((t) => ({ value: t, label: t }))}
         />
         <FilterSelect
-          label="Técnico"
+          label="Operador"
           value={filters.technicianId}
           onChange={(v) => onUpdate('technicianId', v)}
           options={technicians.map((u) => ({ value: u.id, label: u.name || u.email }))}

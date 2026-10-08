@@ -104,7 +104,7 @@ export default function VisitCreatePage() {
       <form onSubmit={handleSubmit} className="space-y-3 rounded-xl border bg-card p-6 shadow-sm">
         <div className="grid gap-3 sm:grid-cols-2">
           <div>
-            <Label className="text-xs">Técnico *</Label>
+            <Label className="text-xs">Operador *</Label>
             <Select value={form.technician} onValueChange={(v) => set('technician', v)}>
               <SelectTrigger className="h-9">
                 <SelectValue placeholder="Selecione" />

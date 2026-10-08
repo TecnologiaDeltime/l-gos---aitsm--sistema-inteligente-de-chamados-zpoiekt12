@@ -105,13 +105,13 @@ export default function VisitReportsPage() {
       'relatorio-visitas.csv',
       filtered.map((v) => ({
         Data: v.scheduled_date || '',
-        Técnico: techs.find((t) => t.id === v.technician)?.name || '',
+        Operador: techs.find((t) => t.id === v.technician)?.name || '',
         Status: v.status,
         Tipo: v.appointment_type || '',
         KM: v.calculated_mileage || 0,
         Endereço: v.client_address || '',
       })),
-      ['Data', 'Técnico', 'Status', 'Tipo', 'KM', 'Endereço'],
+      ['Data', 'Operador', 'Status', 'Tipo', 'KM', 'Endereço'],
     )
   }
 
@@ -206,7 +206,7 @@ export default function VisitReportsPage() {
         </Card>
         <Card>
           <CardHeader>
-            <CardTitle className="text-sm">Por Técnico</CardTitle>
+            <CardTitle className="text-sm">Por Operador</CardTitle>
           </CardHeader>
           <CardContent>
             <ChartContainer config={config} className="h-[200px]">

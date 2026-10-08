@@ -100,7 +100,7 @@ export default function KmRatesPage() {
                 <tr>
                   <th className="p-3">R$/KM</th>
                   <th className="p-3">Veículo</th>
-                  <th className="p-3">Técnico</th>
+                  <th className="p-3">Operador</th>
                   <th className="p-3">Cliente</th>
                   <th className="p-3">Distância</th>
                   <th className="p-3">Vigência</th>
@@ -185,7 +185,7 @@ export default function KmRatesPage() {
               </Select>
             </div>
             <div>
-              <Label className="text-xs">Técnico</Label>
+              <Label className="text-xs">Operador</Label>
               <Select
                 value={form.technician}
                 onValueChange={(v) => setForm({ ...form, technician: v })}

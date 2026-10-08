@@ -164,8 +164,8 @@ export default function SlaGoalsPage() {
   const handleSaveGoal = async () => {
     if (!formTechId) {
       toast({
-        title: 'Técnico obrigatório',
-        description: 'Selecione um técnico para definir as metas.',
+        title: 'Operador obrigatório',
+        description: 'Selecione um operador para definir as metas.',
         variant: 'destructive',
       })
       return
@@ -207,7 +207,7 @@ export default function SlaGoalsPage() {
         if (existing) {
           // Atualiza a existente em vez de duplicar
           await updateTechnicianGoal(existing.id, payload)
-          toast({ title: 'Meta do técnico atualizada com sucesso' })
+          toast({ title: 'Meta do operador atualizada com sucesso' })
         } else {
           await createTechnicianGoal(payload)
           toast({ title: 'Nova meta cadastrada com sucesso' })
@@ -284,11 +284,11 @@ export default function SlaGoalsPage() {
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div>
           <h2 className="text-xl font-bold flex items-center gap-2">
-            <Target className="h-5 w-5 text-blue-600" /> Gestão de Metas por Técnico
+            <Target className="h-5 w-5 text-blue-600" /> Gestão de Metas por Operador
           </h2>
           <p className="text-xs text-slate-500">
             Defina e ajuste as metas individuais de SLA de Resposta, SLA de Solução e Efetividade de
-            Resolução para cada técnico (vigência geral contínua ou mensal).
+            Resolução para cada operador (vigência geral contínua ou mensal).
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -311,7 +311,7 @@ export default function SlaGoalsPage() {
         <Card className="border border-slate-200 dark:border-slate-800">
           <CardContent className="p-4 flex items-center justify-between">
             <div>
-              <p className="text-xs text-slate-500 font-medium">Técnicos Elegíveis</p>
+              <p className="text-xs text-slate-500 font-medium">Operadores Elegíveis</p>
               <p className="text-2xl font-bold">{technicians.length}</p>
             </div>
             <div className="p-2.5 rounded-lg bg-blue-50 dark:bg-blue-950/40 text-blue-600">
@@ -354,10 +354,10 @@ export default function SlaGoalsPage() {
         <CardHeader className="pb-3">
           <CardTitle className="text-sm font-semibold flex items-center gap-2">
             <Target className="h-4 w-4 text-emerald-600" />
-            Metas Vigentes por Técnico
+            Metas Vigentes por Operador
           </CardTitle>
           <CardDescription className="text-xs">
-            Visão consolidada da vigência contínua e metas mensais configuradas para cada técnico.
+            Visão consolidada da vigência contínua e metas mensais configuradas para cada operador.
           </CardDescription>
         </CardHeader>
         <CardContent className="p-0">
@@ -368,13 +368,13 @@ export default function SlaGoalsPage() {
               ))}
             </div>
           ) : technicians.length === 0 ? (
-            <p className="p-8 text-center text-sm text-slate-500">Nenhum técnico encontrado.</p>
+            <p className="p-8 text-center text-sm text-slate-500">Nenhum operador encontrado.</p>
           ) : (
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="text-xs">Técnico</TableHead>
+                    <TableHead className="text-xs">Operador</TableHead>
                     <TableHead className="text-xs text-center">Vigência Geral</TableHead>
                     <TableHead className="text-xs text-center">SLA Resposta</TableHead>
                     <TableHead className="text-xs text-center">SLA Solução</TableHead>
@@ -461,7 +461,7 @@ export default function SlaGoalsPage() {
                 <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-slate-400" />
                 <Input
                   type="text"
-                  placeholder="Buscar técnico..."
+                  placeholder="Buscar operador..."
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   className="pl-8 h-8 text-xs w-44"
@@ -497,7 +497,7 @@ export default function SlaGoalsPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="text-xs">Técnico</TableHead>
+                    <TableHead className="text-xs">Operador</TableHead>
                     <TableHead className="text-xs text-center">Tipo de Vigência</TableHead>
                     <TableHead className="text-xs text-center">Período</TableHead>
                     <TableHead className="text-xs text-center">SLA Resposta (%)</TableHead>
@@ -514,7 +514,7 @@ export default function SlaGoalsPage() {
                     return (
                       <TableRow key={g.id}>
                         <TableCell className="text-xs font-medium">
-                          {tech?.name || tech?.email || 'Técnico não identificado'}
+                          {tech?.name || tech?.email || 'Operador não identificado'}
                         </TableCell>
                         <TableCell className="text-xs text-center">
                           {g.period_type === 'geral' ? (
@@ -585,21 +585,21 @@ export default function SlaGoalsPage() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Target className="h-5 w-5 text-blue-600" />
-              {editingGoal ? 'Editar Meta do Técnico' : 'Definir Meta do Técnico'}
+              {editingGoal ? 'Editar Meta do Operador' : 'Definir Meta do Operador'}
             </DialogTitle>
             <DialogDescription className="text-xs">
               Informe as metas de SLA e efetividade (0 a 100%). Valores são exibidos estritamente em
-              percentual no painel do técnico.
+              percentual no painel do operador.
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 py-2">
-            {/* Técnico */}
+            {/* Operador */}
             <div className="space-y-1.5">
-              <Label className="text-xs">Técnico</Label>
+              <Label className="text-xs">Operador</Label>
               <Select value={formTechId} onValueChange={setFormTechId} disabled={!!editingGoal}>
                 <SelectTrigger className="text-xs">
-                  <SelectValue placeholder="Selecione o técnico" />
+                  <SelectValue placeholder="Selecione o operador" />
                 </SelectTrigger>
                 <SelectContent>
                   {technicians.map((t) => (

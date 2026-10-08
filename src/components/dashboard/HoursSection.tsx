@@ -25,9 +25,9 @@ type Dimension = 'client' | 'operator' | 'contract' | 'technician' | 'total'
 const DIM_LABELS: Record<Dimension, string> = {
   total: 'Total geral',
   client: 'Por cliente',
-  operator: 'Por operador',
+  operator: 'Por autor',
   contract: 'Por contrato',
-  technician: 'Por técnico',
+  technician: 'Por operador',
 }
 
 export function HoursSection({

@@ -72,7 +72,7 @@ export function VisitsSection({ data }: VisitsSectionProps) {
               <tr>
                 <th className="p-2">Data Agendada</th>
                 <th className="p-2">Data Realizada</th>
-                <th className="p-2">Técnico</th>
+                <th className="p-2">Operador</th>
                 <th className="p-2">Cliente</th>
                 <th className="p-2">Chamado</th>
                 <th className="p-2">Status</th>

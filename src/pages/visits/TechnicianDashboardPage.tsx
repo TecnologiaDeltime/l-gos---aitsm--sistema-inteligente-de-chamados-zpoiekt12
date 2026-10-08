@@ -563,7 +563,7 @@ export default function TechnicianDashboardPage() {
       {/* Header com Boas-vindas e Filtro por Mês */}
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
-          <h2 className="text-xl font-bold tracking-tight">Painel do Técnico</h2>
+          <h2 className="text-xl font-bold tracking-tight">Painel do Operador</h2>
           <p className="text-xs text-slate-500">
             Acompanhamento de horas de interações, métricas de atendimento, visitas e cumprimento de
             metas

@@ -75,7 +75,7 @@ export function VisitScheduleDialog({
 
   const handleSubmit = async () => {
     if (!technician || !date || !company) {
-      toast({ title: 'Preencha técnico, cliente e data', variant: 'destructive' })
+      toast({ title: 'Preencha operador, cliente e data', variant: 'destructive' })
       return
     }
     try {
@@ -116,7 +116,7 @@ export function VisitScheduleDialog({
         <div className="space-y-3">
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <Label className="text-xs">Técnico *</Label>
+              <Label className="text-xs">Operador *</Label>
               <Select value={technician} onValueChange={setTechnician}>
                 <SelectTrigger className="h-9">
                   <SelectValue placeholder="Selecione" />

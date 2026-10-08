@@ -96,10 +96,10 @@ export default function SatisfactionDashboard() {
       <div className="flex flex-wrap gap-2">
         <Select value={techFilter} onValueChange={setTechFilter}>
           <SelectTrigger className="w-40">
-            <SelectValue placeholder="Técnico" />
+            <SelectValue placeholder="Operador" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">Todos Técnicos</SelectItem>
+            <SelectItem value="all">Todos Operadores</SelectItem>
             {users.map((u) => (
               <SelectItem key={u.id} value={u.id}>
                 {u.name}
@@ -150,7 +150,7 @@ export default function SatisfactionDashboard() {
       <div className="grid gap-4 md:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle className="text-sm">Nota por Técnico</CardTitle>
+            <CardTitle className="text-sm">Nota por Operador</CardTitle>
           </CardHeader>
           <CardContent>
             <ChartContainer config={chartConfig} className="h-[200px]">

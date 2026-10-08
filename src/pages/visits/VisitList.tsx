@@ -97,10 +97,10 @@ export default function VisitList() {
         </Select>
         <Select value={techFilter} onValueChange={setTechFilter}>
           <SelectTrigger className="w-48 h-8 text-xs">
-            <SelectValue placeholder="Técnico" />
+            <SelectValue placeholder="Operador" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">Todos Técnicos</SelectItem>
+            <SelectItem value="all">Todos Operadores</SelectItem>
             {technicians.map((t) => (
               <SelectItem key={t.id} value={t.id}>
                 {t.name}
@@ -172,7 +172,7 @@ export default function VisitList() {
                       : '-'}{' '}
                     {v.scheduled_time || ''}
                   </div>
-                  <div>Técnico: {v.expand?.technician?.name || '-'}</div>
+                  <div>Operador: {v.expand?.technician?.name || '-'}</div>
                   <div>{v.visit_reason || ''}</div>
                 </div>
                 {v.calculated_mileage ? (

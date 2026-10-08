@@ -63,7 +63,7 @@ export default function TeamDetail() {
                 <SelectContent>
                   <SelectItem value="admin">Administrador</SelectItem>
                   <SelectItem value="gestor">Gestor</SelectItem>
-                  <SelectItem value="tecnico">Técnico/Analista</SelectItem>
+                  <SelectItem value="tecnico">Operador/Analista</SelectItem>
                   <SelectItem value="cliente_solicitante">Cliente Solicitante</SelectItem>
                 </SelectContent>
               </Select>

@@ -122,7 +122,7 @@ export default function Layout() {
       icon: TrendingUp,
       show: permissions.canViewReports,
     },
-    { label: 'Agenda Técnica', path: '/agenda-tecnica', icon: CalendarClock, show: true },
+    { label: 'Agenda de Operadores', path: '/agenda-tecnica', icon: CalendarClock, show: true },
     { label: 'Visitas Técnicas', path: '/visits', icon: MapPin, show: true },
     {
       label: 'Dashboard de Visitas',
@@ -130,7 +130,7 @@ export default function Layout() {
       icon: MapPin,
       show: permissions.canViewReports,
     },
-    { label: 'Painel do Técnico', path: '/visits/technician-dashboard', icon: Gauge, show: true },
+    { label: 'Painel do Operador', path: '/visits/technician-dashboard', icon: Gauge, show: true },
     {
       label: 'Pesquisa de Satisfação',
       path: '/satisfaction',
@@ -364,7 +364,7 @@ export default function Layout() {
     { label: 'Checklists de Visita', path: '/visitas-n2/checklists', icon: ListTree, show: true },
     { label: 'Visitas Recorrentes', path: '/visitas-n2/recurring', icon: RefreshCw, show: true },
     {
-      label: 'Disponibilidade de Técnicos',
+      label: 'Disponibilidade de Operadores',
       path: '/visitas-n2/availability',
       icon: Clock,
       show: true,

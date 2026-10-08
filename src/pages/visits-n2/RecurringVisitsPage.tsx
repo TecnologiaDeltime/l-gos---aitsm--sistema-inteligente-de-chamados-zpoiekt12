@@ -152,7 +152,7 @@ export default function RecurringVisitsPage() {
               </Select>
             </div>
             <div>
-              <Label className="text-xs">Técnico</Label>
+              <Label className="text-xs">Operador</Label>
               <Select
                 value={form.technician}
                 onValueChange={(v) => setForm({ ...form, technician: v })}

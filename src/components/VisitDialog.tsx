@@ -90,7 +90,7 @@ export function VisitDialog({
         </DialogHeader>
         <div className="space-y-3">
           <div>
-            <Label className="text-xs">Técnico *</Label>
+            <Label className="text-xs">Operador *</Label>
             <Select value={technician} onValueChange={setTechnician}>
               <SelectTrigger>
                 <SelectValue placeholder="Selecione" />

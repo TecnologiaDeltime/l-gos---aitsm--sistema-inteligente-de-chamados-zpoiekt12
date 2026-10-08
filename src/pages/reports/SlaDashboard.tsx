@@ -174,7 +174,7 @@ export default function SlaDashboard() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-sm">SLA por Técnico</CardTitle>
+          <CardTitle className="text-sm">SLA por Operador</CardTitle>
         </CardHeader>
         <CardContent className="p-0">
           {loading ? (
@@ -188,7 +188,7 @@ export default function SlaDashboard() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="text-xs">Técnico</TableHead>
+                    <TableHead className="text-xs">Operador</TableHead>
                     <TableHead className="text-xs text-center">Total</TableHead>
                     <TableHead className="text-xs text-center">SLA Resposta</TableHead>
                     <TableHead className="text-xs text-center">Meta Resp.</TableHead>

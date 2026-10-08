@@ -86,7 +86,7 @@ export default function VisitManagerDashboard() {
 
   const kpis = [
     {
-      label: 'Técnicos Ativos',
+      label: 'Operadores Ativos',
       value: activeTechs.length,
       icon: Users,
       color: 'text-blue-600',
@@ -225,7 +225,7 @@ export default function VisitManagerDashboard() {
         <h2 className="text-xl font-bold">Dashboard de Gestão de Visitas</h2>
         <Link to="/sla-goals">
           <Button size="sm" variant="outline" className="text-xs">
-            <Target className="h-4 w-4 mr-1.5 text-blue-600" /> Gerenciar Metas dos Técnicos
+            <Target className="h-4 w-4 mr-1.5 text-blue-600" /> Gerenciar Metas dos Operadores
           </Button>
         </Link>
       </div>
@@ -251,7 +251,7 @@ export default function VisitManagerDashboard() {
       <div className="grid gap-4 md:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle className="text-sm">Status dos Técnicos</CardTitle>
+            <CardTitle className="text-sm">Status dos Operadores</CardTitle>
           </CardHeader>
           <CardContent className="space-y-1">
             {Object.entries(techStatusCount).map(([status, count]) => (
@@ -292,7 +292,7 @@ export default function VisitManagerDashboard() {
           <div>
             <CardTitle className="text-sm font-semibold flex items-center gap-2">
               <Award className="h-4 w-4 text-amber-500" />
-              Ranking de Metas vs. Realizado por Técnico
+              Ranking de Metas vs. Realizado por Operador
             </CardTitle>
             <p className="text-xs text-slate-500 mt-0.5">
               Comparativo de atingimento dos 3 percentuais (SLA Resposta, SLA Solução, Efetividade)
@@ -311,7 +311,7 @@ export default function VisitManagerDashboard() {
               <thead className="bg-slate-50 dark:bg-slate-800/50 border-y">
                 <tr>
                   <th className="p-3">Posição</th>
-                  <th className="p-3">Técnico</th>
+                  <th className="p-3">Operador</th>
                   <th className="p-3 text-center">SLA Resposta (Real vs Meta)</th>
                   <th className="p-3 text-center">SLA Solução (Real vs Meta)</th>
                   <th className="p-3 text-center">Efetividade (Real vs Meta)</th>
@@ -322,7 +322,7 @@ export default function VisitManagerDashboard() {
                 {techPerformanceRanking.length === 0 ? (
                   <tr>
                     <td colSpan={6} className="p-6 text-center text-slate-500">
-                      Nenhum técnico ativo com metas registradas.
+                      Nenhum operador ativo com metas registradas.
                     </td>
                   </tr>
                 ) : (
@@ -405,7 +405,7 @@ export default function VisitManagerDashboard() {
               <thead className="bg-slate-50 border-y">
                 <tr>
                   <th className="p-3">Horário</th>
-                  <th className="p-3">Técnico</th>
+                  <th className="p-3">Operador</th>
                   <th className="p-3">Cliente</th>
                   <th className="p-3">Endereço</th>
                   <th className="p-3">Status</th>

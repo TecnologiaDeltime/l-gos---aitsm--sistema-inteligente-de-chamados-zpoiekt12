@@ -125,14 +125,14 @@ export default function TechnicalAgenda() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between flex-wrap gap-2">
-        <h2 className="text-lg font-bold">Agenda Técnica</h2>
+        <h2 className="text-lg font-bold">Agenda de Operadores</h2>
         <div className="flex gap-2 flex-wrap">
           <Select value={techFilter} onValueChange={setTechFilter}>
             <SelectTrigger className="w-40 h-8 text-xs">
-              <SelectValue placeholder="Técnico" />
+              <SelectValue placeholder="Operador" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Todos Técnicos</SelectItem>
+              <SelectItem value="all">Todos Operadores</SelectItem>
               {activeTechs.map((t) => (
                 <SelectItem key={t.id} value={t.id}>
                   {t.name}
@@ -192,7 +192,7 @@ export default function TechnicalAgenda() {
             <thead>
               <tr>
                 <th className="border bg-slate-50 p-2 text-xs font-semibold text-slate-600 w-32">
-                  Técnico
+                  Operador
                 </th>
                 {weekDays.map((d, i) => (
                   <th

@@ -1253,7 +1253,7 @@ export default function TicketDetail() {
                     <MapPin className="inline h-3 w-3" /> {v.client_address || '-'}
                   </p>
                   <p className="text-muted-foreground">
-                    Técnico: {v.expand?.technician?.name || '-'}
+                    Operador: {v.expand?.technician?.name || '-'}
                   </p>
                   {v.materials && <p className="text-muted-foreground">Materiais: {v.materials}</p>}
                 </div>
@@ -1508,7 +1508,7 @@ export default function TicketDetail() {
               {ticket.expand?.company?.trade_name || 'N/A'}
             </div>
             <div className="flex items-center gap-2 text-muted-foreground">
-              <User className="h-4 w-4 text-muted-foreground" /> Técnico:{' '}
+              <User className="h-4 w-4 text-muted-foreground" /> Operador:{' '}
               {ticket.expand?.assigned_to?.name || 'Não atribuído'}
             </div>
             <div className="flex items-center gap-2 text-muted-foreground">
