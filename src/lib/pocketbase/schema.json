@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-08T21:21:56.010Z",
+  "generatedAt": "2026-10-08T21:29:27.937Z",
   "collections": [
     {
       "name": "users",
@@ -9148,6 +9148,234 @@
         }
       ],
       "indexes": []
+    },
+    {
+      "name": "technician_goals",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != \"\"",
+        "view": "@request.auth.id != \"\"",
+        "create": "@request.auth.role = \"admin\" || @request.auth.role = \"gestor\"",
+        "update": "@request.auth.role = \"admin\" || @request.auth.role = \"gestor\"",
+        "delete": "@request.auth.role = \"admin\" || @request.auth.role = \"gestor\""
+      },
+      "fields": [
+        {
+          "name": "technician",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "period_type",
+          "type": "select",
+          "required": true,
+          "system": false,
+          "selectValues": ["geral", "mensal"]
+        },
+        {
+          "name": "period_month",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "response_sla_target",
+          "type": "number",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "solution_sla_target",
+          "type": "number",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "resolution_effectiveness_target",
+          "type": "number",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "notes",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": [
+        "CREATE INDEX idx_techgoals_tech ON technician_goals (technician)",
+        "CREATE INDEX idx_techgoals_period ON technician_goals (technician, period_type, period_month)"
+      ]
+    },
+    {
+      "name": "monthly_report_schedules",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != \"\"",
+        "view": "@request.auth.id != \"\"",
+        "create": "@request.auth.role = \"admin\" || @request.auth.role = \"gestor\"",
+        "update": "@request.auth.role = \"admin\" || @request.auth.role = \"gestor\"",
+        "delete": "@request.auth.role = \"admin\" || @request.auth.role = \"gestor\""
+      },
+      "fields": [
+        {
+          "name": "company",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "companies"
+        },
+        {
+          "name": "enabled",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "send_day",
+          "type": "number",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "use_focal_points",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "manual_recipients",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "last_sent_at",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "last_sent_month",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created_by",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": ["CREATE UNIQUE INDEX idx_rep_sched_company ON monthly_report_schedules (company)"]
+    },
+    {
+      "name": "monthly_report_send_logs",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != \"\"",
+        "view": "@request.auth.id != \"\"",
+        "create": "@request.auth.role = \"admin\" || @request.auth.role = \"gestor\"",
+        "update": "@request.auth.role = \"admin\" || @request.auth.role = \"gestor\"",
+        "delete": "@request.auth.role = \"admin\" || @request.auth.role = \"gestor\""
+      },
+      "fields": [
+        {
+          "name": "company",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "companies"
+        },
+        {
+          "name": "report_month",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "recipients",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "status",
+          "type": "select",
+          "required": true,
+          "system": false,
+          "selectValues": ["sucesso", "falha"]
+        },
+        {
+          "name": "error_message",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "sent_at",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "triggered_by",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": [
+        "CREATE INDEX idx_replogs_company ON monthly_report_send_logs (company)",
+        "CREATE INDEX idx_replogs_sent_at ON monthly_report_send_logs (sent_at)"
+      ]
     }
   ]
 }

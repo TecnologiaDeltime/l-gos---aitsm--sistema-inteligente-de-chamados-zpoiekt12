@@ -32,7 +32,8 @@ import {
 import { getVisits, TechnicalVisitRecord } from '@/services/technical-visits'
 import { getOperatorInteractions, TicketInteractionRecord } from '@/services/ticket-interactions'
 import { getTickets, TicketRecord } from '@/services/tickets'
-import { getSlaGoals, SlaGoalRecord } from '@/services/sla-goals'
+import { getTechnicianGoals, type TechnicianGoalRecord } from '@/services/technician-goals'
+import { getSlaGoals, type SlaGoalRecord } from '@/services/sla-goals'
 import { useRealtime } from '@/hooks/use-realtime'
 import { formatHours, formatMinutes } from '@/lib/duration'
 
@@ -79,6 +80,7 @@ export default function TechnicianDashboardPage() {
   const [interactions, setInteractions] = useState<TicketInteractionRecord[]>([])
   const [tickets, setTickets] = useState<TicketRecord[]>([])
   const [goals, setGoals] = useState<SlaGoalRecord[]>([])
+  const [techGoals, setTechGoals] = useState<TechnicianGoalRecord[]>([])
   const [loading, setLoading] = useState(true)
 
   // Filtro de mês: por padrão sempre traga o mês atual no filtro.
@@ -93,16 +95,18 @@ export default function TechnicianDashboardPage() {
     if (!user) return
     setLoading(true)
     try {
-      const [allVisits, allInteractions, allTickets, allGoals] = await Promise.all([
+      const [allVisits, allInteractions, allTickets, allGoals, allTechGoals] = await Promise.all([
         getVisits(`technician = "${user.id}"`),
         getOperatorInteractions(user.id),
         getTickets(`assigned_to = "${user.id}"`),
         getSlaGoals(),
+        getTechnicianGoals(`technician = "${user.id}"`),
       ])
       setVisits(allVisits)
       setInteractions(allInteractions)
       setTickets(allTickets)
       setGoals(allGoals)
+      setTechGoals(allTechGoals)
     } catch {
       /* intentionally ignored */
     } finally {
@@ -118,6 +122,7 @@ export default function TechnicianDashboardPage() {
   useRealtime('ticket_interactions', () => loadData())
   useRealtime('tickets', () => loadData())
   useRealtime('sla_goals', () => loadData())
+  useRealtime('technician_goals', () => loadData())
 
   // Data de hoje (local)
   const todayDate = new Date()
@@ -409,12 +414,33 @@ export default function TechnicianDashboardPage() {
 
   // ==============================================================
   // 5. Metas do Técnico mostrando SOMENTE os percentuais de atuação dele
-  // Metas cadastradas em sla_goals + percentual atingido pelo técnico
+  // Metas cadastradas em technician_goals (mês do filtro ou vigência geral) com fallback
   // ==============================================================
   const technicianGoals = useMemo(() => {
     if (!user) return []
 
-    const userGoals = goals.filter((g) => g.technician === user.id)
+    // Identifica mês selecionado no filtro (formato YYYY-MM)
+    const selectedMonthKey = `${selectedMonth.year}-${String(selectedMonth.month + 1).padStart(2, '0')}`
+
+    // 1. Prioridade: meta específica para o mês selecionado
+    const monthSpecificGoal = techGoals.find(
+      (g) => g.period_type === 'mensal' && g.period_month === selectedMonthKey,
+    )
+    // 2. Segunda opção: meta de vigência geral (contínua)
+    const generalGoal = techGoals.find((g) => g.period_type === 'geral')
+
+    const activeCustomGoal = monthSpecificGoal || generalGoal
+
+    // Fallback legado (sla_goals) se não houver technician_goals
+    const userLegacyGoals = goals.filter((g) => g.technician === user.id)
+    const legacyGoalResponse = userLegacyGoals.find((g) => g.sla_type === 'Resposta')
+    const legacyGoalSolution = userLegacyGoals.find((g) => g.sla_type === 'Solução')
+
+    const targetResp =
+      activeCustomGoal?.response_sla_target ?? legacyGoalResponse?.target_percentage ?? 90
+    const targetSol =
+      activeCustomGoal?.solution_sla_target ?? legacyGoalSolution?.target_percentage ?? 85
+    const targetEff = activeCustomGoal?.resolution_effectiveness_target ?? 80
 
     // Calcula cumprimento de SLA do técnico nos chamados atribuídos a ele
     // Usa a janela do filtro selecionado (ou últimos 30 dias se sem filtro)
@@ -443,10 +469,6 @@ export default function TechnicianDashboardPage() {
     const actualResponsePct = responseTotal > 0 ? (responseMet / responseTotal) * 100 : 0
     const actualSolutionPct = solutionTotal > 0 ? (solutionMet / solutionTotal) * 100 : 0
 
-    // Meta cadastrada para resposta e solução
-    const goalResponse = userGoals.find((g) => g.sla_type === 'Resposta')
-    const goalSolution = userGoals.find((g) => g.sla_type === 'Solução')
-
     // Atuação geral: percentual de resolução no período
     const resolutionPct =
       relevantTickets.length > 0
@@ -464,8 +486,7 @@ export default function TechnicianDashboardPage() {
       colorClass: string
     }> = []
 
-    // Meta de SLA de Resposta
-    const targetResp = goalResponse?.target_percentage ?? 90
+    // 1. Meta de SLA de Resposta
     const respProgress =
       targetResp > 0 ? Math.min(100, (actualResponsePct / targetResp) * 100) : 100
     list.push({
@@ -480,8 +501,7 @@ export default function TechnicianDashboardPage() {
       colorClass: actualResponsePct >= targetResp ? 'text-emerald-600' : 'text-amber-600',
     })
 
-    // Meta de SLA de Solução
-    const targetSol = goalSolution?.target_percentage ?? 85
+    // 2. Meta de SLA de Solução
     const solProgress = targetSol > 0 ? Math.min(100, (actualSolutionPct / targetSol) * 100) : 100
     list.push({
       title: 'SLA de Solução',
@@ -495,21 +515,22 @@ export default function TechnicianDashboardPage() {
       colorClass: actualSolutionPct >= targetSol ? 'text-emerald-600' : 'text-amber-600',
     })
 
-    // Taxa de Efetividade / Resolução de Chamados
+    // 3. Taxa de Efetividade / Resolução de Chamados
+    const effProgress = targetEff > 0 ? Math.min(100, (resolutionPct / targetEff) * 100) : 100
     list.push({
       title: 'Efetividade de Resolução',
       actualPct: resolutionPct,
-      targetPct: 80,
-      progressPct: Math.min(100, (resolutionPct / 80) * 100),
+      targetPct: targetEff,
+      progressPct: effProgress,
       statusText:
-        resolutionPct >= 80
+        resolutionPct >= targetEff
           ? 'Meta atingida'
-          : `${(80 - resolutionPct).toFixed(1)}% abaixo da meta`,
-      colorClass: resolutionPct >= 80 ? 'text-emerald-600' : 'text-indigo-600',
+          : `${(targetEff - resolutionPct).toFixed(1)}% abaixo da meta`,
+      colorClass: resolutionPct >= targetEff ? 'text-emerald-600' : 'text-indigo-600',
     })
 
     return list
-  }, [user, goals, filteredTickets, tickets])
+  }, [user, techGoals, goals, filteredTickets, tickets, selectedMonth])
 
   // Controles de navegação de mês
   const handlePrevMonth = () => {

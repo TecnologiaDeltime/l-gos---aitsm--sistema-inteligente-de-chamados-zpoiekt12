@@ -22,6 +22,7 @@ import {
   TrendingDown,
   Minus,
   LineChart as LineChartIcon,
+  Mail,
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -63,6 +64,7 @@ import {
   LabelList,
 } from 'recharts'
 import { PrintChartContainer } from '@/components/reports/PrintChartContainer'
+import { MonthlyReportScheduleDialog } from '@/components/reports/MonthlyReportScheduleDialog'
 
 const CHART_COLORS = [
   '#2563eb', // blue-600
@@ -136,6 +138,7 @@ export default function MonthlyClientReportPage() {
   const [loadingCompanies, setLoadingCompanies] = useState(true)
   const [loadingReport, setLoadingReport] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [scheduleDialogOpen, setScheduleDialogOpen] = useState(false)
 
   // Carrega empresas
   useEffect(() => {
@@ -484,9 +487,17 @@ export default function MonthlyClientReportPage() {
             <Button
               variant="outline"
               size="sm"
+              onClick={() => setScheduleDialogOpen(true)}
+              disabled={!companyId}
+              className="border-blue-600 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/40"
+            >
+              <Mail className="h-4 w-4 mr-1.5" /> Envio Automático por E-mail
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
               onClick={handlePrint}
               disabled={loadingReport || !reportData}
-              className="border-blue-600 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/40"
             >
               <Printer className="h-4 w-4 mr-1.5" /> Exportar PDF (ABNT)
             </Button>
@@ -1819,6 +1830,21 @@ export default function MonthlyClientReportPage() {
             </p>
           </div>
         </div>
+      )}
+
+      {/* Diálogo de Envio Automático por E-mail */}
+      {companyId && (
+        <MonthlyReportScheduleDialog
+          open={scheduleDialogOpen}
+          onOpenChange={setScheduleDialogOpen}
+          companyId={companyId}
+          companyName={
+            companies.find((c) => c.id === companyId)?.trade_name ||
+            companies.find((c) => c.id === companyId)?.legal_name ||
+            'Cliente'
+          }
+          currentMonthKey={monthKey}
+        />
       )}
     </div>
   )
