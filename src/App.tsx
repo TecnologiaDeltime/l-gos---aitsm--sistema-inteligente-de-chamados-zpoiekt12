@@ -70,14 +70,10 @@ import ClientExtractionPage from '@/pages/reports/ClientExtractionPage'
 import MonthlyClientReportPage from '@/pages/reports/MonthlyClientReportPage'
 import AutomationList from '@/pages/automations/AutomationList'
 import AutomationEditor from '@/pages/automations/AutomationEditor'
-import AutomationDashboard from '@/pages/automations/AutomationDashboard'
 import ApprovalCenter from '@/pages/approvals/ApprovalCenter'
 import TechnicalAgenda from '@/pages/visits/TechnicalAgenda'
 import VisitManagerDashboard from '@/pages/visits/VisitManagerDashboard'
 import TechnicianDashboardPage from '@/pages/visits/TechnicianDashboardPage'
-import TravelDashboard from '@/pages/visits/TravelDashboard'
-import ReimbursementDashboard from '@/pages/visits/ReimbursementDashboard'
-import OperationalMap from '@/pages/visits/OperationalMap'
 import ChangeDashboard from '@/pages/changes/ChangeDashboard'
 import ChangeList from '@/pages/changes/ChangeList'
 import MyChanges from '@/pages/changes/MyChanges'
@@ -105,7 +101,6 @@ import ProblemSettings from '@/pages/problems/ProblemSettings'
 import VisitCreatePage from '@/pages/visits-n2/VisitCreatePage'
 import MyVisitsPage from '@/pages/visits-n2/MyVisitsPage'
 import VisitDetailPage from '@/pages/visits-n2/VisitDetailPage'
-import TravelEntriesPage from '@/pages/visits-n2/TravelEntriesPage'
 import ExpensesPage from '@/pages/visits-n2/ExpensesPage'
 import ServiceOrdersPage from '@/pages/visits-n2/ServiceOrdersPage'
 import ClientSignaturesPage from '@/pages/visits-n2/ClientSignaturesPage'
@@ -247,15 +242,11 @@ const App = () => (
               <Route path="/horas-clientes" element={<ClientHoursPage />} />
               <Route path="/blocking" element={<BlockingManagement />} />
               <Route path="/automations" element={<AutomationList />} />
-              <Route path="/automations/dashboard" element={<AutomationDashboard />} />
               <Route path="/automations/:id/edit" element={<AutomationEditor />} />
               <Route path="/approval-center" element={<ApprovalCenter />} />
               <Route path="/agenda-tecnica" element={<TechnicalAgenda />} />
               <Route path="/visits/dashboard" element={<VisitManagerDashboard />} />
               <Route path="/visits/technician-dashboard" element={<TechnicianDashboardPage />} />
-              <Route path="/visits/travel-dashboard" element={<TravelDashboard />} />
-              <Route path="/visits/reimbursement-dashboard" element={<ReimbursementDashboard />} />
-              <Route path="/visits/map" element={<OperationalMap />} />
               <Route path="/changes" element={<ChangeDashboard />} />
               <Route path="/changes/list" element={<ChangeList />} />
               <Route path="/changes/new" element={<ChangeCreate />} />
@@ -285,9 +276,7 @@ const App = () => (
               <Route path="/visitas-n2/list" element={<VisitList />} />
               <Route path="/visitas-n2/new" element={<VisitCreatePage />} />
               <Route path="/visitas-n2/my" element={<MyVisitsPage />} />
-              <Route path="/visitas-n2/travel" element={<TravelEntriesPage />} />
               <Route path="/visitas-n2/expenses" element={<ExpensesPage />} />
-              <Route path="/visitas-n2/reimbursements" element={<ReimbursementDashboard />} />
               <Route path="/visitas-n2/service-orders" element={<ServiceOrdersPage />} />
               <Route path="/visitas-n2/signatures" element={<ClientSignaturesPage />} />
               <Route path="/visitas-n2/checklists" element={<VisitChecklistsPage />} />
