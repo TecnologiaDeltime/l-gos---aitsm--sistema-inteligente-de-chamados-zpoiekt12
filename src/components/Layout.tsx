@@ -132,36 +132,12 @@ export default function Layout() {
     },
     { label: 'Painel do Técnico', path: '/visits/technician-dashboard', icon: Gauge, show: true },
     {
-      label: 'Deslocamentos',
-      path: '/visits/travel-dashboard',
-      icon: MapPin,
-      show: permissions.canViewReports,
-    },
-    {
-      label: 'Reembolsos',
-      path: '/visits/reimbursement-dashboard',
-      icon: FileCheck,
-      show: permissions.canViewReports,
-    },
-    {
-      label: 'Mapa Operacional',
-      path: '/visits/map',
-      icon: MapPin,
-      show: permissions.isAdmin || permissions.isGestor,
-    },
-    {
       label: 'Pesquisa de Satisfação',
       path: '/satisfaction',
       icon: Star,
       show: permissions.canViewReports,
     },
     { label: 'Base de Conhecimento', path: '/knowledge-base', icon: BookOpen, show: true },
-    {
-      label: 'Dashboard de Automações',
-      path: '/automations/dashboard',
-      icon: Workflow,
-      show: permissions.canViewAutomations,
-    },
   ]
 
   const clientSubmenuItems = [
@@ -382,9 +358,7 @@ export default function Layout() {
     { label: 'Lista de Visitas', path: '/visitas-n2/list', icon: Ticket, show: true },
     { label: 'Nova Visita', path: '/visitas-n2/new', icon: PlusCircle, show: true },
     { label: 'Minhas Visitas', path: '/visitas-n2/my', icon: User, show: true },
-    { label: 'Deslocamentos', path: '/visitas-n2/travel', icon: MapPin, show: true },
     { label: 'Despesas', path: '/visitas-n2/expenses', icon: FileCheck, show: true },
-    { label: 'Reembolsos', path: '/visitas-n2/reimbursements', icon: DollarSign, show: true },
     { label: 'Ordens de Serviço', path: '/visitas-n2/service-orders', icon: FileText, show: true },
     { label: 'Assinaturas', path: '/visitas-n2/signatures', icon: CheckCheck, show: true },
     { label: 'Checklists de Visita', path: '/visitas-n2/checklists', icon: ListTree, show: true },

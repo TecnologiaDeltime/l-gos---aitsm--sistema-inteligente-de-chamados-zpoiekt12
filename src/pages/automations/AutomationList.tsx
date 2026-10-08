@@ -28,7 +28,7 @@ import {
   TableRow,
   TableCell,
 } from '@/components/ui/table'
-import { Plus, Copy, Edit, Power, History, BarChart3 } from 'lucide-react'
+import { Plus, Copy, Edit, Power, History } from 'lucide-react'
 import {
   getAutomations,
   createAutomation,
@@ -149,9 +149,6 @@ export default function AutomationList() {
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-bold">Central de Automações</h2>
         <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={() => navigate('/automations/dashboard')}>
-            <BarChart3 className="mr-1 h-4 w-4" /> Dashboard
-          </Button>
           {canManageAutomations && (
             <Dialog open={open} onOpenChange={setOpen}>
               <DialogTrigger asChild>
