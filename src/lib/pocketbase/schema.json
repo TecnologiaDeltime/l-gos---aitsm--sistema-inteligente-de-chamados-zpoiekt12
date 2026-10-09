@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-09T00:53:25.561Z",
+  "generatedAt": "2026-10-09T14:07:43.898Z",
   "collections": [
     {
       "name": "users",
@@ -8771,6 +8771,24 @@
           "type": "text",
           "required": false,
           "system": false
+        },
+        {
+          "name": "last_processed_count",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "total_ingested_count",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "total_retained_count",
+          "type": "number",
+          "required": false,
+          "system": false
         }
       ],
       "indexes": []
@@ -9525,6 +9543,112 @@
         "CREATE INDEX idx_email_audit_type ON email_audit_logs (test_type)",
         "CREATE INDEX idx_email_audit_status ON email_audit_logs (status)",
         "CREATE INDEX idx_email_audit_created ON email_audit_logs (created DESC)"
+      ]
+    },
+    {
+      "name": "processed_emails",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != '' && (@request.auth.role = 'admin' || @request.auth.role = 'gestor')",
+        "view": "@request.auth.id != '' && (@request.auth.role = 'admin' || @request.auth.role = 'gestor')",
+        "create": "@request.auth.id != ''",
+        "update": "@request.auth.id != '' && (@request.auth.role = 'admin' || @request.auth.role = 'gestor')",
+        "delete": "@request.auth.id != '' && (@request.auth.role = 'admin' || @request.auth.role = 'gestor')"
+      },
+      "fields": [
+        {
+          "name": "message_id",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "dedupe_hash",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "from_email",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "from_name",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "subject",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "outcome",
+          "type": "select",
+          "required": true,
+          "system": false,
+          "selectValues": ["ticket_created", "ticket_replied", "ticket_retained", "skipped"]
+        },
+        {
+          "name": "ticket_id",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "ticket_number",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "retained_id",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "interaction_id",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "details",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "processed_at",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": [
+        "CREATE UNIQUE INDEX idx_processed_emails_mid ON processed_emails (message_id)",
+        "CREATE INDEX idx_processed_emails_hash ON processed_emails (dedupe_hash)",
+        "CREATE INDEX idx_processed_emails_from ON processed_emails (from_email)",
+        "CREATE INDEX idx_processed_emails_created ON processed_emails (created DESC)"
       ]
     }
   ]
