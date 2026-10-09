@@ -70,6 +70,12 @@ export function usePermissions() {
         }
       case 'profiles':
         return { read: isAdmin, write: isAdmin, hidden: !isAdmin }
+      case 'vault':
+        return {
+          read: isAdmin || isGestor || isTecnico,
+          write: isAdmin || isGestor,
+          hidden: !isAdmin && !isGestor && !isTecnico,
+        }
       case 'sla_dashboard':
         return { read: isTecnico || isClienteGestor, write: isGestor, hidden: false }
       case 'notifications':
@@ -99,6 +105,8 @@ export function usePermissions() {
   // Specific module checks for fast access
   const canManageProfiles = canWriteModule('profiles') || isAdmin
   const canManageOperators = canWriteModule('operators') || isAdmin
+  const canAccessVault = canReadModule('vault') || isAdmin || isGestor
+  const canManageVault = canWriteModule('vault') || isAdmin
   const canManageClients = canWriteModule('clients')
   const canManageContracts = canWriteModule('clients')
   const canManageTeam = canWriteModule('operators') || isAdmin || isGestor
@@ -150,5 +158,7 @@ export function usePermissions() {
     canPublishAutomations,
     canViewAutomations,
     canTestAutomations,
+    canAccessVault,
+    canManageVault,
   }
 }

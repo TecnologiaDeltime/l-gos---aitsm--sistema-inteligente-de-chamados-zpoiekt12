@@ -20,6 +20,7 @@ export type ModuleKey =
   | 'sla_dashboard'
   | 'notifications'
   | 'time_tracking'
+  | 'vault'
 
 export interface ModuleDefinition {
   key: ModuleKey
@@ -112,6 +113,12 @@ export const SYSTEM_MODULES: ModuleDefinition[] = [
     key: 'profiles',
     label: 'Perfis de Acesso',
     description: 'Definição de perfis e matriz de permissões do sistema',
+    category: 'Administração',
+  },
+  {
+    key: 'vault',
+    label: 'Cofre de Senhas',
+    description: 'Armazenamento seguro, controle por perfil de operador e auditoria de credenciais',
     category: 'Administração',
   },
 ]

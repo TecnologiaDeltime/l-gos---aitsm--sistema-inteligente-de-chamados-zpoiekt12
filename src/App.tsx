@@ -91,6 +91,7 @@ import ProblemList from '@/pages/problems/ProblemList'
 import ProblemCreate from '@/pages/problems/ProblemCreate'
 import ProblemDetail from '@/pages/problems/ProblemDetail'
 import MyProblems from '@/pages/problems/MyProblems'
+import VaultPage from '@/pages/vault/VaultPage'
 import ProblemInvestigation from '@/pages/problems/ProblemInvestigation'
 import ProblemEffectivenessAnalysis from '@/pages/problems/ProblemEffectivenessAnalysis'
 import ProblemPending from '@/pages/problems/ProblemPending'
@@ -233,6 +234,14 @@ const App = () => (
               <Route path="/settings" element={<SettingsPage />} />
               <Route path="/settings/sla" element={<SlaSettings />} />
               <Route path="/settings/ticket-templates" element={<TicketTemplates />} />
+              <Route
+                path="/vault"
+                element={
+                  <ProtectedRoute requiredModule="vault">
+                    <VaultPage />
+                  </ProtectedRoute>
+                }
+              />
               <Route path="/notifications" element={<NotificationsPage />} />
               <Route path="/operator-dashboard" element={<OperatorDashboard />} />
               <Route path="/manager-dashboard" element={<ManagerDashboard />} />

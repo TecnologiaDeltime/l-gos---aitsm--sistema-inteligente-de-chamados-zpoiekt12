@@ -49,6 +49,7 @@ import {
   FileSearch,
   Volume2,
   VolumeX,
+  Lock,
 } from 'lucide-react'
 import { useAuth } from '@/hooks/use-auth'
 import { useTheme } from '@/hooks/use-theme'
@@ -388,12 +389,26 @@ export default function Layout() {
       icon: Shield,
       show: permissions.canReadModule('profiles') || permissions.isAdmin,
     },
+    {
+      label: 'Cofre de Senhas',
+      path: '/vault',
+      icon: Lock,
+      show: permissions.canAccessVault,
+    },
   ]
   const adminGroupVisible =
-    (!permissions.isModuleHidden('operators') || !permissions.isModuleHidden('profiles')) &&
+    (!permissions.isModuleHidden('operators') ||
+      !permissions.isModuleHidden('profiles') ||
+      !permissions.isModuleHidden('vault')) &&
     adminSubmenuItems.some((i) => i.show)
 
   const configuracoesSubmenuItems = [
+    {
+      label: 'Cofre de Senhas',
+      path: '/vault',
+      icon: Lock,
+      show: permissions.canAccessVault,
+    },
     {
       label: 'Caixa de E-mail & IMAP',
       path: '/settings?tab=email',

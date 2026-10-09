@@ -7,9 +7,10 @@ import { Button } from '@/components/ui/button'
 import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
 import { useToast } from '@/hooks/use-toast'
-import { FileText, Bell, Save, Mail, User, Settings, Hourglass } from 'lucide-react'
+import { FileText, Bell, Save, Mail, User, Settings, Hourglass, Lock } from 'lucide-react'
 import { getEmailConfig, saveEmailConfig, EmailConfigRecord } from '@/services/email-config'
 import { ImapEmailSettings } from '@/components/settings/ImapEmailSettings'
+import VaultPage from '@/pages/vault/VaultPage'
 import {
   getVoiceAlertsEnabled,
   setVoiceAlertsEnabled,
@@ -42,13 +43,17 @@ export default function SettingsPage() {
   const permissions = usePermissions()
 
   // Aba ativa de primeiro nível em Configurações
-  // 'email' é a seção própria e independente solicitada
-  const initialTab = searchParams.get('tab') === 'email' ? 'email' : 'general'
-  const [mainTab, setMainTab] = useState<'general' | 'email'>(initialTab)
+  const initialTab =
+    searchParams.get('tab') === 'email'
+      ? 'email'
+      : searchParams.get('tab') === 'vault'
+        ? 'vault'
+        : 'general'
+  const [mainTab, setMainTab] = useState<'general' | 'email' | 'vault'>(initialTab)
 
-  const handleTabChange = (tab: 'general' | 'email') => {
+  const handleTabChange = (tab: 'general' | 'email' | 'vault') => {
     setMainTab(tab)
-    setSearchParams(tab === 'email' ? { tab: 'email' } : {})
+    setSearchParams(tab === 'email' ? { tab: 'email' } : tab === 'vault' ? { tab: 'vault' } : {})
   }
 
   // Sincronizar se o parâmetro de URL mudar
@@ -56,7 +61,9 @@ export default function SettingsPage() {
     const tabFromUrl = searchParams.get('tab')
     if (tabFromUrl === 'email' && mainTab !== 'email') {
       setMainTab('email')
-    } else if (!tabFromUrl && mainTab === 'email') {
+    } else if (tabFromUrl === 'vault' && mainTab !== 'vault') {
+      setMainTab('vault')
+    } else if (!tabFromUrl && (mainTab === 'email' || mainTab === 'vault')) {
       // Se não houver parâmetro mas o usuário clicou no menu geral
     }
   }, [searchParams])
@@ -266,6 +273,21 @@ export default function SettingsPage() {
           <Button
             type="button"
             size="sm"
+            variant={mainTab === 'vault' ? 'default' : 'ghost'}
+            onClick={() => handleTabChange('vault')}
+            className={`h-8 text-xs font-semibold rounded-lg transition-all ${
+              mainTab === 'vault'
+                ? 'bg-amber-600 text-white shadow-sm'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100'
+            }`}
+          >
+            <Lock className="h-3.5 w-3.5 mr-1.5" />
+            Cofre de Senhas
+          </Button>
+
+          <Button
+            type="button"
+            size="sm"
             variant={mainTab === 'email' ? 'default' : 'ghost'}
             onClick={() => handleTabChange('email')}
             className={`h-8 text-xs font-semibold rounded-lg transition-all ${
@@ -279,6 +301,13 @@ export default function SettingsPage() {
           </Button>
         </div>
       </div>
+
+      {/* SEÇÃO 0: COFRE DE SENHAS */}
+      {mainTab === 'vault' && (
+        <div className="space-y-6">
+          <VaultPage embeddedTab />
+        </div>
+      )}
 
       {/* SEÇÃO 1 (INDEPENDENTE): CONEXÃO IMAP REAL & CAIXA DE E-MAIL */}
       {mainTab === 'email' && (

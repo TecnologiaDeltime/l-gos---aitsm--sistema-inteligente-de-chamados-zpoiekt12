@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-09T16:22:10.352Z",
+  "generatedAt": "2026-10-09T20:08:24.811Z",
   "collections": [
     {
       "name": "users",
@@ -9692,6 +9692,233 @@
         "CREATE INDEX idx_processed_emails_hash ON processed_emails (dedupe_hash)",
         "CREATE INDEX idx_processed_emails_from ON processed_emails (from_email)",
         "CREATE INDEX idx_processed_emails_created ON processed_emails (created DESC)"
+      ]
+    },
+    {
+      "name": "vault_credentials",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != \"\"",
+        "view": "@request.auth.id != \"\"",
+        "create": "@request.auth.id != \"\" && (@request.auth.role = \"admin\" || @request.auth.role = \"gestor\")",
+        "update": "@request.auth.id != \"\" && (@request.auth.role = \"admin\" || @request.auth.role = \"gestor\")",
+        "delete": "@request.auth.id != \"\" && (@request.auth.role = \"admin\" || @request.auth.role = \"gestor\")"
+      },
+      "fields": [
+        {
+          "name": "company",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "companies"
+        },
+        {
+          "name": "type",
+          "type": "select",
+          "required": true,
+          "system": false,
+          "selectValues": ["Portal", "Equipamento", "Aplicação"]
+        },
+        {
+          "name": "name",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "environment",
+          "type": "select",
+          "required": true,
+          "system": false,
+          "selectValues": [
+            "Produção",
+            "Homologação",
+            "Teste",
+            "Desenvolvimento",
+            "DR / Contingência"
+          ]
+        },
+        {
+          "name": "url_or_address",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "username",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "password",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "notes",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "allowed_profiles",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "profiles"
+        },
+        {
+          "name": "created_by",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "updated_by",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": [
+        "CREATE INDEX idx_vault_creds_company ON vault_credentials (company)",
+        "CREATE INDEX idx_vault_creds_type ON vault_credentials (type)",
+        "CREATE INDEX idx_vault_creds_env ON vault_credentials (environment)",
+        "CREATE INDEX idx_vault_creds_name ON vault_credentials (name)"
+      ]
+    },
+    {
+      "name": "vault_audit_logs",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != \"\"",
+        "view": "@request.auth.id != \"\"",
+        "create": "@request.auth.id != \"\"",
+        "update": null,
+        "delete": null
+      },
+      "fields": [
+        {
+          "name": "credential",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "vault_credentials"
+        },
+        {
+          "name": "credential_name",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "client_name",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "operator",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "operator_name",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "operator_email",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "action",
+          "type": "select",
+          "required": true,
+          "system": false,
+          "selectValues": [
+            "PASSWORD_VIEWED",
+            "PASSWORD_VIEW_FAILED_AUTH",
+            "PASSWORD_VIEW_DENIED_PROFILE",
+            "CREDENTIAL_CREATED",
+            "CREDENTIAL_UPDATED",
+            "CREDENTIAL_DELETED"
+          ]
+        },
+        {
+          "name": "status",
+          "type": "select",
+          "required": true,
+          "system": false,
+          "selectValues": ["SUCCESS", "DENIED", "FAILED"]
+        },
+        {
+          "name": "reason",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "ip_address",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "user_agent",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "details",
+          "type": "json",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": [
+        "CREATE INDEX idx_vault_audit_op ON vault_audit_logs (operator)",
+        "CREATE INDEX idx_vault_audit_action ON vault_audit_logs (action)",
+        "CREATE INDEX idx_vault_audit_status ON vault_audit_logs (status)",
+        "CREATE INDEX idx_vault_audit_created ON vault_audit_logs (created DESC)"
       ]
     }
   ]
