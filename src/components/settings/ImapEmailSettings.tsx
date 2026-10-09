@@ -177,7 +177,8 @@ export function ImapEmailSettings({
   }
 
   const handleCopyWebhook = () => {
-    const url = `${window.location.origin}/backend/v1/emails/ingest`
+    const baseUrl = (import.meta.env.VITE_POCKETBASE_URL || '').replace(/\/$/, '')
+    const url = `${baseUrl}/backend/v1/emails/ingest`
     navigator.clipboard.writeText(url)
     setCopiedWebhook(true)
     toast({ title: 'URL do Webhook copiada para a área de transferência!' })
@@ -270,6 +271,110 @@ export function ImapEmailSettings({
         {/* ABA 1: PARÂMETROS DA CAIXA */}
         {activeTab === 'config' && (
           <div className="space-y-6">
+            {/* Painel de Status do Último Ciclo da Rotina Automática */}
+            <div className="rounded-xl p-4 border bg-gradient-to-r from-slate-50 to-blue-50/40 dark:from-slate-900/60 dark:to-blue-950/20 border-slate-200 dark:border-slate-800 space-y-3">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-200/80 dark:border-slate-800 pb-3">
+                <div className="flex items-center gap-2">
+                  <span className="flex h-2.5 w-2.5 rounded-full bg-blue-600 animate-ping" />
+                  <span className="text-xs font-bold uppercase tracking-wider text-slate-800 dark:text-slate-200">
+                    Status da Ingestão Automática (Ciclos de 2 min)
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Badge
+                    variant={
+                      (emailConfig as any).last_check_status === 'Sucesso' ||
+                      (emailConfig as any).last_check_status === 'success'
+                        ? 'default'
+                        : (emailConfig as any).last_check_status?.includes('Falha')
+                          ? 'destructive'
+                          : 'secondary'
+                    }
+                    className="text-[11px] font-semibold"
+                  >
+                    Último Ciclo: {(emailConfig as any).last_check_status || 'Aguardando 1º ciclo'}
+                  </Badge>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+                <div className="bg-white/80 dark:bg-slate-900/80 p-2.5 rounded-lg border">
+                  <span className="text-[11px] text-slate-500 block">Última Checagem</span>
+                  <span className="font-semibold text-slate-800 dark:text-slate-200">
+                    {(emailConfig as any).last_check_at
+                      ? new Date((emailConfig as any).last_check_at).toLocaleTimeString('pt-BR')
+                      : 'Nunca'}
+                  </span>
+                </div>
+
+                <div className="bg-white/80 dark:bg-slate-900/80 p-2.5 rounded-lg border">
+                  <span className="text-[11px] text-slate-500 block">Último Lote</span>
+                  <span className="font-semibold text-slate-800 dark:text-slate-200">
+                    {(emailConfig as any).last_processed_count ?? 0} processado(s)
+                  </span>
+                </div>
+
+                <div className="bg-white/80 dark:bg-slate-900/80 p-2.5 rounded-lg border">
+                  <span className="text-[11px] text-slate-500 block">Total Ingeridos</span>
+                  <span className="font-semibold text-emerald-600 dark:text-emerald-400">
+                    {(emailConfig as any).total_ingested_count ?? 0} chamados
+                  </span>
+                </div>
+
+                <div className="bg-white/80 dark:bg-slate-900/80 p-2.5 rounded-lg border">
+                  <span className="text-[11px] text-slate-500 block">Total Retidos</span>
+                  <span className="font-semibold text-amber-600 dark:text-amber-400">
+                    {(emailConfig as any).total_retained_count ?? 0} retidos
+                  </span>
+                </div>
+              </div>
+
+              {(emailConfig as any).last_check_error && (
+                <div className="p-3 rounded-lg bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 text-red-900 dark:text-red-200 text-xs flex items-start gap-2">
+                  <AlertCircle className="h-4 w-4 shrink-0 mt-0.5 text-red-600 dark:text-red-400" />
+                  <div>
+                    <strong className="block font-semibold">
+                      Diagnóstico do Erro no Último Ciclo:
+                    </strong>
+                    <span>{(emailConfig as any).last_check_error}</span>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Guia de Configuração para Microsoft 365 / Office 365 */}
+            <div className="p-4 rounded-xl border border-blue-200 dark:border-blue-900 bg-blue-50/50 dark:bg-blue-950/30 space-y-2 text-xs">
+              <div className="flex items-center gap-2 text-blue-900 dark:text-blue-200 font-bold">
+                <Server className="h-4 w-4 text-blue-600" />
+                <span>Instruções Importantes para Caixas Microsoft 365 (imap.office365.com)</span>
+              </div>
+              <ul className="list-disc pl-5 space-y-1 text-slate-700 dark:text-slate-300 text-[11px]">
+                <li>
+                  <strong>Autenticação Básica vs Senha de Aplicativo:</strong> O Microsoft 365
+                  desabilitou autenticação básica padrão. É obrigatório criar uma{' '}
+                  <em>Senha de Aplicativo (App Password)</em> na conta se a organização utilizar
+                  MFA/2FA, ou conceder acesso IMAP no Microsoft 365 Admin Center.
+                </li>
+                <li>
+                  <strong>Nome da Pasta de Entrada:</strong> O padrão do Office 365 é{' '}
+                  <code>INBOX</code>. Se você utilizar uma pasta personalizada como{' '}
+                  <code>Atendimento</code>, ela deve existir exatamente com essa grafia no webmail
+                  do Outlook. O sistema possui fallback automático para a <code>INBOX</code> caso a
+                  pasta não seja localizada.
+                </li>
+                <li>
+                  <strong>Porta e Criptografia:</strong> Porta <strong>993</strong> com{' '}
+                  <strong>SSL/TLS</strong> direta habilitada.
+                </li>
+                <li>
+                  <strong>Domínios Liberados:</strong> E-mails de remetentes cujo domínio esteja em{' '}
+                  <em>Clientes → Domínios de E-mail</em> geram chamados automaticamente. E-mails de
+                  outros domínios são enviados para <em>Chamados Retidos (/tickets/retained)</em>{' '}
+                  para proteção contra spam.
+                </li>
+              </ul>
+            </div>
+
             {/* Toggle Mestre */}
             <div className="flex items-center justify-between rounded-lg bg-slate-50 dark:bg-slate-900/50 p-4 border border-slate-200 dark:border-slate-800">
               <div className="space-y-0.5">
@@ -508,7 +613,7 @@ export function ImapEmailSettings({
               <div className="flex items-center gap-2">
                 <Input
                   readOnly
-                  value={`${window.location.origin}/backend/v1/emails/ingest`}
+                  value={`${(import.meta.env.VITE_POCKETBASE_URL || '').replace(/\/$/, '')}/backend/v1/emails/ingest`}
                   className="itsm-input bg-slate-50 dark:bg-slate-900 text-xs font-mono"
                 />
                 <Button

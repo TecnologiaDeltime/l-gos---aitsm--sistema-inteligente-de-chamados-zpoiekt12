@@ -3,7 +3,7 @@
 // Pipeline de Ingestão:
 // 1. Lê a configuração salva em `email_config` (se inativo, pula).
 // 2. Conecta ao servidor IMAP real (TLS/SSL direto ou STARTTLS via TCP socket).
-// 3. Autentica e seleciona a pasta configurada (padrão INBOX).
+// 3. Autentica e seleciona a pasta configurada (com fallback inteligente se pasta personalizada não existir).
 // 4. Busca e-mails não lidos (SEARCH UNSEEN / SEARCH ALL).
 // 5. Para cada e-mail:
 //    - Deduplicação estrita via UID / Message-ID / Hash no processed_emails.
@@ -13,16 +13,19 @@
 //        * Se novo chamado: cria Ticket vinculado à empresa do domínio, solicitante, SLA, fila e salva anexos.
 //    - Se NÃO liberado: envia para "Chamados Retidos" (retained_tickets com status Pendente e retention_notified=false).
 //    - Marca o e-mail como lido / move para processed_folder se configurado.
-// 6. Atualiza `email_config` com last_check_at, last_processed_count e histórico em `email_audit_logs`.
+// 6. Atualiza `email_config` com last_check_at, last_check_status, last_check_error, last_processed_count e histórico em `email_audit_logs`.
 
 cronAdd('email_checker_cron', '*/2 * * * *', () => {
+  var config = null
+  var startTime = Date.now()
+
   try {
     var configs = $app.findRecordsByFilter('email_config', 'enabled = true', '-created', 1, 0)
     if (!configs || configs.length === 0) {
       return
     }
 
-    var config = configs[0]
+    config = configs[0]
     var host = config.getString('imap_host')
     var port = config.getInt('imap_port') || 993
     var user = config.getString('imap_user')
@@ -32,13 +35,19 @@ cronAdd('email_checker_cron', '*/2 * * * *', () => {
     var processedFolder = config.getString('processed_folder') || ''
 
     if (!host || !user || !pass) {
+      config.set('last_check_at', new Date().toISOString())
+      config.set('last_check_status', 'Falha')
+      config.set(
+        'last_check_error',
+        'Configuração IMAP incompleta: host, usuário ou senha ausente.',
+      )
+      $app.save(config)
       $app
         .logger()
         .warn('email_checker_cron: Configuração IMAP incompleta (host, user ou senha ausente).')
       return
     }
 
-    var startTime = Date.now()
     var processedCount = 0
     var createdCount = 0
     var repliedCount = 0
@@ -47,7 +56,7 @@ cronAdd('email_checker_cron', '*/2 * * * *', () => {
     var errors = []
 
     // -------------------------------------------------------------
-    // Helpers locais (dentro do callback por exigência da JSVM)
+    // Helpers locais
     // -------------------------------------------------------------
     var base64ToUint8 = function (base64Str) {
       if (!base64Str) return null
@@ -165,12 +174,15 @@ cronAdd('email_checker_cron', '*/2 * * * *', () => {
       try {
         var auditCol = $app.findCollectionByNameOrId('email_audit_logs')
         var rec = new Record(auditCol)
-        rec.set('config', configId)
-        rec.set('action', action)
-        rec.set('status', status)
-        rec.set('message', message)
-        rec.set('processed_count', count || 0)
-        rec.set('duration_ms', durationMs || 0)
+        rec.set('test_type', 'connection_test')
+        rec.set('status', status === 'success' ? 'success' : 'failed')
+        rec.set('host', host)
+        rec.set('port', port)
+        rec.set('user_account', user)
+        rec.set('inbox_folder', inboxFolder)
+        rec.set('encryption', encryption)
+        rec.set('summary_message', message)
+        rec.set('latest_messages_count', count || 0)
         $app.save(rec)
       } catch (err) {
         $app.logger().error('logAudit error', 'err', err.message)
@@ -178,7 +190,7 @@ cronAdd('email_checker_cron', '*/2 * * * *', () => {
     }
 
     // -------------------------------------------------------------
-    // Parser RFC 822 / MIME básico e robusto para JSVM
+    // Parser RFC 822 / MIME
     // -------------------------------------------------------------
     var parseRawRfc822 = function (raw, uid) {
       var splitIdx = raw.indexOf('\r\n\r\n')
@@ -851,9 +863,12 @@ cronAdd('email_checker_cron', '*/2 * * * *', () => {
         conn = $net.dial('tcp', addr)
       }
     } catch (dialErr) {
-      var errMsg =
-        'Falha ao conectar via TCP/TLS no host ' + host + ':' + port + ' - ' + dialErr.message
+      var errMsg = 'Falha de rede/TCP ao conectar em ' + host + ':' + port + ' - ' + dialErr.message
       $app.logger().error('email_checker_cron connect error', 'error', errMsg)
+      config.set('last_check_at', new Date().toISOString())
+      config.set('last_check_status', 'Falha na Conexão')
+      config.set('last_check_error', errMsg)
+      $app.save(config)
       logAudit(config.id, 'check', 'error', errMsg, 0, Date.now() - startTime)
       return
     }
@@ -952,15 +967,55 @@ cronAdd('email_checker_cron', '*/2 * * * *', () => {
       var safeUser = user.replace(/\\/g, '\\\\').replace(/"/g, '\\"')
       var loginRes = sendCmd('LOGIN "' + safeUser + '" "' + safePass + '"')
       if (loginRes.status !== 'OK') {
-        throw new Error('Falha na autenticação IMAP: ' + loginRes.lines.join(' '))
+        var loginErrText = loginRes.lines.join(' ')
+        if (
+          loginErrText.toLowerCase().indexOf('basic auth') !== -1 ||
+          loginErrText.toLowerCase().indexOf('authentication failed') !== -1 ||
+          host.toLowerCase().indexOf('office365.com') !== -1
+        ) {
+          throw new Error(
+            'Autenticação IMAP rejeitada (Office 365 / Microsoft). Verifique se a senha informada é uma Senha de Aplicativo (App Password) e se o acesso IMAP está habilitado para esta caixa no portal Microsoft 365. Detalhes: ' +
+              loginErrText,
+          )
+        }
+        throw new Error('Falha na autenticação IMAP: ' + loginErrText)
       }
 
-      // 4. SELECT pasta
+      // 4. SELECT pasta com fallback inteligente
       var selectRes = sendCmd('SELECT "' + inboxFolder + '"')
+      var actualFolderUsed = inboxFolder
+
       if (selectRes.status !== 'OK') {
-        throw new Error(
-          'Falha ao selecionar pasta "' + inboxFolder + '": ' + selectRes.lines.join(' '),
-        )
+        // Tentar fallbacks automáticos se a pasta personalizada não for encontrada
+        var candidateFallbacks = ['INBOX', 'Inbox', 'Caixa de Entrada']
+        var fbSuccess = false
+        for (var c = 0; c < candidateFallbacks.length; c++) {
+          var cand = candidateFallbacks[c]
+          if (cand !== inboxFolder) {
+            var fbRes = sendCmd('SELECT "' + cand + '"')
+            if (fbRes.status === 'OK') {
+              actualFolderUsed = cand
+              fbSuccess = true
+              errors.push(
+                'Aviso: Pasta configurada "' +
+                  inboxFolder +
+                  '" não encontrada. Utilizada a pasta "' +
+                  cand +
+                  '".',
+              )
+              break
+            }
+          }
+        }
+
+        if (!fbSuccess) {
+          throw new Error(
+            'Pasta "' +
+              inboxFolder +
+              '" não encontrada no servidor IMAP. Verifique se o nome exato da pasta no webmail é este (ex: INBOX ou Atendimento). Erro do servidor: ' +
+              selectRes.lines.join(' '),
+          )
+        }
       }
 
       // 5. UID SEARCH UNSEEN
@@ -1051,7 +1106,7 @@ cronAdd('email_checker_cron', '*/2 * * * *', () => {
 
           sendCmd('UID STORE ' + uid + ' +FLAGS (\\Seen)')
 
-          if (processedFolder && processedFolder !== inboxFolder) {
+          if (processedFolder && processedFolder !== actualFolderUsed) {
             try {
               var copyRes = sendCmd('UID COPY ' + uid + ' "' + processedFolder + '"')
               if (copyRes.status === 'OK') {
@@ -1067,7 +1122,7 @@ cronAdd('email_checker_cron', '*/2 * * * *', () => {
         }
       }
 
-      if (processedFolder && processedFolder !== inboxFolder) {
+      if (processedFolder && processedFolder !== actualFolderUsed) {
         try {
           sendCmd('EXPUNGE')
         } catch (_) {}
@@ -1076,6 +1131,15 @@ cronAdd('email_checker_cron', '*/2 * * * *', () => {
       try {
         sendCmd('LOGOUT')
       } catch (_) {}
+    } catch (operationErr) {
+      var opErrMsg = operationErr.message || 'Erro durante varredura IMAP.'
+      $app.logger().error('email_checker_cron operation error', 'error', opErrMsg)
+      config.set('last_check_at', new Date().toISOString())
+      config.set('last_check_status', 'Falha na Operação')
+      config.set('last_check_error', opErrMsg)
+      $app.save(config)
+      logAudit(config.id, 'check', 'error', opErrMsg, 0, Date.now() - startTime)
+      return
     } finally {
       if (conn) {
         try {
@@ -1088,8 +1152,8 @@ cronAdd('email_checker_cron', '*/2 * * * *', () => {
 
     try {
       config.set('last_check_at', new Date().toISOString())
-      config.set('last_check_status', 'success')
-      config.set('last_check_error', '')
+      config.set('last_check_status', 'Sucesso')
+      config.set('last_check_error', errors.length > 0 ? 'Avisos: ' + errors.join('; ') : '')
       config.set('last_processed_count', processedCount)
       var prevIngested = config.getInt('total_ingested_count') || 0
       var prevRetained = config.getInt('total_retained_count') || 0
@@ -1119,5 +1183,13 @@ cronAdd('email_checker_cron', '*/2 * * * *', () => {
     logAudit(config.id, 'check', auditStatus, auditMsg, processedCount, duration)
   } catch (globalErr) {
     $app.logger().error('email_checker_cron fatal error', 'error', globalErr.message)
+    if (config) {
+      try {
+        config.set('last_check_at', new Date().toISOString())
+        config.set('last_check_status', 'Erro Inesperado')
+        config.set('last_check_error', globalErr.message || 'Erro fatal no cron')
+        $app.save(config)
+      } catch (_) {}
+    }
   }
 })
