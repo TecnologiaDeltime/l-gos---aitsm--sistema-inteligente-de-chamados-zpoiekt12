@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-08T23:27:36.629Z",
+  "generatedAt": "2026-10-09T00:53:25.561Z",
   "collections": [
     {
       "name": "users",
@@ -8746,6 +8746,31 @@
           "required": false,
           "system": false,
           "autodateTriggers": ["onCreate", "onUpdate"]
+        },
+        {
+          "name": "imap_password",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "imap_encryption",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["SSL/TLS", "STARTTLS", "Nenhuma"]
+        },
+        {
+          "name": "inbox_folder",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "processed_folder",
+          "type": "text",
+          "required": false,
+          "system": false
         }
       ],
       "indexes": []
@@ -9375,6 +9400,131 @@
       "indexes": [
         "CREATE INDEX idx_replogs_company ON monthly_report_send_logs (company)",
         "CREATE INDEX idx_replogs_sent_at ON monthly_report_send_logs (sent_at)"
+      ]
+    },
+    {
+      "name": "email_audit_logs",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != '' && (@request.auth.role = 'admin' || @request.auth.role = 'gestor')",
+        "view": "@request.auth.id != '' && (@request.auth.role = 'admin' || @request.auth.role = 'gestor')",
+        "create": "@request.auth.id != '' && (@request.auth.role = 'admin' || @request.auth.role = 'gestor')",
+        "update": "@request.auth.id != '' && (@request.auth.role = 'admin' || @request.auth.role = 'gestor')",
+        "delete": "@request.auth.id != '' && (@request.auth.role = 'admin' || @request.auth.role = 'gestor')"
+      },
+      "fields": [
+        {
+          "name": "test_type",
+          "type": "select",
+          "required": true,
+          "system": false,
+          "selectValues": ["connection_test", "dry_run_simulation"]
+        },
+        {
+          "name": "executed_by",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "executed_by_name",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "executed_by_email",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "status",
+          "type": "select",
+          "required": true,
+          "system": false,
+          "selectValues": ["success", "warning", "failed"]
+        },
+        {
+          "name": "host",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "port",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "user_account",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "inbox_folder",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "encryption",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "steps_result",
+          "type": "json",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "summary_message",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "latest_messages_count",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "latest_messages",
+          "type": "json",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "dry_run_result",
+          "type": "json",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": [
+        "CREATE INDEX idx_email_audit_type ON email_audit_logs (test_type)",
+        "CREATE INDEX idx_email_audit_status ON email_audit_logs (status)",
+        "CREATE INDEX idx_email_audit_created ON email_audit_logs (created DESC)"
       ]
     }
   ]
