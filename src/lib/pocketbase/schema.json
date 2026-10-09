@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-09T14:51:49.866Z",
+  "generatedAt": "2026-10-09T15:31:56.071Z",
   "collections": [
     {
       "name": "users",
@@ -9436,7 +9436,7 @@
           "type": "select",
           "required": true,
           "system": false,
-          "selectValues": ["connection_test", "dry_run_simulation"]
+          "selectValues": ["connection_test", "dry_run_simulation", "teste-envio"]
         },
         {
           "name": "executed_by",

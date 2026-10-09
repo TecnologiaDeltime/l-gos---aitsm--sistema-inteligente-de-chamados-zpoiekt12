@@ -9,6 +9,7 @@ import {
   FileText,
   Users,
   Inbox,
+  Mail,
   Tags,
   BarChart3,
   BookOpen,
@@ -394,6 +395,12 @@ export default function Layout() {
 
   const configuracoesSubmenuItems = [
     {
+      label: 'Caixa de E-mail & IMAP',
+      path: '/settings?tab=email',
+      icon: Mail,
+      show: permissions.canWriteModule('settings'),
+    },
+    {
       label: 'Configurações de SLA',
       path: '/settings/sla',
       icon: Clock,
@@ -600,7 +607,10 @@ export default function Layout() {
                 .filter((i) => i.show)
                 .map((sub) => {
                   const SubIcon = sub.icon
-                  const subActive = location.pathname === sub.path
+                  const currentFull = `${location.pathname}${location.search}`
+                  const subActive =
+                    currentFull === sub.path ||
+                    (location.pathname === sub.path && !location.search && !sub.path.includes('?'))
                   return (
                     <Link
                       key={sub.path}
@@ -1017,7 +1027,21 @@ export default function Layout() {
                 ...relatoriosSubmenuItems,
                 ...adminSubmenuItems,
                 ...configuracoesSubmenuItems,
-              ].find((i) => i.path === location.pathname)?.label || 'Painel'}
+              ].find((i) => i.path === `${location.pathname}${location.search}`)?.label ||
+                [
+                  ...navItems,
+                  ...dashboardSubmenuItems,
+                  ...clientSubmenuItems,
+                  ...cmdbSubmenuItems,
+                  ...chamadosSubmenuItems,
+                  ...changesSubmenuItems,
+                  ...problemsSubmenuItems,
+                  ...visitsN2SubmenuItems,
+                  ...relatoriosSubmenuItems,
+                  ...adminSubmenuItems,
+                  ...configuracoesSubmenuItems,
+                ].find((i) => i.path === location.pathname)?.label ||
+                'Painel'}{' '}
             </h1>
           </div>
 

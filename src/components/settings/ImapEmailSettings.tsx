@@ -30,6 +30,9 @@ import {
   ChevronUp,
   Server,
   Lock,
+  Eye,
+  EyeOff,
+  Send,
   ArrowRight,
   UserCheck,
   Tag,
@@ -45,6 +48,8 @@ import {
   testEmailConnection,
   runEmailDryRunSimulation,
   getEmailAuditLogs,
+  sendTestEmail,
+  SendTestEmailResponse,
 } from '@/services/email-config'
 
 interface ImapEmailSettingsProps {
@@ -66,17 +71,24 @@ export function ImapEmailSettings({
 
   // Credenciais e campos específicos
   const [imapPassword, setImapPassword] = useState(emailConfig.imap_password || '')
+  const [showPassword, setShowPassword] = useState(false)
   const [testingConnection, setTestingConnection] = useState(false)
   const [runningDryRun, setRunningDryRun] = useState(false)
+  const [sendingTestEmail, setSendingTestEmail] = useState(false)
   const [loadingAudit, setLoadingAudit] = useState(false)
   const [copiedWebhook, setCopiedWebhook] = useState(false)
+
+  // Envio de e-mail de teste
+  const [testTargetEmail, setTestTargetEmail] = useState('')
+  const [testSendResult, setTestSendResult] = useState<SendTestEmailResponse | null>(null)
 
   // Resultados
   const [testResponse, setTestResponse] = useState<ImapTestResponse | null>(null)
   const [dryRunResult, setDryRunResult] = useState<DryRunSimulationResult | null>(null)
   const [auditLogs, setAuditLogs] = useState<EmailAuditLogRecord[]>([])
-  const [showAuditHistory, setShowAuditHistory] = useState(false)
-  const [activeTab, setActiveTab] = useState<'config' | 'test' | 'dryrun' | 'audit'>('config')
+  const [activeTab, setActiveTab] = useState<'config' | 'sendtest' | 'test' | 'dryrun' | 'audit'>(
+    'config',
+  )
 
   // Carregar histórico de auditoria
   const loadAuditHistory = async () => {
@@ -88,6 +100,66 @@ export function ImapEmailSettings({
       toast({ title: 'Não foi possível carregar os logs de auditoria.', variant: 'destructive' })
     } finally {
       setLoadingAudit(false)
+    }
+  }
+
+  // Executar Envio de E-mail de Teste
+  const handleSendTestEmail = async () => {
+    const target = testTargetEmail.trim()
+    if (!target) {
+      toast({
+        title: 'Informe o e-mail de destino',
+        description: 'Digite um endereço de e-mail válido para receber a mensagem de teste.',
+        variant: 'destructive',
+      })
+      return
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(target)) {
+      toast({
+        title: 'Formato de e-mail inválido',
+        description: 'O endereço digitado não tem uma estrutura de e-mail válida.',
+        variant: 'destructive',
+      })
+      return
+    }
+
+    setSendingTestEmail(true)
+    setTestSendResult(null)
+
+    try {
+      const resp = await sendTestEmail({ to: target })
+      setTestSendResult(resp)
+      if (resp.success) {
+        toast({
+          title: 'E-mail de teste enviado com sucesso!',
+          description: `Mensagem entregue ao destinatário ${target}.`,
+        })
+      } else {
+        toast({
+          title: 'Falha no envio de e-mail de teste',
+          description: resp.error || resp.message,
+          variant: 'destructive',
+        })
+      }
+      loadAuditHistory()
+    } catch (err: any) {
+      const errorMsg = err.data?.error || err.message || 'Erro desconhecido ao enviar e-mail.'
+      setTestSendResult({
+        success: false,
+        message: 'Falha no envio do e-mail de teste.',
+        target_email: target,
+        error: errorMsg,
+      })
+      toast({
+        title: 'Erro ao enviar e-mail de teste',
+        description: errorMsg,
+        variant: 'destructive',
+      })
+      loadAuditHistory()
+    } finally {
+      setSendingTestEmail(false)
     }
   }
 
@@ -220,7 +292,7 @@ export function ImapEmailSettings({
         </div>
 
         {/* Abas Superiores de Navegação */}
-        <div className="flex items-center gap-1.5 pt-4 border-t border-slate-100 dark:border-slate-800/80 -mb-2">
+        <div className="flex flex-wrap items-center gap-1.5 pt-4 border-t border-slate-100 dark:border-slate-800/80 -mb-2">
           <Button
             type="button"
             size="sm"
@@ -230,6 +302,16 @@ export function ImapEmailSettings({
           >
             <Server className="h-3.5 w-3.5 mr-1.5" />
             Parâmetros da Caixa
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant={activeTab === 'sendtest' ? 'default' : 'ghost'}
+            className={`h-8 text-xs ${activeTab === 'sendtest' ? 'bg-blue-600 text-white' : ''}`}
+            onClick={() => setActiveTab('sendtest')}
+          >
+            <Send className="h-3.5 w-3.5 mr-1.5" />
+            Enviar E-mail de Teste
           </Button>
           <Button
             type="button"
@@ -478,24 +560,53 @@ export function ImapEmailSettings({
               </div>
 
               <div className="space-y-1.5">
-                <Label className="text-xs font-medium text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
-                  <Lock className="h-3.5 w-3.5 text-slate-400" />
-                  Senha da Caixa (App Password)
-                </Label>
-                <Input
-                  type="password"
-                  placeholder="••••••••••••"
-                  value={imapPassword}
-                  onChange={(e) => {
-                    setImapPassword(e.target.value)
-                    setEmailConfig({ ...emailConfig, imap_password: e.target.value })
-                  }}
-                  className="itsm-input"
-                  disabled={!isGestor}
-                />
+                <div className="flex items-center justify-between">
+                  <Label className="text-xs font-medium text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                    <Lock className="h-3.5 w-3.5 text-slate-400" />
+                    Senha da Caixa (App Password)
+                  </Label>
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="text-[11px] text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1"
+                  >
+                    {showPassword ? (
+                      <>
+                        <EyeOff className="h-3 w-3" />
+                        Ocultar senha
+                      </>
+                    ) : (
+                      <>
+                        <Eye className="h-3 w-3" />
+                        Mostrar senha
+                      </>
+                    )}
+                  </button>
+                </div>
+                <div className="relative">
+                  <Input
+                    type={showPassword ? 'text' : 'password'}
+                    placeholder="••••••••••••"
+                    value={imapPassword}
+                    onChange={(e) => {
+                      setImapPassword(e.target.value)
+                      setEmailConfig({ ...emailConfig, imap_password: e.target.value })
+                    }}
+                    className="itsm-input pr-10"
+                    disabled={!isGestor}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                    title={showPassword ? 'Ocultar senha' : 'Exibir senha'}
+                  >
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
                 <p className="text-[11px] text-slate-400">
                   Gravada de forma segura nas configurações da organização. Para Google ou Microsoft
-                  365, utilize uma Senha de Aplicativo.
+                  365, utilize uma Senha de Aplicativo (App Password).
                 </p>
               </div>
 
@@ -571,6 +682,17 @@ export function ImapEmailSettings({
 
                 <div className="flex items-center gap-2">
                   <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setActiveTab('sendtest')}
+                    className="border-blue-300 dark:border-blue-800 text-blue-700 dark:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-950/50"
+                  >
+                    <Send className="mr-1.5 h-4 w-4 text-blue-600" />
+                    Enviar E-mail de Teste
+                  </Button>
+
+                  <Button
+                    type="button"
                     variant="outline"
                     onClick={handleRunConnectionTest}
                     disabled={testingConnection || !emailConfig.imap_host}
@@ -579,10 +701,11 @@ export function ImapEmailSettings({
                     <RefreshCw
                       className={`mr-1.5 h-4 w-4 ${testingConnection ? 'animate-spin' : ''}`}
                     />
-                    {testingConnection ? 'Testando Conexão...' : 'Testar Conexão IMAP'}
+                    {testingConnection ? 'Testando Conexão...' : 'Testar Conexão'}
                   </Button>
 
                   <Button
+                    type="button"
                     variant="secondary"
                     onClick={handleRunDryRun}
                     disabled={runningDryRun}
@@ -633,7 +756,121 @@ export function ImapEmailSettings({
           </div>
         )}
 
-        {/* ABA 2: VALIDAÇÃO PASSO A PASSO (IMAP TEST) */}
+        {/* ABA 2: ENVIAR E-MAIL DE TESTE (NOVO) */}
+        {activeTab === 'sendtest' && (
+          <div className="space-y-6">
+            <div className="p-4 rounded-xl bg-blue-50/70 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800 space-y-1">
+              <h4 className="text-sm font-bold text-blue-950 dark:text-blue-200 flex items-center gap-2">
+                <Send className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                Validação do Envio de E-mails (SMTP)
+              </h4>
+              <p className="text-xs text-blue-800/80 dark:text-blue-300/80">
+                Dispare um e-mail de teste real para verificar se o servidor de saída está
+                autenticado, sem bloqueio de portas e apto a entregar notificações e alertas de
+                chamados aos destinatários.
+              </p>
+            </div>
+
+            <div className="p-5 rounded-xl border bg-white dark:bg-slate-900 shadow-sm space-y-4">
+              <div className="space-y-1.5">
+                <Label className="text-xs font-semibold text-slate-800 dark:text-slate-200">
+                  E-mail de Destino para o Teste
+                </Label>
+                <div className="flex flex-col sm:flex-row gap-2.5">
+                  <Input
+                    type="email"
+                    placeholder="seu.email@empresa.com.br"
+                    value={testTargetEmail}
+                    onChange={(e) => setTestTargetEmail(e.target.value)}
+                    className="itsm-input flex-1"
+                    disabled={sendingTestEmail || !isGestor}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault()
+                        handleSendTestEmail()
+                      }
+                    }}
+                  />
+                  <Button
+                    onClick={handleSendTestEmail}
+                    disabled={sendingTestEmail || !testTargetEmail || !isGestor}
+                    className="bg-blue-600 hover:bg-blue-700 text-white shrink-0"
+                  >
+                    <Send className={`mr-1.5 h-4 w-4 ${sendingTestEmail ? 'animate-spin' : ''}`} />
+                    {sendingTestEmail ? 'Enviando Teste...' : 'Enviar E-mail de Teste'}
+                  </Button>
+                </div>
+                <p className="text-[11px] text-slate-500">
+                  Um e-mail com assunto <code>[Teste] Verificação de envio — Sistema ITSM</code>{' '}
+                  será despachado contendo a data/hora e identificação da caixa configurada.
+                </p>
+              </div>
+
+              {/* Informações da caixa de origem que será utilizada */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3.5 rounded-lg bg-slate-50 dark:bg-slate-800/50 text-xs border border-slate-200 dark:border-slate-800">
+                <div>
+                  <span className="text-[11px] text-slate-400 block">Caixa de Origem / Conta:</span>
+                  <span className="font-semibold text-slate-800 dark:text-slate-200">
+                    {emailConfig.imap_user || 'noreply@serviceone.com.br'}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-[11px] text-slate-400 block">
+                    Servidor Host Configurado:
+                  </span>
+                  <span className="font-semibold text-slate-800 dark:text-slate-200">
+                    {emailConfig.imap_host || 'SMTP Padrão do Sistema'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Feedback do Envio de Teste */}
+              {testSendResult && (
+                <div
+                  className={`p-4 rounded-xl border space-y-2 ${
+                    testSendResult.success
+                      ? 'bg-emerald-50 border-emerald-200 text-emerald-950 dark:bg-emerald-950/40 dark:border-emerald-800 dark:text-emerald-200'
+                      : 'bg-red-50 border-red-200 text-red-950 dark:bg-red-950/40 dark:border-red-800 dark:text-red-200'
+                  }`}
+                >
+                  <div className="flex items-start gap-2.5">
+                    {testSendResult.success ? (
+                      <CheckCircle2 className="h-5 w-5 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+                    ) : (
+                      <AlertCircle className="h-5 w-5 text-red-600 dark:text-red-400 shrink-0 mt-0.5" />
+                    )}
+                    <div className="space-y-1">
+                      <p className="text-sm font-bold">
+                        {testSendResult.success
+                          ? 'E-mail de teste enviado com sucesso!'
+                          : 'Falha no envio do e-mail de teste'}
+                      </p>
+                      <p className="text-xs">{testSendResult.error || testSendResult.message}</p>
+                      <div className="text-[11px] opacity-80 pt-1 space-y-0.5">
+                        <p>
+                          <strong>Destinatário:</strong> {testSendResult.target_email}
+                        </p>
+                        {testSendResult.sent_at && (
+                          <p>
+                            <strong>Data do disparo:</strong>{' '}
+                            {new Date(testSendResult.sent_at).toLocaleString('pt-BR')}
+                          </p>
+                        )}
+                        {testSendResult.sender_email && (
+                          <p>
+                            <strong>Remetente:</strong> {testSendResult.sender_email}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* ABA 3: VALIDAÇÃO PASSO A PASSO (IMAP TEST) */}
         {activeTab === 'test' && (
           <div className="space-y-5">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-xl bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800">
@@ -1075,7 +1312,9 @@ export function ImapEmailSettings({
                         >
                           {log.test_type === 'connection_test'
                             ? 'Teste Conexão IMAP'
-                            : 'Simulação Ponta a Ponta'}
+                            : log.test_type === 'teste-envio'
+                              ? 'Envio de Teste (SMTP)'
+                              : 'Simulação Ponta a Ponta'}
                         </Badge>
                         <span className="font-semibold text-slate-800 dark:text-slate-200">
                           {log.summary_message || 'Execução de teste'}

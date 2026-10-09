@@ -114,9 +114,11 @@ export interface DryRunResponse {
   error?: string
 }
 
+export type EmailAuditTestType = 'connection_test' | 'dry_run_simulation' | 'teste-envio'
+
 export interface EmailAuditLogRecord {
   id: string
-  test_type: 'connection_test' | 'dry_run_simulation'
+  test_type: EmailAuditTestType
   executed_by?: string
   executed_by_name?: string
   executed_by_email?: string
@@ -130,9 +132,23 @@ export interface EmailAuditLogRecord {
   summary_message?: string
   latest_messages_count?: number
   latest_messages?: ImapSampleMessage[]
-  dry_run_result?: DryRunSimulationResult
+  dry_run_result?: any
   created: string
   updated: string
+}
+
+export interface SendTestEmailPayload {
+  to: string
+}
+
+export interface SendTestEmailResponse {
+  success: boolean
+  message: string
+  target_email: string
+  sender_email?: string
+  sent_at?: string
+  subject?: string
+  error?: string
 }
 
 export const getEmailConfig = async (): Promise<EmailConfigRecord | null> => {
@@ -207,6 +223,13 @@ export const runEmailDryRunSimulation = async (data?: {
   return pb.send<DryRunResponse>('/backend/v1/emails/dry-run', {
     method: 'POST',
     body: data || {},
+  })
+}
+
+export const sendTestEmail = async (data: SendTestEmailPayload): Promise<SendTestEmailResponse> => {
+  return pb.send<SendTestEmailResponse>('/backend/v1/emails/send-test', {
+    method: 'POST',
+    body: data,
   })
 }
 

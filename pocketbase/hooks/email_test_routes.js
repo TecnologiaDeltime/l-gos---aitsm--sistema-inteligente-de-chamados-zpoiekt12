@@ -1,7 +1,8 @@
-// Endpoint para teste de conexão IMAP passo a passo e simulação dry-run
+// Endpoint para teste de conexão IMAP passo a passo, simulação dry-run e envio de e-mail de teste
 // Rotas:
 // POST /backend/v1/emails/test-connection
 // POST /backend/v1/emails/dry-run
+// POST /backend/v1/emails/send-test
 
 routerAdd('POST', '/backend/v1/emails/test-connection', (e) => {
   try {
@@ -642,6 +643,204 @@ routerAdd('POST', '/backend/v1/emails/dry-run', (e) => {
     })
   } catch (err) {
     $app.logger().error('dry-run fatal error', 'error', err.message)
+    return e.json(500, { error: err.message })
+  }
+})
+
+routerAdd('POST', '/backend/v1/emails/send-test', (e) => {
+  try {
+    var authUser = e.auth
+    if (!authUser) {
+      return e.json(401, { error: 'Requer autenticação.' })
+    }
+    var userRole = authUser.getString('role')
+    if (userRole !== 'admin' && userRole !== 'gestor') {
+      return e.json(403, {
+        error: 'Apenas administradores e gestores podem enviar e-mails de teste.',
+      })
+    }
+
+    var body = e.requestInfo().body || {}
+    var targetEmail = (body.to || body.target_email || body.email || '').trim()
+
+    if (!targetEmail) {
+      return e.json(400, { error: 'Informe um endereço de e-mail de destino válido.' })
+    }
+
+    var emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(targetEmail)) {
+      return e.json(400, { error: 'Formato de e-mail de destino inválido (' + targetEmail + ').' })
+    }
+
+    // Buscar configuração atual da caixa para compor dados e remetente
+    var senderEmail = 'noreply@serviceone.com.br'
+    var senderName = 'ServiceOne ITSM'
+    var configuredBoxUser = ''
+    var configuredBoxHost = ''
+    try {
+      var configs = $app.findRecordsByFilter('email_config', '', '-created', 1, 0)
+      if (configs.length > 0) {
+        var cfg = configs[0]
+        configuredBoxUser = (cfg.getString('imap_user') || '').trim()
+        configuredBoxHost = (cfg.getString('imap_host') || '').trim()
+        if (configuredBoxUser && configuredBoxUser.indexOf('@') !== -1) {
+          senderEmail = configuredBoxUser
+          senderName = 'ServiceOne (' + configuredBoxUser + ')'
+        }
+      }
+    } catch (_) {}
+
+    var now = new Date()
+    var nowFormatted = now.toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })
+    var subject = '[Teste] Verificação de envio — Sistema ITSM'
+    var textBody =
+      'Olá,\n\n' +
+      'Este é um e-mail de teste disparado pelo Sistema ITSM para validar o canal de envio.\n\n' +
+      'Detalhes do teste:\n' +
+      '• Data e Hora: ' +
+      nowFormatted +
+      ' (Horário de Brasília)\n' +
+      '• Caixa/Remetente: ' +
+      (configuredBoxUser || senderEmail) +
+      '\n' +
+      '• Servidor Host: ' +
+      (configuredBoxHost || 'SMTP do Sistema') +
+      '\n' +
+      '• Destinatário: ' +
+      targetEmail +
+      '\n' +
+      '• Disparado por: ' +
+      (authUser.getString('name') || authUser.getString('email') || 'Administrador') +
+      '\n\n' +
+      'Se você recebeu esta mensagem, o envio de e-mails está operando corretamente.\n\n' +
+      '---\n' +
+      'ServiceOne ITSM — Gestão Inteligente de Chamados'
+
+    var htmlBody =
+      '<div style="font-family: Arial, sans-serif; max-width: 580px; margin: 0 auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 12px; background: #ffffff;">' +
+      '<div style="padding-bottom: 16px; border-bottom: 2px solid #2563eb; margin-bottom: 20px;">' +
+      '<h2 style="color: #1e293b; margin: 0; font-size: 20px;">[Teste] Verificação de Envio — Sistema ITSM</h2>' +
+      '<p style="color: #64748b; font-size: 13px; margin: 4px 0 0 0;">Mensagem de validação de conectividade de e-mail</p>' +
+      '</div>' +
+      '<p style="color: #334155; font-size: 14px; line-height: 1.6;">Olá,</p>' +
+      '<p style="color: #334155; font-size: 14px; line-height: 1.6;">Este é um e-mail de teste disparado pelo <strong>Sistema ITSM</strong> para validar a conectividade e a entrega de mensagens.</p>' +
+      '<div style="background: #f8fafc; border-left: 4px solid #2563eb; padding: 14px; border-radius: 6px; margin: 20px 0; font-size: 13px; color: #1e293b;">' +
+      '<p style="margin: 0 0 6px 0;"><strong>Data e Hora:</strong> ' +
+      nowFormatted +
+      '</p>' +
+      '<p style="margin: 0 0 6px 0;"><strong>Caixa/Conta:</strong> ' +
+      (configuredBoxUser || senderEmail) +
+      '</p>' +
+      '<p style="margin: 0 0 6px 0;"><strong>Servidor:</strong> ' +
+      (configuredBoxHost || 'SMTP Padrão') +
+      '</p>' +
+      '<p style="margin: 0 0 6px 0;"><strong>Destinatário:</strong> ' +
+      targetEmail +
+      '</p>' +
+      '<p style="margin: 0;"><strong>Disparado por:</strong> ' +
+      (authUser.getString('name') || authUser.getString('email') || 'Administrador') +
+      '</p>' +
+      '</div>' +
+      '<p style="color: #16a34a; font-weight: bold; font-size: 14px; margin-top: 20px;">✓ Se você recebeu esta mensagem, o envio de e-mails está operando com sucesso.</p>' +
+      '<hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 24px 0;" />' +
+      '<p style="color: #94a3b8; font-size: 11px; margin: 0; text-align: center;">ServiceOne ITSM &copy; ' +
+      now.getFullYear() +
+      ' — Mensagem automática de teste gerada em /settings</p>' +
+      '</div>'
+
+    var sendSuccess = false
+    var sendErrorMsg = ''
+
+    try {
+      var message = new MailMessage()
+      message.from = { address: senderEmail, name: senderName }
+      message.to = [{ address: targetEmail }]
+      message.subject = subject
+      message.text = textBody
+      message.html = htmlBody
+
+      var mailClient = $app.newMailClient()
+      mailClient.send(message)
+      sendSuccess = true
+    } catch (sendErr) {
+      sendSuccess = false
+      var rawErr = sendErr.message || String(sendErr)
+      if (rawErr.toLowerCase().indexOf('connection refused') !== -1) {
+        sendErrorMsg =
+          'Conexão recusada pelo servidor SMTP. Verifique o host e a porta configurados.'
+      } else if (
+        rawErr.toLowerCase().indexOf('authentication failed') !== -1 ||
+        rawErr.toLowerCase().indexOf('535') !== -1
+      ) {
+        sendErrorMsg = 'Falha de autenticação SMTP: credenciais recusadas pelo servidor.'
+      } else if (rawErr.toLowerCase().indexOf('timeout') !== -1) {
+        sendErrorMsg = 'Tempo limite esgotado ao tentar comunicar com o servidor SMTP.'
+      } else {
+        sendErrorMsg = 'Falha no envio de e-mail: ' + rawErr
+      }
+      $app.logger().error('send-test mail failed', 'error', rawErr, 'target', targetEmail)
+    }
+
+    var summaryMessage = sendSuccess
+      ? 'E-mail de teste enviado com sucesso para ' + targetEmail
+      : 'Falha no envio para ' + targetEmail + ': ' + sendErrorMsg
+
+    // Registrar o teste na auditoria de e-mails (email_audit_logs)
+    try {
+      var auditCol = $app.findCollectionByNameOrId('email_audit_logs')
+      var audit = new Record(auditCol)
+      audit.set('test_type', 'teste-envio')
+      audit.set('executed_by', authUser.id)
+      audit.set('executed_by_name', authUser.getString('name') || 'Administrador')
+      audit.set('executed_by_email', authUser.getString('email') || '')
+      audit.set('status', sendSuccess ? 'success' : 'failed')
+      audit.set('host', configuredBoxHost)
+      audit.set('user_account', configuredBoxUser || senderEmail)
+      audit.set('summary_message', summaryMessage)
+      audit.set('latest_messages_count', 1)
+      audit.set('steps_result', [
+        {
+          id: 'smtp_dispatch',
+          name: 'Disparo de e-mail de teste via SMTP',
+          status: sendSuccess ? 'success' : 'failed',
+          message: sendSuccess ? 'Mensagem enviada com sucesso para ' + targetEmail : sendErrorMsg,
+          duration_ms: 0,
+        },
+      ])
+      audit.set('dry_run_result', {
+        target_email: targetEmail,
+        sender_email: senderEmail,
+        sender_name: senderName,
+        subject: subject,
+        sent_at: now.toISOString(),
+        success: sendSuccess,
+        error: sendErrorMsg || null,
+      })
+      $app.save(audit)
+    } catch (auditErr) {
+      $app.logger().error('send-test error saving audit', 'error', auditErr.message)
+    }
+
+    if (!sendSuccess) {
+      return e.json(500, {
+        success: false,
+        error: sendErrorMsg,
+        message: 'Não foi possível enviar o e-mail de teste.',
+        target_email: targetEmail,
+        sender_email: senderEmail,
+      })
+    }
+
+    return e.json(200, {
+      success: true,
+      message: 'E-mail de teste enviado com sucesso para ' + targetEmail + '!',
+      target_email: targetEmail,
+      sender_email: senderEmail,
+      sent_at: now.toISOString(),
+      subject: subject,
+    })
+  } catch (err) {
+    $app.logger().error('send-test fatal error', 'error', err.message)
     return e.json(500, { error: err.message })
   }
 })
