@@ -109,6 +109,12 @@ export default function SettingsPage() {
             imap_ssl: true,
             check_interval_minutes: 2,
             enabled: false,
+            smtp_host: 'smtp.office365.com',
+            smtp_port: 587,
+            smtp_encryption: 'STARTTLS',
+            smtp_user: 'suporte@empresa.com.br',
+            smtp_sender_name: 'Atendimento HelpDesk',
+            smtp_reply_to: 'suporte@empresa.com.br',
             created: '',
             updated: '',
           })
@@ -158,6 +164,13 @@ export default function SettingsPage() {
         processed_folder: emailConfig.processed_folder || 'Processados',
         check_interval_minutes: emailConfig.check_interval_minutes,
         enabled: emailConfig.enabled,
+        smtp_host: emailConfig.smtp_host,
+        smtp_port: emailConfig.smtp_port,
+        smtp_encryption: emailConfig.smtp_encryption,
+        smtp_user: emailConfig.smtp_user,
+        smtp_password: emailConfig.smtp_password,
+        smtp_sender_name: emailConfig.smtp_sender_name,
+        smtp_reply_to: emailConfig.smtp_reply_to,
       })
       setEmailConfig(saved)
       toast({ title: 'Configurações da caixa de e-mail salvas com sucesso!' })

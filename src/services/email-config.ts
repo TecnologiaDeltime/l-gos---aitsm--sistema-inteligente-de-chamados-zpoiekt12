@@ -1,6 +1,7 @@
 import pb from '@/lib/pocketbase/client'
 
 export type ImapEncryption = 'SSL/TLS' | 'STARTTLS' | 'Nenhuma'
+export type SmtpEncryption = 'STARTTLS' | 'SSL/TLS' | 'Nenhuma'
 
 export interface EmailConfigRecord {
   id: string
@@ -18,6 +19,16 @@ export interface EmailConfigRecord {
   last_check_status?: string
   last_check_error?: string
   webhook_token?: string
+  last_processed_count?: number
+  total_ingested_count?: number
+  total_retained_count?: number
+  smtp_host?: string
+  smtp_port?: number
+  smtp_encryption?: SmtpEncryption
+  smtp_user?: string
+  smtp_password?: string
+  smtp_sender_name?: string
+  smtp_reply_to?: string
   created: string
   updated: string
 }
@@ -146,9 +157,46 @@ export interface SendTestEmailResponse {
   message: string
   target_email: string
   sender_email?: string
+  sender_name?: string
   sent_at?: string
   subject?: string
+  smtp_used?: 'dedicated_mailbox' | 'serviceone_fallback' | string
+  smtp_host?: string
   error?: string
+}
+
+export interface SmtpTestStep {
+  id: string
+  name: string
+  status: 'pending' | 'success' | 'warning' | 'failed' | 'skipped'
+  message: string
+  duration_ms: number
+}
+
+export interface SmtpTestResponse {
+  success: boolean
+  status: 'success' | 'failed' | 'warning'
+  message: string
+  duration_ms?: number
+  steps: SmtpTestStep[]
+  smtp_used?: 'dedicated_mailbox' | 'serviceone_fallback' | string
+  host?: string
+  port?: number
+  user?: string
+  target_email?: string
+  error?: string
+}
+
+export interface TestSmtpConnectionParams {
+  smtp_host?: string
+  smtp_port?: number
+  smtp_encryption?: SmtpEncryption
+  smtp_user?: string
+  smtp_password?: string
+  smtp_sender_name?: string
+  smtp_reply_to?: string
+  to?: string
+  recipient?: string
 }
 
 export const getEmailConfig = async (): Promise<EmailConfigRecord | null> => {
@@ -193,6 +241,13 @@ export const saveEmailConfig = async (
     check_interval_minutes: data.check_interval_minutes || 2,
     enabled: data.enabled ?? false,
     webhook_token: data.webhook_token || undefined,
+    smtp_host: data.smtp_host || 'smtp.office365.com',
+    smtp_port: data.smtp_port || 587,
+    smtp_encryption: data.smtp_encryption || 'STARTTLS',
+    smtp_user: data.smtp_user || '',
+    smtp_password: data.smtp_password || '',
+    smtp_sender_name: data.smtp_sender_name || 'Atendimento HelpDesk',
+    smtp_reply_to: data.smtp_reply_to || '',
     ...payload,
   })
 }
@@ -223,6 +278,15 @@ export const runEmailDryRunSimulation = async (data?: {
   return pb.send<DryRunResponse>('/backend/v1/emails/dry-run', {
     method: 'POST',
     body: data || {},
+  })
+}
+
+export const testSmtpConnection = async (
+  params: TestSmtpConnectionParams,
+): Promise<SmtpTestResponse> => {
+  return pb.send<SmtpTestResponse>('/backend/v1/emails/test-smtp', {
+    method: 'POST',
+    body: params,
   })
 }
 

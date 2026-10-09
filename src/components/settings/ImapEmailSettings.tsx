@@ -45,11 +45,14 @@ import {
   DryRunSimulationResult,
   EmailAuditLogRecord,
   ImapEncryption,
+  SmtpEncryption,
   testEmailConnection,
+  testSmtpConnection,
   runEmailDryRunSimulation,
   getEmailAuditLogs,
   sendTestEmail,
   SendTestEmailResponse,
+  SmtpTestResponse,
 } from '@/services/email-config'
 
 interface ImapEmailSettingsProps {
@@ -72,23 +75,37 @@ export function ImapEmailSettings({
   // Credenciais e campos específicos
   const [imapPassword, setImapPassword] = useState(emailConfig.imap_password || '')
   const [showPassword, setShowPassword] = useState(false)
+  const [smtpPassword, setSmtpPassword] = useState(
+    emailConfig.smtp_password ?? emailConfig.imap_password ?? '',
+  )
+  const [showSmtpPassword, setShowSmtpPassword] = useState(false)
+
+  // Sincronização entre recepção e envio
+  const [useSameAccountForSmtp, setUseSameAccountForSmtp] = useState(
+    !emailConfig.smtp_user || emailConfig.smtp_user === emailConfig.imap_user,
+  )
+
   const [testingConnection, setTestingConnection] = useState(false)
+  const [testingSmtp, setTestingSmtp] = useState(false)
   const [runningDryRun, setRunningDryRun] = useState(false)
   const [sendingTestEmail, setSendingTestEmail] = useState(false)
   const [loadingAudit, setLoadingAudit] = useState(false)
   const [copiedWebhook, setCopiedWebhook] = useState(false)
 
   // Envio de e-mail de teste
-  const [testTargetEmail, setTestTargetEmail] = useState('')
+  const [testTargetEmail, setTestTargetEmail] = useState(
+    emailConfig.smtp_user || emailConfig.imap_user || '',
+  )
   const [testSendResult, setTestSendResult] = useState<SendTestEmailResponse | null>(null)
 
   // Resultados
   const [testResponse, setTestResponse] = useState<ImapTestResponse | null>(null)
+  const [smtpTestResponse, setSmtpTestResponse] = useState<SmtpTestResponse | null>(null)
   const [dryRunResult, setDryRunResult] = useState<DryRunSimulationResult | null>(null)
   const [auditLogs, setAuditLogs] = useState<EmailAuditLogRecord[]>([])
-  const [activeTab, setActiveTab] = useState<'config' | 'sendtest' | 'test' | 'dryrun' | 'audit'>(
-    'config',
-  )
+  const [activeTab, setActiveTab] = useState<
+    'config' | 'sendtest' | 'test' | 'smtptest' | 'dryrun' | 'audit'
+  >('config')
 
   // Carregar histórico de auditoria
   const loadAuditHistory = async () => {
@@ -100,6 +117,118 @@ export function ImapEmailSettings({
       toast({ title: 'Não foi possível carregar os logs de auditoria.', variant: 'destructive' })
     } finally {
       setLoadingAudit(false)
+    }
+  }
+
+  // Atualizar campo IMAP e opcionalmente replicar no SMTP se a opção estiver ativada
+  const handleImapUserChange = (val: string) => {
+    setEmailConfig((prev) => {
+      if (!prev) return prev
+      return {
+        ...prev,
+        imap_user: val,
+        smtp_user: useSameAccountForSmtp ? val : prev.smtp_user,
+      }
+    })
+  }
+
+  const handleImapPasswordChange = (val: string) => {
+    setImapPassword(val)
+    setEmailConfig((prev) => {
+      if (!prev) return prev
+      return {
+        ...prev,
+        imap_password: val,
+        smtp_password: useSameAccountForSmtp ? val : prev.smtp_password,
+      }
+    })
+    if (useSameAccountForSmtp) {
+      setSmtpPassword(val)
+    }
+  }
+
+  // Toggle "Usar a mesma conta da recepção"
+  const handleToggleSameAccount = (checked: boolean) => {
+    setUseSameAccountForSmtp(checked)
+    if (checked) {
+      const syncedUser = emailConfig.imap_user || ''
+      const syncedPass = imapPassword || emailConfig.imap_password || ''
+      setSmtpPassword(syncedPass)
+      setEmailConfig((prev) => {
+        if (!prev) return prev
+        return {
+          ...prev,
+          smtp_user: syncedUser,
+          smtp_password: syncedPass,
+        }
+      })
+      toast({
+        title: 'Contas sincronizadas',
+        description: 'Usuário e senha de envio SMTP foram copiados da recepção IMAP.',
+      })
+    }
+  }
+
+  // Executar Teste Passo a Passo de Envio SMTP (5 passos)
+  const handleRunSmtpTest = async () => {
+    const host = emailConfig.smtp_host || 'smtp.office365.com'
+    const user = emailConfig.smtp_user || emailConfig.imap_user || ''
+    const pass = smtpPassword || emailConfig.smtp_password || imapPassword || ''
+    const target = (testTargetEmail || user).trim()
+
+    if (!host || !user) {
+      toast({
+        title: 'Parâmetros SMTP incompletos',
+        description: 'Servidor SMTP e Usuário de Envio são obrigatórios para o teste.',
+        variant: 'destructive',
+      })
+      return
+    }
+
+    setTestingSmtp(true)
+    setSmtpTestResponse(null)
+    setActiveTab('smtptest')
+
+    try {
+      const resp = await testSmtpConnection({
+        smtp_host: host,
+        smtp_port: emailConfig.smtp_port || 587,
+        smtp_encryption: (emailConfig.smtp_encryption || 'STARTTLS') as SmtpEncryption,
+        smtp_user: user,
+        smtp_password: pass,
+        smtp_sender_name: emailConfig.smtp_sender_name || 'Atendimento HelpDesk',
+        smtp_reply_to: emailConfig.smtp_reply_to || user,
+        to: target,
+      })
+
+      setSmtpTestResponse(resp)
+      if (resp.success) {
+        toast({
+          title: 'Envio SMTP validado com sucesso!',
+          description: resp.message,
+        })
+      } else {
+        toast({
+          title: 'Atenção no teste SMTP',
+          description: resp.error || resp.message,
+          variant: 'destructive',
+        })
+      }
+      loadAuditHistory()
+    } catch (err: any) {
+      const errMsg =
+        err.data?.error || err.message || 'Falha ao conectar e validar o servidor SMTP.'
+      toast({
+        title: 'Erro na validação SMTP',
+        description: errMsg,
+        variant: 'destructive',
+      })
+      if (err.data && err.data.steps) {
+        setSmtpTestResponse(err.data)
+      }
+      loadAuditHistory()
+    } finally {
+      setTestingSmtp(false)
     }
   }
 
@@ -306,12 +435,12 @@ export function ImapEmailSettings({
           <Button
             type="button"
             size="sm"
-            variant={activeTab === 'sendtest' ? 'default' : 'ghost'}
-            className={`h-8 text-xs ${activeTab === 'sendtest' ? 'bg-blue-600 text-white' : ''}`}
-            onClick={() => setActiveTab('sendtest')}
+            variant={activeTab === 'smtptest' ? 'default' : 'ghost'}
+            className={`h-8 text-xs ${activeTab === 'smtptest' ? 'bg-blue-600 text-white' : ''}`}
+            onClick={() => setActiveTab('smtptest')}
           >
             <Send className="h-3.5 w-3.5 mr-1.5" />
-            Enviar E-mail de Teste
+            Validação SMTP (5 Passos)
           </Button>
           <Button
             type="button"
@@ -321,7 +450,17 @@ export function ImapEmailSettings({
             onClick={() => setActiveTab('test')}
           >
             <ShieldCheck className="h-3.5 w-3.5 mr-1.5" />
-            Validação por Etapas
+            Validação IMAP (7 Passos)
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant={activeTab === 'sendtest' ? 'default' : 'ghost'}
+            className={`h-8 text-xs ${activeTab === 'sendtest' ? 'bg-blue-600 text-white' : ''}`}
+            onClick={() => setActiveTab('sendtest')}
+          >
+            <Mail className="h-3.5 w-3.5 mr-1.5" />
+            Disparo Direto
           </Button>
           <Button
             type="button"
@@ -475,192 +614,477 @@ export function ImapEmailSettings({
               />
             </div>
 
-            {/* Grid de Configurações IMAP */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <Label className="text-xs font-medium text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
-                  <Server className="h-3.5 w-3.5 text-slate-400" />
-                  Servidor IMAP (Host)
-                </Label>
-                <Input
-                  type="text"
-                  placeholder="ex: imap.seudominio.com.br ou imap.gmail.com"
-                  value={emailConfig.imap_host || ''}
-                  onChange={(e) => setEmailConfig({ ...emailConfig, imap_host: e.target.value })}
-                  className="itsm-input"
-                  disabled={!isGestor}
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <Label className="text-xs font-medium text-slate-700 dark:text-slate-300">
-                  Porta do Servidor IMAP
-                </Label>
-                <Input
-                  type="number"
-                  placeholder="993"
-                  value={emailConfig.imap_port || 993}
-                  onChange={(e) =>
-                    setEmailConfig({
-                      ...emailConfig,
-                      imap_port: parseInt(e.target.value, 10) || 993,
-                    })
-                  }
-                  className="itsm-input"
-                  disabled={!isGestor}
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <Label className="text-xs font-medium text-slate-700 dark:text-slate-300">
-                  Criptografia da Conexão
-                </Label>
-                <Select
-                  value={
-                    emailConfig.imap_encryption || (emailConfig.imap_ssl ? 'SSL/TLS' : 'STARTTLS')
-                  }
-                  onValueChange={(val: ImapEncryption) =>
-                    setEmailConfig({
-                      ...emailConfig,
-                      imap_encryption: val,
-                      imap_ssl: val === 'SSL/TLS',
-                      imap_port:
-                        val === 'SSL/TLS'
-                          ? 993
-                          : val === 'STARTTLS'
-                            ? 143
-                            : emailConfig.imap_port || 143,
-                    })
-                  }
-                  disabled={!isGestor}
-                >
-                  <SelectTrigger className="itsm-input">
-                    <SelectValue placeholder="Selecione o tipo de criptografia" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="SSL/TLS">SSL/TLS (Porta 993 recomendada)</SelectItem>
-                    <SelectItem value="STARTTLS">STARTTLS (Porta 143 recomendada)</SelectItem>
-                    <SelectItem value="Nenhuma">Nenhuma / Aberta (Insegura)</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-1.5">
-                <Label className="text-xs font-medium text-slate-700 dark:text-slate-300">
-                  Usuário / E-mail da Caixa
-                </Label>
-                <Input
-                  type="email"
-                  placeholder="suporte@cliente.com.br"
-                  value={emailConfig.imap_user || ''}
-                  onChange={(e) => setEmailConfig({ ...emailConfig, imap_user: e.target.value })}
-                  className="itsm-input"
-                  disabled={!isGestor}
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <div className="flex items-center justify-between">
-                  <Label className="text-xs font-medium text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
-                    <Lock className="h-3.5 w-3.5 text-slate-400" />
-                    Senha da Caixa (App Password)
-                  </Label>
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="text-[11px] text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1"
-                  >
-                    {showPassword ? (
-                      <>
-                        <EyeOff className="h-3 w-3" />
-                        Ocultar senha
-                      </>
-                    ) : (
-                      <>
-                        <Eye className="h-3 w-3" />
-                        Mostrar senha
-                      </>
-                    )}
-                  </button>
+            {/* SEÇÃO A: RECEPÇÃO DE E-MAILS (IMAP) */}
+            <div className="space-y-4">
+              <div className="flex items-center justify-between pb-2 border-b border-slate-200 dark:border-slate-800">
+                <div className="flex items-center gap-2">
+                  <div className="p-1.5 rounded-md bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300">
+                    <Inbox className="h-4 w-4" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">
+                      Recepção de E-mails (IMAP)
+                    </h3>
+                    <p className="text-xs text-slate-500">
+                      Configuração da caixa para leitura e ingestão automática de chamados
+                    </p>
+                  </div>
                 </div>
-                <div className="relative">
+                <Badge variant="outline" className="text-xs font-normal">
+                  Entrada
+                </Badge>
+              </div>
+
+              {/* Grid de Configurações IMAP */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                    <Server className="h-3.5 w-3.5 text-slate-400" />
+                    Servidor IMAP (Host)
+                  </Label>
                   <Input
-                    type={showPassword ? 'text' : 'password'}
-                    placeholder="••••••••••••"
-                    value={imapPassword}
-                    onChange={(e) => {
-                      setImapPassword(e.target.value)
-                      setEmailConfig({ ...emailConfig, imap_password: e.target.value })
-                    }}
-                    className="itsm-input pr-10"
+                    type="text"
+                    placeholder="ex: imap.office365.com"
+                    value={emailConfig.imap_host || ''}
+                    onChange={(e) => setEmailConfig({ ...emailConfig, imap_host: e.target.value })}
+                    className="itsm-input"
                     disabled={!isGestor}
                   />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
-                    title={showPassword ? 'Ocultar senha' : 'Exibir senha'}
-                  >
-                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </button>
                 </div>
-                <p className="text-[11px] text-slate-400">
-                  Gravada de forma segura nas configurações da organização. Para Google ou Microsoft
-                  365, utilize uma Senha de Aplicativo (App Password).
+
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium text-slate-700 dark:text-slate-300">
+                    Porta do Servidor IMAP
+                  </Label>
+                  <Input
+                    type="number"
+                    placeholder="993"
+                    value={emailConfig.imap_port || 993}
+                    onChange={(e) =>
+                      setEmailConfig({
+                        ...emailConfig,
+                        imap_port: parseInt(e.target.value, 10) || 993,
+                      })
+                    }
+                    className="itsm-input"
+                    disabled={!isGestor}
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium text-slate-700 dark:text-slate-300">
+                    Criptografia da Conexão
+                  </Label>
+                  <Select
+                    value={
+                      emailConfig.imap_encryption || (emailConfig.imap_ssl ? 'SSL/TLS' : 'STARTTLS')
+                    }
+                    onValueChange={(val: ImapEncryption) =>
+                      setEmailConfig({
+                        ...emailConfig,
+                        imap_encryption: val,
+                        imap_ssl: val === 'SSL/TLS',
+                        imap_port:
+                          val === 'SSL/TLS'
+                            ? 993
+                            : val === 'STARTTLS'
+                              ? 143
+                              : emailConfig.imap_port || 143,
+                      })
+                    }
+                    disabled={!isGestor}
+                  >
+                    <SelectTrigger className="itsm-input">
+                      <SelectValue placeholder="Selecione o tipo de criptografia" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="SSL/TLS">SSL/TLS (Porta 993 recomendada)</SelectItem>
+                      <SelectItem value="STARTTLS">STARTTLS (Porta 143 recomendada)</SelectItem>
+                      <SelectItem value="Nenhuma">Nenhuma / Aberta (Insegura)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium text-slate-700 dark:text-slate-300">
+                    Usuário / E-mail da Caixa
+                  </Label>
+                  <Input
+                    type="email"
+                    placeholder="suporte@cliente.com.br"
+                    value={emailConfig.imap_user || ''}
+                    onChange={(e) => handleImapUserChange(e.target.value)}
+                    className="itsm-input"
+                    disabled={!isGestor}
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-xs font-medium text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                      <Lock className="h-3.5 w-3.5 text-slate-400" />
+                      Senha da Caixa (App Password)
+                    </Label>
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="text-[11px] text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1"
+                    >
+                      {showPassword ? (
+                        <>
+                          <EyeOff className="h-3 w-3" />
+                          Ocultar senha
+                        </>
+                      ) : (
+                        <>
+                          <Eye className="h-3 w-3" />
+                          Mostrar senha
+                        </>
+                      )}
+                    </button>
+                  </div>
+                  <div className="relative">
+                    <Input
+                      type={showPassword ? 'text' : 'password'}
+                      placeholder="••••••••••••"
+                      value={imapPassword}
+                      onChange={(e) => handleImapPasswordChange(e.target.value)}
+                      className="itsm-input pr-10"
+                      disabled={!isGestor}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                      title={showPassword ? 'Ocultar senha' : 'Exibir senha'}
+                    >
+                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
+                  <p className="text-[11px] text-slate-400">
+                    Gravada de forma segura nas configurações da organização. Para Google ou
+                    Microsoft 365, utilize uma Senha de Aplicativo (App Password).
+                  </p>
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                    <Inbox className="h-3.5 w-3.5 text-slate-400" />
+                    Pasta de Entrada (Padrão INBOX)
+                  </Label>
+                  <Input
+                    type="text"
+                    placeholder="INBOX"
+                    value={emailConfig.inbox_folder || 'INBOX'}
+                    onChange={(e) =>
+                      setEmailConfig({ ...emailConfig, inbox_folder: e.target.value })
+                    }
+                    className="itsm-input"
+                    disabled={!isGestor}
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                    <FolderSync className="h-3.5 w-3.5 text-slate-400" />
+                    Pasta de E-mails Processados
+                  </Label>
+                  <Input
+                    type="text"
+                    placeholder="Processados ou INBOX.Processed"
+                    value={emailConfig.processed_folder || 'Processados'}
+                    onChange={(e) =>
+                      setEmailConfig({ ...emailConfig, processed_folder: e.target.value })
+                    }
+                    className="itsm-input"
+                    disabled={!isGestor}
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                    <Clock className="h-3.5 w-3.5 text-slate-400" />
+                    Intervalo de Verificação (minutos)
+                  </Label>
+                  <Input
+                    type="number"
+                    min={1}
+                    max={60}
+                    value={emailConfig.check_interval_minutes || 2}
+                    onChange={(e) =>
+                      setEmailConfig({
+                        ...emailConfig,
+                        check_interval_minutes: parseInt(e.target.value, 10) || 2,
+                      })
+                    }
+                    className="itsm-input"
+                    disabled={!isGestor}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* SEÇÃO B: ENVIO DE E-MAIL (SMTP) */}
+            <div className="space-y-4 pt-4 border-t-2 border-slate-200 dark:border-slate-800">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-slate-200 dark:border-slate-800">
+                <div className="flex items-center gap-2">
+                  <div className="p-1.5 rounded-md bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300">
+                    <Send className="h-4 w-4" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                      Envio de E-mail (SMTP)
+                    </h3>
+                    <p className="text-xs text-slate-500">
+                      Configuração da caixa de saída para notificações de chamados, SLAs e respostas
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 bg-slate-100 dark:bg-slate-800/80 px-3 py-1.5 rounded-lg border">
+                  <Switch
+                    id="same-account-toggle"
+                    checked={useSameAccountForSmtp}
+                    onCheckedChange={handleToggleSameAccount}
+                    disabled={!isGestor}
+                  />
+                  <Label
+                    htmlFor="same-account-toggle"
+                    className="text-xs font-medium text-slate-700 dark:text-slate-300 cursor-pointer"
+                  >
+                    Usar a mesma conta da recepção
+                  </Label>
+                </div>
+              </div>
+
+              {/* Dicas Microsoft 365 para SMTP */}
+              <div className="p-4 rounded-xl border border-emerald-200 dark:border-emerald-900 bg-emerald-50/50 dark:bg-emerald-950/20 space-y-2 text-xs">
+                <div className="flex items-center gap-2 text-emerald-900 dark:text-emerald-200 font-bold">
+                  <Server className="h-4 w-4 text-emerald-600" />
+                  <span>Configuração Recomendada Microsoft 365 (SMTP)</span>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-[11px] text-slate-700 dark:text-slate-300">
+                  <div className="bg-white/80 dark:bg-slate-900/80 p-2 rounded border">
+                    <span className="text-slate-400 block font-semibold">Servidor Host</span>
+                    <strong className="text-slate-900 dark:text-slate-100 font-mono">
+                      smtp.office365.com
+                    </strong>
+                  </div>
+                  <div className="bg-white/80 dark:bg-slate-900/80 p-2 rounded border">
+                    <span className="text-slate-400 block font-semibold">Porta & Criptografia</span>
+                    <strong className="text-slate-900 dark:text-slate-100 font-mono">
+                      587 (STARTTLS)
+                    </strong>
+                  </div>
+                  <div className="bg-white/80 dark:bg-slate-900/80 p-2 rounded border">
+                    <span className="text-slate-400 block font-semibold">Autenticação com 2FA</span>
+                    <strong className="text-emerald-700 dark:text-emerald-300">
+                      Senha de Aplicativo
+                    </strong>
+                  </div>
+                </div>
+                <p className="text-[11px] text-slate-600 dark:text-slate-400">
+                  Para contas Microsoft 365 com 2FA obrigatório, crie uma Senha de Aplicativo em{' '}
+                  <a
+                    href="https://mysignins.microsoft.com/security-info"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-emerald-700 dark:text-emerald-300 underline font-medium"
+                  >
+                    mysignins.microsoft.com/security-info
+                  </a>{' '}
+                  ou certifique-se de que o protocolo <em>SMTP autenticado</em> está habilitado para
+                  a caixa no Microsoft 365 Admin Center.
                 </p>
               </div>
 
-              <div className="space-y-1.5">
-                <Label className="text-xs font-medium text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
-                  <Inbox className="h-3.5 w-3.5 text-slate-400" />
-                  Pasta de Entrada (Padrão INBOX)
-                </Label>
-                <Input
-                  type="text"
-                  placeholder="INBOX"
-                  value={emailConfig.inbox_folder || 'INBOX'}
-                  onChange={(e) => setEmailConfig({ ...emailConfig, inbox_folder: e.target.value })}
-                  className="itsm-input"
-                  disabled={!isGestor}
-                />
-              </div>
+              {/* Grid de Configurações SMTP */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                    <Server className="h-3.5 w-3.5 text-slate-400" />
+                    Servidor SMTP (Host)
+                  </Label>
+                  <Input
+                    type="text"
+                    placeholder="smtp.office365.com"
+                    value={emailConfig.smtp_host || ''}
+                    onChange={(e) => setEmailConfig({ ...emailConfig, smtp_host: e.target.value })}
+                    className="itsm-input"
+                    disabled={!isGestor}
+                  />
+                </div>
 
-              <div className="space-y-1.5">
-                <Label className="text-xs font-medium text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
-                  <FolderSync className="h-3.5 w-3.5 text-slate-400" />
-                  Pasta de E-mails Processados
-                </Label>
-                <Input
-                  type="text"
-                  placeholder="Processados ou INBOX.Processed"
-                  value={emailConfig.processed_folder || 'Processados'}
-                  onChange={(e) =>
-                    setEmailConfig({ ...emailConfig, processed_folder: e.target.value })
-                  }
-                  className="itsm-input"
-                  disabled={!isGestor}
-                />
-              </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium text-slate-700 dark:text-slate-300">
+                    Porta SMTP (Padrão 587)
+                  </Label>
+                  <Input
+                    type="number"
+                    placeholder="587"
+                    value={emailConfig.smtp_port ?? 587}
+                    onChange={(e) =>
+                      setEmailConfig({
+                        ...emailConfig,
+                        smtp_port: parseInt(e.target.value, 10) || 587,
+                      })
+                    }
+                    className="itsm-input"
+                    disabled={!isGestor}
+                  />
+                  <p className="text-[10px] text-slate-400">
+                    Aceita portas 587 (STARTTLS), 465 (SSL/TLS) ou 25 (padrão provedor).
+                  </p>
+                </div>
 
-              <div className="space-y-1.5">
-                <Label className="text-xs font-medium text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
-                  <Clock className="h-3.5 w-3.5 text-slate-400" />
-                  Intervalo de Verificação (minutos)
-                </Label>
-                <Input
-                  type="number"
-                  min={1}
-                  max={60}
-                  value={emailConfig.check_interval_minutes || 2}
-                  onChange={(e) =>
-                    setEmailConfig({
-                      ...emailConfig,
-                      check_interval_minutes: parseInt(e.target.value, 10) || 2,
-                    })
-                  }
-                  className="itsm-input"
-                  disabled={!isGestor}
-                />
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium text-slate-700 dark:text-slate-300">
+                    Criptografia SMTP
+                  </Label>
+                  <Select
+                    value={emailConfig.smtp_encryption || 'STARTTLS'}
+                    onValueChange={(val: SmtpEncryption) =>
+                      setEmailConfig({
+                        ...emailConfig,
+                        smtp_encryption: val,
+                        smtp_port:
+                          val === 'SSL/TLS'
+                            ? 465
+                            : val === 'STARTTLS'
+                              ? 587
+                              : emailConfig.smtp_port || 587,
+                      })
+                    }
+                    disabled={!isGestor}
+                  >
+                    <SelectTrigger className="itsm-input">
+                      <SelectValue placeholder="Selecione o tipo de criptografia" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="STARTTLS">STARTTLS (Porta 587 - Padrão M365)</SelectItem>
+                      <SelectItem value="SSL/TLS">SSL/TLS (Porta 465)</SelectItem>
+                      <SelectItem value="Nenhuma">Nenhuma / Aberta</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium text-slate-700 dark:text-slate-300">
+                    Usuário / E-mail de Envio SMTP
+                  </Label>
+                  <Input
+                    type="email"
+                    placeholder="atendimento@empresa.com.br"
+                    value={
+                      useSameAccountForSmtp
+                        ? emailConfig.imap_user || ''
+                        : emailConfig.smtp_user || ''
+                    }
+                    onChange={(e) => setEmailConfig({ ...emailConfig, smtp_user: e.target.value })}
+                    className={`itsm-input ${useSameAccountForSmtp ? 'bg-slate-50 dark:bg-slate-800/60' : ''}`}
+                    disabled={!isGestor || useSameAccountForSmtp}
+                  />
+                  {useSameAccountForSmtp && (
+                    <p className="text-[10px] text-slate-400">
+                      Copiado automaticamente da conta IMAP de recepção.
+                    </p>
+                  )}
+                </div>
+
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-xs font-medium text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                      <Lock className="h-3.5 w-3.5 text-slate-400" />
+                      Senha SMTP (App Password)
+                    </Label>
+                    <button
+                      type="button"
+                      onClick={() => setShowSmtpPassword(!showSmtpPassword)}
+                      className="text-[11px] text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1"
+                    >
+                      {showSmtpPassword ? (
+                        <>
+                          <EyeOff className="h-3 w-3" />
+                          Ocultar
+                        </>
+                      ) : (
+                        <>
+                          <Eye className="h-3 w-3" />
+                          Mostrar
+                        </>
+                      )}
+                    </button>
+                  </div>
+                  <div className="relative">
+                    <Input
+                      type={showSmtpPassword ? 'text' : 'password'}
+                      placeholder="••••••••••••"
+                      value={
+                        useSameAccountForSmtp
+                          ? imapPassword || emailConfig.imap_password || ''
+                          : smtpPassword
+                      }
+                      onChange={(e) => {
+                        setSmtpPassword(e.target.value)
+                        setEmailConfig({ ...emailConfig, smtp_password: e.target.value })
+                      }}
+                      className={`itsm-input pr-10 ${useSameAccountForSmtp ? 'bg-slate-50 dark:bg-slate-800/60' : ''}`}
+                      disabled={!isGestor || useSameAccountForSmtp}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowSmtpPassword(!showSmtpPassword)}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                      title={showSmtpPassword ? 'Ocultar senha' : 'Exibir senha'}
+                    >
+                      {showSmtpPassword ? (
+                        <EyeOff className="h-4 w-4" />
+                      ) : (
+                        <Eye className="h-4 w-4" />
+                      )}
+                    </button>
+                  </div>
+                  <p className="text-[11px] text-slate-400">
+                    {useSameAccountForSmtp
+                      ? 'Reutilizando a senha da recepção IMAP. Desmarque o toggle acima para informar outra senha.'
+                      : 'Utilize a Senha de Aplicativo gerada para a conta de envio.'}
+                  </p>
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium text-slate-700 dark:text-slate-300">
+                    Nome de Exibição do Remetente
+                  </Label>
+                  <Input
+                    type="text"
+                    placeholder="Atendimento HelpDesk"
+                    value={emailConfig.smtp_sender_name || ''}
+                    onChange={(e) =>
+                      setEmailConfig({ ...emailConfig, smtp_sender_name: e.target.value })
+                    }
+                    className="itsm-input"
+                    disabled={!isGestor}
+                  />
+                  <p className="text-[10px] text-slate-400">
+                    Aparece no campo "De:" para os solicitantes (ex: Suporte TI &lt;email&gt;).
+                  </p>
+                </div>
+
+                <div className="space-y-1.5 md:col-span-2">
+                  <Label className="text-xs font-medium text-slate-700 dark:text-slate-300">
+                    Responder para (Reply-To, opcional)
+                  </Label>
+                  <Input
+                    type="email"
+                    placeholder="suporte@empresa.com.br (deixe vazio para usar a própria conta)"
+                    value={emailConfig.smtp_reply_to || ''}
+                    onChange={(e) =>
+                      setEmailConfig({ ...emailConfig, smtp_reply_to: e.target.value })
+                    }
+                    className="itsm-input"
+                    disabled={!isGestor}
+                  />
+                </div>
               </div>
             </div>
 
@@ -680,15 +1104,18 @@ export function ImapEmailSettings({
                   </Button>
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   <Button
                     type="button"
                     variant="outline"
-                    onClick={() => setActiveTab('sendtest')}
-                    className="border-blue-300 dark:border-blue-800 text-blue-700 dark:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-950/50"
+                    onClick={handleRunSmtpTest}
+                    disabled={testingSmtp || !emailConfig.smtp_host}
+                    className="border-emerald-300 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-950/50"
                   >
-                    <Send className="mr-1.5 h-4 w-4 text-blue-600" />
-                    Enviar E-mail de Teste
+                    <Send
+                      className={`mr-1.5 h-4 w-4 text-emerald-600 ${testingSmtp ? 'animate-spin' : ''}`}
+                    />
+                    {testingSmtp ? 'Testando Envio...' : 'Testar Envio (SMTP)'}
                   </Button>
 
                   <Button
@@ -701,7 +1128,7 @@ export function ImapEmailSettings({
                     <RefreshCw
                       className={`mr-1.5 h-4 w-4 ${testingConnection ? 'animate-spin' : ''}`}
                     />
-                    {testingConnection ? 'Testando Conexão...' : 'Testar Conexão'}
+                    {testingConnection ? 'Testando Conexão...' : 'Testar Recepção (IMAP)'}
                   </Button>
 
                   <Button
@@ -811,15 +1238,14 @@ export function ImapEmailSettings({
                 <div>
                   <span className="text-[11px] text-slate-400 block">Caixa de Origem / Conta:</span>
                   <span className="font-semibold text-slate-800 dark:text-slate-200">
-                    {emailConfig.imap_user || 'noreply@serviceone.com.br'}
+                    {emailConfig.smtp_user || emailConfig.imap_user || 'SMTP Padrão do Sistema'}
                   </span>
                 </div>
                 <div>
-                  <span className="text-[11px] text-slate-400 block">
-                    Servidor Host Configurado:
-                  </span>
+                  <span className="text-[11px] text-slate-400 block">Servidor Host de Saída:</span>
                   <span className="font-semibold text-slate-800 dark:text-slate-200">
-                    {emailConfig.imap_host || 'SMTP Padrão do Sistema'}
+                    {emailConfig.smtp_host || 'SMTP Padrão do Sistema'} (Porta{' '}
+                    {emailConfig.smtp_port || 587})
                   </span>
                 </div>
               </div>
@@ -840,11 +1266,27 @@ export function ImapEmailSettings({
                       <AlertCircle className="h-5 w-5 text-red-600 dark:text-red-400 shrink-0 mt-0.5" />
                     )}
                     <div className="space-y-1">
-                      <p className="text-sm font-bold">
-                        {testSendResult.success
-                          ? 'E-mail de teste enviado com sucesso!'
-                          : 'Falha no envio do e-mail de teste'}
-                      </p>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="text-sm font-bold">
+                          {testSendResult.success
+                            ? 'E-mail de teste enviado com sucesso!'
+                            : 'Falha no envio do e-mail de teste'}
+                        </p>
+                        {testSendResult.smtp_used && (
+                          <Badge
+                            variant={
+                              testSendResult.smtp_used === 'dedicated_mailbox'
+                                ? 'default'
+                                : 'secondary'
+                            }
+                            className="text-[10px]"
+                          >
+                            {testSendResult.smtp_used === 'dedicated_mailbox'
+                              ? 'Caixa dedicada'
+                              : 'Fallback ServiceOne'}
+                          </Badge>
+                        )}
+                      </div>
                       <p className="text-xs">{testSendResult.error || testSendResult.message}</p>
                       <div className="text-[11px] opacity-80 pt-1 space-y-0.5">
                         <p>
@@ -858,7 +1300,15 @@ export function ImapEmailSettings({
                         )}
                         {testSendResult.sender_email && (
                           <p>
-                            <strong>Remetente:</strong> {testSendResult.sender_email}
+                            <strong>Remetente:</strong>{' '}
+                            {testSendResult.sender_name
+                              ? `${testSendResult.sender_name} <${testSendResult.sender_email}>`
+                              : testSendResult.sender_email}
+                          </p>
+                        )}
+                        {testSendResult.smtp_host && (
+                          <p>
+                            <strong>Host utilizado:</strong> {testSendResult.smtp_host}
                           </p>
                         )}
                       </div>
@@ -867,6 +1317,226 @@ export function ImapEmailSettings({
                 </div>
               )}
             </div>
+          </div>
+        )}
+
+        {/* ABA: VALIDAÇÃO SMTP PASSO A PASSO (5 PASSOS) */}
+        {activeTab === 'smtptest' && (
+          <div className="space-y-5">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-xl bg-emerald-50/70 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800">
+              <div className="space-y-0.5">
+                <h4 className="text-sm font-bold text-emerald-950 dark:text-emerald-200 flex items-center gap-2">
+                  <Send className="h-4 w-4 text-emerald-600" />
+                  Diagnóstico de Envio SMTP Passo a Passo (5 Etapas)
+                </h4>
+                <p className="text-xs text-emerald-800/80 dark:text-emerald-300/80">
+                  Executa em tempo real os 5 passos do envio: Parâmetros, Conexão Host/Porta,
+                  Handshake TLS/STARTTLS, Autenticação de Credenciais e Disparo Real.
+                </p>
+              </div>
+              <Button
+                size="sm"
+                onClick={handleRunSmtpTest}
+                disabled={testingSmtp || !emailConfig.smtp_host}
+                className="bg-emerald-600 hover:bg-emerald-700 text-white shrink-0"
+              >
+                <RefreshCw className={`mr-1.5 h-3.5 w-3.5 ${testingSmtp ? 'animate-spin' : ''}`} />
+                {testingSmtp ? 'Validando SMTP...' : 'Executar Validação SMTP'}
+              </Button>
+            </div>
+
+            {/* Configuração do Destino para a Etapa 5 (Envio Real) */}
+            <div className="p-4 rounded-xl border bg-white dark:bg-slate-900 space-y-3">
+              <Label className="text-xs font-semibold text-slate-800 dark:text-slate-200">
+                Destinatário para o Teste de Disparo Real (Etapa 5)
+              </Label>
+              <div className="flex flex-col sm:flex-row gap-2.5">
+                <Input
+                  type="email"
+                  placeholder="destinatario@empresa.com.br"
+                  value={testTargetEmail}
+                  onChange={(e) => setTestTargetEmail(e.target.value)}
+                  className="itsm-input flex-1"
+                  disabled={testingSmtp || !isGestor}
+                />
+                <Button
+                  onClick={handleRunSmtpTest}
+                  disabled={testingSmtp || !emailConfig.smtp_host || !isGestor}
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white shrink-0"
+                >
+                  <Send className={`mr-1.5 h-4 w-4 ${testingSmtp ? 'animate-spin' : ''}`} />
+                  {testingSmtp ? 'Testando...' : 'Iniciar Teste 5 Passos'}
+                </Button>
+              </div>
+              <p className="text-[11px] text-slate-500">
+                Será disparado um e-mail de prova para este endereço se as etapas de conexão e
+                credenciais forem aprovadas.
+              </p>
+            </div>
+
+            {testingSmtp && (
+              <div className="p-8 text-center space-y-3 bg-white dark:bg-slate-900 rounded-xl border">
+                <RefreshCw className="h-8 w-8 text-emerald-600 animate-spin mx-auto" />
+                <p className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                  Conectando ao servidor SMTP {emailConfig.smtp_host || 'smtp.office365.com'}:
+                  {emailConfig.smtp_port || 587}...
+                </p>
+                <p className="text-xs text-slate-400">
+                  Executando handshake TLS, autenticação EHLO e validação de credenciais
+                </p>
+              </div>
+            )}
+
+            {smtpTestResponse && !testingSmtp && (
+              <div className="space-y-4">
+                {/* Resumo do Status SMTP */}
+                <div
+                  className={`p-4 rounded-xl border flex items-start gap-3 ${
+                    smtpTestResponse.success
+                      ? 'bg-emerald-50 border-emerald-200 text-emerald-900 dark:bg-emerald-950/40 dark:border-emerald-800 dark:text-emerald-200'
+                      : 'bg-red-50 border-red-200 text-red-900 dark:bg-red-950/40 dark:border-red-800 dark:text-red-200'
+                  }`}
+                >
+                  {smtpTestResponse.success ? (
+                    <CheckCircle2 className="h-5 w-5 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+                  ) : (
+                    <AlertCircle className="h-5 w-5 text-red-600 dark:text-red-400 shrink-0 mt-0.5" />
+                  )}
+                  <div className="space-y-1 flex-1">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <p className="text-sm font-bold">{smtpTestResponse.message}</p>
+                      {smtpTestResponse.smtp_used && (
+                        <Badge
+                          variant={
+                            smtpTestResponse.smtp_used === 'dedicated_mailbox'
+                              ? 'default'
+                              : 'secondary'
+                          }
+                          className="text-[10px]"
+                        >
+                          {smtpTestResponse.smtp_used === 'dedicated_mailbox'
+                            ? 'Caixa dedicada'
+                            : 'Fallback ServiceOne'}
+                        </Badge>
+                      )}
+                    </div>
+                    {smtpTestResponse.error && (
+                      <p className="text-xs font-mono text-red-700 dark:text-red-300">
+                        {smtpTestResponse.error}
+                      </p>
+                    )}
+                    <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs opacity-90 pt-1">
+                      {smtpTestResponse.host && (
+                        <span>
+                          <strong>Host:</strong> {smtpTestResponse.host}:{smtpTestResponse.port}
+                        </span>
+                      )}
+                      {smtpTestResponse.user && (
+                        <span>
+                          <strong>Usuário:</strong> {smtpTestResponse.user}
+                        </span>
+                      )}
+                      {smtpTestResponse.target_email && (
+                        <span>
+                          <strong>Destinatário de Teste:</strong> {smtpTestResponse.target_email}
+                        </span>
+                      )}
+                      {smtpTestResponse.duration_ms !== undefined && (
+                        <span>
+                          <strong>Tempo total:</strong> {smtpTestResponse.duration_ms}ms
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Lista dos 5 Passos SMTP */}
+                {smtpTestResponse.steps && smtpTestResponse.steps.length > 0 && (
+                  <div className="border rounded-xl divide-y dark:divide-slate-800 bg-white dark:bg-slate-900/60 shadow-sm overflow-hidden">
+                    <div className="p-3 bg-slate-50 dark:bg-slate-800/50 text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider flex items-center justify-between">
+                      <span>Etapas da Validação SMTP (5 Passos)</span>
+                      <span className="text-[11px] font-normal text-slate-400">
+                        {smtpTestResponse.steps.filter((s) => s.status === 'success').length} de{' '}
+                        {smtpTestResponse.steps.length} aprovadas
+                      </span>
+                    </div>
+                    {smtpTestResponse.steps.map((step, idx) => (
+                      <div
+                        key={step.id || idx}
+                        className="p-3.5 flex items-start justify-between gap-3 text-xs"
+                      >
+                        <div className="flex items-start gap-2.5">
+                          {step.status === 'success' && (
+                            <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0 mt-0.5" />
+                          )}
+                          {step.status === 'warning' && (
+                            <AlertTriangle className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
+                          )}
+                          {step.status === 'failed' && (
+                            <AlertCircle className="h-4 w-4 text-red-500 shrink-0 mt-0.5" />
+                          )}
+                          {step.status === 'skipped' && (
+                            <span className="h-4 w-4 rounded-full border border-slate-300 flex items-center justify-center text-[10px] text-slate-400 shrink-0 mt-0.5">
+                              -
+                            </span>
+                          )}
+                          {step.status === 'pending' && (
+                            <RefreshCw className="h-4 w-4 text-blue-500 animate-spin shrink-0 mt-0.5" />
+                          )}
+                          <div className="space-y-0.5">
+                            <p className="font-semibold text-slate-800 dark:text-slate-200">
+                              {idx + 1}. {step.name}
+                            </p>
+                            <p className="text-slate-500 dark:text-slate-400">{step.message}</p>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2 shrink-0">
+                          {step.duration_ms > 0 && (
+                            <span className="text-[10px] font-mono text-slate-400">
+                              {step.duration_ms}ms
+                            </span>
+                          )}
+                          <Badge
+                            variant={
+                              step.status === 'success'
+                                ? 'default'
+                                : step.status === 'warning'
+                                  ? 'secondary'
+                                  : step.status === 'failed'
+                                    ? 'destructive'
+                                    : 'outline'
+                            }
+                            className="text-[10px] uppercase font-bold"
+                          >
+                            {step.status === 'success'
+                              ? 'Aprovado'
+                              : step.status === 'warning'
+                                ? 'Aviso'
+                                : step.status === 'failed'
+                                  ? 'Falha'
+                                  : step.status === 'pending'
+                                    ? 'Em Andamento'
+                                    : 'Ignorado'}
+                          </Badge>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {!smtpTestResponse && !testingSmtp && (
+              <div className="p-8 text-center space-y-2 border border-dashed rounded-xl text-slate-400">
+                <Send className="h-8 w-8 mx-auto text-slate-300 dark:text-slate-600" />
+                <p className="text-xs">Nenhum teste de envio SMTP executado nesta sessão.</p>
+                <p className="text-[11px] text-slate-400">
+                  Clique no botão acima para validar as 5 etapas de envio (parâmetros, host, TLS,
+                  autenticação e envio real).
+                </p>
+              </div>
+            )}
           </div>
         )}
 
