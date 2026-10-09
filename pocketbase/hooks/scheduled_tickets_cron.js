@@ -145,8 +145,12 @@ cronAdd('scheduled_tickets_cron', '*/5 * * * *', function () {
               mailMsg.to = [{ address: userEmail }]
               mailMsg.subject = emailSubj
               mailMsg.text = emailBody
-              var mailer = $app.newMailClient()
-              mailer.send(mailMsg)
+              if (globalThis.sendSystemMailMessage) {
+                globalThis.sendSystemMailMessage(mailMsg)
+              } else {
+                var mailer = $app.newMailClient()
+                mailer.send(mailMsg)
+              }
             } catch (mailErr) {
               $app
                 .logger()

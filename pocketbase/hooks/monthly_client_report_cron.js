@@ -537,8 +537,7 @@ cronAdd('monthly_client_report_cron', '0 6 * * *', function () {
         'Relatório gerado automaticamente pelo ServiceOne ITSM.' +
         '</p></div></body></html>'
 
-      // Envia via mailClient
-      var mailClient = $app.newMailClient()
+      // Envia via mailClient ou serviço unificado do sistema
       var sendErrors = []
 
       for (var rIdx = 0; rIdx < recipients.length; rIdx++) {
@@ -556,7 +555,12 @@ cronAdd('monthly_client_report_cron', '0 6 * * *', function () {
           '.\nConsulte o e-mail em formato HTML para visualizar o documento completo no padrão ABNT.'
 
         try {
-          mailClient.send(message)
+          if (globalThis.sendSystemMailMessage) {
+            globalThis.sendSystemMailMessage(message)
+          } else {
+            var mailClient = $app.newMailClient()
+            mailClient.send(message)
+          }
         } catch (sendErr) {
           sendErrors.push(targetEmail + ': ' + sendErr.message)
         }
@@ -1119,7 +1123,6 @@ routerAdd(
         'Relatório gerado automaticamente pelo ServiceOne ITSM.' +
         '</p></div></body></html>'
 
-      var mailClient = $app.newMailClient()
       var sendErrors = []
 
       for (var rIdx = 0; rIdx < recipients.length; rIdx++) {
@@ -1137,7 +1140,12 @@ routerAdd(
           '.\nConsulte o e-mail em formato HTML para visualizar o documento completo no padrão ABNT.'
 
         try {
-          mailClient.send(message)
+          if (globalThis.sendSystemMailMessage) {
+            globalThis.sendSystemMailMessage(message)
+          } else {
+            var mailClient = $app.newMailClient()
+            mailClient.send(message)
+          }
         } catch (sendErr) {
           sendErrors.push(targetEmail + ': ' + sendErr.message)
         }

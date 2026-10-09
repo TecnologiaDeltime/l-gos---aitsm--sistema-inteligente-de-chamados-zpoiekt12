@@ -359,8 +359,12 @@ routerAdd(
             message.to = [{ address: recipients[ei].email }]
             message.subject = subject
             message.text = bodyText
-            var mailClient = $app.newMailClient()
-            mailClient.send(message)
+            if (globalThis.sendSystemMailMessage) {
+              globalThis.sendSystemMailMessage(message)
+            } else {
+              var mailClient = $app.newMailClient()
+              mailClient.send(message)
+            }
           } catch (err) {
             $app.logger().error('change_approval_decide mail error', 'error', err.message)
           }

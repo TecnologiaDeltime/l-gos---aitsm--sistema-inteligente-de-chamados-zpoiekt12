@@ -219,13 +219,17 @@ cronAdd('sla_response_alerts', '* * * * *', function () {
           message.to = [{ address: recipients[m].email }]
           message.subject = subject
           message.text = bodyText
-          var mailClient = $app.newMailClient()
-          mailClient.send(message)
+          if (globalThis.sendSystemMailMessage) {
+            globalThis.sendSystemMailMessage(message)
+          } else {
+            var mailClient = $app.newMailClient()
+            mailClient.send(message)
+          }
         } catch (err) {
           $app
             .logger()
             .error(
-              'sla_response_alerts: email send failed for ticket ' + ticketNumber,
+              'sla_response_alerts: erro ao enviar e-mail para ' + recipients[m].email,
               'error',
               err.message,
             )

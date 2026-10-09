@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-09T15:31:56.071Z",
+  "generatedAt": "2026-10-09T15:56:50.979Z",
   "collections": [
     {
       "name": "users",
@@ -8789,6 +8789,49 @@
           "type": "number",
           "required": false,
           "system": false
+        },
+        {
+          "name": "smtp_host",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "smtp_port",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "smtp_encryption",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["STARTTLS", "SSL/TLS", "Nenhuma"]
+        },
+        {
+          "name": "smtp_user",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "smtp_password",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "smtp_sender_name",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "smtp_reply_to",
+          "type": "text",
+          "required": false,
+          "system": false
         }
       ],
       "indexes": []
@@ -9436,7 +9479,7 @@
           "type": "select",
           "required": true,
           "system": false,
-          "selectValues": ["connection_test", "dry_run_simulation", "teste-envio"]
+          "selectValues": ["connection_test", "dry_run_simulation", "teste-envio", "teste-smtp"]
         },
         {
           "name": "executed_by",

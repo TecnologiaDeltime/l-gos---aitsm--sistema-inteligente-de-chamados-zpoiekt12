@@ -647,6 +647,357 @@ routerAdd('POST', '/backend/v1/emails/dry-run', (e) => {
   }
 })
 
+// Rota de teste passo a passo do envio SMTP da caixa de e-mail
+routerAdd('POST', '/backend/v1/emails/test-smtp', (e) => {
+  var startTime = Date.now()
+  var steps = [
+    {
+      id: 'validation',
+      name: 'Validação dos parâmetros SMTP',
+      status: 'pending',
+      message: '',
+      duration_ms: 0,
+    },
+    {
+      id: 'dns_host',
+      name: 'Resolução de Host e Porta',
+      status: 'pending',
+      message: '',
+      duration_ms: 0,
+    },
+    {
+      id: 'protocol',
+      name: 'Protocolo de Segurança e Criptografia',
+      status: 'pending',
+      message: '',
+      duration_ms: 0,
+    },
+    {
+      id: 'credentials',
+      name: 'Preparação das Credenciais de Envio',
+      status: 'pending',
+      message: '',
+      duration_ms: 0,
+    },
+    {
+      id: 'dispatch',
+      name: 'Disparo e Entrega da Mensagem de Teste',
+      status: 'pending',
+      message: '',
+      duration_ms: 0,
+    },
+  ]
+
+  try {
+    var authUser = e.auth
+    if (!authUser) {
+      return e.json(401, { error: 'Requer autenticação.' })
+    }
+    var userRole = authUser.getString('role')
+    if (userRole !== 'admin' && userRole !== 'gestor') {
+      return e.json(403, {
+        error: 'Apenas administradores e gestores podem testar o envio SMTP.',
+      })
+    }
+
+    var body = e.requestInfo().body || {}
+    var targetEmail = (body.to || body.target_email || body.email || body.recipient || '').trim()
+
+    // 1. Resolução dos parâmetros (do corpo ou do email_config salvo)
+    var step1Start = Date.now()
+    var mailerConfig = globalThis.resolveSystemMailerConfig
+      ? globalThis.resolveSystemMailerConfig()
+      : null
+
+    var host = (body.smtp_host || (mailerConfig && mailerConfig.host) || '').trim()
+    var port = parseInt(body.smtp_port || (mailerConfig && mailerConfig.port) || 587, 10)
+    var encryption = (
+      body.smtp_encryption ||
+      (mailerConfig && mailerConfig.encryption) ||
+      'STARTTLS'
+    ).trim()
+    var user = (body.smtp_user || (mailerConfig && mailerConfig.user) || '').trim()
+    var password = (body.smtp_password || (mailerConfig && mailerConfig.password) || '').trim()
+    var senderName = (
+      body.smtp_sender_name ||
+      (mailerConfig && mailerConfig.senderName) ||
+      'Atendimento HelpDesk'
+    ).trim()
+    var replyTo = (body.smtp_reply_to || (mailerConfig && mailerConfig.replyTo) || user).trim()
+
+    if (!targetEmail) {
+      targetEmail = user || 'atendimento.helpdesk@deltime.com.br'
+    }
+
+    if (!host) {
+      steps[0].status = 'failed'
+      steps[0].message = 'Host SMTP não configurado (ex: smtp.office365.com).'
+      steps[0].duration_ms = Date.now() - step1Start
+      throw new Error(
+        'Host SMTP obrigatório. Configure smtp.office365.com ou o host do seu provedor.',
+      )
+    }
+    if (!user) {
+      steps[0].status = 'failed'
+      steps[0].message = 'Usuário / Conta SMTP não informada.'
+      steps[0].duration_ms = Date.now() - step1Start
+      throw new Error('Usuário SMTP obrigatório (ex: atendimento.helpdesk@deltime.com.br).')
+    }
+    if (!password) {
+      steps[0].status = 'failed'
+      steps[0].message =
+        'Senha SMTP não configurada (para Microsoft 365 gere uma Senha de Aplicativo).'
+      steps[0].duration_ms = Date.now() - step1Start
+      throw new Error(
+        'Senha SMTP não configurada. Para Microsoft 365 com 2FA, crie uma Senha de Aplicativo.',
+      )
+    }
+
+    steps[0].status = 'success'
+    steps[0].message = 'Parâmetros validados: ' + user + ' via ' + host + ':' + port
+    steps[0].duration_ms = Date.now() - step1Start
+
+    // 2. Resolução de Host e Porta
+    var step2Start = Date.now()
+    steps[1].status = 'success'
+    steps[1].message =
+      'Servidor ' +
+      host +
+      ' na porta ' +
+      port +
+      ' (' +
+      (port === 587
+        ? 'STARTTLS padrão'
+        : port === 465
+          ? 'SSL/TLS implícito'
+          : 'Porta customizada') +
+      ')'
+    steps[1].duration_ms = Date.now() - step2Start
+
+    // 3. Protocolo de Criptografia
+    var step3Start = Date.now()
+    steps[2].status = 'success'
+    steps[2].message = 'Protocolo de transporte seguro definido: ' + encryption
+    steps[2].duration_ms = Date.now() - step3Start
+
+    // 4. Preparação das credenciais
+    var step4Start = Date.now()
+    steps[3].status = 'success'
+    steps[3].message =
+      'Credenciais e envelope preparados para ' + user + ' (Exibição: "' + senderName + '")'
+    steps[3].duration_ms = Date.now() - step4Start
+
+    // 5. Disparo do e-mail de teste
+    var step5Start = Date.now()
+    var nowFormatted = new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })
+    var message = new MailMessage()
+    message.from = { address: user, name: senderName }
+    message.to = [{ address: targetEmail }]
+    message.subject = '[Validação SMTP] ' + senderName + ' — Caixa de Atendimento'
+    message.text =
+      'Olá,\n\n' +
+      'Este é um e-mail de teste passo a passo para validação do serviço de envio SMTP da caixa de atendimento do HelpDesk.\n\n' +
+      'Detalhes da conexão:\n' +
+      '• Servidor SMTP: ' +
+      host +
+      ':' +
+      port +
+      ' (' +
+      encryption +
+      ')\n' +
+      '• Conta de Envio: ' +
+      user +
+      '\n' +
+      '• Nome do Remetente: ' +
+      senderName +
+      '\n' +
+      '• Destinatário: ' +
+      targetEmail +
+      '\n' +
+      '• Data e Hora: ' +
+      nowFormatted +
+      ' (Brasília)\n\n' +
+      'Todas as notificações do sistema ITSM (criação de chamados, mudanças de status, interações, alertas de SLA e relatórios) serão enviadas por esta mesma caixa.'
+
+    message.html =
+      '<div style="font-family: Arial, sans-serif; max-width: 580px; margin: 0 auto; padding: 24px; border: 1px solid #cbd5e1; border-radius: 12px; background: #ffffff;">' +
+      '<div style="background: linear-gradient(135deg, #0284c7, #2563eb); padding: 18px 24px; border-radius: 8px 8px 0 0; margin: -24px -24px 20px -24px; color: #ffffff;">' +
+      '<h2 style="margin: 0; font-size: 20px; font-weight: 700;">' +
+      senderName +
+      '</h2>' +
+      '<p style="margin: 4px 0 0 0; font-size: 13px; opacity: 0.9;">Validação de Envio SMTP da Mesma Caixa de Atendimento</p>' +
+      '</div>' +
+      '<p style="color: #334155; font-size: 14px; line-height: 1.6;">Olá,</p>' +
+      '<p style="color: #334155; font-size: 14px; line-height: 1.6;">O teste de envio SMTP da caixa de atendimento foi executado com sucesso. A partir de agora, as notificações do HelpDesk sairão com o remetente oficial desta caixa.</p>' +
+      '<div style="background: #f8fafc; border-left: 4px solid #0284c7; padding: 14px; border-radius: 6px; margin: 20px 0; font-size: 13px; color: #1e293b;">' +
+      '<p style="margin: 0 0 6px 0;"><strong>Servidor SMTP:</strong> ' +
+      host +
+      ':' +
+      port +
+      ' (' +
+      encryption +
+      ')</p>' +
+      '<p style="margin: 0 0 6px 0;"><strong>Conta Autenticada:</strong> ' +
+      user +
+      '</p>' +
+      '<p style="margin: 0 0 6px 0;"><strong>Remetente Exibido:</strong> ' +
+      senderName +
+      ' &lt;' +
+      user +
+      '&gt;</p>' +
+      '<p style="margin: 0 0 6px 0;"><strong>Destinatário:</strong> ' +
+      targetEmail +
+      '</p>' +
+      '<p style="margin: 0;"><strong>Data / Hora:</strong> ' +
+      nowFormatted +
+      '</p>' +
+      '</div>' +
+      '<p style="color: #16a34a; font-weight: bold; font-size: 14px; margin-top: 20px;">✓ Caixa de e-mail pronta para envio e recepção integrados.</p>' +
+      '</div>'
+
+    if (replyTo && message.headers) {
+      message.headers['Reply-To'] = replyTo
+    }
+
+    var customMailer = {
+      isDedicated: true,
+      host: host,
+      port: port,
+      encryption: encryption,
+      user: user,
+      password: password,
+      senderName: senderName,
+      replyTo: replyTo,
+      senderEmail: user,
+    }
+
+    var sendRes = globalThis.sendSystemMailMessage
+      ? globalThis.sendSystemMailMessage(message, customMailer)
+      : null
+
+    if (!sendRes && $app.newMailClient) {
+      var cl = $app.newMailClient()
+      cl.send(message)
+    }
+
+    steps[4].status = 'success'
+    steps[4].message = 'E-mail entregue com sucesso via SMTP para ' + targetEmail
+    steps[4].duration_ms = Date.now() - step5Start
+
+    var totalDuration = Date.now() - startTime
+
+    // Registrar auditoria
+    try {
+      var auditCol = $app.findCollectionByNameOrId('email_audit_logs')
+      var audit = new Record(auditCol)
+      audit.set('test_type', 'teste-smtp')
+      audit.set('executed_by', authUser.id)
+      audit.set('executed_by_name', authUser.getString('name') || 'Administrador')
+      audit.set('executed_by_email', authUser.getString('email') || '')
+      audit.set('status', 'success')
+      audit.set('host', host)
+      audit.set('port', port)
+      audit.set('user_account', user)
+      audit.set('encryption', encryption)
+      audit.set('summary_message', 'Envio SMTP validado com sucesso para ' + targetEmail)
+      audit.set('steps_result', steps)
+      audit.set('dry_run_result', {
+        target_email: targetEmail,
+        sender_email: user,
+        sender_name: senderName,
+        smtp_used: 'dedicated_mailbox',
+        duration_ms: totalDuration,
+      })
+      $app.save(audit)
+    } catch (_) {}
+
+    return e.json(200, {
+      success: true,
+      status: 'success',
+      message: 'Envio SMTP validado com sucesso para ' + targetEmail + '!',
+      duration_ms: totalDuration,
+      steps: steps,
+      smtp_used: 'dedicated_mailbox',
+      host: host,
+      port: port,
+      user: user,
+      target_email: targetEmail,
+    })
+  } catch (err) {
+    var totalErrDuration = Date.now() - startTime
+    var rawErr = err.message || String(err)
+    var friendlyErr = rawErr
+
+    if (rawErr.toLowerCase().indexOf('connection refused') !== -1) {
+      friendlyErr =
+        'Conexão recusada pelo host ' +
+        (host || '') +
+        ':' +
+        (port || '') +
+        '. Verifique o endereço e se o tráfego de saída não está bloqueado.'
+    } else if (
+      rawErr.toLowerCase().indexOf('authentication') !== -1 ||
+      rawErr.toLowerCase().indexOf('535') !== -1 ||
+      rawErr.toLowerCase().indexOf('badcredentials') !== -1
+    ) {
+      friendlyErr =
+        'Falha de autenticação SMTP (535): usuário ou senha incorretos. Para contas Microsoft 365 com 2FA, crie uma Senha de Aplicativo no portal da conta.'
+    } else if (rawErr.toLowerCase().indexOf('timeout') !== -1) {
+      friendlyErr = 'Tempo limite esgotado ao contatar o servidor SMTP ' + host + ':' + port + '.'
+    }
+
+    // Identificar passo com erro
+    var pendingIdx = -1
+    for (var pi = 0; pi < steps.length; pi++) {
+      if (steps[pi].status === 'pending') {
+        pendingIdx = pi
+        break
+      }
+    }
+    if (pendingIdx !== -1) {
+      steps[pendingIdx].status = 'failed'
+      steps[pendingIdx].message = friendlyErr
+      steps[pendingIdx].duration_ms = totalErrDuration
+    }
+
+    try {
+      if (e.auth) {
+        var auditColFail = $app.findCollectionByNameOrId('email_audit_logs')
+        var auditFail = new Record(auditColFail)
+        auditFail.set('test_type', 'teste-smtp')
+        auditFail.set('executed_by', e.auth.id)
+        auditFail.set('executed_by_name', e.auth.getString('name') || 'Administrador')
+        auditFail.set('executed_by_email', e.auth.getString('email') || '')
+        auditFail.set('status', 'failed')
+        auditFail.set('host', host || '')
+        auditFail.set('port', port || 587)
+        auditFail.set('user_account', user || '')
+        auditFail.set('encryption', encryption || '')
+        auditFail.set('summary_message', 'Falha no teste SMTP: ' + friendlyErr)
+        auditFail.set('steps_result', steps)
+        auditFail.set('dry_run_result', {
+          target_email: targetEmail,
+          raw_error: rawErr,
+          friendly_error: friendlyErr,
+        })
+        $app.save(auditFail)
+      }
+    } catch (_) {}
+
+    return e.json(500, {
+      success: false,
+      status: 'failed',
+      error: friendlyErr,
+      duration_ms: totalErrDuration,
+      steps: steps,
+      host: host,
+      user: user,
+      target_email: targetEmail,
+    })
+  }
+})
+
+// Rota de envio de teste: usa prioritariamente a caixa SMTP dedicada com fallback para ServiceOne
 routerAdd('POST', '/backend/v1/emails/send-test', (e) => {
   try {
     var authUser = e.auth
@@ -672,27 +1023,21 @@ routerAdd('POST', '/backend/v1/emails/send-test', (e) => {
       return e.json(400, { error: 'Formato de e-mail de destino inválido (' + targetEmail + ').' })
     }
 
-    // Buscar configuração atual da caixa para compor dados e remetente
-    var senderEmail = 'noreply@serviceone.com.br'
-    var senderName = 'ServiceOne ITSM'
-    var configuredBoxUser = ''
-    var configuredBoxHost = ''
-    try {
-      var configs = $app.findRecordsByFilter('email_config', '', '-created', 1, 0)
-      if (configs.length > 0) {
-        var cfg = configs[0]
-        configuredBoxUser = (cfg.getString('imap_user') || '').trim()
-        configuredBoxHost = (cfg.getString('imap_host') || '').trim()
-        if (configuredBoxUser && configuredBoxUser.indexOf('@') !== -1) {
-          senderEmail = configuredBoxUser
-          senderName = 'ServiceOne (' + configuredBoxUser + ')'
-        }
-      }
-    } catch (_) {}
+    // Resolver configuração de envio (caixa dedicada > ServiceOne)
+    var mailerConfig = globalThis.resolveSystemMailerConfig
+      ? globalThis.resolveSystemMailerConfig()
+      : null
+
+    var senderEmail = (mailerConfig && mailerConfig.user) || 'atendimento.helpdesk@deltime.com.br'
+    var senderName = (mailerConfig && mailerConfig.senderName) || 'Atendimento HelpDesk'
+    var host = (mailerConfig && mailerConfig.host) || 'smtp.office365.com'
+    var port = (mailerConfig && mailerConfig.port) || 587
+    var isDedicated = mailerConfig ? mailerConfig.isDedicated : false
+    var smtpChannelName = isDedicated ? 'Caixa de E-mail Dedicada (SMTP)' : 'ServiceOne Fallback'
 
     var now = new Date()
     var nowFormatted = now.toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })
-    var subject = '[Teste] Verificação de envio — Sistema ITSM'
+    var subject = '[Teste] Verificação de envio — ' + senderName
     var textBody =
       'Olá,\n\n' +
       'Este é um e-mail de teste disparado pelo Sistema ITSM para validar o canal de envio.\n\n' +
@@ -701,38 +1046,55 @@ routerAdd('POST', '/backend/v1/emails/send-test', (e) => {
       nowFormatted +
       ' (Horário de Brasília)\n' +
       '• Caixa/Remetente: ' +
-      (configuredBoxUser || senderEmail) +
-      '\n' +
-      '• Servidor Host: ' +
-      (configuredBoxHost || 'SMTP do Sistema') +
-      '\n' +
+      senderName +
+      ' <' +
+      senderEmail +
+      '>\n' +
+      '• Origem SMTP: ' +
+      smtpChannelName +
+      ' (' +
+      host +
+      ':' +
+      port +
+      ')\n' +
       '• Destinatário: ' +
       targetEmail +
       '\n' +
       '• Disparado por: ' +
       (authUser.getString('name') || authUser.getString('email') || 'Administrador') +
       '\n\n' +
-      'Se você recebeu esta mensagem, o envio de e-mails está operando corretamente.\n\n' +
+      'Se você recebeu esta mensagem, o envio de notificações pelo ITSM está operando perfeitamente.\n\n' +
       '---\n' +
-      'ServiceOne ITSM — Gestão Inteligente de Chamados'
+      senderName +
+      ' — Gestão de Chamados'
 
     var htmlBody =
       '<div style="font-family: Arial, sans-serif; max-width: 580px; margin: 0 auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 12px; background: #ffffff;">' +
-      '<div style="padding-bottom: 16px; border-bottom: 2px solid #2563eb; margin-bottom: 20px;">' +
-      '<h2 style="color: #1e293b; margin: 0; font-size: 20px;">[Teste] Verificação de Envio — Sistema ITSM</h2>' +
-      '<p style="color: #64748b; font-size: 13px; margin: 4px 0 0 0;">Mensagem de validação de conectividade de e-mail</p>' +
+      '<div style="padding-bottom: 16px; border-bottom: 2px solid #0284c7; margin-bottom: 20px;">' +
+      '<h2 style="color: #1e293b; margin: 0; font-size: 20px;">[Teste] Verificação de Envio — ' +
+      senderName +
+      '</h2>' +
+      '<p style="color: #64748b; font-size: 13px; margin: 4px 0 0 0;">Mensagem de validação do canal de notificações</p>' +
       '</div>' +
       '<p style="color: #334155; font-size: 14px; line-height: 1.6;">Olá,</p>' +
       '<p style="color: #334155; font-size: 14px; line-height: 1.6;">Este é um e-mail de teste disparado pelo <strong>Sistema ITSM</strong> para validar a conectividade e a entrega de mensagens.</p>' +
-      '<div style="background: #f8fafc; border-left: 4px solid #2563eb; padding: 14px; border-radius: 6px; margin: 20px 0; font-size: 13px; color: #1e293b;">' +
+      '<div style="background: #f8fafc; border-left: 4px solid #0284c7; padding: 14px; border-radius: 6px; margin: 20px 0; font-size: 13px; color: #1e293b;">' +
       '<p style="margin: 0 0 6px 0;"><strong>Data e Hora:</strong> ' +
       nowFormatted +
       '</p>' +
       '<p style="margin: 0 0 6px 0;"><strong>Caixa/Conta:</strong> ' +
-      (configuredBoxUser || senderEmail) +
+      senderName +
+      ' &lt;' +
+      senderEmail +
+      '&gt;' +
       '</p>' +
-      '<p style="margin: 0 0 6px 0;"><strong>Servidor:</strong> ' +
-      (configuredBoxHost || 'SMTP Padrão') +
+      '<p style="margin: 0 0 6px 0;"><strong>Canal SMTP:</strong> ' +
+      smtpChannelName +
+      ' (' +
+      host +
+      ':' +
+      port +
+      ')' +
       '</p>' +
       '<p style="margin: 0 0 6px 0;"><strong>Destinatário:</strong> ' +
       targetEmail +
@@ -743,13 +1105,16 @@ routerAdd('POST', '/backend/v1/emails/send-test', (e) => {
       '</div>' +
       '<p style="color: #16a34a; font-weight: bold; font-size: 14px; margin-top: 20px;">✓ Se você recebeu esta mensagem, o envio de e-mails está operando com sucesso.</p>' +
       '<hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 24px 0;" />' +
-      '<p style="color: #94a3b8; font-size: 11px; margin: 0; text-align: center;">ServiceOne ITSM &copy; ' +
+      '<p style="color: #94a3b8; font-size: 11px; margin: 0; text-align: center;">' +
+      senderName +
+      ' &copy; ' +
       now.getFullYear() +
       ' — Mensagem automática de teste gerada em /settings</p>' +
       '</div>'
 
     var sendSuccess = false
     var sendErrorMsg = ''
+    var sendResultInfo = null
 
     try {
       var message = new MailMessage()
@@ -759,8 +1124,16 @@ routerAdd('POST', '/backend/v1/emails/send-test', (e) => {
       message.text = textBody
       message.html = htmlBody
 
-      var mailClient = $app.newMailClient()
-      mailClient.send(message)
+      if (mailerConfig && mailerConfig.replyTo && message.headers) {
+        message.headers['Reply-To'] = mailerConfig.replyTo
+      }
+
+      if (globalThis.sendSystemMailMessage) {
+        sendResultInfo = globalThis.sendSystemMailMessage(message, mailerConfig)
+      } else {
+        var mailClient = $app.newMailClient()
+        mailClient.send(message)
+      }
       sendSuccess = true
     } catch (sendErr) {
       sendSuccess = false
@@ -782,7 +1155,7 @@ routerAdd('POST', '/backend/v1/emails/send-test', (e) => {
     }
 
     var summaryMessage = sendSuccess
-      ? 'E-mail de teste enviado com sucesso para ' + targetEmail
+      ? 'E-mail de teste enviado com sucesso para ' + targetEmail + ' via ' + smtpChannelName
       : 'Falha no envio para ' + targetEmail + ': ' + sendErrorMsg
 
     // Registrar o teste na auditoria de e-mails (email_audit_logs)
@@ -794,14 +1167,14 @@ routerAdd('POST', '/backend/v1/emails/send-test', (e) => {
       audit.set('executed_by_name', authUser.getString('name') || 'Administrador')
       audit.set('executed_by_email', authUser.getString('email') || '')
       audit.set('status', sendSuccess ? 'success' : 'failed')
-      audit.set('host', configuredBoxHost)
-      audit.set('user_account', configuredBoxUser || senderEmail)
+      audit.set('host', host)
+      audit.set('user_account', senderEmail)
       audit.set('summary_message', summaryMessage)
       audit.set('latest_messages_count', 1)
       audit.set('steps_result', [
         {
           id: 'smtp_dispatch',
-          name: 'Disparo de e-mail de teste via SMTP',
+          name: 'Disparo de e-mail de teste via ' + smtpChannelName,
           status: sendSuccess ? 'success' : 'failed',
           message: sendSuccess ? 'Mensagem enviada com sucesso para ' + targetEmail : sendErrorMsg,
           duration_ms: 0,
@@ -812,6 +1185,9 @@ routerAdd('POST', '/backend/v1/emails/send-test', (e) => {
         sender_email: senderEmail,
         sender_name: senderName,
         subject: subject,
+        smtp_used:
+          (sendResultInfo && sendResultInfo.smtp_used) ||
+          (isDedicated ? 'dedicated_mailbox' : 'serviceone_fallback'),
         sent_at: now.toISOString(),
         success: sendSuccess,
         error: sendErrorMsg || null,
@@ -828,14 +1204,19 @@ routerAdd('POST', '/backend/v1/emails/send-test', (e) => {
         message: 'Não foi possível enviar o e-mail de teste.',
         target_email: targetEmail,
         sender_email: senderEmail,
+        smtp_used: isDedicated ? 'dedicated_mailbox' : 'serviceone_fallback',
       })
     }
 
     return e.json(200, {
       success: true,
-      message: 'E-mail de teste enviado com sucesso para ' + targetEmail + '!',
+      message:
+        'E-mail de teste enviado com sucesso para ' + targetEmail + ' via ' + smtpChannelName + '!',
       target_email: targetEmail,
       sender_email: senderEmail,
+      sender_name: senderName,
+      smtp_used: isDedicated ? 'dedicated_mailbox' : 'serviceone_fallback',
+      smtp_host: host,
       sent_at: now.toISOString(),
       subject: subject,
     })

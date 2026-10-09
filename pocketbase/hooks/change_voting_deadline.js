@@ -341,8 +341,12 @@ cronAdd('change_voting_deadline', '*/15 * * * *', function () {
         message.to = [{ address: notifRecipients[e].email }]
         message.subject = subject
         message.text = bodyText
-        var mailClient = $app.newMailClient()
-        mailClient.send(message)
+        if (globalThis.sendSystemMailMessage) {
+          globalThis.sendSystemMailMessage(message)
+        } else {
+          var mailClient = $app.newMailClient()
+          mailClient.send(message)
+        }
       } catch (err) {
         $app.logger().error('change_voting_deadline mail error', 'error', err.message)
       }

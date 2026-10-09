@@ -223,8 +223,12 @@ cronAdd('scheduled_report_sender', '0 2 * * *', function () {
         message.subject = subject
         message.text = bodyText
         message.attachments = [{ filename: filename, content: csvBytes }]
-        var client = $app.newMailClient()
-        client.send(message)
+        if (globalThis.sendSystemMailMessage) {
+          globalThis.sendSystemMailMessage(message)
+        } else {
+          var client = $app.newMailClient()
+          client.send(message)
+        }
       }
 
       var nextRun = new Date(now.getFullYear(), now.getMonth() + 1, dayOfMonth, 2, 0, 0)

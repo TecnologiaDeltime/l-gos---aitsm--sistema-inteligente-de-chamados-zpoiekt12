@@ -385,13 +385,17 @@ cronAdd('level_consumption_alerts', '*/5 * * * *', function () {
           mailMsg.to = [{ address: emailList[em2] }]
           mailMsg.subject = subject
           mailMsg.text = bodyText
-          var mailClient = $app.newMailClient()
-          mailClient.send(mailMsg)
+          if (globalThis.sendSystemMailMessage) {
+            globalThis.sendSystemMailMessage(mailMsg)
+          } else {
+            var mailClient = $app.newMailClient()
+            mailClient.send(mailMsg)
+          }
         } catch (err) {
           $app
             .logger()
             .error(
-              'level_consumption_alerts: email send failed ' + emailList[em2],
+              'level_consumption_alerts: erro ao enviar e-mail para ' + emailList[em2],
               'error',
               err.message,
             )
