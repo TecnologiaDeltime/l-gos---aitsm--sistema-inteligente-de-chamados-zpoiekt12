@@ -1,3 +1,24 @@
+routerAdd('GET', '/backend/v1/debug-globals', (e) => {
+  var names = Object.getOwnPropertyNames(globalThis).sort()
+  var dollar = names.filter((n) => n.startsWith('$'))
+  var hasTls = typeof $tls !== 'undefined'
+  var hasNet = typeof $net !== 'undefined'
+  var hasOs = typeof $os !== 'undefined'
+  var osProps = []
+  if (hasOs) {
+    try {
+      osProps = Object.getOwnPropertyNames($os)
+    } catch (_) {}
+  }
+  return e.json(200, {
+    dollar_globals: dollar,
+    has_tls: hasTls,
+    has_net: hasNet,
+    has_os: hasOs,
+    os_props: osProps,
+  })
+})
+
 routerAdd('GET', '/backend/v1/approvals/{token}', (e) => {
   const token = e.request.pathValue('token')
   if (!token) return e.badRequestError('Token is required')

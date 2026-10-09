@@ -169,7 +169,7 @@ onRecordAfterUpdateSuccess((e) => {
   for (var ei = 0; ei < recipients.length; ei++) {
     if (!recipients[ei].email) continue
     try {
-      var message = new MailMessage()
+      var message = new MailerMessage()
       message.from = { address: 'noreply@serviceone.com.br', name: 'ServiceOne' }
       message.to = [{ address: recipients[ei].email }]
       message.subject = subject

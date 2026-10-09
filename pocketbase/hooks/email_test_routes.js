@@ -790,7 +790,7 @@ routerAdd('POST', '/backend/v1/emails/test-smtp', (e) => {
     // 5. Disparo do e-mail de teste
     var step5Start = Date.now()
     var nowFormatted = new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })
-    var message = new MailMessage()
+    var message = new MailerMessage()
     message.from = { address: user, name: senderName }
     message.to = [{ address: targetEmail }]
     message.subject = '[Validação SMTP] ' + senderName + ' — Caixa de Atendimento'
@@ -1117,7 +1117,7 @@ routerAdd('POST', '/backend/v1/emails/send-test', (e) => {
     var sendResultInfo = null
 
     try {
-      var message = new MailMessage()
+      var message = new MailerMessage()
       message.from = { address: senderEmail, name: senderName }
       message.to = [{ address: targetEmail }]
       message.subject = subject

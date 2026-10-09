@@ -336,7 +336,7 @@ cronAdd('change_voting_deadline', '*/15 * * * *', function () {
     for (var e = 0; e < notifRecipients.length; e++) {
       if (!notifRecipients[e].email) continue
       try {
-        var message = new MailMessage()
+        var message = new MailerMessage()
         message.from = { address: 'noreply@serviceone.com.br', name: 'ServiceOne' }
         message.to = [{ address: notifRecipients[e].email }]
         message.subject = subject

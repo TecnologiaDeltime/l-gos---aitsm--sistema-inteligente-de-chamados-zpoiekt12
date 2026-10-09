@@ -89,7 +89,7 @@
     if (!opts) throw new Error('Parâmetros de e-mail ausentes.')
     var mailerConfig = globalThis.resolveSystemMailerConfig()
 
-    var message = new MailMessage()
+    var message = new MailerMessage()
 
     // Remetente
     var senderEmail = mailerConfig.senderEmail || 'noreply@serviceone.com.br'
@@ -134,7 +134,7 @@
     return globalThis.sendSystemMailMessage(message, mailerConfig)
   }
 
-  // Envia um MailMessage aplicando a caixa dedicada ou fallback
+  // Envia um MailerMessage aplicando a caixa dedicada ou fallback
   globalThis.sendSystemMailMessage = function (message, mailerConfig) {
     if (!mailerConfig) {
       mailerConfig = globalThis.resolveSystemMailerConfig()

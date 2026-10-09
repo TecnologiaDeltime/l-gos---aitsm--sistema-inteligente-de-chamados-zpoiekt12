@@ -260,7 +260,7 @@ onRecordAfterCreateSuccess((e) => {
               'h)'
             : '')
 
-        var message = new MailMessage()
+        var message = new MailerMessage()
         message.from = { address: 'noreply@serviceone.com.br', name: 'ServiceOne' }
         message.to = [{ address: dest.email }]
         message.subject = subject
