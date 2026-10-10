@@ -38,6 +38,8 @@ import {
   Tag,
   Copy,
   Check,
+  ExternalLink,
+  Key,
 } from 'lucide-react'
 import {
   EmailConfigRecord,
@@ -75,6 +77,8 @@ export function ImapEmailSettings({
   // Credenciais e campos específicos
   const [imapPassword, setImapPassword] = useState(emailConfig.imap_password || '')
   const [showPassword, setShowPassword] = useState(false)
+  const [graphSecret, setGraphSecret] = useState(emailConfig.graph_client_secret || '')
+  const [showGraphSecret, setShowGraphSecret] = useState(false)
   const [smtpPassword, setSmtpPassword] = useState(
     emailConfig.smtp_password ?? emailConfig.imap_password ?? '',
   )
@@ -294,13 +298,31 @@ export function ImapEmailSettings({
 
   // Executar Teste de Conexão Passo a Passo
   const handleRunConnectionTest = async () => {
-    if (!emailConfig.imap_host || !emailConfig.imap_user) {
-      toast({
-        title: 'Preencha Host e Usuário',
-        description: 'Host IMAP e Usuário/E-mail são obrigatórios para testar.',
-        variant: 'destructive',
-      })
-      return
+    const isGraph = (emailConfig.reception_mode || 'graph') === 'graph'
+
+    if (isGraph) {
+      if (
+        !emailConfig.graph_tenant_id ||
+        !emailConfig.graph_client_id ||
+        !(graphSecret || emailConfig.graph_client_secret)
+      ) {
+        toast({
+          title: 'Preencha as Credenciais do Microsoft Entra ID',
+          description:
+            'Tenant ID, Client ID e Segredo do Cliente são obrigatórios para testar o Microsoft Graph.',
+          variant: 'destructive',
+        })
+        return
+      }
+    } else {
+      if (!emailConfig.imap_host || !emailConfig.imap_user) {
+        toast({
+          title: 'Preencha Host e Usuário',
+          description: 'Host IMAP e Usuário/E-mail são obrigatórios para testar.',
+          variant: 'destructive',
+        })
+        return
+      }
     }
 
     setTestingConnection(true)
@@ -309,6 +331,11 @@ export function ImapEmailSettings({
 
     try {
       const resp = await testEmailConnection({
+        reception_mode: emailConfig.reception_mode || 'graph',
+        graph_tenant_id: emailConfig.graph_tenant_id,
+        graph_client_id: emailConfig.graph_client_id,
+        graph_client_secret: graphSecret || emailConfig.graph_client_secret,
+        graph_mailbox: emailConfig.graph_mailbox || emailConfig.imap_user,
         imap_host: emailConfig.imap_host,
         imap_port: emailConfig.imap_port,
         imap_user: emailConfig.imap_user,
@@ -322,20 +349,22 @@ export function ImapEmailSettings({
       setTestResponse(resp)
       if (resp.success) {
         toast({
-          title: 'Conexão IMAP validada!',
-          description: resp.message,
+          title: isGraph ? 'Conexão Microsoft Graph validada!' : 'Conexão IMAP validada!',
+          description: resp.summary_message || resp.message || 'Comunicação bem-sucedida.',
         })
       } else {
         toast({
-          title: 'Atenção na conexão IMAP',
-          description: resp.message,
+          title: isGraph ? 'Atenção na conexão Graph' : 'Atenção na conexão IMAP',
+          description: resp.summary_message || resp.message || 'Falha na validação.',
           variant: 'destructive',
         })
       }
       loadAuditHistory()
     } catch (err: any) {
       toast({
-        title: 'Erro ao conectar ao servidor IMAP',
+        title: isGraph
+          ? 'Erro na comunicação Microsoft Graph'
+          : 'Erro ao conectar ao servidor IMAP',
         description: err.message || 'Falha de comunicação.',
         variant: 'destructive',
       })
@@ -450,7 +479,9 @@ export function ImapEmailSettings({
             onClick={() => setActiveTab('test')}
           >
             <ShieldCheck className="h-3.5 w-3.5 mr-1.5" />
-            Validação IMAP (7 Passos)
+            {(emailConfig.reception_mode || 'graph') === 'graph'
+              ? 'Validação Graph API (7 Passos)'
+              : 'Validação IMAP (7 Passos)'}
           </Button>
           <Button
             type="button"
@@ -563,39 +594,6 @@ export function ImapEmailSettings({
               )}
             </div>
 
-            {/* Guia de Configuração para Microsoft 365 / Office 365 */}
-            <div className="p-4 rounded-xl border border-blue-200 dark:border-blue-900 bg-blue-50/50 dark:bg-blue-950/30 space-y-2 text-xs">
-              <div className="flex items-center gap-2 text-blue-900 dark:text-blue-200 font-bold">
-                <Server className="h-4 w-4 text-blue-600" />
-                <span>Instruções Importantes para Caixas Microsoft 365 (imap.office365.com)</span>
-              </div>
-              <ul className="list-disc pl-5 space-y-1 text-slate-700 dark:text-slate-300 text-[11px]">
-                <li>
-                  <strong>Autenticação Básica vs Senha de Aplicativo:</strong> O Microsoft 365
-                  desabilitou autenticação básica padrão. É obrigatório criar uma{' '}
-                  <em>Senha de Aplicativo (App Password)</em> na conta se a organização utilizar
-                  MFA/2FA, ou conceder acesso IMAP no Microsoft 365 Admin Center.
-                </li>
-                <li>
-                  <strong>Nome da Pasta de Entrada:</strong> O padrão do Office 365 é{' '}
-                  <code>INBOX</code>. Se você utilizar uma pasta personalizada como{' '}
-                  <code>Atendimento</code>, ela deve existir exatamente com essa grafia no webmail
-                  do Outlook. O sistema possui fallback automático para a <code>INBOX</code> caso a
-                  pasta não seja localizada.
-                </li>
-                <li>
-                  <strong>Porta e Criptografia:</strong> Porta <strong>993</strong> com{' '}
-                  <strong>SSL/TLS</strong> direta habilitada.
-                </li>
-                <li>
-                  <strong>Domínios Liberados:</strong> E-mails de remetentes cujo domínio esteja em{' '}
-                  <em>Clientes → Domínios de E-mail</em> geram chamados automaticamente. E-mails de
-                  outros domínios são enviados para <em>Chamados Retidos (/tickets/retained)</em>{' '}
-                  para proteção contra spam.
-                </li>
-              </ul>
-            </div>
-
             {/* Toggle Mestre */}
             <div className="flex items-center justify-between rounded-lg bg-slate-50 dark:bg-slate-900/50 p-4 border border-slate-200 dark:border-slate-800">
               <div className="space-y-0.5">
@@ -614,19 +612,19 @@ export function ImapEmailSettings({
               />
             </div>
 
-            {/* SEÇÃO A: RECEPÇÃO DE E-MAILS (IMAP) */}
-            <div className="space-y-4">
-              <div className="flex items-center justify-between pb-2 border-b border-slate-200 dark:border-slate-800">
+            {/* SEÇÃO A: RECEPÇÃO DE E-MAILS (SELETOR DE MODO GRAPH VS IMAP) */}
+            <div className="space-y-5">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-slate-200 dark:border-slate-800">
                 <div className="flex items-center gap-2">
                   <div className="p-1.5 rounded-md bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300">
                     <Inbox className="h-4 w-4" />
                   </div>
                   <div>
                     <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">
-                      Recepção de E-mails (IMAP)
+                      Recepção de E-mails & Ingestão ITSM
                     </h3>
                     <p className="text-xs text-slate-500">
-                      Configuração da caixa para leitura e ingestão automática de chamados
+                      Escolha o método de conexão com a caixa de correio da organização
                     </p>
                   </div>
                 </div>
@@ -635,193 +633,518 @@ export function ImapEmailSettings({
                 </Badge>
               </div>
 
-              {/* Grid de Configurações IMAP */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-medium text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
-                    <Server className="h-3.5 w-3.5 text-slate-400" />
-                    Servidor IMAP (Host)
-                  </Label>
-                  <Input
-                    type="text"
-                    placeholder="ex: imap.office365.com"
-                    value={emailConfig.imap_host || ''}
-                    onChange={(e) => setEmailConfig({ ...emailConfig, imap_host: e.target.value })}
-                    className="itsm-input"
-                    disabled={!isGestor}
-                  />
-                </div>
-
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-medium text-slate-700 dark:text-slate-300">
-                    Porta do Servidor IMAP
-                  </Label>
-                  <Input
-                    type="number"
-                    placeholder="993"
-                    value={emailConfig.imap_port || 993}
-                    onChange={(e) =>
+              {/* Seletor de Modo de Recepção */}
+              <div className="space-y-2 p-4 rounded-xl border bg-slate-50/80 dark:bg-slate-900/40 border-slate-200 dark:border-slate-800">
+                <Label className="text-xs font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider block">
+                  Modo de Recepção da Caixa
+                </Label>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    onClick={() =>
                       setEmailConfig({
                         ...emailConfig,
-                        imap_port: parseInt(e.target.value, 10) || 993,
+                        reception_mode: 'graph',
                       })
                     }
-                    className="itsm-input"
-                    disabled={!isGestor}
-                  />
-                </div>
-
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-medium text-slate-700 dark:text-slate-300">
-                    Criptografia da Conexão
-                  </Label>
-                  <Select
-                    value={
-                      emailConfig.imap_encryption || (emailConfig.imap_ssl ? 'SSL/TLS' : 'STARTTLS')
-                    }
-                    onValueChange={(val: ImapEncryption) =>
-                      setEmailConfig({
-                        ...emailConfig,
-                        imap_encryption: val,
-                        imap_ssl: val === 'SSL/TLS',
-                        imap_port:
-                          val === 'SSL/TLS'
-                            ? 993
-                            : val === 'STARTTLS'
-                              ? 143
-                              : emailConfig.imap_port || 143,
-                      })
-                    }
-                    disabled={!isGestor}
+                    className={`p-3.5 rounded-xl border text-left transition-all relative flex flex-col gap-1.5 ${
+                      (emailConfig.reception_mode || 'graph') === 'graph'
+                        ? 'border-blue-600 bg-blue-50/70 dark:bg-blue-950/40 text-blue-950 dark:text-blue-100 shadow-sm ring-1 ring-blue-600'
+                        : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 hover:border-slate-300'
+                    }`}
                   >
-                    <SelectTrigger className="itsm-input">
-                      <SelectValue placeholder="Selecione o tipo de criptografia" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="SSL/TLS">SSL/TLS (Porta 993 recomendada)</SelectItem>
-                      <SelectItem value="STARTTLS">STARTTLS (Porta 143 recomendada)</SelectItem>
-                      <SelectItem value="Nenhuma">Nenhuma / Aberta (Insegura)</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-xs flex items-center gap-1.5">
+                        <CheckCircle2
+                          className={`h-4 w-4 ${
+                            (emailConfig.reception_mode || 'graph') === 'graph'
+                              ? 'text-blue-600 dark:text-blue-400'
+                              : 'text-slate-300'
+                          }`}
+                        />
+                        Microsoft Graph API (HTTPS)
+                      </span>
+                      <Badge className="bg-blue-600 text-white text-[10px] font-semibold">
+                        Recomendado para Office 365
+                      </Badge>
+                    </div>
+                    <p className="text-[11px] text-slate-600 dark:text-slate-400 leading-relaxed pl-5">
+                      Utiliza HTTPS oficial via OAuth2 Client Credentials (sem dependência de
+                      sockets TCP). Compatível 100% com o runtime Goja e seguro contra bloqueios de
+                      Basic Auth do M365.
+                    </p>
+                  </button>
 
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-medium text-slate-700 dark:text-slate-300">
-                    Usuário / E-mail da Caixa
-                  </Label>
-                  <Input
-                    type="email"
-                    placeholder="suporte@cliente.com.br"
-                    value={emailConfig.imap_user || ''}
-                    onChange={(e) => handleImapUserChange(e.target.value)}
-                    className="itsm-input"
-                    disabled={!isGestor}
-                  />
-                </div>
-
-                <div className="space-y-1.5">
-                  <div className="flex items-center justify-between">
-                    <Label className="text-xs font-medium text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
-                      <Lock className="h-3.5 w-3.5 text-slate-400" />
-                      Senha da Caixa (App Password)
-                    </Label>
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="text-[11px] text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1"
-                    >
-                      {showPassword ? (
-                        <>
-                          <EyeOff className="h-3 w-3" />
-                          Ocultar senha
-                        </>
-                      ) : (
-                        <>
-                          <Eye className="h-3 w-3" />
-                          Mostrar senha
-                        </>
-                      )}
-                    </button>
-                  </div>
-                  <div className="relative">
-                    <Input
-                      type={showPassword ? 'text' : 'password'}
-                      placeholder="••••••••••••"
-                      value={imapPassword}
-                      onChange={(e) => handleImapPasswordChange(e.target.value)}
-                      className="itsm-input pr-10"
-                      disabled={!isGestor}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
-                      title={showPassword ? 'Ocultar senha' : 'Exibir senha'}
-                    >
-                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                    </button>
-                  </div>
-                  <p className="text-[11px] text-slate-400">
-                    Gravada de forma segura nas configurações da organização. Para Google ou
-                    Microsoft 365, utilize uma Senha de Aplicativo (App Password).
-                  </p>
-                </div>
-
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-medium text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
-                    <Inbox className="h-3.5 w-3.5 text-slate-400" />
-                    Pasta de Entrada (Padrão INBOX)
-                  </Label>
-                  <Input
-                    type="text"
-                    placeholder="INBOX"
-                    value={emailConfig.inbox_folder || 'INBOX'}
-                    onChange={(e) =>
-                      setEmailConfig({ ...emailConfig, inbox_folder: e.target.value })
-                    }
-                    className="itsm-input"
-                    disabled={!isGestor}
-                  />
-                </div>
-
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-medium text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
-                    <FolderSync className="h-3.5 w-3.5 text-slate-400" />
-                    Pasta de E-mails Processados
-                  </Label>
-                  <Input
-                    type="text"
-                    placeholder="Processados ou INBOX.Processed"
-                    value={emailConfig.processed_folder || 'Processados'}
-                    onChange={(e) =>
-                      setEmailConfig({ ...emailConfig, processed_folder: e.target.value })
-                    }
-                    className="itsm-input"
-                    disabled={!isGestor}
-                  />
-                </div>
-
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-medium text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
-                    <Clock className="h-3.5 w-3.5 text-slate-400" />
-                    Intervalo de Verificação (minutos)
-                  </Label>
-                  <Input
-                    type="number"
-                    min={1}
-                    max={60}
-                    value={emailConfig.check_interval_minutes || 2}
-                    onChange={(e) =>
+                  <button
+                    type="button"
+                    onClick={() =>
                       setEmailConfig({
                         ...emailConfig,
-                        check_interval_minutes: parseInt(e.target.value, 10) || 2,
+                        reception_mode: 'imap',
                       })
                     }
-                    className="itsm-input"
-                    disabled={!isGestor}
-                  />
+                    className={`p-3.5 rounded-xl border text-left transition-all relative flex flex-col gap-1.5 ${
+                      emailConfig.reception_mode === 'imap'
+                        ? 'border-blue-600 bg-blue-50/70 dark:bg-blue-950/40 text-blue-950 dark:text-blue-100 shadow-sm ring-1 ring-blue-600'
+                        : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 hover:border-slate-300'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-xs flex items-center gap-1.5">
+                        <CheckCircle2
+                          className={`h-4 w-4 ${
+                            emailConfig.reception_mode === 'imap'
+                              ? 'text-blue-600 dark:text-blue-400'
+                              : 'text-slate-300'
+                          }`}
+                        />
+                        IMAP Legado (Sockets TCP)
+                      </span>
+                      <Badge variant="outline" className="text-[10px]">
+                        Outros Servidores
+                      </Badge>
+                    </div>
+                    <p className="text-[11px] text-slate-600 dark:text-slate-400 leading-relaxed pl-5">
+                      Para servidores de correio padrão (Zimbra, Postfix, cPanel). Em ambientes sem
+                      módulos de rede de baixo nível, prefira webhooks ou Microsoft Graph.
+                    </p>
+                  </button>
                 </div>
               </div>
+
+              {/* CAMPOS ESPECÍFICOS DO MODO GRAPH */}
+              {(emailConfig.reception_mode || 'graph') === 'graph' && (
+                <div className="space-y-4">
+                  {/* Card de Passo a Passo Microsoft Entra ID */}
+                  <div className="p-4 rounded-xl border border-blue-200 dark:border-blue-900 bg-gradient-to-r from-blue-50/70 to-indigo-50/50 dark:from-blue-950/40 dark:to-indigo-950/30 space-y-3 text-xs">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2 text-blue-950 dark:text-blue-100 font-bold">
+                        <Server className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                        <span>
+                          Passo a Passo: Como Configurar o Aplicativo no Microsoft Entra ID (Azure)
+                        </span>
+                      </div>
+                      <a
+                        href="https://portal.azure.com/#view/Microsoft_AAD_IAM/ActiveDirectoryMenuBlade/~/RegisteredApps"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-[11px] text-blue-700 dark:text-blue-300 hover:underline flex items-center gap-1 font-semibold"
+                      >
+                        Abrir Portal Azure / Entra <ExternalLink className="h-3 w-3" />
+                      </a>
+                    </div>
+
+                    <ol className="list-decimal pl-5 space-y-1.5 text-slate-700 dark:text-slate-300 text-[11.5px] leading-relaxed">
+                      <li>
+                        Acesse o <strong>portal.azure.com</strong> &rarr; navegue até{' '}
+                        <strong>Microsoft Entra ID</strong> &rarr;{' '}
+                        <strong>Registros de aplicativo</strong> &rarr; clique em{' '}
+                        <strong>+ Novo registro</strong>.
+                      </li>
+                      <li>
+                        Dê um nome (ex: <code>ITSM Deltime Helpdesk</code>), selecione{' '}
+                        <em>Contas neste diretório organizacional (Locatário único)</em> e conclua o
+                        registro.
+                      </li>
+                      <li>
+                        Na tela <strong>Visão Geral</strong> do aplicativo criado, copie o{' '}
+                        <strong>ID do Diretório (Locatário / Tenant ID)</strong> e o{' '}
+                        <strong>ID do Aplicativo (Cliente / Client ID)</strong> e cole nos campos
+                        abaixo.
+                      </li>
+                      <li>
+                        No menu lateral esquerdo, vá em <strong>Permissões de API</strong> &rarr;{' '}
+                        <strong>+ Adicionar uma permissão</strong> &rarr;{' '}
+                        <strong>Microsoft Graph</strong> &rarr; escolha{' '}
+                        <strong>Permissões de aplicativo (Application permissions)</strong> &rarr;{' '}
+                        marque <code>Mail.Read</code> (ou <code>Mail.ReadWrite</code>) &rarr; clique
+                        em <strong>Adicionar permissões</strong>.
+                      </li>
+                      <li>
+                        <strong>ESSENCIAL:</strong> Na mesma tela de Permissões de API, clique no
+                        botão{' '}
+                        <strong className="text-blue-700 dark:text-blue-300">
+                          "Conceder consentimento do administrador para [Sua Empresa]"
+                        </strong>{' '}
+                        para que o status mude para verde (Concedido).
+                      </li>
+                      <li>
+                        No menu lateral, vá em <strong>Certificados e Segredos</strong> &rarr;{' '}
+                        <strong>+ Novo segredo do cliente</strong> &rarr; adicione uma descrição e
+                        validade &rarr; copie imediatamente o{' '}
+                        <strong className="text-red-700 dark:text-red-300">Valor (Value)</strong> do
+                        segredo (não o Secret ID) e cole no campo <em>Segredo do Cliente</em>{' '}
+                        abaixo.
+                      </li>
+                    </ol>
+                  </div>
+
+                  {/* Grid de Campos Graph */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-medium text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                        <Server className="h-3.5 w-3.5 text-blue-500" />
+                        ID do Locatário (Tenant ID)
+                      </Label>
+                      <Input
+                        type="text"
+                        placeholder="ex: 00000000-0000-0000-0000-000000000000"
+                        value={emailConfig.graph_tenant_id || ''}
+                        onChange={(e) =>
+                          setEmailConfig({ ...emailConfig, graph_tenant_id: e.target.value.trim() })
+                        }
+                        className="itsm-input font-mono text-xs"
+                        disabled={!isGestor}
+                      />
+                      <p className="text-[10px] text-slate-400">
+                        GUID do locatário (Diretório) no Microsoft Entra ID.
+                      </p>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-medium text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                        <Key className="h-3.5 w-3.5 text-blue-500" />
+                        ID do Aplicativo (Client ID)
+                      </Label>
+                      <Input
+                        type="text"
+                        placeholder="ex: 00000000-0000-0000-0000-000000000000"
+                        value={emailConfig.graph_client_id || ''}
+                        onChange={(e) =>
+                          setEmailConfig({ ...emailConfig, graph_client_id: e.target.value.trim() })
+                        }
+                        className="itsm-input font-mono text-xs"
+                        disabled={!isGestor}
+                      />
+                      <p className="text-[10px] text-slate-400">
+                        Application (Client) ID gerado no registro do App.
+                      </p>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <Label className="text-xs font-medium text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                          <Lock className="h-3.5 w-3.5 text-slate-400" />
+                          Segredo do Cliente (Client Secret)
+                        </Label>
+                        <button
+                          type="button"
+                          onClick={() => setShowGraphSecret(!showGraphSecret)}
+                          className="text-[11px] text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1"
+                        >
+                          {showGraphSecret ? (
+                            <>
+                              <EyeOff className="h-3 w-3" />
+                              Ocultar
+                            </>
+                          ) : (
+                            <>
+                              <Eye className="h-3 w-3" />
+                              Mostrar
+                            </>
+                          )}
+                        </button>
+                      </div>
+                      <div className="relative">
+                        <Input
+                          type={showGraphSecret ? 'text' : 'password'}
+                          placeholder="Valor gerado em Certificados e Segredos"
+                          value={graphSecret}
+                          onChange={(e) => {
+                            const val = e.target.value
+                            setGraphSecret(val)
+                            setEmailConfig({ ...emailConfig, graph_client_secret: val })
+                          }}
+                          className="itsm-input pr-10 font-mono text-xs"
+                          disabled={!isGestor}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowGraphSecret(!showGraphSecret)}
+                          className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                          title={showGraphSecret ? 'Ocultar segredo' : 'Exibir segredo'}
+                        >
+                          {showGraphSecret ? (
+                            <EyeOff className="h-4 w-4" />
+                          ) : (
+                            <Eye className="h-4 w-4" />
+                          )}
+                        </button>
+                      </div>
+                      <p className="text-[10px] text-slate-400">
+                        Copie o campo <strong>Valor (Value)</strong> imediatamente após criá-lo no
+                        portal.
+                      </p>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-medium text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                        <Mail className="h-3.5 w-3.5 text-blue-500" />
+                        Caixa / E-mail Monitorado (Mailbox)
+                      </Label>
+                      <Input
+                        type="email"
+                        placeholder="atendimento.helpdesk@deltime.com.br"
+                        value={emailConfig.graph_mailbox || emailConfig.imap_user || ''}
+                        onChange={(e) => {
+                          const val = e.target.value.trim()
+                          setEmailConfig({
+                            ...emailConfig,
+                            graph_mailbox: val,
+                            imap_user: val,
+                            smtp_user: useSameAccountForSmtp ? val : emailConfig.smtp_user,
+                          })
+                        }}
+                        className="itsm-input"
+                        disabled={!isGestor}
+                      />
+                      <p className="text-[10px] text-slate-400">
+                        Endereço da caixa no Microsoft 365 cujas mensagens serão lidas e convertidas
+                        em chamados.
+                      </p>
+                    </div>
+
+                    <div className="space-y-1.5 md:col-span-2">
+                      <Label className="text-xs font-medium text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                        <Clock className="h-3.5 w-3.5 text-slate-400" />
+                        Intervalo de Verificação (minutos)
+                      </Label>
+                      <Input
+                        type="number"
+                        min={1}
+                        max={60}
+                        value={emailConfig.check_interval_minutes || 2}
+                        onChange={(e) =>
+                          setEmailConfig({
+                            ...emailConfig,
+                            check_interval_minutes: parseInt(e.target.value, 10) || 2,
+                          })
+                        }
+                        className="itsm-input max-w-xs"
+                        disabled={!isGestor}
+                      />
+                      <p className="text-[10px] text-slate-400">
+                        A rotina agendada no backend verifica novas mensagens não lidas no intervalo
+                        definido.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* CAMPOS ESPECÍFICOS DO MODO IMAP LEGADO */}
+              {emailConfig.reception_mode === 'imap' && (
+                <div className="space-y-4">
+                  <div className="p-4 rounded-xl border border-amber-200 dark:border-amber-900 bg-amber-50/50 dark:bg-amber-950/30 text-xs text-amber-900 dark:text-amber-200 flex items-start gap-2.5">
+                    <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5 text-amber-600" />
+                    <div>
+                      <strong className="block font-semibold">
+                        Aviso sobre sockets TCP no runtime:
+                      </strong>
+                      <span>
+                        Se a sua caixa for Microsoft 365 / Office 365, recomendamos fortemente
+                        utilizar o modo <strong>Microsoft Graph (HTTPS)</strong> acima, pois o
+                        runtime PocketBase opera via HTTPS nativo e a Microsoft desabilitou o IMAP
+                        básico.
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-medium text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                        <Server className="h-3.5 w-3.5 text-slate-400" />
+                        Servidor IMAP (Host)
+                      </Label>
+                      <Input
+                        type="text"
+                        placeholder="ex: imap.office365.com"
+                        value={emailConfig.imap_host || ''}
+                        onChange={(e) =>
+                          setEmailConfig({ ...emailConfig, imap_host: e.target.value })
+                        }
+                        className="itsm-input"
+                        disabled={!isGestor}
+                      />
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-medium text-slate-700 dark:text-slate-300">
+                        Porta do Servidor IMAP
+                      </Label>
+                      <Input
+                        type="number"
+                        placeholder="993"
+                        value={emailConfig.imap_port || 993}
+                        onChange={(e) =>
+                          setEmailConfig({
+                            ...emailConfig,
+                            imap_port: parseInt(e.target.value, 10) || 993,
+                          })
+                        }
+                        className="itsm-input"
+                        disabled={!isGestor}
+                      />
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-medium text-slate-700 dark:text-slate-300">
+                        Criptografia da Conexão
+                      </Label>
+                      <Select
+                        value={
+                          emailConfig.imap_encryption ||
+                          (emailConfig.imap_ssl ? 'SSL/TLS' : 'STARTTLS')
+                        }
+                        onValueChange={(val: ImapEncryption) =>
+                          setEmailConfig({
+                            ...emailConfig,
+                            imap_encryption: val,
+                            imap_ssl: val === 'SSL/TLS',
+                            imap_port:
+                              val === 'SSL/TLS'
+                                ? 993
+                                : val === 'STARTTLS'
+                                  ? 143
+                                  : emailConfig.imap_port || 143,
+                          })
+                        }
+                        disabled={!isGestor}
+                      >
+                        <SelectTrigger className="itsm-input">
+                          <SelectValue placeholder="Selecione o tipo de criptografia" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="SSL/TLS">SSL/TLS (Porta 993 recomendada)</SelectItem>
+                          <SelectItem value="STARTTLS">STARTTLS (Porta 143 recomendada)</SelectItem>
+                          <SelectItem value="Nenhuma">Nenhuma / Aberta (Insegura)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-medium text-slate-700 dark:text-slate-300">
+                        Usuário / E-mail da Caixa
+                      </Label>
+                      <Input
+                        type="email"
+                        placeholder="suporte@cliente.com.br"
+                        value={emailConfig.imap_user || ''}
+                        onChange={(e) => handleImapUserChange(e.target.value)}
+                        className="itsm-input"
+                        disabled={!isGestor}
+                      />
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <Label className="text-xs font-medium text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                          <Lock className="h-3.5 w-3.5 text-slate-400" />
+                          Senha da Caixa (App Password)
+                        </Label>
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword(!showPassword)}
+                          className="text-[11px] text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1"
+                        >
+                          {showPassword ? (
+                            <>
+                              <EyeOff className="h-3 w-3" />
+                              Ocultar senha
+                            </>
+                          ) : (
+                            <>
+                              <Eye className="h-3 w-3" />
+                              Mostrar senha
+                            </>
+                          )}
+                        </button>
+                      </div>
+                      <div className="relative">
+                        <Input
+                          type={showPassword ? 'text' : 'password'}
+                          placeholder="••••••••••••"
+                          value={imapPassword}
+                          onChange={(e) => handleImapPasswordChange(e.target.value)}
+                          className="itsm-input pr-10"
+                          disabled={!isGestor}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword(!showPassword)}
+                          className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                          title={showPassword ? 'Ocultar senha' : 'Exibir senha'}
+                        >
+                          {showPassword ? (
+                            <EyeOff className="h-4 w-4" />
+                          ) : (
+                            <Eye className="h-4 w-4" />
+                          )}
+                        </button>
+                      </div>
+                      <p className="text-[11px] text-slate-400">
+                        Para Google ou servidores compatíveis, utilize uma Senha de Aplicativo (App
+                        Password).
+                      </p>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-medium text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                        <Inbox className="h-3.5 w-3.5 text-slate-400" />
+                        Pasta de Entrada (Padrão INBOX)
+                      </Label>
+                      <Input
+                        type="text"
+                        placeholder="INBOX"
+                        value={emailConfig.inbox_folder || 'INBOX'}
+                        onChange={(e) =>
+                          setEmailConfig({ ...emailConfig, inbox_folder: e.target.value })
+                        }
+                        className="itsm-input"
+                        disabled={!isGestor}
+                      />
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-medium text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                        <FolderSync className="h-3.5 w-3.5 text-slate-400" />
+                        Pasta de E-mails Processados
+                      </Label>
+                      <Input
+                        type="text"
+                        placeholder="Processados ou INBOX.Processed"
+                        value={emailConfig.processed_folder || 'Processados'}
+                        onChange={(e) =>
+                          setEmailConfig({ ...emailConfig, processed_folder: e.target.value })
+                        }
+                        className="itsm-input"
+                        disabled={!isGestor}
+                      />
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-medium text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                        <Clock className="h-3.5 w-3.5 text-slate-400" />
+                        Intervalo de Verificação (minutos)
+                      </Label>
+                      <Input
+                        type="number"
+                        min={1}
+                        max={60}
+                        value={emailConfig.check_interval_minutes || 2}
+                        onChange={(e) =>
+                          setEmailConfig({
+                            ...emailConfig,
+                            check_interval_minutes: parseInt(e.target.value, 10) || 2,
+                          })
+                        }
+                        className="itsm-input"
+                        disabled={!isGestor}
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* SEÇÃO B: ENVIO DE E-MAIL (SMTP) */}
@@ -1122,13 +1445,22 @@ export function ImapEmailSettings({
                     type="button"
                     variant="outline"
                     onClick={handleRunConnectionTest}
-                    disabled={testingConnection || !emailConfig.imap_host}
+                    disabled={
+                      testingConnection ||
+                      ((emailConfig.reception_mode || 'graph') === 'graph'
+                        ? !emailConfig.graph_tenant_id || !emailConfig.graph_client_id
+                        : !emailConfig.imap_host)
+                    }
                     className="border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-200"
                   >
                     <RefreshCw
                       className={`mr-1.5 h-4 w-4 ${testingConnection ? 'animate-spin' : ''}`}
                     />
-                    {testingConnection ? 'Testando Conexão...' : 'Testar Recepção (IMAP)'}
+                    {testingConnection
+                      ? 'Testando Conexão...'
+                      : (emailConfig.reception_mode || 'graph') === 'graph'
+                        ? 'Testar Recepção (Graph API)'
+                        : 'Testar Recepção (IMAP)'}
                   </Button>
 
                   <Button
@@ -1547,17 +1879,25 @@ export function ImapEmailSettings({
               <div className="space-y-0.5">
                 <h4 className="text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
                   <ShieldCheck className="h-4 w-4 text-blue-600" />
-                  Diagnóstico de Conexão IMAP Passo a Passo
+                  {(emailConfig.reception_mode || 'graph') === 'graph'
+                    ? 'Diagnóstico Microsoft Graph API (HTTPS) Passo a Passo'
+                    : 'Diagnóstico de Conexão IMAP Passo a Passo'}
                 </h4>
                 <p className="text-xs text-slate-500">
-                  Executa em tempo real os 7 testes essenciais: Socket TCP, Criptografia, Login,
-                  Seleção de Pasta, Contagem de Mensagens, Leitura e Rotina Cron.
+                  {(emailConfig.reception_mode || 'graph') === 'graph'
+                    ? 'Executa em tempo real os 7 testes essenciais da Graph API: Conexão HTTPS, Token OAuth2, Permissão Mail.Read, Listagem, Contagem de Não Lidas, Amostragem e Cron Automático.'
+                    : 'Executa em tempo real os 7 testes essenciais: Socket TCP, Criptografia, Login, Seleção de Pasta, Contagem de Mensagens, Leitura e Rotina Cron.'}
                 </p>
               </div>
               <Button
                 size="sm"
                 onClick={handleRunConnectionTest}
-                disabled={testingConnection || !emailConfig.imap_host}
+                disabled={
+                  testingConnection ||
+                  ((emailConfig.reception_mode || 'graph') === 'graph'
+                    ? !emailConfig.graph_tenant_id || !emailConfig.graph_client_id
+                    : !emailConfig.imap_host)
+                }
                 className="bg-blue-600 hover:bg-blue-700 text-white shrink-0"
               >
                 <RefreshCw
@@ -1571,10 +1911,14 @@ export function ImapEmailSettings({
               <div className="p-8 text-center space-y-3 bg-white dark:bg-slate-900 rounded-xl border">
                 <RefreshCw className="h-8 w-8 text-blue-600 animate-spin mx-auto" />
                 <p className="text-sm font-medium text-slate-700 dark:text-slate-300">
-                  Conectando ao servidor IMAP {emailConfig.imap_host}:{emailConfig.imap_port}...
+                  {(emailConfig.reception_mode || 'graph') === 'graph'
+                    ? `Autenticando via Microsoft Graph API (HTTPS) para ${emailConfig.graph_mailbox || emailConfig.imap_user || 'caixa configurada'}...`
+                    : `Conectando ao servidor IMAP ${emailConfig.imap_host}:${emailConfig.imap_port}...`}
                 </p>
                 <p className="text-xs text-slate-400">
-                  Avaliando resposta de socket, handshake e autenticação
+                  {(emailConfig.reception_mode || 'graph') === 'graph'
+                    ? 'Validando OAuth2 Client Credentials no Entra ID e leitura da caixa'
+                    : 'Avaliando resposta de socket, handshake e autenticação'}
                 </p>
               </div>
             )}
@@ -1595,19 +1939,31 @@ export function ImapEmailSettings({
                     <AlertCircle className="h-5 w-5 text-red-600 dark:text-red-400 shrink-0 mt-0.5" />
                   )}
                   <div className="space-y-1">
-                    <p className="text-sm font-bold">{testResponse.message}</p>
+                    <p className="text-sm font-bold">
+                      {testResponse.summary_message || testResponse.message}
+                    </p>
                     <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs opacity-90">
                       <span>
-                        <strong>Servidor:</strong> {testResponse.host}:{testResponse.port}
+                        <strong>Método / Host:</strong>{' '}
+                        {testResponse.reception_mode === 'graph'
+                          ? 'Microsoft Graph (graph.microsoft.com:443)'
+                          : `${testResponse.host || emailConfig.imap_host}:${testResponse.port || emailConfig.imap_port}`}
                       </span>
                       <span>
-                        <strong>Usuário:</strong> {testResponse.user}
+                        <strong>Caixa / Conta:</strong>{' '}
+                        {testResponse.stats?.mailbox ||
+                          testResponse.user ||
+                          emailConfig.graph_mailbox ||
+                          emailConfig.imap_user}
                       </span>
                       <span>
-                        <strong>Criptografia:</strong> {testResponse.encryption}
+                        <strong>Protocolo:</strong>{' '}
+                        {testResponse.reception_mode === 'graph'
+                          ? 'HTTPS (OAuth2 Bearer)'
+                          : testResponse.encryption || emailConfig.imap_encryption}
                       </span>
                       <span>
-                        <strong>Pasta:</strong> {testResponse.inbox_folder}
+                        <strong>Pasta:</strong> {testResponse.inbox_folder || 'INBOX'}
                       </span>
                     </div>
                   </div>
@@ -1642,7 +1998,9 @@ export function ImapEmailSettings({
                           <p className="font-semibold text-slate-800 dark:text-slate-200">
                             {idx + 1}. {step.name}
                           </p>
-                          <p className="text-slate-500 dark:text-slate-400">{step.message}</p>
+                          <p className="text-slate-500 dark:text-slate-400">
+                            {step.detail || step.message}
+                          </p>
                         </div>
                       </div>
 
@@ -1677,39 +2035,44 @@ export function ImapEmailSettings({
                   ))}
                 </div>
 
-                {/* Últimas 5 Mensagens Amostradas */}
-                {testResponse.latest_messages && testResponse.latest_messages.length > 0 && (
+                {/* Mensagens Amostradas (compatível com samples ou latest_messages) */}
+                {((testResponse.samples && testResponse.samples.length > 0) ||
+                  (testResponse.latest_messages && testResponse.latest_messages.length > 0)) && (
                   <div className="space-y-2 pt-2">
                     <Label className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
                       <Inbox className="h-4 w-4 text-blue-500" />
                       Últimas Mensagens Identificadas na Caixa (
-                      {testResponse.latest_messages.length})
+                      {(testResponse.samples || testResponse.latest_messages || []).length})
                     </Label>
                     <div className="border rounded-xl overflow-hidden divide-y dark:divide-slate-800 text-xs">
-                      {testResponse.latest_messages.map((msg, mIdx) => (
-                        <div
-                          key={mIdx}
-                          className="p-3 bg-white dark:bg-slate-900 flex flex-col sm:flex-row sm:items-center justify-between gap-2 hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors"
-                        >
-                          <div className="space-y-0.5 min-w-0">
-                            <p className="font-semibold text-slate-800 dark:text-slate-200 truncate">
-                              {msg.subject || '(Sem assunto)'}
-                            </p>
-                            <p className="text-slate-500 truncate text-[11px]">
-                              De:{' '}
-                              <span className="font-medium text-slate-700 dark:text-slate-300">
-                                {msg.from}
+                      {(testResponse.samples || testResponse.latest_messages || []).map(
+                        (msg, mIdx) => (
+                          <div
+                            key={mIdx}
+                            className="p-3 bg-white dark:bg-slate-900 flex flex-col sm:flex-row sm:items-center justify-between gap-2 hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors"
+                          >
+                            <div className="space-y-0.5 min-w-0">
+                              <p className="font-semibold text-slate-800 dark:text-slate-200 truncate">
+                                {msg.subject || '(Sem assunto)'}
+                              </p>
+                              <p className="text-slate-500 truncate text-[11px]">
+                                De:{' '}
+                                <span className="font-medium text-slate-700 dark:text-slate-300">
+                                  {msg.from_name ? `${msg.from_name} <${msg.from}>` : msg.from}
+                                </span>
+                              </p>
+                            </div>
+                            <div className="flex items-center gap-2 shrink-0 text-[11px] text-slate-400">
+                              <span>
+                                {msg.date ? new Date(msg.date).toLocaleString('pt-BR') : ''}
                               </span>
-                            </p>
+                              <Badge variant="outline" className="text-[10px] font-normal">
+                                {msg.is_read ? 'Lida' : msg.status || 'Não lida'}
+                              </Badge>
+                            </div>
                           </div>
-                          <div className="flex items-center gap-2 shrink-0 text-[11px] text-slate-400">
-                            <span>{new Date(msg.date).toLocaleString('pt-BR')}</span>
-                            <Badge variant="outline" className="text-[10px] font-normal">
-                              {msg.status}
-                            </Badge>
-                          </div>
-                        </div>
-                      ))}
+                        ),
+                      )}
                     </div>
                   </div>
                 )}

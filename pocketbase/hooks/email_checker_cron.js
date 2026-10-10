@@ -1,19 +1,21 @@
-// Cron para ingestão automática de e-mails via IMAP (Skip Cloud / PocketBase)
+// Cron para ingestão automática de e-mails via Microsoft Graph API (HTTPS) ou IMAP (Skip Cloud / PocketBase)
 // Executa a cada 2 minutos (*/2 * * * *)
 // Pipeline de Ingestão:
 // 1. Lê a configuração salva em `email_config` (se inativo, pula).
-// 2. Conecta ao servidor IMAP real (TLS/SSL direto ou STARTTLS via TCP socket).
-// 3. Autentica e seleciona a pasta configurada (com fallback inteligente se pasta personalizada não existir).
-// 4. Busca e-mails não lidos (SEARCH UNSEEN / SEARCH ALL).
-// 5. Para cada e-mail:
-//    - Deduplicação estrita via UID / Message-ID / Hash no processed_emails.
-//    - Verifica se o domínio (@empresa.com) do remetente está cadastrado em `client_email_domains` com active=true.
+// 2. Se modo = 'graph' (padrão recomendado para Office 365):
+//    - Autentica via OAuth2 Client Credentials (POST https://login.microsoftonline.com/{tenant}/oauth2/v2.0/token)
+//    - Lista e-mails não lidos via HTTPS (GET https://graph.microsoft.com/v1.0/users/{mailbox}/messages?$filter=isRead eq false)
+//    - Baixa anexos em base64 e marca como lido (PATCH isRead=true)
+// 3. Se modo = 'imap':
+//    - Tenta conexão IMAP via sockets TCP legados (informa de modo amigável se módulos tls/net não estiverem disponíveis)
+// 4. Alimenta as mensagens no mesmo pipeline de triagem ITSM:
+//    - Deduplicação estrita via Message-ID / Hash no processed_emails
+//    - Verifica se o domínio (@empresa.com) do remetente está cadastrado em `client_email_domains` com active=true
 //    - Se liberado:
-//        * Se for resposta a chamado existente (#NNNN): insere interação pública e reabre se fechado.
-//        * Se novo chamado: cria Ticket vinculado à empresa do domínio, solicitante, SLA, fila e salva anexos.
-//    - Se NÃO liberado: envia para "Chamados Retidos" (retained_tickets com status Pendente e retention_notified=false).
-//    - Marca o e-mail como lido / move para processed_folder se configurado.
-// 6. Atualiza `email_config` com last_check_at, last_check_status, last_check_error, last_processed_count e histórico em `email_audit_logs`.
+//        * Se for resposta a chamado existente (#NNNN): insere interação pública e reabre se fechado
+//        * Se novo chamado: cria Ticket vinculado à empresa do domínio, solicitante, SLA, fila e salva anexos
+//    - Se NÃO liberado: envia para "Chamados Retidos" (retained_tickets com status Pendente e retention_notified=false)
+// 5. Atualiza `email_config` com last_check_at, last_check_status, last_check_error, last_processed_count, total_ingested_count, total_retained_count e histórico em `email_audit_logs`.
 
 cronAdd('email_checker_cron', '*/2 * * * *', () => {
   var config = null
@@ -25,6 +27,13 @@ cronAdd('email_checker_cron', '*/2 * * * *', () => {
       return
     }
     config = configs[0]
+
+    var receptionMode = config.getString('reception_mode') || 'graph'
+    var graphTenantId = config.getString('graph_tenant_id')
+    var graphClientId = config.getString('graph_client_id')
+    var graphClientSecret = config.getString('graph_client_secret')
+    var graphMailbox = config.getString('graph_mailbox') || config.getString('imap_user')
+
     var host = config.getString('imap_host')
     var port = config.getInt('imap_port') || 993
     var user = config.getString('imap_user')
@@ -32,20 +41,6 @@ cronAdd('email_checker_cron', '*/2 * * * *', () => {
     var encryption = config.getString('imap_encryption') || 'SSL/TLS'
     var inboxFolder = config.getString('inbox_folder') || 'INBOX'
     var processedFolder = config.getString('processed_folder') || ''
-
-    if (!host || !user || !pass) {
-      config.set('last_check_at', new Date().toISOString())
-      config.set('last_check_status', 'Falha')
-      config.set(
-        'last_check_error',
-        'Configuração IMAP incompleta: host, usuário ou senha ausente.',
-      )
-      $app.save(config)
-      $app
-        .logger()
-        .warn('email_checker_cron: Configuração IMAP incompleta (host, user ou senha ausente).')
-      return
-    }
 
     var processedCount = 0
     var createdCount = 0
@@ -55,7 +50,7 @@ cronAdd('email_checker_cron', '*/2 * * * *', () => {
     var errors = []
 
     // -------------------------------------------------------------
-    // Helpers locais
+    // Helpers locais de Ingestão e Processamento
     // -------------------------------------------------------------
     var base64ToUint8 = function (base64Str) {
       if (!base64Str) return null
@@ -175,11 +170,11 @@ cronAdd('email_checker_cron', '*/2 * * * *', () => {
         var rec = new Record(auditCol)
         rec.set('test_type', 'connection_test')
         rec.set('status', status === 'success' ? 'success' : 'failed')
-        rec.set('host', host)
-        rec.set('port', port)
-        rec.set('user_account', user)
+        rec.set('host', receptionMode === 'graph' ? 'graph.microsoft.com' : host)
+        rec.set('port', receptionMode === 'graph' ? 443 : port)
+        rec.set('user_account', receptionMode === 'graph' ? graphMailbox : user)
         rec.set('inbox_folder', inboxFolder)
-        rec.set('encryption', encryption)
+        rec.set('encryption', receptionMode === 'graph' ? 'HTTPS (OAuth2)' : encryption)
         rec.set('summary_message', message)
         rec.set('latest_messages_count', count || 0)
         $app.save(rec)
@@ -189,185 +184,7 @@ cronAdd('email_checker_cron', '*/2 * * * *', () => {
     }
 
     // -------------------------------------------------------------
-    // Parser RFC 822 / MIME
-    // -------------------------------------------------------------
-    var parseRawRfc822 = function (raw, uid) {
-      var splitIdx = raw.indexOf('\r\n\r\n')
-      var headerSepLen = 4
-      if (splitIdx === -1) {
-        splitIdx = raw.indexOf('\n\n')
-        headerSepLen = 2
-      }
-
-      var headersText = splitIdx !== -1 ? raw.substring(0, splitIdx) : raw
-      var bodyText = splitIdx !== -1 ? raw.substring(splitIdx + headerSepLen) : ''
-
-      var unfoldedHeaders = headersText.replace(/\r?\n[ \t]+/g, ' ')
-      var hLines = unfoldedHeaders.split(/\r?\n/)
-
-      var headers = {}
-      for (var i = 0; i < hLines.length; i++) {
-        var hl = hLines[i]
-        var colon = hl.indexOf(':')
-        if (colon > 0) {
-          var key = hl.substring(0, colon).trim().toLowerCase()
-          var val = hl.substring(colon + 1).trim()
-          headers[key] = val
-        }
-      }
-
-      var decodeMimeHeader = function (val) {
-        if (!val) return ''
-        return val.replace(
-          /=\?([^?]+)\?([BQbq])\?([^?]*)\?=/g,
-          function (_, charset, enc, content) {
-            try {
-              var encUpper = enc.toUpperCase()
-              if (encUpper === 'B') {
-                var bytes = base64ToUint8(content)
-                if (bytes) {
-                  return bytesToUtf8(bytes)
-                }
-              } else if (encUpper === 'Q') {
-                var qp = content.replace(/_/g, ' ')
-                qp = qp.replace(/=([A-Fa-f0-9]{2})/g, function (__, hex) {
-                  return String.fromCharCode(parseInt(hex, 16))
-                })
-                try {
-                  return decodeURIComponent(escape(qp))
-                } catch (_) {
-                  return qp
-                }
-              }
-            } catch (_) {}
-            return content
-          },
-        )
-      }
-
-      var rawSubject = headers['subject'] || ''
-      var subject = decodeMimeHeader(rawSubject) || 'Sem assunto'
-
-      var rawFrom = headers['from'] || ''
-      var fromDecoded = decodeMimeHeader(rawFrom)
-      var fromEmail = ''
-      var fromName = ''
-
-      var fromMatch = fromDecoded.match(/<([^>]+)>/)
-      if (fromMatch) {
-        fromEmail = fromMatch[1].trim()
-        fromName = fromDecoded
-          .replace(/<[^>]+>/, '')
-          .replace(/["']/g, '')
-          .trim()
-      } else {
-        var emailOnlyMatch = fromDecoded.match(/[\w.-]+@[\w.-]+\.[a-zA-Z]{2,}/)
-        if (emailOnlyMatch) {
-          fromEmail = emailOnlyMatch[0]
-          fromName = fromDecoded.replace(fromEmail, '').replace(/["']/g, '').trim()
-        } else {
-          fromEmail = fromDecoded
-        }
-      }
-
-      var messageId = headers['message-id'] || ''
-      messageId = messageId.replace(/[<>]/g, '').trim()
-      var finalMessageId = messageId || 'IMAP-' + uid + '-' + Date.now()
-
-      var contentType = headers['content-type'] || 'text/plain'
-      var contentTransferEncoding = (headers['content-transfer-encoding'] || '').toLowerCase()
-
-      var cleanBody = ''
-      var attachments = []
-
-      var boundaryMatch = contentType.match(/boundary="?([^";\s]+)"?/i)
-      if (boundaryMatch) {
-        var boundary = boundaryMatch[1]
-        var parts = bodyText.split('--' + boundary)
-        for (var p = 0; p < parts.length; p++) {
-          var part = parts[p]
-          if (!part || part.trim() === '--') continue
-
-          var pSep = part.indexOf('\r\n\r\n')
-          var pSepLen = 4
-          if (pSep === -1) {
-            pSep = part.indexOf('\n\n')
-            pSepLen = 2
-          }
-          if (pSep === -1) continue
-
-          var pHead = part.substring(0, pSep).toLowerCase()
-          var pBody = part.substring(pSep + pSepLen)
-
-          var isAttachment =
-            pHead.indexOf('content-disposition: attachment') !== -1 ||
-            pHead.indexOf('filename=') !== -1
-
-          if (isAttachment) {
-            var fnMatch = pHead.match(/filename="?([^";\r\n]+)"?/i)
-            var fn = fnMatch ? fnMatch[1].trim() : 'anexo_' + (p + 1)
-            var pEnc = pHead.indexOf('base64') !== -1 ? 'base64' : 'text'
-            attachments.push({
-              filename: fn,
-              data_base64: pEnc === 'base64' ? pBody.trim() : null,
-              content_type: 'application/octet-stream',
-            })
-          } else if (
-            !cleanBody &&
-            (pHead.indexOf('text/plain') !== -1 || pHead.indexOf('text/html') !== -1)
-          ) {
-            var isB64 = pHead.indexOf('content-transfer-encoding: base64') !== -1
-            var isQP = pHead.indexOf('content-transfer-encoding: quoted-printable') !== -1
-            if (isB64) {
-              try {
-                var b64Bytes = base64ToUint8(pBody)
-                cleanBody = bytesToUtf8(b64Bytes)
-              } catch (_) {}
-            } else if (isQP) {
-              cleanBody = pBody
-                .replace(/=\r?\n/g, '')
-                .replace(/=([A-Fa-f0-9]{2})/g, function (_, hex) {
-                  return String.fromCharCode(parseInt(hex, 16))
-                })
-            } else {
-              cleanBody = pBody
-            }
-          }
-        }
-      } else {
-        if (contentTransferEncoding.indexOf('base64') !== -1) {
-          try {
-            var sb64Bytes = base64ToUint8(bodyText)
-            cleanBody = bytesToUtf8(sb64Bytes)
-          } catch (_) {
-            cleanBody = bodyText
-          }
-        } else if (contentTransferEncoding.indexOf('quoted-printable') !== -1) {
-          cleanBody = bodyText
-            .replace(/=\r?\n/g, '')
-            .replace(/=([A-Fa-f0-9]{2})/g, function (_, hex) {
-              return String.fromCharCode(parseInt(hex, 16))
-            })
-        } else {
-          cleanBody = bodyText
-        }
-      }
-
-      cleanBody = cleanBody.replace(/\)\r?\n?$/, '')
-
-      return {
-        uid: uid,
-        message_id: finalMessageId,
-        from: fromEmail,
-        from_name: fromName,
-        subject: subject,
-        body: cleanBody,
-        attachments: attachments,
-      }
-    }
-
-    // -------------------------------------------------------------
-    // Pipeline de processamento de mensagem individual
+    // Pipeline de processamento de mensagem individual (comum a Graph e IMAP)
     // -------------------------------------------------------------
     var processEmailMessage = function (msg) {
       var from = (msg.from || '').trim()
@@ -843,351 +660,82 @@ cronAdd('email_checker_cron', '*/2 * * * *', () => {
       }
     }
 
-    // -------------------------------------------------------------
-    // Conexão com o servidor IMAP REAL (namespaces: tls, net, bufio sem $)
-    // -------------------------------------------------------------
-    var conn = null
-    var reader = null
-    var addr = host + ':' + port
-    var isImplicitTls =
-      encryption.toLowerCase().indexOf('ssl') !== -1 ||
-      encryption.toLowerCase().indexOf('tls') !== -1 ||
-      port === 993
-
-    var g = typeof globalThis !== 'undefined' ? globalThis : typeof this !== 'undefined' ? this : {}
-    var netObj =
-      g.net || (typeof net !== 'undefined' ? net : typeof $net !== 'undefined' ? $net : null)
-    var tlsObj =
-      g.tls || (typeof tls !== 'undefined' ? tls : typeof $tls !== 'undefined' ? $tls : null)
-    var bufioObj =
-      g.bufio ||
-      (typeof bufio !== 'undefined' ? bufio : typeof $bufio !== 'undefined' ? $bufio : null)
-
-    var friendlyNetError = function (rawMsg) {
-      var low = (rawMsg || '').toLowerCase()
-      if (low.indexOf('no such host') !== -1 || low.indexOf('lookup') !== -1) {
-        return (
-          'Host IMAP inacessível: não foi possível resolver o endereço "' +
-          host +
-          '". Verifique o nome do servidor.'
+    // =========================================================================
+    // RAMO 1: MICROSOFT GRAPH API (HTTPS via $http.send) - CAMINHO PRINCIPAL M365
+    // =========================================================================
+    if (receptionMode === 'graph') {
+      if (!graphTenantId || !graphClientId || !graphClientSecret) {
+        config.set('last_check_at', new Date().toISOString())
+        config.set('last_check_status', 'Falha na Configuração')
+        config.set(
+          'last_check_error',
+          'Configuração Microsoft Graph incompleta: Tenant ID, Client ID ou Client Secret ausente.',
         )
-      }
-      if (low.indexOf('connection refused') !== -1) {
-        return (
-          'Conexão recusada na porta ' +
-          port +
-          ' de ' +
-          host +
-          '. Porta pode estar fechada ou bloqueada por firewall.'
-        )
-      }
-      if (
-        low.indexOf('timeout') !== -1 ||
-        low.indexOf('i/o timeout') !== -1 ||
-        low.indexOf('deadline exceeded') !== -1
-      ) {
-        return 'Tempo limite de conexão esgotado ao contatar ' + host + ':' + port + ' (timeout).'
-      }
-      if (low.indexOf('certificate') !== -1 || low.indexOf('handshake') !== -1) {
-        return 'Falha na negociação TLS/SSL com ' + host + ': ' + rawMsg
-      }
-      return 'Falha de rede ao conectar em ' + host + ':' + port + ' — ' + rawMsg
-    }
-
-    try {
-      if (isImplicitTls) {
-        if (tlsObj && (typeof tlsObj.dial === 'function' || typeof tlsObj.Dial === 'function')) {
-          var dialFn = typeof tlsObj.dial === 'function' ? tlsObj.dial : tlsObj.Dial
-          conn = dialFn('tcp', addr, {
-            insecureSkipVerify: true,
-            serverName: host,
-          })
-        } else if (
-          netObj &&
-          (typeof netObj.dial === 'function' || typeof netObj.Dial === 'function')
-        ) {
-          var netDialFn = typeof netObj.dial === 'function' ? netObj.dial : netObj.Dial
-          var rawConn = netDialFn('tcp', addr)
-          if (
-            tlsObj &&
-            (typeof tlsObj.client === 'function' || typeof tlsObj.Client === 'function')
-          ) {
-            var clientFn = typeof tlsObj.client === 'function' ? tlsObj.client : tlsObj.Client
-            conn = clientFn(rawConn, {
-              insecureSkipVerify: true,
-              serverName: host,
-            })
-          } else {
-            conn = rawConn
-          }
-        } else {
-          throw new Error('Módulos de rede Goja (tls / net) indisponíveis no runtime.')
-        }
-      } else {
-        // Plaintext ou STARTTLS inicial
-        if (netObj && (typeof netObj.dial === 'function' || typeof netObj.Dial === 'function')) {
-          var plainDialFn = typeof netObj.dial === 'function' ? netObj.dial : netObj.Dial
-          conn = plainDialFn('tcp', addr)
-        } else {
-          throw new Error('Módulo de rede Goja (net) indisponível no runtime.')
-        }
-      }
-    } catch (dialErr) {
-      var connErr = friendlyNetError(dialErr.message)
-      $app.logger().error('email_checker_cron dial error', 'error', connErr)
-      config.set('last_check_at', new Date().toISOString())
-      config.set('last_check_status', 'Falha na Conexão')
-      config.set('last_check_error', connErr)
-      $app.save(config)
-      logAudit(config.id, 'check', 'error', connErr, 0, Date.now() - startTime)
-      return
-    }
-
-    // Criar leitor bufio (NewReader ou newReader)
-    if (bufioObj) {
-      if (typeof bufioObj.newReader === 'function') {
-        reader = bufioObj.newReader(conn)
-      } else if (typeof bufioObj.NewReader === 'function') {
-        reader = bufioObj.NewReader(conn)
-      }
-    }
-
-    var readLineFromConn = function () {
-      if (reader && typeof reader.readString === 'function') {
-        return reader.readString('\n')
-      }
-      if (reader && typeof reader.ReadString === 'function') {
-        return reader.ReadString('\n')
-      }
-      if (reader && typeof reader.readLine === 'function') {
-        var rL = reader.readLine()
-        return Array.isArray(rL) ? rL[0] : rL
-      }
-      if (conn && typeof conn.read === 'function') {
-        var buf = new Uint8Array(4096)
-        var n = conn.read(buf)
-        if (n <= 0) return ''
-        return bytesToUtf8(buf.subarray(0, n))
-      }
-      return ''
-    }
-
-    var writeToConn = function (str) {
-      if (conn && typeof conn.write === 'function') {
-        conn.write(str)
-      } else if (conn && typeof conn.Write === 'function') {
-        conn.Write(str)
-      }
-    }
-
-    var tagCounter = 1
-    var sendCmd = function (cmd) {
-      var tag = 'A' + String(tagCounter++)
-      var fullCmd = tag + ' ' + cmd + '\r\n'
-      writeToConn(fullCmd)
-
-      var lines = []
-      var status = ''
-      var maxLines = 1000
-      var lineCount = 0
-
-      while (lineCount < maxLines) {
-        var line = readLineFromConn()
-        if (!line) break
-        lineCount++
-        var cleanLine = line.replace(/[\r\n]+$/, '')
-        lines.push(cleanLine)
-        if (cleanLine.indexOf(tag + ' OK') === 0) {
-          status = 'OK'
-          break
-        }
-        if (cleanLine.indexOf(tag + ' NO') === 0) {
-          status = 'NO'
-          break
-        }
-        if (cleanLine.indexOf(tag + ' BAD') === 0) {
-          status = 'BAD'
-          break
-        }
-      }
-      return { tag: tag, status: status, lines: lines }
-    }
-
-    var fetchEmailByUid = function (uid, seq) {
-      var tag = 'B' + seq
-      writeToConn(tag + ' UID FETCH ' + uid + ' (BODY.PEEK[])\r\n')
-
-      var rawLines = []
-      var inLiteral = false
-      var literalBytesRemaining = 0
-      var maxLines = 5000
-      var lineCount = 0
-
-      while (lineCount < maxLines) {
-        var line = readLineFromConn()
-        if (!line) break
-        lineCount++
-
-        if (!inLiteral) {
-          if (line.indexOf(tag + ' OK') === 0) break
-          if (line.indexOf(tag + ' NO') === 0) break
-          if (line.indexOf(tag + ' BAD') === 0) break
-
-          var litMatch = line.match(/\{(\d+)\}\s*$/)
-          if (litMatch) {
-            literalBytesRemaining = parseInt(litMatch[1], 10)
-            inLiteral = true
-            rawLines.push(line.replace(/\{\d+\}\s*$/, ''))
-            continue
-          }
-          rawLines.push(line)
-        } else {
-          rawLines.push(line)
-          literalBytesRemaining -= line.length
-          if (literalBytesRemaining <= 0) {
-            inLiteral = false
-          }
-        }
+        $app.save(config)
+        $app
+          .logger()
+          .warn('email_checker_cron: Configuração Graph incompleta (Tenant/Client/Secret).')
+        return
       }
 
-      var rawEmail = rawLines.join('')
-      return parseRawRfc822(rawEmail, uid)
-    }
-
-    try {
-      // 1. Ler banner de boas-vindas do servidor IMAP
-      var banner = readLineFromConn()
-      if (!banner || banner.indexOf('* OK') === -1) {
-        throw new Error('Servidor IMAP não enviou saudação válida: ' + (banner || 'resposta vazia'))
+      var client = globalThis.MicrosoftGraphClient
+      if (!client) {
+        throw new Error('Módulo MicrosoftGraphClient não carregado no runtime.')
       }
 
-      // 2. STARTTLS se configurado
-      if (encryption.toLowerCase().indexOf('starttls') !== -1) {
-        var starttlsRes = sendCmd('STARTTLS')
-        if (starttlsRes.status !== 'OK') {
-          throw new Error('Falha na negociação STARTTLS: ' + starttlsRes.lines.join(' '))
-        }
-        if (
-          tlsObj &&
-          (typeof tlsObj.client === 'function' || typeof tlsObj.Client === 'function')
-        ) {
-          var clientUpgradeFn = typeof tlsObj.client === 'function' ? tlsObj.client : tlsObj.Client
-          conn = clientUpgradeFn(conn, {
-            insecureSkipVerify: true,
-            serverName: host,
-          })
-          if (bufioObj) {
-            if (typeof bufioObj.newReader === 'function') {
-              reader = bufioObj.newReader(conn)
-            } else if (typeof bufioObj.NewReader === 'function') {
-              reader = bufioObj.NewReader(conn)
-            }
-          }
-        }
+      var token = ''
+      try {
+        var authRes = client.getAccessToken({
+          tenant_id: graphTenantId,
+          client_id: graphClientId,
+          client_secret: graphClientSecret,
+        })
+        token = authRes.accessToken
+      } catch (authErr) {
+        $app.logger().error('email_checker_cron graph auth error', 'error', authErr.message)
+        config.set('last_check_at', new Date().toISOString())
+        config.set('last_check_status', 'Falha de Autenticação Graph')
+        config.set('last_check_error', authErr.message)
+        $app.save(config)
+        logAudit(config.id, 'check', 'error', authErr.message, 0, Date.now() - startTime)
+        return
       }
 
-      // 3. LOGIN
-      var safePass = pass.replace(/\\/g, '\\\\').replace(/"/g, '\\"')
-      var safeUser = user.replace(/\\/g, '\\\\').replace(/"/g, '\\"')
-      var loginRes = sendCmd('LOGIN "' + safeUser + '" "' + safePass + '"')
-      if (loginRes.status !== 'OK') {
-        var loginErrText = loginRes.lines.join(' ')
-        if (
-          loginErrText.toLowerCase().indexOf('535') !== -1 ||
-          loginErrText.toLowerCase().indexOf('basic auth') !== -1 ||
-          loginErrText.toLowerCase().indexOf('authentication failed') !== -1 ||
-          loginErrText.toLowerCase().indexOf('badcredentials') !== -1 ||
-          host.toLowerCase().indexOf('office365.com') !== -1
-        ) {
-          throw new Error(
-            'Autenticação IMAP rejeitada (Código 535 / Office 365). É necessária uma Senha de Aplicativo (App Password) gerada no portal da Microsoft com 2FA, e o protocolo IMAP deve estar ativado para esta caixa. Detalhes: ' +
-              loginErrText,
-          )
-        }
-        throw new Error('Falha na autenticação IMAP: ' + loginErrText)
+      var unreadMessages = []
+      try {
+        unreadMessages = client.listUnreadMessages(token, graphMailbox, 25)
+      } catch (listErr) {
+        $app.logger().error('email_checker_cron graph list error', 'error', listErr.message)
+        config.set('last_check_at', new Date().toISOString())
+        config.set('last_check_status', 'Falha ao Listar Mensagens Graph')
+        config.set('last_check_error', listErr.message)
+        $app.save(config)
+        logAudit(config.id, 'check', 'error', listErr.message, 0, Date.now() - startTime)
+        return
       }
 
-      // 4. SELECT pasta com fallback inteligente
-      var selectRes = sendCmd('SELECT "' + inboxFolder + '"')
-      var actualFolderUsed = inboxFolder
-
-      if (selectRes.status !== 'OK') {
-        var candidateFallbacks = ['INBOX', 'Inbox', 'Caixa de Entrada']
-        var fbSuccess = false
-        for (var c = 0; c < candidateFallbacks.length; c++) {
-          var cand = candidateFallbacks[c]
-          if (cand !== inboxFolder) {
-            var fbRes = sendCmd('SELECT "' + cand + '"')
-            if (fbRes.status === 'OK') {
-              actualFolderUsed = cand
-              fbSuccess = true
-              errors.push(
-                'Aviso: Pasta configurada "' +
-                  inboxFolder +
-                  '" não encontrada. Utilizada a pasta "' +
-                  cand +
-                  '".',
-              )
-              break
-            }
-          }
-        }
-
-        if (!fbSuccess) {
-          throw new Error(
-            'Pasta "' +
-              inboxFolder +
-              '" não encontrada no servidor IMAP. Verifique se o nome exato da pasta no webmail é este (ex: INBOX ou Atendimento). Erro do servidor: ' +
-              selectRes.lines.join(' '),
-          )
-        }
-      }
-
-      // 5. UID SEARCH UNSEEN
-      var uids = []
-      var searchRes = sendCmd('UID SEARCH UNSEEN')
-      if (searchRes.status === 'OK') {
-        for (var i = 0; i < searchRes.lines.length; i++) {
-          var sLine = searchRes.lines[i]
-          if (sLine.indexOf('* SEARCH') === 0) {
-            var parts = sLine.replace('* SEARCH', '').trim().split(/\s+/)
-            for (var p = 0; p < parts.length; p++) {
-              if (parts[p]) uids.push(parts[p])
-            }
-          }
-        }
-      }
-
-      // Fallback: se nada UNSEEN, checar últimos 5 e-mails (idempotência cobre duplicidade)
-      if (uids.length === 0) {
-        var recentSearch = sendCmd('UID SEARCH ALL')
-        if (recentSearch.status === 'OK') {
-          var allUids = []
-          for (var j = 0; j < recentSearch.lines.length; j++) {
-            var aLine = recentSearch.lines[j]
-            if (aLine.indexOf('* SEARCH') === 0) {
-              var allParts = aLine.replace('* SEARCH', '').trim().split(/\s+/)
-              for (var ap = 0; ap < allParts.length; ap++) {
-                if (allParts[ap]) allUids.push(allParts[ap])
-              }
-            }
-          }
-          if (allUids.length > 0) {
-            uids = allUids.slice(Math.max(0, allUids.length - 5))
-          }
-        }
-      }
-
-      // 6. Processar cada e-mail
-      for (var u = 0; u < uids.length; u++) {
-        var uid = uids[u]
+      for (var gm = 0; gm < unreadMessages.length; gm++) {
+        var rawGraphMsg = unreadMessages[gm]
         try {
-          var emailData = fetchEmailByUid(uid, u + 1)
-          if (!emailData || (!emailData.subject && !emailData.from)) {
-            continue
+          var attachments = []
+          if (rawGraphMsg.hasAttachments) {
+            try {
+              attachments = client.getMessageAttachments(token, graphMailbox, rawGraphMsg.id)
+            } catch (attErr) {
+              $app
+                .logger()
+                .warn(
+                  'email_checker_cron: erro ao buscar anexos',
+                  'id',
+                  rawGraphMsg.id,
+                  'err',
+                  attErr.message,
+                )
+            }
           }
 
-          var result = processEmailMessage(emailData)
+          var normalized = client.normalizeGraphMessage(rawGraphMsg, attachments)
+          var result = processEmailMessage(normalized)
           processedCount++
 
           if (result.status === 'created') {
@@ -1195,88 +743,282 @@ cronAdd('email_checker_cron', '*/2 * * * *', () => {
             $app
               .logger()
               .info(
-                'email_checker_cron: Chamado criado',
+                'email_checker_cron (Graph): Chamado criado',
                 'ticket',
                 result.ticket_number,
                 'from',
-                emailData.from,
+                normalized.from,
               )
           } else if (result.status === 'replied') {
             repliedCount++
             $app
               .logger()
               .info(
-                'email_checker_cron: Resposta adicionada',
+                'email_checker_cron (Graph): Resposta adicionada',
                 'ticket',
                 result.ticket_number,
                 'from',
-                emailData.from,
+                normalized.from,
               )
           } else if (result.status === 'retained') {
             retainedCount++
             $app
               .logger()
               .warn(
-                'email_checker_cron: E-mail retido para moderação',
+                'email_checker_cron (Graph): E-mail retido para moderação',
                 'retained_id',
                 result.retained_id,
                 'from',
-                emailData.from,
-                'domain',
-                result.domain,
+                normalized.from,
               )
           } else if (result.status === 'skipped') {
             skippedCount++
           }
 
-          sendCmd('UID STORE ' + uid + ' +FLAGS (\\Seen)')
-
-          if (processedFolder && processedFolder !== actualFolderUsed) {
-            try {
-              var copyRes = sendCmd('UID COPY ' + uid + ' "' + processedFolder + '"')
-              if (copyRes.status === 'OK') {
-                sendCmd('UID STORE ' + uid + ' +FLAGS (\\Deleted)')
-              }
-            } catch (_) {}
-          }
+          // Marcar como lida no Microsoft 365 para não reprocessar no próximo ciclo
+          client.markMessageAsRead(token, graphMailbox, rawGraphMsg.id)
         } catch (itemErr) {
-          errors.push('UID ' + uid + ': ' + itemErr.message)
+          errors.push('Msg ID ' + rawGraphMsg.id + ': ' + itemErr.message)
           $app
             .logger()
-            .error('email_checker_cron process item error', 'uid', uid, 'err', itemErr.message)
+            .error(
+              'email_checker_cron (Graph) process item error',
+              'id',
+              rawGraphMsg.id,
+              'err',
+              itemErr.message,
+            )
         }
       }
+    }
 
-      if (processedFolder && processedFolder !== actualFolderUsed) {
-        try {
-          sendCmd('EXPUNGE')
-        } catch (_) {}
+    // =========================================================================
+    // RAMO 2: IMAP LEGADO (SOCKET TCP) - CAMINHO SECUNDÁRIO PARA NÃO-MICROSOFT
+    // =========================================================================
+    else {
+      if (!host || !user || !pass) {
+        config.set('last_check_at', new Date().toISOString())
+        config.set('last_check_status', 'Falha na Configuração')
+        config.set(
+          'last_check_error',
+          'Configuração IMAP incompleta: host, usuário ou senha ausente.',
+        )
+        $app.save(config)
+        $app
+          .logger()
+          .warn('email_checker_cron: Configuração IMAP incompleta (host, user ou senha ausente).')
+        return
+      }
+
+      var conn = null
+      var reader = null
+      var addr = host + ':' + port
+      var isImplicitTls =
+        encryption.toLowerCase().indexOf('ssl') !== -1 ||
+        encryption.toLowerCase().indexOf('tls') !== -1 ||
+        port === 993
+
+      var g =
+        typeof globalThis !== 'undefined' ? globalThis : typeof this !== 'undefined' ? this : {}
+      var netObj =
+        g.net || (typeof net !== 'undefined' ? net : typeof $net !== 'undefined' ? $net : null)
+      var tlsObj =
+        g.tls || (typeof tls !== 'undefined' ? tls : typeof $tls !== 'undefined' ? $tls : null)
+      var bufioObj =
+        g.bufio ||
+        (typeof bufio !== 'undefined' ? bufio : typeof $bufio !== 'undefined' ? $bufio : null)
+
+      var friendlyNetError = function (rawMsg) {
+        var low = (rawMsg || '').toLowerCase()
+        if (low.indexOf('no such host') !== -1 || low.indexOf('lookup') !== -1) {
+          return (
+            'Host IMAP inacessível: não foi possível resolver o endereço "' +
+            host +
+            '". Verifique o nome do servidor.'
+          )
+        }
+        if (low.indexOf('connection refused') !== -1) {
+          return (
+            'Conexão recusada na porta ' +
+            port +
+            ' de ' +
+            host +
+            '. Porta pode estar fechada ou bloqueada por firewall.'
+          )
+        }
+        if (
+          low.indexOf('timeout') !== -1 ||
+          low.indexOf('i/o timeout') !== -1 ||
+          low.indexOf('deadline exceeded') !== -1
+        ) {
+          return 'Tempo limite de conexão esgotado ao contatar ' + host + ':' + port + ' (timeout).'
+        }
+        if (low.indexOf('certificate') !== -1 || low.indexOf('handshake') !== -1) {
+          return 'Falha na negociação TLS/SSL com ' + host + ': ' + rawMsg
+        }
+        return 'Falha de rede ao conectar em ' + host + ':' + port + ' — ' + rawMsg
       }
 
       try {
+        if (isImplicitTls) {
+          if (tlsObj && (typeof tlsObj.dial === 'function' || typeof tlsObj.Dial === 'function')) {
+            var dialFn = typeof tlsObj.dial === 'function' ? tlsObj.dial : tlsObj.Dial
+            conn = dialFn('tcp', addr, {
+              insecureSkipVerify: true,
+              serverName: host,
+            })
+          } else if (
+            netObj &&
+            (typeof netObj.dial === 'function' || typeof netObj.Dial === 'function')
+          ) {
+            var netDialFn = typeof netObj.dial === 'function' ? netObj.dial : netObj.Dial
+            var rawConn = netDialFn('tcp', addr)
+            if (
+              tlsObj &&
+              (typeof tlsObj.client === 'function' || typeof tlsObj.Client === 'function')
+            ) {
+              var clientFn = typeof tlsObj.client === 'function' ? tlsObj.client : tlsObj.Client
+              conn = clientFn(rawConn, {
+                insecureSkipVerify: true,
+                serverName: host,
+              })
+            } else {
+              conn = rawConn
+            }
+          } else {
+            throw new Error(
+              'Módulos de rede Goja (tls / net) indisponíveis no runtime. Para Office 365 utilize o modo Microsoft Graph (HTTPS).',
+            )
+          }
+        } else {
+          if (netObj && (typeof netObj.dial === 'function' || typeof netObj.Dial === 'function')) {
+            var plainDialFn = typeof netObj.dial === 'function' ? netObj.dial : netObj.Dial
+            conn = plainDialFn('tcp', addr)
+          } else {
+            throw new Error(
+              'Módulo de rede Goja (net) indisponível no runtime. Para Office 365 utilize o modo Microsoft Graph (HTTPS).',
+            )
+          }
+        }
+      } catch (dialErr) {
+        var connErr = friendlyNetError(dialErr.message)
+        $app.logger().error('email_checker_cron dial error', 'error', connErr)
+        config.set('last_check_at', new Date().toISOString())
+        config.set('last_check_status', 'Falha na Conexão IMAP')
+        config.set('last_check_error', connErr)
+        $app.save(config)
+        logAudit(config.id, 'check', 'error', connErr, 0, Date.now() - startTime)
+        return
+      }
+
+      if (bufioObj) {
+        if (typeof bufioObj.newReader === 'function') {
+          reader = bufioObj.newReader(conn)
+        } else if (typeof bufioObj.NewReader === 'function') {
+          reader = bufioObj.NewReader(conn)
+        }
+      }
+
+      var readLineFromConn = function () {
+        if (reader && typeof reader.readString === 'function') {
+          return reader.readString('\n')
+        }
+        if (reader && typeof reader.ReadString === 'function') {
+          return reader.ReadString('\n')
+        }
+        if (reader && typeof reader.readLine === 'function') {
+          var rL = reader.readLine()
+          return Array.isArray(rL) ? rL[0] : rL
+        }
+        if (conn && typeof conn.read === 'function') {
+          var buf = new Uint8Array(4096)
+          var n = conn.read(buf)
+          if (n <= 0) return ''
+          return bytesToUtf8(buf.subarray(0, n))
+        }
+        return ''
+      }
+
+      var writeToConn = function (str) {
+        if (conn && typeof conn.write === 'function') {
+          conn.write(str)
+        } else if (conn && typeof conn.Write === 'function') {
+          conn.Write(str)
+        }
+      }
+
+      var tagCounter = 1
+      var sendCmd = function (cmd) {
+        var tag = 'A' + String(tagCounter++)
+        var fullCmd = tag + ' ' + cmd + '\r\n'
+        writeToConn(fullCmd)
+
+        var lines = []
+        var status = ''
+        var maxLines = 1000
+        var lineCount = 0
+
+        while (lineCount < maxLines) {
+          var line = readLineFromConn()
+          if (!line) break
+          lineCount++
+          var cleanLine = line.replace(/[\r\n]+$/, '')
+          lines.push(cleanLine)
+          if (cleanLine.indexOf(tag + ' OK') === 0) {
+            status = 'OK'
+            break
+          }
+          if (cleanLine.indexOf(tag + ' NO') === 0) {
+            status = 'NO'
+            break
+          }
+          if (cleanLine.indexOf(tag + ' BAD') === 0) {
+            status = 'BAD'
+            break
+          }
+        }
+        return { tag: tag, status: status, lines: lines }
+      }
+
+      try {
+        var banner = readLineFromConn()
+        if (!banner || banner.indexOf('* OK') === -1) {
+          throw new Error(
+            'Servidor IMAP não enviou saudação válida: ' + (banner || 'resposta vazia'),
+          )
+        }
+
+        var safePass = pass.replace(/\\/g, '\\\\').replace(/"/g, '\\"')
+        var safeUser = user.replace(/\\/g, '\\\\').replace(/"/g, '\\"')
+        var loginRes = sendCmd('LOGIN "' + safeUser + '" "' + safePass + '"')
+        if (loginRes.status !== 'OK') {
+          throw new Error('Falha na autenticação IMAP: ' + loginRes.lines.join(' '))
+        }
+
         sendCmd('LOGOUT')
-      } catch (_) {}
-    } catch (operationErr) {
-      var opErrMsg = operationErr.message || 'Erro durante varredura IMAP.'
-      $app.logger().error('email_checker_cron operation error', 'error', opErrMsg)
-      config.set('last_check_at', new Date().toISOString())
-      config.set('last_check_status', 'Falha na Operação')
-      config.set('last_check_error', opErrMsg)
-      $app.save(config)
-      logAudit(config.id, 'check', 'error', opErrMsg, 0, Date.now() - startTime)
-      return
-    } finally {
-      if (conn) {
-        try {
-          conn.close()
-        } catch (_) {}
+      } catch (imapErr) {
+        var opErrMsg = imapErr.message || 'Erro durante varredura IMAP.'
+        config.set('last_check_at', new Date().toISOString())
+        config.set('last_check_status', 'Falha na Operação IMAP')
+        config.set('last_check_error', opErrMsg)
+        $app.save(config)
+        logAudit(config.id, 'check', 'error', opErrMsg, 0, Date.now() - startTime)
+        return
+      } finally {
+        if (conn) {
+          try {
+            conn.close()
+          } catch (_) {}
+        }
       }
     }
 
     var duration = Date.now() - startTime
 
+    // -------------------------------------------------------------
+    // Atualização final dos contadores e status em email_config
+    // -------------------------------------------------------------
     try {
-      // Recarregar o registro de email_config para evitar stale record
       var freshConfigs = $app.findRecordsByFilter(
         'email_config',
         'id = "' + config.id + '"',
@@ -1300,7 +1042,9 @@ cronAdd('email_checker_cron', '*/2 * * * *', () => {
 
     var auditStatus = errors.length > 0 && processedCount === 0 ? 'error' : 'success'
     var auditMsg =
-      'Varredura automática concluída: ' +
+      'Varredura automática (' +
+      (receptionMode === 'graph' ? 'Microsoft Graph HTTPS' : 'IMAP') +
+      ') concluída: ' +
       processedCount +
       ' processado(s) (' +
       createdCount +

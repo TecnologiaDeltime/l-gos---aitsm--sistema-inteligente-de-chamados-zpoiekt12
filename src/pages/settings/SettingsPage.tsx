@@ -161,6 +161,11 @@ export default function SettingsPage() {
     setEmailConfigSaving(true)
     try {
       const saved = await saveEmailConfig({
+        reception_mode: emailConfig.reception_mode,
+        graph_tenant_id: emailConfig.graph_tenant_id,
+        graph_client_id: emailConfig.graph_client_id,
+        graph_client_secret: emailConfig.graph_client_secret,
+        graph_mailbox: emailConfig.graph_mailbox,
         imap_host: emailConfig.imap_host,
         imap_port: emailConfig.imap_port,
         imap_user: emailConfig.imap_user,

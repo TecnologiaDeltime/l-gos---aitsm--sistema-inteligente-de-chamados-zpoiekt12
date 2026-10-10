@@ -2,9 +2,15 @@ import pb from '@/lib/pocketbase/client'
 
 export type ImapEncryption = 'SSL/TLS' | 'STARTTLS' | 'Nenhuma'
 export type SmtpEncryption = 'STARTTLS' | 'SSL/TLS' | 'Nenhuma'
+export type EmailReceptionMode = 'graph' | 'imap'
 
 export interface EmailConfigRecord {
   id: string
+  reception_mode?: EmailReceptionMode
+  graph_tenant_id?: string
+  graph_client_id?: string
+  graph_client_secret?: string
+  graph_mailbox?: string
   imap_host: string
   imap_port: number
   imap_user: string
@@ -34,42 +40,57 @@ export interface EmailConfigRecord {
 }
 
 export interface ImapTestStep {
-  id: string
+  id?: string
+  step?: number
   name: string
   status: 'pending' | 'success' | 'warning' | 'failed' | 'skipped'
-  message: string
+  message?: string
+  detail?: string
   duration_ms: number
 }
 
 export interface ImapSampleMessage {
-  uid: string
+  id?: string
+  uid?: string
+  message_id?: string
   from: string
+  from_name?: string
   subject: string
   date: string
-  status: string
+  is_read?: boolean
+  status?: string
 }
 
 export interface ImapTestResponse {
   success: boolean
-  status: 'success' | 'failed' | 'warning'
-  message: string
-  tested_at: string
-  host: string
-  port: number
-  user: string
-  encryption: string
-  inbox_folder: string
-  processed_folder: string
+  reception_mode?: EmailReceptionMode
+  status?: 'success' | 'failed' | 'warning'
+  message?: string
+  summary_message?: string
+  tested_at?: string
+  host?: string
+  port?: number
+  user?: string
+  encryption?: string
+  inbox_folder?: string
+  processed_folder?: string
   steps: ImapTestStep[]
-  messages_count: number
-  latest_messages: ImapSampleMessage[]
+  messages_count?: number
+  latest_messages?: ImapSampleMessage[]
+  samples?: ImapSampleMessage[]
+  stats?: {
+    unread_count?: number
+    total_recent?: number
+    mailbox?: string
+    display_name?: string
+    inbox_folder?: string
+  }
   cron_info?: {
     last_execution_at?: string
     last_execution_status?: string
     interval_minutes?: number
   }
 }
-
 export interface DryRunSimulationResult {
   message_sampled: {
     from: string
@@ -253,9 +274,14 @@ export const saveEmailConfig = async (
 }
 
 export const testEmailConnection = async (data: {
-  imap_host: string
-  imap_port: number
-  imap_user: string
+  reception_mode?: EmailReceptionMode
+  graph_tenant_id?: string
+  graph_client_id?: string
+  graph_client_secret?: string
+  graph_mailbox?: string
+  imap_host?: string
+  imap_port?: number
+  imap_user?: string
   imap_pass?: string
   imap_password?: string
   imap_ssl?: boolean
