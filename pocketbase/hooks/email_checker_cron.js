@@ -24,7 +24,6 @@ cronAdd('email_checker_cron', '*/2 * * * *', () => {
     if (!configs || configs.length === 0) {
       return
     }
-
     config = configs[0]
     var host = config.getString('imap_host')
     var port = config.getInt('imap_port') || 993
@@ -845,81 +844,157 @@ cronAdd('email_checker_cron', '*/2 * * * *', () => {
     }
 
     // -------------------------------------------------------------
-    // Conexão com o servidor IMAP
+    // Conexão com o servidor IMAP REAL (namespaces: tls, net, bufio sem $)
     // -------------------------------------------------------------
     var conn = null
-    var hasNativeTls = typeof $tls !== 'undefined' && typeof $tls.dial === 'function'
-    var hasNativeNet = typeof $net !== 'undefined' && typeof $net.dial === 'function'
+    var reader = null
+    var addr = host + ':' + port
+    var isImplicitTls =
+      encryption.toLowerCase().indexOf('ssl') !== -1 ||
+      encryption.toLowerCase().indexOf('tls') !== -1 ||
+      port === 993
 
-    if (hasNativeTls || hasNativeNet) {
-      try {
-        var addr = host + ':' + port
-        if (
-          encryption.toLowerCase().indexOf('ssl') !== -1 ||
-          encryption.toLowerCase().indexOf('tls') !== -1 ||
-          port === 993
-        ) {
-          conn = $tls.dial('tcp', addr, {
+    var g = typeof globalThis !== 'undefined' ? globalThis : typeof this !== 'undefined' ? this : {}
+    var netObj =
+      g.net || (typeof net !== 'undefined' ? net : typeof $net !== 'undefined' ? $net : null)
+    var tlsObj =
+      g.tls || (typeof tls !== 'undefined' ? tls : typeof $tls !== 'undefined' ? $tls : null)
+    var bufioObj =
+      g.bufio ||
+      (typeof bufio !== 'undefined' ? bufio : typeof $bufio !== 'undefined' ? $bufio : null)
+
+    var friendlyNetError = function (rawMsg) {
+      var low = (rawMsg || '').toLowerCase()
+      if (low.indexOf('no such host') !== -1 || low.indexOf('lookup') !== -1) {
+        return (
+          'Host IMAP inacessível: não foi possível resolver o endereço "' +
+          host +
+          '". Verifique o nome do servidor.'
+        )
+      }
+      if (low.indexOf('connection refused') !== -1) {
+        return (
+          'Conexão recusada na porta ' +
+          port +
+          ' de ' +
+          host +
+          '. Porta pode estar fechada ou bloqueada por firewall.'
+        )
+      }
+      if (
+        low.indexOf('timeout') !== -1 ||
+        low.indexOf('i/o timeout') !== -1 ||
+        low.indexOf('deadline exceeded') !== -1
+      ) {
+        return 'Tempo limite de conexão esgotado ao contatar ' + host + ':' + port + ' (timeout).'
+      }
+      if (low.indexOf('certificate') !== -1 || low.indexOf('handshake') !== -1) {
+        return 'Falha na negociação TLS/SSL com ' + host + ': ' + rawMsg
+      }
+      return 'Falha de rede ao conectar em ' + host + ':' + port + ' — ' + rawMsg
+    }
+
+    try {
+      if (isImplicitTls) {
+        if (tlsObj && (typeof tlsObj.dial === 'function' || typeof tlsObj.Dial === 'function')) {
+          var dialFn = typeof tlsObj.dial === 'function' ? tlsObj.dial : tlsObj.Dial
+          conn = dialFn('tcp', addr, {
             insecureSkipVerify: true,
             serverName: host,
           })
+        } else if (
+          netObj &&
+          (typeof netObj.dial === 'function' || typeof netObj.Dial === 'function')
+        ) {
+          var netDialFn = typeof netObj.dial === 'function' ? netObj.dial : netObj.Dial
+          var rawConn = netDialFn('tcp', addr)
+          if (
+            tlsObj &&
+            (typeof tlsObj.client === 'function' || typeof tlsObj.Client === 'function')
+          ) {
+            var clientFn = typeof tlsObj.client === 'function' ? tlsObj.client : tlsObj.Client
+            conn = clientFn(rawConn, {
+              insecureSkipVerify: true,
+              serverName: host,
+            })
+          } else {
+            conn = rawConn
+          }
         } else {
-          conn = $net.dial('tcp', addr)
+          throw new Error('Módulos de rede Goja (tls / net) indisponíveis no runtime.')
         }
-      } catch (dialErr) {
-        var errMsg = 'Falha de rede ao conectar em ' + host + ':' + port + ' - ' + dialErr.message
-        $app.logger().error('email_checker_cron connect error', 'error', errMsg)
-        config.set('last_check_at', new Date().toISOString())
-        config.set('last_check_status', 'Falha na Conexão')
-        config.set('last_check_error', errMsg)
-        $app.save(config)
-        logAudit(config.id, 'check', 'error', errMsg, 0, Date.now() - startTime)
-        return
+      } else {
+        // Plaintext ou STARTTLS inicial
+        if (netObj && (typeof netObj.dial === 'function' || typeof netObj.Dial === 'function')) {
+          var plainDialFn = typeof netObj.dial === 'function' ? netObj.dial : netObj.Dial
+          conn = plainDialFn('tcp', addr)
+        } else {
+          throw new Error('Módulo de rede Goja (net) indisponível no runtime.')
+        }
       }
-    }
-
-    if (!conn) {
-      // Runtime Goja sem sockets TCP/TLS diretos:
-      // O ciclo roda de forma limpa, audita a prontidão do webhook e registra
-      // status amigável e explicativo no email_config sem ReferenceError.
-      var noSocketMsg =
-        'Conexão IMAP direta (' +
-        host +
-        ':' +
-        port +
-        ') aguarda suporte a socket TLS no ambiente. O webhook de ingestão contínua (/backend/v1/emails/ingest) está 100% ativo e processando chamados normalmente.'
-      $app.logger().info('email_checker_cron cycle completed', 'note', noSocketMsg)
-
+    } catch (dialErr) {
+      var connErr = friendlyNetError(dialErr.message)
+      $app.logger().error('email_checker_cron dial error', 'error', connErr)
       config.set('last_check_at', new Date().toISOString())
-      config.set('last_check_status', 'Aguardando Sockets')
-      config.set('last_check_error', noSocketMsg)
-      config.set('last_processed_count', 0)
+      config.set('last_check_status', 'Falha na Conexão')
+      config.set('last_check_error', connErr)
       $app.save(config)
-
-      logAudit(
-        config.id,
-        'check',
-        'success',
-        'Ciclo executado: webhook ativo. ' + noSocketMsg,
-        0,
-        Date.now() - startTime,
-      )
+      logAudit(config.id, 'check', 'error', connErr, 0, Date.now() - startTime)
       return
     }
 
-    var reader = typeof $bufio !== 'undefined' && $bufio.newReader ? $bufio.newReader(conn) : null
-    var tagCounter = 1
+    // Criar leitor bufio (NewReader ou newReader)
+    if (bufioObj) {
+      if (typeof bufioObj.newReader === 'function') {
+        reader = bufioObj.newReader(conn)
+      } else if (typeof bufioObj.NewReader === 'function') {
+        reader = bufioObj.NewReader(conn)
+      }
+    }
 
+    var readLineFromConn = function () {
+      if (reader && typeof reader.readString === 'function') {
+        return reader.readString('\n')
+      }
+      if (reader && typeof reader.ReadString === 'function') {
+        return reader.ReadString('\n')
+      }
+      if (reader && typeof reader.readLine === 'function') {
+        var rL = reader.readLine()
+        return Array.isArray(rL) ? rL[0] : rL
+      }
+      if (conn && typeof conn.read === 'function') {
+        var buf = new Uint8Array(4096)
+        var n = conn.read(buf)
+        if (n <= 0) return ''
+        return bytesToUtf8(buf.subarray(0, n))
+      }
+      return ''
+    }
+
+    var writeToConn = function (str) {
+      if (conn && typeof conn.write === 'function') {
+        conn.write(str)
+      } else if (conn && typeof conn.Write === 'function') {
+        conn.Write(str)
+      }
+    }
+
+    var tagCounter = 1
     var sendCmd = function (cmd) {
       var tag = 'A' + String(tagCounter++)
       var fullCmd = tag + ' ' + cmd + '\r\n'
-      conn.write(fullCmd)
+      writeToConn(fullCmd)
 
       var lines = []
       var status = ''
-      while (true) {
-        var line = reader ? reader.readString('\n') : ''
+      var maxLines = 1000
+      var lineCount = 0
+
+      while (lineCount < maxLines) {
+        var line = readLineFromConn()
         if (!line) break
+        lineCount++
         var cleanLine = line.replace(/[\r\n]+$/, '')
         lines.push(cleanLine)
         if (cleanLine.indexOf(tag + ' OK') === 0) {
@@ -940,15 +1015,18 @@ cronAdd('email_checker_cron', '*/2 * * * *', () => {
 
     var fetchEmailByUid = function (uid, seq) {
       var tag = 'B' + seq
-      conn.write(tag + ' UID FETCH ' + uid + ' (BODY.PEEK[])\r\n')
+      writeToConn(tag + ' UID FETCH ' + uid + ' (BODY.PEEK[])\r\n')
 
       var rawLines = []
       var inLiteral = false
       var literalBytesRemaining = 0
+      var maxLines = 5000
+      var lineCount = 0
 
-      while (true) {
-        var line = reader ? reader.readString('\n') : ''
+      while (lineCount < maxLines) {
+        var line = readLineFromConn()
         if (!line) break
+        lineCount++
 
         if (!inLiteral) {
           if (line.indexOf(tag + ' OK') === 0) break
@@ -977,10 +1055,10 @@ cronAdd('email_checker_cron', '*/2 * * * *', () => {
     }
 
     try {
-      // 1. Ler banner de boas-vindas
-      var banner = reader ? reader.readString('\n') : ''
+      // 1. Ler banner de boas-vindas do servidor IMAP
+      var banner = readLineFromConn()
       if (!banner || banner.indexOf('* OK') === -1) {
-        throw new Error('Servidor IMAP não enviou saudação válida: ' + banner)
+        throw new Error('Servidor IMAP não enviou saudação válida: ' + (banner || 'resposta vazia'))
       }
 
       // 2. STARTTLS se configurado
@@ -989,13 +1067,21 @@ cronAdd('email_checker_cron', '*/2 * * * *', () => {
         if (starttlsRes.status !== 'OK') {
           throw new Error('Falha na negociação STARTTLS: ' + starttlsRes.lines.join(' '))
         }
-        if (typeof $tls !== 'undefined' && typeof $tls.client === 'function') {
-          conn = $tls.client(conn, {
+        if (
+          tlsObj &&
+          (typeof tlsObj.client === 'function' || typeof tlsObj.Client === 'function')
+        ) {
+          var clientUpgradeFn = typeof tlsObj.client === 'function' ? tlsObj.client : tlsObj.Client
+          conn = clientUpgradeFn(conn, {
             insecureSkipVerify: true,
             serverName: host,
           })
-          if (typeof $bufio !== 'undefined' && $bufio.newReader) {
-            reader = $bufio.newReader(conn)
+          if (bufioObj) {
+            if (typeof bufioObj.newReader === 'function') {
+              reader = bufioObj.newReader(conn)
+            } else if (typeof bufioObj.NewReader === 'function') {
+              reader = bufioObj.NewReader(conn)
+            }
           }
         }
       }
@@ -1007,12 +1093,14 @@ cronAdd('email_checker_cron', '*/2 * * * *', () => {
       if (loginRes.status !== 'OK') {
         var loginErrText = loginRes.lines.join(' ')
         if (
+          loginErrText.toLowerCase().indexOf('535') !== -1 ||
           loginErrText.toLowerCase().indexOf('basic auth') !== -1 ||
           loginErrText.toLowerCase().indexOf('authentication failed') !== -1 ||
+          loginErrText.toLowerCase().indexOf('badcredentials') !== -1 ||
           host.toLowerCase().indexOf('office365.com') !== -1
         ) {
           throw new Error(
-            'Autenticação IMAP rejeitada (Office 365 / Microsoft). Verifique se a senha informada é uma Senha de Aplicativo (App Password) e se o acesso IMAP está habilitado para esta caixa no portal Microsoft 365. Detalhes: ' +
+            'Autenticação IMAP rejeitada (Código 535 / Office 365). É necessária uma Senha de Aplicativo (App Password) gerada no portal da Microsoft com 2FA, e o protocolo IMAP deve estar ativado para esta caixa. Detalhes: ' +
               loginErrText,
           )
         }
@@ -1024,7 +1112,6 @@ cronAdd('email_checker_cron', '*/2 * * * *', () => {
       var actualFolderUsed = inboxFolder
 
       if (selectRes.status !== 'OK') {
-        // Tentar fallbacks automáticos se a pasta personalizada não for encontrada
         var candidateFallbacks = ['INBOX', 'Inbox', 'Caixa de Entrada']
         var fbSuccess = false
         for (var c = 0; c < candidateFallbacks.length; c++) {
@@ -1189,15 +1276,24 @@ cronAdd('email_checker_cron', '*/2 * * * *', () => {
     var duration = Date.now() - startTime
 
     try {
-      config.set('last_check_at', new Date().toISOString())
-      config.set('last_check_status', 'Sucesso')
-      config.set('last_check_error', errors.length > 0 ? 'Avisos: ' + errors.join('; ') : '')
-      config.set('last_processed_count', processedCount)
-      var prevIngested = config.getInt('total_ingested_count') || 0
-      var prevRetained = config.getInt('total_retained_count') || 0
-      config.set('total_ingested_count', prevIngested + createdCount + repliedCount)
-      config.set('total_retained_count', prevRetained + retainedCount)
-      $app.save(config)
+      // Recarregar o registro de email_config para evitar stale record
+      var freshConfigs = $app.findRecordsByFilter(
+        'email_config',
+        'id = "' + config.id + '"',
+        '',
+        1,
+        0,
+      )
+      var targetConfig = freshConfigs.length > 0 ? freshConfigs[0] : config
+      targetConfig.set('last_check_at', new Date().toISOString())
+      targetConfig.set('last_check_status', 'Sucesso')
+      targetConfig.set('last_check_error', errors.length > 0 ? 'Avisos: ' + errors.join('; ') : '')
+      targetConfig.set('last_processed_count', processedCount)
+      var prevIngested = targetConfig.getInt('total_ingested_count') || 0
+      var prevRetained = targetConfig.getInt('total_retained_count') || 0
+      targetConfig.set('total_ingested_count', prevIngested + createdCount + repliedCount)
+      targetConfig.set('total_retained_count', prevRetained + retainedCount)
+      $app.save(targetConfig)
     } catch (saveErr) {
       $app.logger().error('email_checker_cron update config error', 'err', saveErr.message)
     }

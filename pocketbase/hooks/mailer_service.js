@@ -171,7 +171,9 @@
           s.smtp.port = mailerConfig.port
           s.smtp.username = mailerConfig.user
           s.smtp.password = mailerConfig.password
-          s.smtp.tls = mailerConfig.encryption === 'SSL/TLS'
+          // No PocketBase Core, s.smtp.tls = true significa SSL direto (ex: porta 465).
+          // Quando tls = false, o PocketBase envia STARTTLS (ex: porta 587 Office 365).
+          s.smtp.tls = mailerConfig.encryption === 'SSL/TLS' || mailerConfig.port === 465
           needsRestore = true
         }
       } catch (applyErr) {

@@ -95,16 +95,51 @@ routerAdd('POST', '/backend/v1/emails/test-connection', (e) => {
     var overallStatus = 'success'
     var finalMessage = 'Conexão IMAP validada com sucesso!'
 
+    var tlsObj = typeof tls !== 'undefined' ? tls : typeof $tls !== 'undefined' ? $tls : null
+    var netObj = typeof net !== 'undefined' ? net : typeof $net !== 'undefined' ? $net : null
+    var bufioObj =
+      typeof bufio !== 'undefined' ? bufio : typeof $bufio !== 'undefined' ? $bufio : null
+
+    var readLineFromConn = function () {
+      if (reader && typeof reader.readString === 'function') {
+        return reader.readString('\n')
+      }
+      if (reader && typeof reader.ReadString === 'function') {
+        return reader.ReadString('\n')
+      }
+      if (conn && typeof conn.read === 'function') {
+        var buf = new Uint8Array(4096)
+        var n = conn.read(buf)
+        if (n <= 0) return ''
+        var str = ''
+        for (var i = 0; i < n; i++) str += String.fromCharCode(buf[i])
+        return str
+      }
+      return ''
+    }
+
+    var writeToConn = function (str) {
+      if (conn && typeof conn.write === 'function') {
+        conn.write(str)
+      } else if (conn && typeof conn.Write === 'function') {
+        conn.Write(str)
+      }
+    }
+
     var sendCmd = function (cmd) {
       var tag = 'T' + String(tagCounter++)
       var fullCmd = tag + ' ' + cmd + '\r\n'
-      conn.write(fullCmd)
+      writeToConn(fullCmd)
 
       var lines = []
       var status = ''
-      while (true) {
-        var line = reader.readString('\n')
+      var maxLines = 1000
+      var lineCount = 0
+
+      while (lineCount < maxLines) {
+        var line = readLineFromConn()
         if (!line) break
+        lineCount++
         var cleanLine = line.replace(/[\r\n]+$/, '')
         lines.push(cleanLine)
         if (cleanLine.indexOf(tag + ' OK') === 0) {
@@ -124,20 +159,19 @@ routerAdd('POST', '/backend/v1/emails/test-connection', (e) => {
     }
 
     try {
-      var hasNativeTls = typeof $tls !== 'undefined' && typeof $tls.dial === 'function'
-      var hasNativeNet = typeof $net !== 'undefined' && typeof $net.dial === 'function'
+      var addr = host + ':' + port
+      var isImplicitTls =
+        encryption.toLowerCase().indexOf('ssl') !== -1 ||
+        encryption.toLowerCase().indexOf('tls') !== -1 ||
+        port === 993
 
-      if (hasNativeTls || hasNativeNet) {
-        // 1. TCP Socket
-        var step1Start = Date.now()
-        var addr = host + ':' + port
-        try {
-          if (
-            encryption.toLowerCase().indexOf('ssl') !== -1 ||
-            encryption.toLowerCase().indexOf('tls') !== -1 ||
-            port === 993
-          ) {
-            conn = $tls.dial('tcp', addr, {
+      // 1. Abertura do Socket TCP
+      var step1Start = Date.now()
+      try {
+        if (isImplicitTls) {
+          if (tlsObj && (typeof tlsObj.dial === 'function' || typeof tlsObj.Dial === 'function')) {
+            var dialFn = typeof tlsObj.dial === 'function' ? tlsObj.dial : tlsObj.Dial
+            conn = dialFn('tcp', addr, {
               insecureSkipVerify: true,
               serverName: host,
             })
@@ -146,260 +180,289 @@ routerAdd('POST', '/backend/v1/emails/test-connection', (e) => {
             steps[0].duration_ms = Date.now() - step1Start
 
             steps[1].status = 'success'
-            steps[1].message = 'Criptografia direta SSL/TLS ativa na porta ' + port
+            steps[1].message =
+              'Criptografia direta SSL/TLS ativa na porta ' + port + ' (TLS handshake OK)'
             steps[1].duration_ms = steps[0].duration_ms
-          } else {
-            conn = $net.dial('tcp', addr)
+          } else if (
+            netObj &&
+            (typeof netObj.dial === 'function' || typeof netObj.Dial === 'function')
+          ) {
+            var netDialFn = typeof netObj.dial === 'function' ? netObj.dial : netObj.Dial
+            var rawConn = netDialFn('tcp', addr)
             steps[0].status = 'success'
             steps[0].message = 'Conexão TCP estabelecida em ' + addr
             steps[0].duration_ms = Date.now() - step1Start
-          }
-        } catch (tcpErr) {
-          steps[0].status = 'failed'
-          steps[0].message = 'Falha ao conectar via rede em ' + addr + ': ' + tcpErr.message
-          steps[0].duration_ms = Date.now() - step1Start
-          throw new Error('Falha de rede/socket: ' + tcpErr.message)
-        }
 
-        if (typeof $bufio !== 'undefined' && $bufio.newReader) {
-          reader = $bufio.newReader(conn)
-        }
-
-        // 2. IMAP Greeting
-        var stepGreetStart = Date.now()
-        var banner = reader ? reader.readString('\n') : ''
-        if (!banner || banner.indexOf('* OK') === -1) {
-          steps[2].status = 'failed'
-          steps[2].message = 'Servidor não enviou saudação IMAP válida: ' + (banner || 'vazio')
-          steps[2].duration_ms = Date.now() - stepGreetStart
-          throw new Error('Saudação IMAP inválida: ' + banner)
-        }
-        steps[2].status = 'success'
-        steps[2].message = 'Servidor respondeu: ' + banner.replace(/[\r\n]+$/, '').substring(0, 80)
-        steps[2].duration_ms = Date.now() - stepGreetStart
-
-        // 2.1 Se STARTTLS
-        if (encryption.toLowerCase().indexOf('starttls') !== -1) {
-          var starttlsStart = Date.now()
-          var starttlsRes = sendCmd('STARTTLS')
-          if (starttlsRes.status !== 'OK') {
-            steps[1].status = 'failed'
-            steps[1].message = 'Servidor rejeitou comando STARTTLS: ' + starttlsRes.lines.join(' ')
-            steps[1].duration_ms = Date.now() - starttlsStart
-            throw new Error('STARTTLS rejeitado')
-          }
-          if (typeof $tls !== 'undefined' && typeof $tls.client === 'function') {
-            conn = $tls.client(conn, {
-              insecureSkipVerify: true,
-              serverName: host,
-            })
-            if (typeof $bufio !== 'undefined' && $bufio.newReader) {
-              reader = $bufio.newReader(conn)
+            if (
+              tlsObj &&
+              (typeof tlsObj.client === 'function' || typeof tlsObj.Client === 'function')
+            ) {
+              var clientFn = typeof tlsObj.client === 'function' ? tlsObj.client : tlsObj.Client
+              conn = clientFn(rawConn, {
+                insecureSkipVerify: true,
+                serverName: host,
+              })
+              steps[1].status = 'success'
+              steps[1].message = 'Criptografia direta TLS negociada com sucesso.'
+              steps[1].duration_ms = Date.now() - step1Start
+            } else {
+              conn = rawConn
+              steps[1].status = 'warning'
+              steps[1].message = 'Conexão aberta sem wrapper TLS.'
             }
-          }
-          steps[1].status = 'success'
-          steps[1].message = 'Negociação STARTTLS concluída com sucesso!'
-          steps[1].duration_ms = Date.now() - starttlsStart
-        } else if (steps[1].status === 'pending') {
-          steps[1].status = 'warning'
-          steps[1].message = 'Conexão em texto claro (sem criptografia TLS)'
-        }
-
-        // 3. LOGIN
-        var stepLoginStart = Date.now()
-        var safePass = pass.replace(/\\/g, '\\\\').replace(/"/g, '\\"')
-        var safeUser = user.replace(/\\/g, '\\\\').replace(/"/g, '\\"')
-        var loginRes = sendCmd('LOGIN "' + safeUser + '" "' + safePass + '"')
-        steps[3].duration_ms = Date.now() - stepLoginStart
-        if (loginRes.status !== 'OK') {
-          steps[3].status = 'failed'
-          var loginErrText = loginRes.lines.join(' ')
-          if (
-            loginErrText.toLowerCase().indexOf('basic auth') !== -1 ||
-            loginErrText.toLowerCase().indexOf('authentication failed') !== -1 ||
-            host.toLowerCase().indexOf('office365.com') !== -1
-          ) {
-            steps[3].message =
-              'Autenticação rejeitada pelo provedor (' +
-              loginErrText +
-              '). Para Microsoft 365 / Office 365, certifique-se de usar uma Senha de Aplicativo ou habilitar IMAP na caixa.'
           } else {
-            steps[3].message = 'Credenciais rejeitadas pelo servidor: ' + loginErrText
-          }
-          throw new Error('Falha de login IMAP: ' + steps[3].message)
-        }
-        steps[3].status = 'success'
-        steps[3].message = 'Autenticação bem-sucedida para a conta ' + user
-
-        // Listar pastas disponíveis (LIST) para diagnóstico rico
-        var availableFolders = []
-        try {
-          var listRes = sendCmd('LIST "" "*"')
-          if (listRes.status === 'OK') {
-            for (var li = 0; li < listRes.lines.length; li++) {
-              var lLine = listRes.lines[li]
-              if (lLine.indexOf('* LIST') === 0) {
-                var lastQuote = lLine.match(/"([^"]+)"$/) || lLine.match(/\s+([^\s]+)$/)
-                if (lastQuote && lastQuote[1]) {
-                  availableFolders.push(lastQuote[1])
-                }
-              }
-            }
-          }
-        } catch (_) {}
-
-        // 4. SELECT Pasta
-        var stepSelStart = Date.now()
-        var selectRes = sendCmd('SELECT "' + inboxFolder + '"')
-        var selectedActualFolder = inboxFolder
-        if (selectRes.status !== 'OK') {
-          var fallbacks = ['INBOX', 'Inbox', 'Caixa de Entrada']
-          var foundFallback = false
-          for (var fb = 0; fb < fallbacks.length; fb++) {
-            var fbFolder = fallbacks[fb]
-            if (fbFolder !== inboxFolder) {
-              var fbRes = sendCmd('SELECT "' + fbFolder + '"')
-              if (fbRes.status === 'OK') {
-                selectedActualFolder = fbFolder
-                foundFallback = true
-                selectRes = fbRes
-                break
-              }
-            }
-          }
-
-          if (foundFallback) {
-            steps[4].status = 'warning'
-            steps[4].message =
-              'A pasta "' +
-              inboxFolder +
-              '" não foi encontrada, mas a pasta alternativa "' +
-              selectedActualFolder +
-              '" foi selecionada com sucesso! Pastas encontradas: ' +
-              availableFolders.slice(0, 5).join(', ')
-          } else {
-            steps[4].status = 'failed'
-            steps[4].message =
-              'Pasta "' +
-              inboxFolder +
-              '" não existe no servidor. Pastas detectadas no servidor: ' +
-              (availableFolders.length > 0 ? availableFolders.slice(0, 8).join(', ') : 'nenhuma')
-            steps[4].duration_ms = Date.now() - stepSelStart
-            throw new Error('Pasta não encontrada: ' + steps[4].message)
+            throw new Error('Módulos de rede Goja (tls / net) não disponíveis no runtime.')
           }
         } else {
-          steps[4].status = 'success'
-          steps[4].message = 'Pasta "' + inboxFolder + '" selecionada e pronta para leitura.'
-        }
-        steps[4].duration_ms = Date.now() - stepSelStart
-
-        // 5. SEARCH e Contagem
-        var stepSearchStart = Date.now()
-        var uids = []
-        var unseenRes = sendCmd('UID SEARCH UNSEEN')
-        if (unseenRes.status === 'OK') {
-          for (var ui = 0; ui < unseenRes.lines.length; ui++) {
-            var unLine = unseenRes.lines[ui]
-            if (unLine.indexOf('* SEARCH') === 0) {
-              var parts = unLine.replace('* SEARCH', '').trim().split(/\s+/)
-              for (var up = 0; up < parts.length; up++) {
-                if (parts[up]) uids.push(parts[up])
-              }
-            }
+          // Plaintext ou STARTTLS inicial
+          if (netObj && (typeof netObj.dial === 'function' || typeof netObj.Dial === 'function')) {
+            var plainDialFn = typeof netObj.dial === 'function' ? netObj.dial : netObj.Dial
+            conn = plainDialFn('tcp', addr)
+            steps[0].status = 'success'
+            steps[0].message = 'Conexão TCP estabelecida em ' + addr
+            steps[0].duration_ms = Date.now() - step1Start
+          } else {
+            throw new Error('Módulo de rede Goja (net) não disponível no runtime.')
           }
         }
-        var unseenCount = uids.length
-
-        var allSearchRes = sendCmd('UID SEARCH ALL')
-        var allUids = []
-        if (allSearchRes.status === 'OK') {
-          for (var ai = 0; ai < allSearchRes.lines.length; ai++) {
-            var aLine = allSearchRes.lines[ai]
-            if (aLine.indexOf('* SEARCH') === 0) {
-              var aParts = aLine.replace('* SEARCH', '').trim().split(/\s+/)
-              for (var ap = 0; ap < aParts.length; ap++) {
-                if (allParts[ap]) allUids.push(aParts[ap])
-              }
-            }
-          }
+      } catch (tcpErr) {
+        var rawErr = tcpErr.message || String(tcpErr)
+        var friendlyTcpErr = rawErr
+        if (
+          rawErr.toLowerCase().indexOf('no such host') !== -1 ||
+          rawErr.toLowerCase().indexOf('lookup') !== -1
+        ) {
+          friendlyTcpErr =
+            'Host inacessível: não foi possível resolver o endereço DNS de "' + host + '".'
+        } else if (rawErr.toLowerCase().indexOf('connection refused') !== -1) {
+          friendlyTcpErr =
+            'Conexão recusada em ' + addr + '. Verifique se a porta está correta e liberada.'
+        } else if (rawErr.toLowerCase().indexOf('timeout') !== -1) {
+          friendlyTcpErr = 'Tempo limite esgotado ao contatar ' + addr + ' (timeout de rede).'
         }
-        totalFound = allUids.length
-        steps[5].status = 'success'
-        steps[5].message =
-          'Total de ' + totalFound + ' e-mail(s) na pasta (' + unseenCount + ' não lido(s)).'
-        steps[5].duration_ms = Date.now() - stepSearchStart
-
-        var sampleUids = allUids.slice(Math.max(0, allUids.length - 3)).reverse()
-        for (var s = 0; s < sampleUids.length; s++) {
-          try {
-            var smUid = sampleUids[s]
-            var fetchRes = sendCmd(
-              'UID FETCH ' + smUid + ' (BODY.PEEK[HEADER.FIELDS (FROM SUBJECT DATE)])',
-            )
-            var sFrom = ''
-            var sSubj = ''
-            var sDate = new Date().toISOString()
-            for (var fl = 0; fl < fetchRes.lines.length; fl++) {
-              var fLine = fetchRes.lines[fl]
-              if (/^from:/i.test(fLine)) sFrom = fLine.replace(/^from:\s*/i, '')
-              if (/^subject:/i.test(fLine)) sSubj = fLine.replace(/^subject:\s*/i, '')
-              if (/^date:/i.test(fLine)) sDate = fLine.replace(/^date:\s*/i, '')
-            }
-            sampleMessages.push({
-              uid: smUid,
-              from: sFrom || 'Desconhecido',
-              subject: sSubj || '(Sem assunto)',
-              date: sDate,
-              status: 'Identificado no servidor',
-            })
-          } catch (_) {}
-        }
-
-        // 6. Cron Scheduler check
-        steps[6].status = 'success'
-        steps[6].message = 'Cron "email_checker_cron" ativo e programado a cada 2 minutos.'
-        steps[6].duration_ms = 0
-
-        try {
-          sendCmd('LOGOUT')
-        } catch (_) {}
-      } else {
-        // Sem sockets diretos no runtime Goja ($tls/$net ausentes no PocketBase JSVM)
-        // Validar e registrar os passos de forma determinística e amigável
-        steps[0].status = 'success'
-        steps[0].message = 'Parâmetros de rede validados: host ' + host + ' na porta ' + port + '.'
-        steps[0].duration_ms = 1
-
-        steps[1].status = 'success'
-        steps[1].message = 'Criptografia segura configurada: ' + encryption + '.'
-        steps[1].duration_ms = 1
-
-        steps[2].status = 'success'
-        steps[2].message = 'Protocolo IMAP4rev1 suportado pelo provedor (' + host + ').'
-        steps[2].duration_ms = 1
-
-        steps[3].status = 'success'
-        steps[3].message = 'Conta configurada: ' + user + ' (credenciais salvas com segurança).'
-        steps[3].duration_ms = 1
-
-        steps[4].status = 'success'
-        steps[4].message = 'Pasta selecionada para leitura: "' + inboxFolder + '".'
-        steps[4].duration_ms = 1
-
-        steps[5].status = 'success'
-        steps[5].message =
-          'Pronto para recepção. O webhook de ingestão contínua (/backend/v1/emails/ingest) está ativo e recebe chamados em tempo real.'
-        steps[5].duration_ms = 1
-
-        steps[6].status = 'success'
-        steps[6].message =
-          'Rotina automática "email_checker_cron" ativa e programada a cada 2 minutos.'
-        steps[6].duration_ms = 1
-
-        overallStatus = 'success'
-        finalMessage =
-          'Configurações da caixa validadas com sucesso! O webhook de ingestão contínua (/backend/v1/emails/ingest) e o pipeline de triagem estão 100% operacionais.'
+        steps[0].status = 'failed'
+        steps[0].message = friendlyTcpErr
+        steps[0].duration_ms = Date.now() - step1Start
+        throw new Error(friendlyTcpErr)
       }
+
+      // Preparar leitor bufio
+      if (bufioObj) {
+        if (typeof bufioObj.newReader === 'function') {
+          reader = bufioObj.newReader(conn)
+        } else if (typeof bufioObj.NewReader === 'function') {
+          reader = bufioObj.NewReader(conn)
+        }
+      }
+
+      // 2. Saudação do Servidor IMAP (Greeting)
+      var stepGreetStart = Date.now()
+      var banner = readLineFromConn()
+      if (!banner || banner.indexOf('* OK') === -1) {
+        steps[2].status = 'failed'
+        steps[2].message =
+          'Servidor IMAP não enviou saudação válida: ' + (banner || 'resposta vazia')
+        steps[2].duration_ms = Date.now() - stepGreetStart
+        throw new Error('Saudação IMAP inválida: ' + banner)
+      }
+      steps[2].status = 'success'
+      steps[2].message = 'Servidor respondeu: ' + banner.replace(/[\r\n]+$/, '').substring(0, 80)
+      steps[2].duration_ms = Date.now() - stepGreetStart
+
+      // 2.1 Se STARTTLS (porta 143/587 com upgrade)
+      if (encryption.toLowerCase().indexOf('starttls') !== -1) {
+        var starttlsStart = Date.now()
+        var starttlsRes = sendCmd('STARTTLS')
+        if (starttlsRes.status !== 'OK') {
+          steps[1].status = 'failed'
+          steps[1].message = 'Servidor rejeitou comando STARTTLS: ' + starttlsRes.lines.join(' ')
+          steps[1].duration_ms = Date.now() - starttlsStart
+          throw new Error('STARTTLS rejeitado')
+        }
+        if (
+          tlsObj &&
+          (typeof tlsObj.client === 'function' || typeof tlsObj.Client === 'function')
+        ) {
+          var clientUpgradeFn = typeof tlsObj.client === 'function' ? tlsObj.client : tlsObj.Client
+          conn = clientUpgradeFn(conn, {
+            insecureSkipVerify: true,
+            serverName: host,
+          })
+          if (bufioObj) {
+            if (typeof bufioObj.newReader === 'function') {
+              reader = bufioObj.newReader(conn)
+            } else if (typeof bufioObj.NewReader === 'function') {
+              reader = bufioObj.NewReader(conn)
+            }
+          }
+        }
+        steps[1].status = 'success'
+        steps[1].message = 'Negociação STARTTLS concluída com sucesso!'
+        steps[1].duration_ms = Date.now() - starttlsStart
+      } else if (steps[1].status === 'pending') {
+        steps[1].status = 'warning'
+        steps[1].message = 'Conexão em texto claro (sem criptografia TLS)'
+      }
+
+      // 3. LOGIN
+      var stepLoginStart = Date.now()
+      var safePass = pass.replace(/\\/g, '\\\\').replace(/"/g, '\\"')
+      var safeUser = user.replace(/\\/g, '\\\\').replace(/"/g, '\\"')
+      var loginRes = sendCmd('LOGIN "' + safeUser + '" "' + safePass + '"')
+      steps[3].duration_ms = Date.now() - stepLoginStart
+      if (loginRes.status !== 'OK') {
+        steps[3].status = 'failed'
+        var loginErrText = loginRes.lines.join(' ')
+        if (
+          loginErrText.toLowerCase().indexOf('535') !== -1 ||
+          loginErrText.toLowerCase().indexOf('basic auth') !== -1 ||
+          loginErrText.toLowerCase().indexOf('authentication failed') !== -1 ||
+          loginErrText.toLowerCase().indexOf('badcredentials') !== -1 ||
+          host.toLowerCase().indexOf('office365.com') !== -1
+        ) {
+          steps[3].message =
+            'Autenticação rejeitada (Código 535 / Microsoft 365). É necessária uma Senha de Aplicativo (App Password) e a habilitação do IMAP para esta caixa no portal Microsoft 365. Detalhes: ' +
+            loginErrText
+        } else {
+          steps[3].message = 'Credenciais rejeitadas pelo servidor: ' + loginErrText
+        }
+        throw new Error('Falha de login IMAP: ' + steps[3].message)
+      }
+      steps[3].status = 'success'
+      steps[3].message = 'Autenticação bem-sucedida para a conta ' + user
+
+      // Listar pastas disponíveis (LIST) para diagnóstico rico
+      var availableFolders = []
+      try {
+        var listRes = sendCmd('LIST "" "*"')
+        if (listRes.status === 'OK') {
+          for (var li = 0; li < listRes.lines.length; li++) {
+            var lLine = listRes.lines[li]
+            if (lLine.indexOf('* LIST') === 0) {
+              var lastQuote = lLine.match(/"([^"]+)"$/) || lLine.match(/\s+([^\s]+)$/)
+              if (lastQuote && lastQuote[1]) {
+                availableFolders.push(lastQuote[1])
+              }
+            }
+          }
+        }
+      } catch (_) {}
+
+      // 4. SELECT Pasta
+      var stepSelStart = Date.now()
+      var selectRes = sendCmd('SELECT "' + inboxFolder + '"')
+      var selectedActualFolder = inboxFolder
+      if (selectRes.status !== 'OK') {
+        var fallbacks = ['INBOX', 'Inbox', 'Caixa de Entrada']
+        var foundFallback = false
+        for (var fb = 0; fb < fallbacks.length; fb++) {
+          var fbFolder = fallbacks[fb]
+          if (fbFolder !== inboxFolder) {
+            var fbRes = sendCmd('SELECT "' + fbFolder + '"')
+            if (fbRes.status === 'OK') {
+              selectedActualFolder = fbFolder
+              foundFallback = true
+              selectRes = fbRes
+              break
+            }
+          }
+        }
+
+        if (foundFallback) {
+          steps[4].status = 'warning'
+          steps[4].message =
+            'A pasta "' +
+            inboxFolder +
+            '" não foi encontrada, mas a pasta alternativa "' +
+            selectedActualFolder +
+            '" foi selecionada com sucesso! Pastas encontradas: ' +
+            availableFolders.slice(0, 5).join(', ')
+        } else {
+          steps[4].status = 'failed'
+          steps[4].message =
+            'Pasta "' +
+            inboxFolder +
+            '" não existe no servidor. Pastas detectadas no servidor: ' +
+            (availableFolders.length > 0 ? availableFolders.slice(0, 8).join(', ') : 'nenhuma')
+          steps[4].duration_ms = Date.now() - stepSelStart
+          throw new Error('Pasta não encontrada: ' + steps[4].message)
+        }
+      } else {
+        steps[4].status = 'success'
+        steps[4].message = 'Pasta "' + inboxFolder + '" selecionada e pronta para leitura.'
+      }
+      steps[4].duration_ms = Date.now() - stepSelStart
+
+      // 5. SEARCH e Contagem
+      var stepSearchStart = Date.now()
+      var uids = []
+      var unseenRes = sendCmd('UID SEARCH UNSEEN')
+      if (unseenRes.status === 'OK') {
+        for (var ui = 0; ui < unseenRes.lines.length; ui++) {
+          var unLine = unseenRes.lines[ui]
+          if (unLine.indexOf('* SEARCH') === 0) {
+            var parts = unLine.replace('* SEARCH', '').trim().split(/\s+/)
+            for (var up = 0; up < parts.length; up++) {
+              if (parts[up]) uids.push(parts[up])
+            }
+          }
+        }
+      }
+      var unseenCount = uids.length
+
+      var allSearchRes = sendCmd('UID SEARCH ALL')
+      var allUids = []
+      if (allSearchRes.status === 'OK') {
+        for (var ai = 0; ai < allSearchRes.lines.length; ai++) {
+          var aLine = allSearchRes.lines[ai]
+          if (aLine.indexOf('* SEARCH') === 0) {
+            var aParts = aLine.replace('* SEARCH', '').trim().split(/\s+/)
+            for (var ap = 0; ap < aParts.length; ap++) {
+              if (allParts[ap]) allUids.push(allParts[ap])
+            }
+          }
+        }
+      }
+      totalFound = allUids.length
+      steps[5].status = 'success'
+      steps[5].message =
+        'Total de ' + totalFound + ' e-mail(s) na pasta (' + unseenCount + ' não lido(s)).'
+      steps[5].duration_ms = Date.now() - stepSearchStart
+
+      var sampleUids = allUids.slice(Math.max(0, allUids.length - 3)).reverse()
+      for (var s = 0; s < sampleUids.length; s++) {
+        try {
+          var smUid = sampleUids[s]
+          var fetchRes = sendCmd(
+            'UID FETCH ' + smUid + ' (BODY.PEEK[HEADER.FIELDS (FROM SUBJECT DATE)])',
+          )
+          var sFrom = ''
+          var sSubj = ''
+          var sDate = new Date().toISOString()
+          for (var fl = 0; fl < fetchRes.lines.length; fl++) {
+            var fLine = fetchRes.lines[fl]
+            if (/^from:/i.test(fLine)) sFrom = fLine.replace(/^from:\s*/i, '')
+            if (/^subject:/i.test(fLine)) sSubj = fLine.replace(/^subject:\s*/i, '')
+            if (/^date:/i.test(fLine)) sDate = fLine.replace(/^date:\s*/i, '')
+          }
+          sampleMessages.push({
+            uid: smUid,
+            from: sFrom || 'Desconhecido',
+            subject: sSubj || '(Sem assunto)',
+            date: sDate,
+            status: 'Identificado no servidor',
+          })
+        } catch (_) {}
+      }
+
+      // 6. Cron Scheduler check
+      steps[6].status = 'success'
+      steps[6].message = 'Cron "email_checker_cron" ativo e programado a cada 2 minutos.'
+      steps[6].duration_ms = 0
+
+      try {
+        sendCmd('LOGOUT')
+      } catch (_) {}
     } catch (flowErr) {
       overallStatus = 'failed'
       finalMessage = flowErr.message || 'Falha durante o teste IMAP.'
@@ -410,7 +473,6 @@ routerAdd('POST', '/backend/v1/emails/test-connection', (e) => {
         } catch (_) {}
       }
     }
-
     // Salvar auditoria
     try {
       var auditCol = $app.findCollectionByNameOrId('email_audit_logs')
