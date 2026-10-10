@@ -217,7 +217,7 @@ cronAdd('scheduled_report_sender', '0 2 * * *', function () {
       var filename = reportName.replace(/[^a-zA-Z0-9]/g, '_') + '.csv'
 
       for (var ei = 0; ei < recipientEmails.length; ei++) {
-        var message = new MailMessage()
+        var message = new MailerMessage()
         message.from = { address: 'noreply@serviceone.com.br', name: 'ServiceOne' }
         message.to = [{ address: recipientEmails[ei] }]
         message.subject = subject

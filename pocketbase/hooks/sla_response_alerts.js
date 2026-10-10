@@ -214,7 +214,7 @@ cronAdd('sla_response_alerts', '* * * * *', function () {
       for (var m = 0; m < recipients.length; m++) {
         if (!recipients[m].email) continue
         try {
-          var message = new MailMessage()
+          var message = new MailerMessage()
           message.from = { address: 'noreply@serviceone.com.br', name: 'ServiceOne' }
           message.to = [{ address: recipients[m].email }]
           message.subject = subject

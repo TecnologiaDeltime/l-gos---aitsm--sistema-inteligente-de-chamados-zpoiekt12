@@ -140,7 +140,7 @@ cronAdd('scheduled_tickets_cron', '*/5 * * * *', function () {
                 'Atenciosamente,\n' +
                 'ServiceOne ITSM'
 
-              var mailMsg = new MailMessage()
+              var mailMsg = new MailerMessage()
               mailMsg.from = { address: 'noreply@serviceone.com.br', name: 'ServiceOne' }
               mailMsg.to = [{ address: userEmail }]
               mailMsg.subject = emailSubj

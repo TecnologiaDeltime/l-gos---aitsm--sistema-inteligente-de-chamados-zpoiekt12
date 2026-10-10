@@ -542,7 +542,7 @@ cronAdd('monthly_client_report_cron', '0 6 * * *', function () {
 
       for (var rIdx = 0; rIdx < recipients.length; rIdx++) {
         var targetEmail = recipients[rIdx]
-        var message = new MailMessage()
+        var message = new MailerMessage()
         message.from = { address: 'noreply@serviceone.com.br', name: 'ServiceOne - ITSM' }
         message.to = [{ address: targetEmail }]
         message.subject = subject
@@ -1127,7 +1127,7 @@ routerAdd(
 
       for (var rIdx = 0; rIdx < recipients.length; rIdx++) {
         var targetEmail = recipients[rIdx]
-        var message = new MailMessage()
+        var message = new MailerMessage()
         message.from = { address: 'noreply@serviceone.com.br', name: 'ServiceOne - ITSM' }
         message.to = [{ address: targetEmail }]
         message.subject = subject
