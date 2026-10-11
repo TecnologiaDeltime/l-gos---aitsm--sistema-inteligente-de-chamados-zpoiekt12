@@ -183,16 +183,7 @@
       }
     }
 
-    try {
-      var client = $app.newMailClient()
-      client.send(message)
-      return {
-        success: true,
-        smtp_used: mailerConfig.isDedicated ? 'dedicated_mailbox' : 'serviceone_fallback',
-        host: mailerConfig.host,
-        user: mailerConfig.user || mailerConfig.senderEmail,
-      }
-    } finally {
+    var restoreSettings = function () {
       if (needsRestore && originalSmtp) {
         try {
           var sRestore = $app.settings
@@ -208,6 +199,66 @@
           }
         } catch (_) {}
       }
+    }
+
+    try {
+      var client = $app.newMailClient()
+      client.send(message)
+      return {
+        success: true,
+        smtp_used: mailerConfig.isDedicated ? 'dedicated_mailbox' : 'serviceone_fallback',
+        host: mailerConfig.host,
+        user: mailerConfig.user || mailerConfig.senderEmail,
+      }
+    } catch (primaryErr) {
+      // Se a caixa dedicada falhar, restaura as configurações originais e tenta o fallback ServiceOne
+      restoreSettings()
+      needsRestore = false
+
+      if (mailerConfig.isDedicated) {
+        $app
+          .logger()
+          .warn(
+            'sendSystemMailMessage: falha no envio via caixa dedicada, tentando fallback ServiceOne',
+            'host',
+            mailerConfig.host,
+            'user',
+            mailerConfig.user,
+            'err',
+            primaryErr.message,
+          )
+
+        try {
+          var fallbackClient = $app.newMailClient()
+          fallbackClient.send(message)
+          return {
+            success: true,
+            smtp_used: 'serviceone_fallback',
+            fallback_reason: primaryErr.message,
+            host: originalSmtp ? originalSmtp.host : '',
+            user: originalSmtp ? originalSmtp.username : '',
+          }
+        } catch (fallbackErr) {
+          $app
+            .logger()
+            .error(
+              'sendSystemMailMessage: falha também no fallback ServiceOne',
+              'err',
+              fallbackErr.message,
+            )
+          throw new Error(
+            'Falha no envio pela caixa dedicada (' +
+              primaryErr.message +
+              ') e no fallback padrão (' +
+              fallbackErr.message +
+              ')',
+          )
+        }
+      }
+
+      throw primaryErr
+    } finally {
+      restoreSettings()
     }
   }
 })()
