@@ -64,6 +64,7 @@ import { getProfiles } from '@/services/profiles'
 import { OperatorItem, CreateOperatorData, UpdateOperatorData } from '@/types/operators'
 import { ProfileRecord } from '@/types/profiles'
 import { useRealtime } from '@/hooks/use-realtime'
+import { getErrorMessage } from '@/lib/pocketbase/errors'
 
 const DEFAULT_TEAMS = [
   'Suporte N1',
@@ -114,7 +115,7 @@ export default function OperatorsPage() {
     } catch (err: any) {
       toast({
         title: 'Erro ao carregar operadores',
-        description: err?.message || 'Não foi possível carregar os dados dos operadores.',
+        description: getErrorMessage(err),
         variant: 'destructive',
       })
     } finally {
@@ -226,7 +227,7 @@ export default function OperatorsPage() {
     } catch (err: any) {
       toast({
         title: 'Erro ao excluir operador',
-        description: err?.message || 'Não foi possível excluir o operador.',
+        description: getErrorMessage(err),
         variant: 'destructive',
       })
     } finally {
@@ -256,7 +257,7 @@ export default function OperatorsPage() {
     } catch (err: any) {
       toast({
         title: 'Erro ao alterar status',
-        description: err?.message,
+        description: getErrorMessage(err),
         variant: 'destructive',
       })
     }
@@ -272,7 +273,7 @@ export default function OperatorsPage() {
     } catch (err: any) {
       toast({
         title: 'Erro ao resetar senha',
-        description: err?.message || 'Não foi possível gerar uma nova senha.',
+        description: getErrorMessage(err),
         variant: 'destructive',
       })
     } finally {

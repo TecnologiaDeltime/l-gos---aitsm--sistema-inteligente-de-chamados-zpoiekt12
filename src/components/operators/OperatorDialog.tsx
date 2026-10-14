@@ -35,6 +35,7 @@ import {
   OperatorType,
 } from '@/types/operators'
 import { ProfileRecord } from '@/types/profiles'
+import { getErrorMessage } from '@/lib/pocketbase/errors'
 
 interface OperatorDialogProps {
   open: boolean
@@ -170,10 +171,13 @@ export function OperatorDialog({
         extension: extension.trim(),
         mobile: mobile.trim(),
         phone: mobile.trim(),
-        profile_id: profileId,
         role: mappedRole,
         active,
         position: position.trim() || 'Operador',
+      }
+
+      if (profileId && profileId.trim()) {
+        payload.profile_id = profileId.trim()
       }
 
       if (!isEditing) {
@@ -184,7 +188,7 @@ export function OperatorDialog({
       await onSave(payload)
       onOpenChange(false)
     } catch (err: any) {
-      setError(err?.message || 'Erro ao salvar operador. Verifique os dados inseridos.')
+      setError(getErrorMessage(err))
     } finally {
       setSaving(false)
     }

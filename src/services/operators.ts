@@ -45,20 +45,68 @@ export const getOperator = async (id: string): Promise<OperatorItem> => {
   })
 }
 
+const cleanPayload = (data: Record<string, any>): Record<string, any> => {
+  const cleaned: Record<string, any> = {}
+  for (const [key, val] of Object.entries(data)) {
+    // Omite undefined
+    if (val === undefined) continue
+    // Se for string vazia em campos relation, omite para evitar "Cannot be empty relation" ou validação de ID
+    if (
+      typeof val === 'string' &&
+      val.trim() === '' &&
+      ['company', 'unit', 'profile_id'].includes(key)
+    ) {
+      continue
+    }
+    // Normaliza strings aparando espaços
+    if (typeof val === 'string') {
+      cleaned[key] = val.trim()
+    } else {
+      cleaned[key] = val
+    }
+  }
+  return cleaned
+}
+
 export const createOperator = async (data: CreateOperatorData): Promise<OperatorItem> => {
-  const fullName = [data.first_name, data.last_name].filter(Boolean).join(' ').trim()
-  const payload: any = {
+  const firstName = (data.first_name || '').trim()
+  const lastName = (data.last_name || '').trim()
+  const fullName = [firstName, lastName].filter(Boolean).join(' ').trim()
+  const email = (data.email || '').trim().toLowerCase()
+
+  const rawPayload: Record<string, any> = {
     ...data,
-    name: fullName,
+    email,
+    first_name: firstName,
+    last_name: lastName,
+    name: fullName || firstName || email,
     active: data.active ?? true,
     emailVisibility: true,
   }
 
-  if (!payload.password) {
-    payload.password = 'Skip@Pass'
-    payload.passwordConfirm = 'Skip@Pass'
+  const initialPassword = data.password && data.password.length >= 8 ? data.password : 'Skip@Pass'
+  rawPayload.password = initialPassword
+  rawPayload.passwordConfirm = data.passwordConfirm || initialPassword
+
+  // Se o role vier vazio ou não for um enum válido, usa 'tecnico'
+  const validRoles = [
+    'admin',
+    'gestor',
+    'tecnico',
+    'cliente_gestor',
+    'cliente_solicitante',
+    'auditor',
+  ]
+  if (!rawPayload.role || !validRoles.includes(rawPayload.role)) {
+    rawPayload.role = 'tecnico'
   }
 
+  // Se type vier vazio ou inválido, usa 'Interno'
+  if (rawPayload.type !== 'Interno' && rawPayload.type !== 'Externo') {
+    rawPayload.type = 'Interno'
+  }
+
+  const payload = cleanPayload(rawPayload)
   return await pb.collection('users').create<OperatorItem>(payload)
 }
 
@@ -66,14 +114,33 @@ export const updateOperator = async (
   id: string,
   data: UpdateOperatorData,
 ): Promise<OperatorItem> => {
-  const payload: any = { ...data }
-  if (data.first_name !== undefined || data.last_name !== undefined) {
-    const existing = await getOperator(id)
-    const firstName = data.first_name !== undefined ? data.first_name : existing.first_name || ''
-    const lastName = data.last_name !== undefined ? data.last_name : existing.last_name || ''
-    payload.name = [firstName, lastName].filter(Boolean).join(' ').trim()
+  const rawPayload: Record<string, any> = { ...data }
+  if (data.email) {
+    rawPayload.email = data.email.trim().toLowerCase()
   }
 
+  if (data.first_name !== undefined || data.last_name !== undefined) {
+    const existing = await getOperator(id)
+    const firstName =
+      data.first_name !== undefined
+        ? (data.first_name || '').trim()
+        : (existing.first_name || '').trim()
+    const lastName =
+      data.last_name !== undefined
+        ? (data.last_name || '').trim()
+        : (existing.last_name || '').trim()
+    rawPayload.first_name = firstName
+    rawPayload.last_name = lastName
+    rawPayload.name =
+      [firstName, lastName].filter(Boolean).join(' ').trim() || firstName || existing.email
+  }
+
+  // Se password foi informado na atualização, valida e inclui confirmação se ausente
+  if (rawPayload.password && !rawPayload.passwordConfirm) {
+    rawPayload.passwordConfirm = rawPayload.password
+  }
+
+  const payload = cleanPayload(rawPayload)
   return await pb.collection('users').update<OperatorItem>(id, payload)
 }
 
