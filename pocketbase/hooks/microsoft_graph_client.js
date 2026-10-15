@@ -471,3 +471,5 @@
     module.exports = GraphClient
   }
 })()
+
+module.exports = globalThis.MicrosoftGraphClient
