@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-15T16:09:34.989Z",
+  "generatedAt": "2026-10-19T20:32:02.906Z",
   "collections": [
     {
       "name": "users",
@@ -8863,6 +8863,67 @@
           "type": "text",
           "required": false,
           "system": false
+        },
+        {
+          "name": "retention_enabled",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "retention_days",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "retention_action",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["archive", "delete"]
+        },
+        {
+          "name": "archive_folder",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "last_retention_at",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "last_retention_status",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "last_retention_error",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "last_retention_count",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "total_archived_count",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "total_deleted_count",
+          "type": "number",
+          "required": false,
+          "system": false
         }
       ],
       "indexes": []
@@ -9510,7 +9571,13 @@
           "type": "select",
           "required": true,
           "system": false,
-          "selectValues": ["connection_test", "dry_run_simulation", "teste-envio", "teste-smtp"]
+          "selectValues": [
+            "connection_test",
+            "dry_run_simulation",
+            "teste-envio",
+            "teste-smtp",
+            "retencao"
+          ]
         },
         {
           "name": "executed_by",

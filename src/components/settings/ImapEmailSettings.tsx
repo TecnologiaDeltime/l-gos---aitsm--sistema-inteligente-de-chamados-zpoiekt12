@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
@@ -40,6 +40,10 @@ import {
   Check,
   ExternalLink,
   Key,
+  Archive,
+  Trash2,
+  Calendar,
+  Timer,
 } from 'lucide-react'
 import {
   EmailConfigRecord,
@@ -48,6 +52,9 @@ import {
   EmailAuditLogRecord,
   ImapEncryption,
   SmtpEncryption,
+  EmailRetentionAction,
+  RetentionStatsResponse,
+  RetentionRunResponse,
   testEmailConnection,
   testSmtpConnection,
   runEmailDryRunSimulation,
@@ -55,8 +62,9 @@ import {
   sendTestEmail,
   SendTestEmailResponse,
   SmtpTestResponse,
+  runEmailRetentionNow,
+  getEmailRetentionStats,
 } from '@/services/email-config'
-
 interface ImapEmailSettingsProps {
   emailConfig: EmailConfigRecord
   setEmailConfig: React.Dispatch<React.SetStateAction<EmailConfigRecord | null>>
@@ -107,9 +115,73 @@ export function ImapEmailSettings({
   const [smtpTestResponse, setSmtpTestResponse] = useState<SmtpTestResponse | null>(null)
   const [dryRunResult, setDryRunResult] = useState<DryRunSimulationResult | null>(null)
   const [auditLogs, setAuditLogs] = useState<EmailAuditLogRecord[]>([])
+
+  // Política de Retenção da Caixa
+  const [retentionStats, setRetentionStats] = useState<RetentionStatsResponse | null>(null)
+  const [loadingRetentionStats, setLoadingRetentionStats] = useState(false)
+  const [runningRetention, setRunningRetention] = useState(false)
+  const [retentionRunResult, setRetentionRunResult] = useState<RetentionRunResponse | null>(null)
+
   const [activeTab, setActiveTab] = useState<
     'config' | 'sendtest' | 'test' | 'smtptest' | 'dryrun' | 'audit'
   >('config')
+
+  // Carregar estatísticas da política de retenção
+  const loadRetentionStats = async () => {
+    setLoadingRetentionStats(true)
+    try {
+      const stats = await getEmailRetentionStats()
+      setRetentionStats(stats)
+    } catch (err: any) {
+      // Falha suave caso endpoint falhe ou servidor esteja offline
+      console.error('Falha ao carregar stats de retenção:', err)
+    } finally {
+      setLoadingRetentionStats(false)
+    }
+  }
+
+  // Executar retenção manualmente agora
+  const handleRunRetentionNow = async () => {
+    setRunningRetention(true)
+    setRetentionRunResult(null)
+    try {
+      const result = await runEmailRetentionNow()
+      setRetentionRunResult(result)
+      if (result.success) {
+        toast({
+          title: 'Retenção da caixa concluída!',
+          description:
+            result.summary || `${result.processed_count || 0} e-mail(s) processado(s) com sucesso.`,
+        })
+      } else {
+        toast({
+          title: 'Aviso na retenção da caixa',
+          description: result.error || 'Não foi possível completar todas as ações de retenção.',
+          variant: 'destructive',
+        })
+      }
+      loadRetentionStats()
+      loadAuditHistory()
+    } catch (err: any) {
+      const msg = err.data?.error || err.message || 'Erro ao executar política de retenção.'
+      setRetentionRunResult({
+        success: false,
+        error: msg,
+      })
+      toast({
+        title: 'Falha na retenção',
+        description: msg,
+        variant: 'destructive',
+      })
+    } finally {
+      setRunningRetention(false)
+    }
+  }
+
+  // Carregar dados de retenção ao montar
+  useEffect(() => {
+    loadRetentionStats()
+  }, [])
 
   // Carregar histórico de auditoria
   const loadAuditHistory = async () => {
@@ -1141,6 +1213,368 @@ export function ImapEmailSettings({
                         className="itsm-input"
                         disabled={!isGestor}
                       />
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* SEÇÃO C: RETENÇÃO DA CAIXA DE E-MAIL (POLÍTICA DE ARQUIVAMENTO / LIMPEZA) */}
+            <div className="space-y-5 pt-4 border-t-2 border-slate-200 dark:border-slate-800">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-slate-200 dark:border-slate-800">
+                <div className="flex items-center gap-2">
+                  <div className="p-1.5 rounded-md bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-300">
+                    <Archive className="h-4 w-4" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                      Retenção da Caixa de E-mail
+                    </h3>
+                    <p className="text-xs text-slate-500">
+                      Política automática e manual para arquivar ou excluir e-mails já processados
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <Badge
+                    variant={emailConfig.retention_enabled ? 'default' : 'secondary'}
+                    className="text-xs"
+                  >
+                    {emailConfig.retention_enabled ? 'Política Ativa' : 'Desativada'}
+                  </Badge>
+                </div>
+              </div>
+
+              {/* Painel Informativo da Política de Retenção */}
+              <div className="rounded-xl p-4 border bg-gradient-to-r from-amber-50/50 via-slate-50 to-orange-50/40 dark:from-amber-950/20 dark:via-slate-900/60 dark:to-orange-950/20 border-amber-200/70 dark:border-amber-900/60 space-y-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-amber-200/50 dark:border-amber-900/40 pb-2.5">
+                  <div className="flex items-center gap-2">
+                    <Timer className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                    <span className="text-xs font-bold uppercase tracking-wider text-slate-800 dark:text-slate-200">
+                      Painel de Retenção & Ciclo Diário
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={loadRetentionStats}
+                      disabled={loadingRetentionStats}
+                      className="h-7 text-xs border-amber-300 dark:border-amber-800 text-amber-900 dark:text-amber-200 hover:bg-amber-100/50"
+                    >
+                      <RefreshCw
+                        className={`h-3 w-3 mr-1 ${loadingRetentionStats ? 'animate-spin' : ''}`}
+                      />
+                      Atualizar Status
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+                  <div className="bg-white/80 dark:bg-slate-900/80 p-2.5 rounded-lg border">
+                    <span className="text-[11px] text-slate-500 block">Aguardando na Pasta</span>
+                    <span className="font-semibold text-slate-800 dark:text-slate-200">
+                      {retentionStats?.processed_waiting_count ??
+                        (emailConfig as any).last_retention_count ??
+                        0}{' '}
+                      mensagem(ns)
+                    </span>
+                    <span className="text-[10px] text-slate-400 block truncate">
+                      Pasta: {emailConfig.processed_folder || 'Processados'}
+                    </span>
+                  </div>
+
+                  <div className="bg-white/80 dark:bg-slate-900/80 p-2.5 rounded-lg border">
+                    <span className="text-[11px] text-slate-500 block">Excedem o Período</span>
+                    <span
+                      className={`font-semibold ${
+                        (retentionStats?.eligible_for_retention_count ?? 0) > 0
+                          ? 'text-amber-600 dark:text-amber-400'
+                          : 'text-slate-800 dark:text-slate-200'
+                      }`}
+                    >
+                      {retentionStats?.eligible_for_retention_count ?? 0} elegível(is)
+                    </span>
+                    <span className="text-[10px] text-slate-400 block truncate">
+                      &gt; {emailConfig.retention_days || 30} dias
+                    </span>
+                  </div>
+
+                  <div className="bg-white/80 dark:bg-slate-900/80 p-2.5 rounded-lg border">
+                    <span className="text-[11px] text-slate-500 block">Última Execução</span>
+                    <span className="font-semibold text-slate-800 dark:text-slate-200">
+                      {emailConfig.last_retention_at
+                        ? new Date(emailConfig.last_retention_at).toLocaleDateString('pt-BR', {
+                            day: '2-digit',
+                            month: '2-digit',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          })
+                        : 'Nunca executado'}
+                    </span>
+                    <span className="text-[10px] text-slate-400 block truncate">
+                      Status: {emailConfig.last_retention_status || 'Pendente'}
+                    </span>
+                  </div>
+
+                  <div className="bg-white/80 dark:bg-slate-900/80 p-2.5 rounded-lg border">
+                    <span className="text-[11px] text-slate-500 block">Próximo Agendamento</span>
+                    <span className="font-semibold text-blue-600 dark:text-blue-400">
+                      Diariamente
+                    </span>
+                    <span className="text-[10px] text-slate-400 block truncate">
+                      {retentionStats?.next_schedule || '00:00 (BRT) / 03:00 (UTC)'}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Histórico acumulado */}
+                <div className="flex flex-wrap items-center gap-4 text-[11px] pt-1 text-slate-600 dark:text-slate-400">
+                  <span>
+                    <strong>Total já arquivado:</strong>{' '}
+                    <span className="font-semibold text-slate-800 dark:text-slate-200">
+                      {retentionStats?.total_archived ?? emailConfig.total_archived_count ?? 0}
+                    </span>
+                  </span>
+                  <span>
+                    <strong>Total excluído:</strong>{' '}
+                    <span className="font-semibold text-slate-800 dark:text-slate-200">
+                      {retentionStats?.total_deleted ?? emailConfig.total_deleted_count ?? 0}
+                    </span>
+                  </span>
+                  {retentionStats?.inspect_error && (
+                    <span className="text-amber-600 dark:text-amber-400 truncate max-w-md">
+                      Aviso de inspeção: {retentionStats.inspect_error}
+                    </span>
+                  )}
+                </div>
+
+                {emailConfig.last_retention_error && (
+                  <div className="p-3 rounded-lg bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 text-red-900 dark:text-red-200 text-xs flex items-start gap-2">
+                    <AlertCircle className="h-4 w-4 shrink-0 mt-0.5 text-red-600 dark:text-red-400" />
+                    <div>
+                      <strong className="block font-semibold">
+                        Aviso na última execução da retenção:
+                      </strong>
+                      <span>{emailConfig.last_retention_error}</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Controles de Configuração da Política */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 rounded-xl border bg-white dark:bg-slate-900 shadow-sm">
+                {/* 1. Ativar / Desativar */}
+                <div className="flex items-center justify-between p-3.5 rounded-lg border bg-slate-50/60 dark:bg-slate-800/40 md:col-span-3">
+                  <div className="space-y-0.5">
+                    <Label className="text-xs font-semibold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                      <Archive className="h-3.5 w-3.5 text-amber-600" />
+                      Ativar Política de Retenção Automática
+                    </Label>
+                    <p className="text-[11px] text-slate-500">
+                      Quando ativada, a rotina diária (00:00 BRT) avalia e-mails na pasta de
+                      processados que ultrapassarem o período definido e aplica a ação selecionada.
+                    </p>
+                  </div>
+                  <Switch
+                    checked={!!emailConfig.retention_enabled}
+                    onCheckedChange={(checked) =>
+                      setEmailConfig({ ...emailConfig, retention_enabled: checked })
+                    }
+                    disabled={!isGestor}
+                  />
+                </div>
+
+                {/* 2. Período de Retenção */}
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                    <Calendar className="h-3.5 w-3.5 text-slate-400" />
+                    Período de Retenção (dias)
+                  </Label>
+                  <Select
+                    value={String(emailConfig.retention_days || 30)}
+                    onValueChange={(val) =>
+                      setEmailConfig({
+                        ...emailConfig,
+                        retention_days: parseInt(val, 10) || 30,
+                      })
+                    }
+                    disabled={!isGestor}
+                  >
+                    <SelectTrigger className="itsm-input">
+                      <SelectValue placeholder="Selecione o período" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="7">7 dias (1 semana)</SelectItem>
+                      <SelectItem value="15">15 dias (quinzenal)</SelectItem>
+                      <SelectItem value="30">30 dias (1 mês — recomendado)</SelectItem>
+                      <SelectItem value="60">60 dias (2 meses)</SelectItem>
+                      <SelectItem value="90">90 dias (3 meses — trimestral)</SelectItem>
+                      <SelectItem value="180">180 dias (6 meses — semestral)</SelectItem>
+                      <SelectItem value="365">365 dias (1 ano)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-[10px] text-slate-400">
+                    Mensagens com data de recebimento anterior a este período serão processadas.
+                  </p>
+                </div>
+
+                {/* 3. Ação */}
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                    <FolderSync className="h-3.5 w-3.5 text-slate-400" />
+                    Ação ao Exceder o Período
+                  </Label>
+                  <Select
+                    value={emailConfig.retention_action || 'archive'}
+                    onValueChange={(val: EmailRetentionAction) =>
+                      setEmailConfig({
+                        ...emailConfig,
+                        retention_action: val,
+                      })
+                    }
+                    disabled={!isGestor}
+                  >
+                    <SelectTrigger className="itsm-input">
+                      <SelectValue placeholder="Selecione a ação" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="archive">
+                        <span className="flex items-center gap-1.5">
+                          <Archive className="h-3.5 w-3.5 text-blue-600" />
+                          Mover para Pasta "Arquivo"
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="delete">
+                        <span className="flex items-center gap-1.5 text-red-600">
+                          <Trash2 className="h-3.5 w-3.5" />
+                          Excluir Definitivamente da Caixa
+                        </span>
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-[10px] text-slate-400">
+                    {emailConfig.retention_action === 'delete'
+                      ? 'Aviso: mensagens serão deletadas permanentemente da caixa.'
+                      : 'Mensagens são movidas para uma pasta de histórico seguro.'}
+                  </p>
+                </div>
+
+                {/* 4. Nome da pasta Arquivo (se ação == archive) */}
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                    <Inbox className="h-3.5 w-3.5 text-slate-400" />
+                    Nome da Pasta de Destino
+                  </Label>
+                  <Input
+                    type="text"
+                    placeholder="Arquivo ou Archive"
+                    value={emailConfig.archive_folder || 'Arquivo'}
+                    onChange={(e) =>
+                      setEmailConfig({
+                        ...emailConfig,
+                        archive_folder: e.target.value,
+                      })
+                    }
+                    className="itsm-input"
+                    disabled={!isGestor || emailConfig.retention_action === 'delete'}
+                  />
+                  <p className="text-[10px] text-slate-400">
+                    A pasta será criada automaticamente na caixa caso ainda não exista.
+                  </p>
+                </div>
+
+                {/* Botão Executar Agora & Feedback de Execução Manual */}
+                <div className="md:col-span-3 pt-3 border-t border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className="text-xs text-slate-500">
+                    <span>
+                      Deseja testar ou aplicar imediatamente a retenção sem aguardar o cron diário?
+                    </span>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleRunRetentionNow}
+                    disabled={runningRetention || !isGestor}
+                    className="border-amber-400 dark:border-amber-700 text-amber-800 dark:text-amber-200 hover:bg-amber-50 dark:hover:bg-amber-950/40 shrink-0"
+                  >
+                    <Archive
+                      className={`mr-1.5 h-4 w-4 text-amber-600 ${
+                        runningRetention ? 'animate-spin' : ''
+                      }`}
+                    />
+                    {runningRetention ? 'Executando Retenção...' : 'Executar Retenção Agora'}
+                  </Button>
+                </div>
+              </div>
+
+              {/* Feedback detalhado da Execução Manual */}
+              {retentionRunResult && (
+                <div
+                  className={`p-4 rounded-xl border space-y-2 text-xs ${
+                    retentionRunResult.success
+                      ? 'bg-emerald-50 border-emerald-200 text-emerald-950 dark:bg-emerald-950/40 dark:border-emerald-800 dark:text-emerald-200'
+                      : 'bg-red-50 border-red-200 text-red-950 dark:bg-red-950/40 dark:border-red-800 dark:text-red-200'
+                  }`}
+                >
+                  <div className="flex items-start gap-2.5">
+                    {retentionRunResult.success ? (
+                      <CheckCircle2 className="h-5 w-5 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+                    ) : (
+                      <AlertCircle className="h-5 w-5 text-red-600 dark:text-red-400 shrink-0 mt-0.5" />
+                    )}
+                    <div className="space-y-1.5 flex-1">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <p className="text-sm font-bold">
+                          {retentionRunResult.success
+                            ? 'Execução Manual da Retenção Concluída'
+                            : 'Falha na Execução da Retenção'}
+                        </p>
+                        {retentionRunResult.duration_ms !== undefined && (
+                          <span className="text-[11px] opacity-75">
+                            Tempo: {retentionRunResult.duration_ms}ms
+                          </span>
+                        )}
+                      </div>
+                      <p>{retentionRunResult.summary || retentionRunResult.error}</p>
+                      {retentionRunResult.success && (
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1 font-semibold text-[11px]">
+                          <div>
+                            Processados:{' '}
+                            <span className="font-bold">
+                              {retentionRunResult.processed_count || 0}
+                            </span>
+                          </div>
+                          <div>
+                            Arquivados:{' '}
+                            <span className="font-bold">
+                              {retentionRunResult.archived_count || 0}
+                            </span>
+                          </div>
+                          <div>
+                            Excluídos:{' '}
+                            <span className="font-bold">
+                              {retentionRunResult.deleted_count || 0}
+                            </span>
+                          </div>
+                        </div>
+                      )}
+                      {retentionRunResult.samples && retentionRunResult.samples.length > 0 && (
+                        <div className="pt-2 border-t border-emerald-200/60 dark:border-emerald-800/60 space-y-1">
+                          <span className="font-bold block text-[11px]">
+                            Exemplo de mensagens afetadas:
+                          </span>
+                          <ul className="list-disc pl-4 space-y-0.5 text-[11px] opacity-90">
+                            {retentionRunResult.samples.map((s, i) => (
+                              <li key={i}>
+                                <strong>{s.subject}</strong> — de {s.from || 'desconhecido'} (
+                                {new Date(s.date).toLocaleDateString('pt-BR')})
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -2347,7 +2781,9 @@ export function ImapEmailSettings({
                             ? 'Teste Conexão IMAP'
                             : log.test_type === 'teste-envio'
                               ? 'Envio de Teste (SMTP)'
-                              : 'Simulação Ponta a Ponta'}
+                              : log.test_type === 'retencao'
+                                ? 'Retenção da Caixa'
+                                : 'Simulação Ponta a Ponta'}
                         </Badge>
                         <span className="font-semibold text-slate-800 dark:text-slate-200">
                           {log.summary_message || 'Execução de teste'}

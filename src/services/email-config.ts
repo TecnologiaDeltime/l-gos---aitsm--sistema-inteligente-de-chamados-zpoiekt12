@@ -35,6 +35,16 @@ export interface EmailConfigRecord {
   smtp_password?: string
   smtp_sender_name?: string
   smtp_reply_to?: string
+  retention_enabled?: boolean
+  retention_days?: number
+  retention_action?: EmailRetentionAction
+  archive_folder?: string
+  last_retention_at?: string
+  last_retention_status?: string
+  last_retention_error?: string
+  last_retention_count?: number
+  total_archived_count?: number
+  total_deleted_count?: number
   created: string
   updated: string
 }
@@ -146,7 +156,55 @@ export interface DryRunResponse {
   error?: string
 }
 
-export type EmailAuditTestType = 'connection_test' | 'dry_run_simulation' | 'teste-envio'
+export type EmailRetentionAction = 'archive' | 'delete'
+
+export interface RetentionRunResponse {
+  success: boolean
+  action?: EmailRetentionAction
+  retention_days?: number
+  processed_count?: number
+  archived_count?: number
+  deleted_count?: number
+  cutoff_date?: string
+  summary?: string
+  duration_ms?: number
+  samples?: Array<{
+    subject: string
+    from: string
+    date: string
+    action: string
+  }>
+  errors?: string[]
+  error?: string
+  skipped?: boolean
+  message?: string
+}
+
+export interface RetentionStatsResponse {
+  enabled: boolean
+  retention_days: number
+  action: EmailRetentionAction
+  archive_folder: string
+  processed_folder: string
+  processed_waiting_count: number
+  eligible_for_retention_count: number
+  folder_found?: boolean
+  inspect_error?: string | null
+  last_execution_at: string | null
+  last_execution_status: string | null
+  last_execution_error: string | null
+  last_execution_count: number
+  total_archived: number
+  total_deleted: number
+  next_schedule: string
+}
+
+export type EmailAuditTestType =
+  | 'connection_test'
+  | 'dry_run_simulation'
+  | 'teste-envio'
+  | 'teste-smtp'
+  | 'retencao'
 
 export interface EmailAuditLogRecord {
   id: string
@@ -366,5 +424,17 @@ export const ingestEmailWebhook = async (data: {
   return pb.send<IngestEmailResponse>('/backend/v1/emails/ingest', {
     method: 'POST',
     body: data,
+  })
+}
+
+export const runEmailRetentionNow = async (): Promise<RetentionRunResponse> => {
+  return pb.send<RetentionRunResponse>('/backend/v1/emails/retention/run', {
+    method: 'POST',
+  })
+}
+
+export const getEmailRetentionStats = async (): Promise<RetentionStatsResponse> => {
+  return pb.send<RetentionStatsResponse>('/backend/v1/emails/retention/stats', {
+    method: 'GET',
   })
 }
