@@ -87,6 +87,8 @@ export function ImapEmailSettings({
   // Credenciais e campos específicos
   const [imapPassword, setImapPassword] = useState(emailConfig.imap_password || '')
   const [showPassword, setShowPassword] = useState(false)
+  // Guarda se o usuário explicitamente alterou/digitou no campo do segredo
+  const [userEditedSecret, setUserEditedSecret] = useState(false)
   const [graphSecret, setGraphSecret] = useState(emailConfig.graph_client_secret || '')
   const [showGraphSecret, setShowGraphSecret] = useState(false)
   const [smtpPassword, setSmtpPassword] = useState(
@@ -370,6 +372,17 @@ export function ImapEmailSettings({
     }
   }
 
+  // Helper para validar se o segredo recém digitado pelo usuário parece um ID de segredo (GUID)
+  // Nunca deve disparar para valores mascarados (••••), strings cifradas (enc:v1:) ou quando o usuário não editou
+  const isFreshSecretGuid = (val?: string): boolean => {
+    if (!userEditedSecret || !val) return false
+    const trimmed = val.trim()
+    if (trimmed.startsWith('enc:v1:') || trimmed.includes('•') || trimmed.includes('*')) {
+      return false
+    }
+    return isGuidSecretId(trimmed)
+  }
+
   // Executar Teste de Conexão Passo a Passo
   const handleRunConnectionTest = async () => {
     const isGraph = (emailConfig.reception_mode || 'graph') === 'graph'
@@ -386,7 +399,7 @@ export function ImapEmailSettings({
         return
       }
 
-      if (isGuidSecretId(secretToTest)) {
+      if (isFreshSecretGuid(secretToTest)) {
         toast({
           title: 'Atenção ao Segredo do Cliente',
           description: GRAPH_SECRET_ID_WARNING,
@@ -999,11 +1012,12 @@ export function ImapEmailSettings({
                           value={graphSecret}
                           onChange={(e) => {
                             const val = e.target.value
+                            setUserEditedSecret(true)
                             setGraphSecret(val)
                             setEmailConfig({ ...emailConfig, graph_client_secret: val })
                           }}
                           className={`itsm-input pr-10 font-mono text-xs ${
-                            isGuidSecretId(graphSecret || emailConfig.graph_client_secret)
+                            isFreshSecretGuid(graphSecret)
                               ? 'border-amber-500 focus-visible:ring-amber-500 bg-amber-50/30 dark:bg-amber-950/20'
                               : ''
                           }`}
@@ -1023,7 +1037,7 @@ export function ImapEmailSettings({
                         </button>
                       </div>
 
-                      {isGuidSecretId(graphSecret || emailConfig.graph_client_secret) && (
+                      {isFreshSecretGuid(graphSecret) && (
                         <div className="p-2.5 rounded-lg border border-amber-300 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/40 text-amber-900 dark:text-amber-200 text-[11px] leading-relaxed flex items-start gap-2">
                           <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
                           <div>

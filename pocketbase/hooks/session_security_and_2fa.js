@@ -29,6 +29,64 @@
     }
     return defaults
   }
+  var getSettings = getSecuritySettings
+  globalThis.getSecuritySettings = getSecuritySettings
+  globalThis.getSettings = getSettings
+
+  // Helper seguro para capturar IP e User-Agent sem quebrar no Goja JSVM
+  function getClientIp(e) {
+    try {
+      if (e && typeof e.requestInfo === 'function') {
+        var info = e.requestInfo()
+        if (info && info.headers) {
+          var xf = info.headers['x-forwarded-for'] || info.headers['X-Forwarded-For']
+          if (xf) {
+            var parts = String(xf).split(',')
+            return parts[0].trim()
+          }
+          var ra = info.headers['remote-addr'] || info.headers['Remote-Addr']
+          if (ra) return String(ra).trim()
+        }
+      }
+    } catch (_) {}
+
+    try {
+      if (e && e.httpContext && typeof e.httpContext.realIP === 'function') {
+        var realIp = e.httpContext.realIP()
+        if (realIp) return String(realIp).trim()
+      }
+    } catch (_) {}
+
+    try {
+      if (e && e.request && e.request.header && typeof e.request.header.get === 'function') {
+        var headerIp = e.request.header.get('x-forwarded-for') || e.request.remoteAddr || ''
+        if (headerIp) return String(headerIp).trim()
+      }
+    } catch (_) {}
+
+    return ''
+  }
+
+  function getClientUserAgent(e) {
+    try {
+      if (e && typeof e.requestInfo === 'function') {
+        var info = e.requestInfo()
+        if (info && info.headers) {
+          var ua = info.headers['user-agent'] || info.headers['User-Agent']
+          if (ua) return String(ua).trim()
+        }
+      }
+    } catch (_) {}
+
+    try {
+      if (e && e.request && e.request.header && typeof e.request.header.get === 'function') {
+        var hUa = e.request.header.get('user-agent') || ''
+        if (hUa) return String(hUa).trim()
+      }
+    } catch (_) {}
+
+    return ''
+  }
 
   // Helper para registrar tentativa de login em login_attempt_logs e audit_logs
   function recordLoginAttempt(email, ip, userAgent, outcome, details) {
@@ -63,8 +121,8 @@
   // =========================================================================
   onRecordAuthWithPasswordRequest((e) => {
     var identity = (e.identity || '').toLowerCase().trim()
-    var ip = e.request.header.get('x-forwarded-for') || e.request.remoteAddr || ''
-    var ua = e.request.header.get('user-agent') || ''
+    var ip = getClientIp(e)
+    var ua = getClientUserAgent(e)
     var settings = getSecuritySettings()
 
     // 1. Procurar o usuário para verificar bloqueio antes da autenticação
@@ -176,17 +234,29 @@
   // =========================================================================
   // CRON DE INVALIDEZ DE SESSÕES EXPIRADAS
   // =========================================================================
-  cronAdd('itsm_session_invalidation', '*/10 * * * *', () => {
+  cronAdd('itsm_session_invalidation', '*/5 * * * *', () => {
     var settings = getSecuritySettings()
     var timeoutMinutes = settings.session_timeout_minutes || 60
     var cutoff = new Date(Date.now() - timeoutMinutes * 60000)
 
     try {
+      // Garantir que session_last_activity não é vazio nem nulo, e que a última atividade é anterior ao cutoff
       var filter =
-        "session_last_activity != '' && session_last_activity < '" + cutoff.toISOString() + "'"
+        "session_last_activity != '' && session_last_activity != null && session_last_activity <= '" +
+        cutoff.toISOString() +
+        "'"
       var staleUsers = $app.findRecordsByFilter('users', filter, '', 100, 0)
       for (var i = 0; i < staleUsers.length; i++) {
         var u = staleUsers[i]
+        var lastAct = u.getString('session_last_activity')
+        // Defesa extra em memória caso o filtro retorne campo vazio
+        if (!lastAct || lastAct.trim() === '') {
+          continue
+        }
+        var actDate = new Date(lastAct)
+        if (isNaN(actDate.getTime()) || actDate > cutoff) {
+          continue
+        }
         // Ao alterar o tokenKey do registro de usuário, todos os JWTs emitidos anteriormente são invalidados instantaneamente!
         u.set('tokenKey', $security.randomString(30))
         u.set('session_last_activity', null)
@@ -370,8 +440,8 @@
         targetUser.set('locked_until', null)
         $app.save(targetUser)
 
-        var ip = e.request.header.get('x-forwarded-for') || e.request.remoteAddr || ''
-        var ua = e.request.header.get('user-agent') || ''
+        var ip = getClientIp(e)
+        var ua = getClientUserAgent(e)
         recordLoginAttempt(
           targetUser.getString('email'),
           ip,
@@ -545,8 +615,8 @@
         authUser.set('totp_enabled', true)
         $app.save(authUser)
 
-        var ip = e.request.header.get('x-forwarded-for') || e.request.remoteAddr || ''
-        var ua = e.request.header.get('user-agent') || ''
+        var ip = getClientIp(e)
+        var ua = getClientUserAgent(e)
         recordLoginAttempt(
           authUser.getString('email'),
           ip,
@@ -570,8 +640,8 @@
     var code = (body.code || '').trim()
     var isRecovery = !!body.is_recovery
 
-    var ip = e.request.header.get('x-forwarded-for') || e.request.remoteAddr || ''
-    var ua = e.request.header.get('user-agent') || ''
+    var ip = getClientIp(e)
+    var ua = getClientUserAgent(e)
 
     if (!email || !code) {
       return e.json(400, { error: 'E-mail e código são obrigatórios.' })
@@ -685,8 +755,8 @@
         targetUser.set('totp_enabled', false)
         $app.save(targetUser)
 
-        var ip = e.request.header.get('x-forwarded-for') || e.request.remoteAddr || ''
-        var ua = e.request.header.get('user-agent') || ''
+        var ip = getClientIp(e)
+        var ua = getClientUserAgent(e)
         recordLoginAttempt(
           targetUser.getString('email'),
           ip,

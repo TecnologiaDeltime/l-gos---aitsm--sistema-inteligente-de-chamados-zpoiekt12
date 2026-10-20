@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { pb } from '@/lib/pocketbase/client'
+import pb from '@/lib/pocketbase/client'
 import { useAuth } from '@/hooks/use-auth'
 import { securityService, TwoFactorSetupResponse } from '@/services/security'
 import { QrCodeDisplay } from '@/components/QrCodeDisplay'

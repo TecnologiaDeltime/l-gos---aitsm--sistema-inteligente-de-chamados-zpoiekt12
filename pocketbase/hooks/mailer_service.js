@@ -38,6 +38,9 @@
         if (typeof globalThis.itsmDecrypt === 'function') {
           sPass = globalThis.itsmDecrypt(rawSPass)
         }
+        if (typeof sPass === 'string') {
+          sPass = sPass.trim()
+        }
         var sPort = cfg.getInt('smtp_port') || 587
         var sEnc = (cfg.getString('smtp_encryption') || 'STARTTLS').trim()
         var sName = (cfg.getString('smtp_sender_name') || 'Atendimento HelpDesk').trim()
@@ -174,11 +177,17 @@
             authMethod: s.smtp.authMethod,
           }
 
+          // Garantir que a senha está descriptografada antes de atribuir ao transporte
+          var resolvedPassword = mailerConfig.password
+          if (typeof globalThis.itsmDecrypt === 'function') {
+            resolvedPassword = globalThis.itsmDecrypt(resolvedPassword)
+          }
+
           s.smtp.enabled = true
           s.smtp.host = mailerConfig.host
           s.smtp.port = mailerConfig.port
           s.smtp.username = mailerConfig.user
-          s.smtp.password = mailerConfig.password
+          s.smtp.password = resolvedPassword
           // No PocketBase Core, s.smtp.tls = true significa SSL direto (ex: porta 465).
           // Quando tls = false, o PocketBase envia STARTTLS (ex: porta 587 Office 365).
           s.smtp.tls = mailerConfig.encryption === 'SSL/TLS' || mailerConfig.port === 465

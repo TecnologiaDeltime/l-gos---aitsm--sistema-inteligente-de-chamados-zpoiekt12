@@ -721,7 +721,15 @@ cronAdd('email_checker_cron', '*/2 * * * *', () => {
       getAccessToken: function (params) {
         var tenantId = (params.tenant_id || params.graph_tenant_id || '').trim()
         var clientId = (params.client_id || params.graph_client_id || '').trim()
-        var clientSecret = (params.client_secret || params.graph_client_secret || '').trim()
+        var rawClientSecret = (params.client_secret || params.graph_client_secret || '').trim()
+
+        var clientSecret = rawClientSecret
+        if (typeof globalThis.itsmDecrypt === 'function') {
+          clientSecret = globalThis.itsmDecrypt(rawClientSecret)
+          if (typeof clientSecret === 'string') {
+            clientSecret = clientSecret.trim()
+          }
+        }
 
         if (!tenantId) {
           throw new Error('Tenant ID (ID do Locatário) da Microsoft não configurado.')
