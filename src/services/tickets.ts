@@ -41,6 +41,7 @@ export interface TicketRecord {
   solution?: string
   parent_ticket_id?: string
   association_group_id?: string
+  email_html?: string
   created: string
   updated: string
   /** Última interação do chamado (expand via getTicketsWithLastInteraction). */
@@ -294,8 +295,25 @@ export const pauseTicketSla = (id: string, reason: string, justification: string
 export const resumeTicketSla = (id: string) =>
   pb.send(`/backend/v1/tickets/${id}/resume-sla`, { method: 'POST' })
 
+export interface TicketInteractionRecord {
+  id: string
+  ticket: string
+  author: string
+  type: string
+  content: string
+  email_html?: string
+  duration_minutes?: number
+  hour_type?: string
+  billing_status?: string
+  origin?: string
+  template?: string
+  created: string
+  updated: string
+  expand?: any
+}
+
 export const getTicketInteractions = (ticketId: string) =>
-  pb.collection('ticket_interactions').getFullList({
+  pb.collection('ticket_interactions').getFullList<TicketInteractionRecord>({
     filter: `ticket = "${ticketId}"`,
     sort: 'created',
     expand: 'author',
@@ -306,6 +324,7 @@ export const createInteraction = (data: {
   author: string
   type: string
   content: string
+  email_html?: string
   duration_minutes?: number
   hour_type?: string
   billing_status?: string

@@ -4,6 +4,7 @@ export interface TicketAttachmentRecord {
   id: string
   ticket: string
   interaction?: string
+  content_id?: string
   file: string
   file_name?: string
   file_size?: number

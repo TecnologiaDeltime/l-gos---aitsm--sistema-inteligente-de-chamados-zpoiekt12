@@ -20,6 +20,7 @@ routerAdd(
       var fromName = retained.getString('from_name')
       var subject = retained.getString('subject')
       var cleanBody = retained.getString('body')
+      var emailHtml = retained.getString('email_html')
 
       // 1. Tentar localizar usuário ou empresa
       var userCompanyId = customCompanyId
@@ -68,6 +69,9 @@ routerAdd(
       var ticket = new Record(ticketsCol)
       ticket.set('title', subject)
       ticket.set('description', cleanBody)
+      if (emailHtml) {
+        ticket.set('email_html', emailHtml)
+      }
       ticket.set('source', 'E-mail')
       ticket.set('status', 'Novo')
       ticket.set('type', 'Incidente')

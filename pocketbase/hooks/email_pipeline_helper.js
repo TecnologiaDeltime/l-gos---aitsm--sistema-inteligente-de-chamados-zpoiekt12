@@ -199,6 +199,9 @@ module.exports = {
         retained.set('from_name', fromName)
         retained.set('subject', subject)
         retained.set('body', cleanBody)
+        if (msg.raw_html || msg.html) {
+          retained.set('email_html', msg.raw_html || msg.html)
+        }
         retained.set('domain', domain)
         retained.set(
           'reason',
@@ -337,12 +340,16 @@ module.exports = {
         var contentType = att.content_type || att.type || 'application/octet-stream'
         var dataBase64 = att.data_base64 || att.base64 || att.data || ''
         var fileUrl = att.url || ''
+        var contentId = (att.content_id || att.contentId || '').replace(/[<>]/g, '').trim()
 
         try {
           var attachRec = new Record(attachCol)
           attachRec.set('ticket', ticketRecordId)
           if (interactionRecordId) {
             attachRec.set('interaction', interactionRecordId)
+          }
+          if (contentId) {
+            attachRec.set('content_id', contentId)
           }
           attachRec.set('file_name', filename)
           attachRec.set('file_type', contentType)
@@ -445,6 +452,9 @@ module.exports = {
         interaction.set('author', uploadedByUserId)
         interaction.set('type', 'Público')
         interaction.set('content', cleanBody)
+        if (msg.raw_html || msg.html) {
+          interaction.set('email_html', msg.raw_html || msg.html)
+        }
         interaction.set('origin', 'Automático')
         interaction.set('billing_status', 'Não Faturável')
         $app.save(interaction)
@@ -520,6 +530,9 @@ module.exports = {
     var ticket = new Record(ticketsCol)
     ticket.set('title', subject)
     ticket.set('description', cleanBody)
+    if (msg.raw_html || msg.html) {
+      ticket.set('email_html', msg.raw_html || msg.html)
+    }
     ticket.set('source', 'E-mail')
     ticket.set('status', 'Novo')
     ticket.set('type', 'Incidente')

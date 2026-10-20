@@ -371,12 +371,14 @@
       var att = rawAttachments[i]
       // Considerar apenas anexos de arquivo (#microsoft.graph.fileAttachment)
       if (att.contentBytes) {
+        var rawCid = (att.contentId || '').replace(/[<>]/g, '').trim()
         attachments.push({
           filename: att.name || 'anexo_' + (i + 1),
           content_type: att.contentType || 'application/octet-stream',
           data_base64: att.contentBytes,
           file_size: att.size || 0,
           is_inline: !!att.isInline,
+          content_id: rawCid,
         })
       }
     }
