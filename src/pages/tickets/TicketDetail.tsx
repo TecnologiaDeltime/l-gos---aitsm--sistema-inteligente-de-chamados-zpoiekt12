@@ -95,6 +95,8 @@ import {
 } from '@/services/attachments'
 import { PriorityBadge } from '@/components/PriorityBadge'
 import { StatusBadge } from '@/components/StatusBadge'
+import { OriginalEmailCard } from '@/components/OriginalEmailCard'
+import { sanitizeEmailHtml } from '@/lib/sanitize-email-html'
 import { SlaDetailBlock } from '@/components/SlaDetailBlock'
 import { computeSlaResponseStatus, computeSlaSolutionStatus } from '@/lib/sla-status'
 import { ApprovalDialog } from '@/components/ApprovalDialog'
@@ -785,9 +787,23 @@ export default function TicketDetail() {
             <span className="font-semibold text-foreground">{ticket.requester_name}</span> em{' '}
             {new Date(ticket.created).toLocaleString('pt-BR')}
           </p>
-          <div className="rounded-lg bg-muted p-4 text-sm text-muted-foreground border border-border">
-            {ticket.description}
-          </div>
+          {ticket.email_html || ticket.source === 'E-mail' ? (
+            <OriginalEmailCard
+              fromName={ticket.requester_name}
+              fromEmail={ticket.requester_email}
+              date={ticket.created}
+              subject={ticket.title}
+              htmlContent={ticket.email_html}
+              textContent={ticket.description}
+              attachments={attachments}
+              defaultExpanded={true}
+              className="border-slate-200/80 dark:border-slate-800"
+            />
+          ) : (
+            <div className="rounded-lg bg-muted p-4 text-sm text-muted-foreground border border-border whitespace-pre-wrap leading-relaxed">
+              {ticket.description}
+            </div>
+          )}
           <div className="flex items-center gap-3 rounded-lg border border-border bg-muted p-3">
             <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
               Operador
@@ -967,7 +983,27 @@ export default function TicketDetail() {
                       )}
                     </div>
                   </div>
-                  <p className="text-muted-foreground">{i.content}</p>
+                  {i.email_html ? (
+                    <div className="pt-1.5 pb-0.5">
+                      <div
+                        className="email-html-body prose prose-xs sm:prose-sm dark:prose-invert max-w-none text-foreground leading-relaxed font-sans bg-muted/30 border border-border/60 rounded-md p-3 overflow-x-auto max-h-[400px] overflow-y-auto"
+                        style={{
+                          wordBreak: 'break-word',
+                          overflowWrap: 'break-word',
+                        }}
+                        dangerouslySetInnerHTML={{
+                          __html: sanitizeEmailHtml(
+                            i.email_html,
+                            attachments.filter((a) => a.interaction === i.id || !a.interaction),
+                          ),
+                        }}
+                      />
+                    </div>
+                  ) : (
+                    <p className="text-muted-foreground whitespace-pre-wrap leading-relaxed">
+                      {i.content}
+                    </p>
+                  )}
                   {i.duration_minutes > 0 && (
                     <div className="flex items-center gap-2 pt-1 text-slate-500">
                       <Clock className="h-3 w-3" />
