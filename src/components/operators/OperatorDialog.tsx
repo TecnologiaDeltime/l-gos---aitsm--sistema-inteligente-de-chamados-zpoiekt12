@@ -277,39 +277,53 @@ export function OperatorDialog({
 
               {/* Senha no cadastro */}
               {!isEditing && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 rounded-xl bg-muted/40 border border-border">
-                  <div className="space-y-1.5">
-                    <Label
-                      htmlFor="pass"
-                      className="text-xs font-semibold flex items-center gap-1.5"
-                    >
-                      <KeyRound className="h-3.5 w-3.5 text-muted-foreground" />
-                      Senha Inicial <span className="text-red-500">*</span>
-                    </Label>
-                    <Input
-                      id="pass"
-                      type="password"
-                      required
-                      placeholder="Mínimo 8 caracteres"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      disabled={saving}
-                    />
+                <div className="p-3 rounded-xl bg-muted/40 border border-border space-y-3">
+                  <div className="flex items-start gap-2 text-xs text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-950/40 p-2.5 rounded-lg border border-blue-200 dark:border-blue-900">
+                    <Mail className="h-4 w-4 shrink-0 mt-0.5 text-blue-600 dark:text-blue-400" />
+                    <div>
+                      <p className="font-semibold">Envio automático por e-mail</p>
+                      <p className="text-[11px] text-muted-foreground mt-0.5">
+                        Esta senha provisória será enviada por e-mail para o operador. No primeiro
+                        login, o sistema exigirá obrigatoriamente a criação de uma nova senha
+                        pessoal.
+                      </p>
+                    </div>
                   </div>
 
-                  <div className="space-y-1.5">
-                    <Label htmlFor="pass-confirm" className="text-xs font-semibold">
-                      Confirmar Senha <span className="text-red-500">*</span>
-                    </Label>
-                    <Input
-                      id="pass-confirm"
-                      type="password"
-                      required
-                      placeholder="Repita a senha"
-                      value={passwordConfirm}
-                      onChange={(e) => setPasswordConfirm(e.target.value)}
-                      disabled={saving}
-                    />
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <Label
+                        htmlFor="pass"
+                        className="text-xs font-semibold flex items-center gap-1.5"
+                      >
+                        <KeyRound className="h-3.5 w-3.5 text-muted-foreground" />
+                        Senha Provisória <span className="text-red-500">*</span>
+                      </Label>
+                      <Input
+                        id="pass"
+                        type="password"
+                        required
+                        placeholder="Mínimo 8 caracteres"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        disabled={saving}
+                      />
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <Label htmlFor="pass-confirm" className="text-xs font-semibold">
+                        Confirmar Senha <span className="text-red-500">*</span>
+                      </Label>
+                      <Input
+                        id="pass-confirm"
+                        type="password"
+                        required
+                        placeholder="Repita a senha"
+                        value={passwordConfirm}
+                        onChange={(e) => setPasswordConfirm(e.target.value)}
+                        disabled={saving}
+                      />
+                    </div>
                   </div>
                 </div>
               )}

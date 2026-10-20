@@ -248,11 +248,19 @@ export default function OperatorsPage() {
         description: `Os dados de "${data.first_name || editingOperator.name}" foram salvos.`,
       })
     } else {
-      await createOperator(data as CreateOperatorData)
-      toast({
-        title: 'Operador cadastrado com sucesso!',
-        description: `O operador "${data.first_name}" foi cadastrado no sistema.`,
-      })
+      const res = await createOperator(data as CreateOperatorData)
+      if (res.email_sent) {
+        toast({
+          title: 'Operador cadastrado com sucesso!',
+          description: `O operador "${data.first_name}" foi cadastrado e o e-mail com as credenciais de primeiro acesso foi enviado.`,
+        })
+      } else {
+        toast({
+          title: 'Operador cadastrado com aviso',
+          description: `O operador "${data.first_name}" foi criado, mas o e-mail de primeiro acesso não pôde ser enviado (${res.email_error || 'falha no servidor de e-mail'}). Informe a senha provisória ao operador.`,
+          variant: 'default',
+        })
+      }
     }
     await loadData()
   }

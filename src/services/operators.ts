@@ -1,5 +1,10 @@
 import pb from '@/lib/pocketbase/client'
-import { OperatorItem, CreateOperatorData, UpdateOperatorData } from '@/types/operators'
+import {
+  OperatorItem,
+  CreateOperatorData,
+  UpdateOperatorData,
+  CreateOperatorResponse,
+} from '@/types/operators'
 
 export const getOperators = async (options?: {
   search?: string
@@ -68,27 +73,16 @@ const cleanPayload = (data: Record<string, any>): Record<string, any> => {
   return cleaned
 }
 
-export const createOperator = async (data: CreateOperatorData): Promise<OperatorItem> => {
+export const createOperator = async (data: CreateOperatorData): Promise<CreateOperatorResponse> => {
   const firstName = (data.first_name || '').trim()
   const lastName = (data.last_name || '').trim()
   const fullName = [firstName, lastName].filter(Boolean).join(' ').trim()
   const email = (data.email || '').trim().toLowerCase()
 
-  const rawPayload: Record<string, any> = {
-    ...data,
-    email,
-    first_name: firstName,
-    last_name: lastName,
-    name: fullName || firstName || email,
-    active: data.active ?? true,
-    emailVisibility: true,
-  }
+  const initialPassword =
+    data.password && data.password.length >= 8 ? data.password : 'Skip@Pass123'
+  const passwordConfirm = data.passwordConfirm || initialPassword
 
-  const initialPassword = data.password && data.password.length >= 8 ? data.password : 'Skip@Pass'
-  rawPayload.password = initialPassword
-  rawPayload.passwordConfirm = data.passwordConfirm || initialPassword
-
-  // Se o role vier vazio ou não for um enum válido, usa 'tecnico'
   const validRoles = [
     'admin',
     'gestor',
@@ -97,17 +91,72 @@ export const createOperator = async (data: CreateOperatorData): Promise<Operator
     'cliente_solicitante',
     'auditor',
   ]
-  if (!rawPayload.role || !validRoles.includes(rawPayload.role)) {
-    rawPayload.role = 'tecnico'
-  }
+  const role = data.role && validRoles.includes(data.role) ? data.role : 'tecnico'
+  const type = data.type === 'Externo' ? 'Externo' : 'Interno'
 
-  // Se type vier vazio ou inválido, usa 'Interno'
-  if (rawPayload.type !== 'Interno' && rawPayload.type !== 'Externo') {
-    rawPayload.type = 'Interno'
+  const rawPayload: Record<string, any> = {
+    ...data,
+    email,
+    password: initialPassword,
+    passwordConfirm: passwordConfirm,
+    first_name: firstName,
+    last_name: lastName,
+    name: fullName || firstName || email,
+    role,
+    type,
+    active: data.active ?? true,
+    must_change_password: true,
   }
 
   const payload = cleanPayload(rawPayload)
-  return await pb.collection('users').create<OperatorItem>(payload)
+
+  // 1. Tenta a rota dedicada backend (com envio de e-mail de primeiro acesso e senha)
+  try {
+    const res = await pb.send<{
+      success: boolean
+      record: OperatorItem
+      email_sent: boolean
+      email_error?: string | null
+      message: string
+    }>('/backend/v1/operators/create', {
+      method: 'POST',
+      body: payload,
+    })
+
+    if (res && res.success) {
+      return {
+        record: res.record,
+        email_sent: !!res.email_sent,
+        email_error: res.email_error,
+        message: res.message || 'Operador criado com sucesso!',
+      }
+    }
+  } catch (backendErr: any) {
+    // Se a rota retornou erro de validação (ex: e-mail já existe, senha curta), repassa diretamente
+    if (backendErr?.status && backendErr.status < 500) {
+      const serverMessage =
+        backendErr?.response?.error ||
+        backendErr?.data?.error ||
+        backendErr?.message ||
+        'Erro ao criar operador'
+      throw new Error(serverMessage)
+    }
+    // Se a rota personalizada não estiver disponível (ex: 404), tenta fallback direto na coleção
+    console.warn(
+      'Rota /backend/v1/operators/create falhou, tentando fallback direto na coleção:',
+      backendErr,
+    )
+  }
+
+  // 2. Fallback: criação direta na coleção users
+  const createdRecord = await pb.collection('users').create<OperatorItem>(payload)
+  return {
+    record: createdRecord,
+    email_sent: false,
+    email_error: 'E-mail automático indisponível via fallback direto.',
+    message:
+      'Operador criado com sucesso. O e-mail de primeiro acesso deve ser enviado manualmente.',
+  }
 }
 
 export const updateOperator = async (
@@ -160,6 +209,7 @@ export const resetOperatorPassword = async (id: string): Promise<string> => {
   await pb.collection('users').update(id, {
     password: tempPassword,
     passwordConfirm: tempPassword,
+    must_change_password: true,
   })
 
   return tempPassword

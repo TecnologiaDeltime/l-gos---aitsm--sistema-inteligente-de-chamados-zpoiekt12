@@ -2,6 +2,7 @@ import { ReactNode } from 'react'
 import { Navigate, useLocation } from 'react-router-dom'
 import { useAuth } from '@/hooks/use-auth'
 import { usePermissions } from '@/hooks/use-permissions'
+import { ForceChangePasswordDialog } from '@/components/ForceChangePasswordDialog'
 import { ModuleKey } from '@/types/profiles'
 
 interface ProtectedRouteProps {
@@ -15,7 +16,7 @@ export function ProtectedRoute({
   requiredModule,
   requireWrite = false,
 }: ProtectedRouteProps) {
-  const { isAuthenticated, loading } = useAuth()
+  const { isAuthenticated, user, loading } = useAuth()
   const { canReadModule, canWriteModule, isModuleHidden } = usePermissions()
   const location = useLocation()
 
@@ -43,5 +44,12 @@ export function ProtectedRoute({
     }
   }
 
-  return <>{children}</>
+  const mustChangePassword = !!user?.must_change_password
+
+  return (
+    <>
+      {mustChangePassword && <ForceChangePasswordDialog open={true} />}
+      {children}
+    </>
+  )
 }

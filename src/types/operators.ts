@@ -11,6 +11,7 @@ export interface OperatorItem extends UserRecord {
   extension?: string
   mobile?: string
   profile_id?: string
+  must_change_password?: boolean
   created: string
   updated: string
   expand?: {
@@ -39,6 +40,13 @@ export interface CreateOperatorData {
   active?: boolean
   position?: string
   company?: string
+}
+
+export interface CreateOperatorResponse {
+  record: OperatorItem
+  email_sent: boolean
+  email_error?: string | null
+  message: string
 }
 
 export interface UpdateOperatorData {

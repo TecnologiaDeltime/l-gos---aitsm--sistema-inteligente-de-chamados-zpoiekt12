@@ -39,6 +39,7 @@ export interface UserRecord {
   failed_login_attempts?: number
   locked_until?: string
   session_last_activity?: string
+  must_change_password?: boolean
   created?: string
   updated?: string
   expand?: any
@@ -94,6 +95,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       failed_login_attempts: record.failed_login_attempts || 0,
       locked_until: record.locked_until,
       session_last_activity: record.session_last_activity,
+      must_change_password: !!record.must_change_password,
       created: record.created,
       updated: record.updated,
       expand: record.expand,
