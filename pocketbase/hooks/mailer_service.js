@@ -29,7 +29,15 @@
         var cfg = configs[0]
         var sHost = (cfg.getString('smtp_host') || '').trim()
         var sUser = (cfg.getString('smtp_user') || cfg.getString('imap_user') || '').trim()
-        var sPass = (cfg.getString('smtp_password') || cfg.getString('imap_password') || '').trim()
+        var rawSPass = (
+          cfg.getString('smtp_password') ||
+          cfg.getString('imap_password') ||
+          ''
+        ).trim()
+        var sPass = rawSPass
+        if (typeof globalThis.itsmDecrypt === 'function') {
+          sPass = globalThis.itsmDecrypt(rawSPass)
+        }
         var sPort = cfg.getInt('smtp_port') || 587
         var sEnc = (cfg.getString('smtp_encryption') || 'STARTTLS').trim()
         var sName = (cfg.getString('smtp_sender_name') || 'Atendimento HelpDesk').trim()

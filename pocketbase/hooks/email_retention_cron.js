@@ -396,7 +396,11 @@
 
       var graphTenantId = (config.getString('graph_tenant_id') || '').trim()
       var graphClientId = (config.getString('graph_client_id') || '').trim()
-      var graphClientSecret = (config.getString('graph_client_secret') || '').trim()
+      var rawGraphSecret = (config.getString('graph_client_secret') || '').trim()
+      var graphClientSecret = rawGraphSecret
+      if (typeof globalThis.itsmDecrypt === 'function') {
+        graphClientSecret = globalThis.itsmDecrypt(rawGraphSecret)
+      }
 
       var isGuidSecret =
         /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(
@@ -796,18 +800,23 @@
     var inspectError = null
 
     // Se Graph configurado, tenta obter contadores em tempo real de forma leve
+    var retentionGraphSecret = config.getString('graph_client_secret')
+    if (typeof globalThis.itsmDecrypt === 'function') {
+      retentionGraphSecret = globalThis.itsmDecrypt(retentionGraphSecret)
+    }
+
     if (
       receptionMode === 'graph' &&
       config.getString('graph_tenant_id') &&
       config.getString('graph_client_id') &&
-      config.getString('graph_client_secret') &&
+      retentionGraphSecret &&
       mailbox
     ) {
       try {
         var token = GraphRetentionClient.getAccessToken({
           graph_tenant_id: config.getString('graph_tenant_id'),
           graph_client_id: config.getString('graph_client_id'),
-          graph_client_secret: config.getString('graph_client_secret'),
+          graph_client_secret: retentionGraphSecret,
         })
 
         var pFolder = GraphRetentionClient.findOrCreateMailFolder(token, mailbox, processedFolder)

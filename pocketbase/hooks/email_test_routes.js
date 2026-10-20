@@ -124,13 +124,17 @@
           : ''
     ).trim()
 
-    var graphClientSecret = (
+    var rawGraphSecret = (
       rawBody.graph_client_secret !== undefined
         ? rawBody.graph_client_secret
         : configRec
           ? configRec.getString('graph_client_secret')
           : ''
     ).trim()
+    var graphClientSecret = rawGraphSecret
+    if (typeof globalThis.itsmDecrypt === 'function') {
+      graphClientSecret = globalThis.itsmDecrypt(rawGraphSecret)
+    }
 
     var graphMailbox = (
       rawBody.graph_mailbox !== undefined
@@ -163,13 +167,17 @@
           : ''
     ).trim()
 
-    var pass = (
+    var rawImapPass = (
       rawBody.imap_password !== undefined
         ? rawBody.imap_password
         : configRec
           ? configRec.getString('imap_password')
           : ''
     ).trim()
+    var pass = rawImapPass
+    if (typeof globalThis.itsmDecrypt === 'function') {
+      pass = globalThis.itsmDecrypt(rawImapPass)
+    }
 
     var encryption = (
       rawBody.imap_encryption !== undefined
@@ -933,13 +941,17 @@
           : ''
     ).trim()
 
-    var graphClientSecret = (
+    var rawDryRunSecret = (
       rawBody.graph_client_secret !== undefined
         ? rawBody.graph_client_secret
         : configRec
           ? configRec.getString('graph_client_secret')
           : ''
     ).trim()
+    var graphClientSecret = rawDryRunSecret
+    if (typeof globalThis.itsmDecrypt === 'function') {
+      graphClientSecret = globalThis.itsmDecrypt(rawDryRunSecret)
+    }
 
     var graphMailbox = (
       rawBody.graph_mailbox !== undefined
@@ -1586,13 +1598,17 @@
           : ''
     ).trim()
 
-    var pass = (
+    var rawSmtpPass = (
       rawBody.smtp_password !== undefined
         ? rawBody.smtp_password
         : configRec
           ? configRec.getString('smtp_password') || configRec.getString('imap_password')
           : ''
     ).trim()
+    var pass = rawSmtpPass
+    if (typeof globalThis.itsmDecrypt === 'function') {
+      pass = globalThis.itsmDecrypt(rawSmtpPass)
+    }
 
     var senderName = (
       rawBody.smtp_sender_name !== undefined

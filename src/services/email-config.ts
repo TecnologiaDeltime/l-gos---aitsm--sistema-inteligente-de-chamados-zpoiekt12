@@ -322,7 +322,22 @@ export const saveEmailConfig = async (
   }
 
   if (current) {
-    return pb.collection('email_config').update<EmailConfigRecord>(current.id, payload)
+    // Se o valor nos campos de senha não tiver mudado ou estiver vazio/cifrado vindo do registro atual sem alteração pelo usuário,
+    // preservamos o valor atual do banco para não sobrescrever com strings vazias ou desnecessárias
+    const updatePayload: Record<string, any> = { ...payload }
+    if (updatePayload.imap_password === undefined || updatePayload.imap_password === '') {
+      delete updatePayload.imap_password
+    }
+    if (updatePayload.smtp_password === undefined || updatePayload.smtp_password === '') {
+      delete updatePayload.smtp_password
+    }
+    if (
+      updatePayload.graph_client_secret === undefined ||
+      updatePayload.graph_client_secret === ''
+    ) {
+      delete updatePayload.graph_client_secret
+    }
+    return pb.collection('email_config').update<EmailConfigRecord>(current.id, updatePayload)
   }
   return pb.collection('email_config').create<EmailConfigRecord>({
     imap_host: data.imap_host || 'imap.gmail.com',

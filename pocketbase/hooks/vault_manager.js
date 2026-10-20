@@ -184,16 +184,65 @@ routerAdd(
       },
     )
 
-    // 6. Retornar credenciais reveladas
+    // 6. Descriptografar a senha caso esteja cifrada
+    var rawPassword = credRecord.getString('password')
+    var plainPassword = rawPassword
+    if (typeof globalThis.itsmDecrypt === 'function') {
+      plainPassword = globalThis.itsmDecrypt(rawPassword)
+    }
+
+    // Retornar credenciais reveladas
     return e.json(200, {
       success: true,
       username: credRecord.getString('username'),
-      password: credRecord.getString('password'),
+      password: plainPassword,
       revealed_at: new Date().toISOString(),
     })
   },
   $apis.requireAuth(),
 )
+
+// Interceptadores para garantir que toda senha gravada em vault_credentials seja cifrada em repouso
+onRecordCreate((e) => {
+  var pwd = e.record.getString('password')
+  if (pwd && typeof globalThis.itsmEncrypt === 'function') {
+    e.record.set('password', globalThis.itsmEncrypt(pwd))
+  }
+  return e.next()
+}, 'vault_credentials')
+
+onRecordUpdate((e) => {
+  var pwd = e.record.getString('password')
+  if (pwd && typeof globalThis.itsmEncrypt === 'function') {
+    e.record.set('password', globalThis.itsmEncrypt(pwd))
+  }
+  return e.next()
+}, 'vault_credentials')
+
+// Interceptadores para email_config: imap_password, smtp_password, graph_client_secret
+onRecordCreate((e) => {
+  if (typeof globalThis.itsmEncrypt === 'function') {
+    var imapPass = e.record.getString('imap_password')
+    if (imapPass) e.record.set('imap_password', globalThis.itsmEncrypt(imapPass))
+    var smtpPass = e.record.getString('smtp_password')
+    if (smtpPass) e.record.set('smtp_password', globalThis.itsmEncrypt(smtpPass))
+    var graphSecret = e.record.getString('graph_client_secret')
+    if (graphSecret) e.record.set('graph_client_secret', globalThis.itsmEncrypt(graphSecret))
+  }
+  return e.next()
+}, 'email_config')
+
+onRecordUpdate((e) => {
+  if (typeof globalThis.itsmEncrypt === 'function') {
+    var imapPass = e.record.getString('imap_password')
+    if (imapPass) e.record.set('imap_password', globalThis.itsmEncrypt(imapPass))
+    var smtpPass = e.record.getString('smtp_password')
+    if (smtpPass) e.record.set('smtp_password', globalThis.itsmEncrypt(smtpPass))
+    var graphSecret = e.record.getString('graph_client_secret')
+    if (graphSecret) e.record.set('graph_client_secret', globalThis.itsmEncrypt(graphSecret))
+  }
+  return e.next()
+}, 'email_config')
 
 // Endpoint auxiliar para auditar operações de criação, alteração ou exclusão de credenciais
 routerAdd(

@@ -31,7 +31,11 @@ cronAdd('email_checker_cron', '*/2 * * * *', () => {
     var receptionMode = config.getString('reception_mode') || 'graph'
     var graphTenantId = (config.getString('graph_tenant_id') || '').trim()
     var graphClientId = (config.getString('graph_client_id') || '').trim()
-    var graphClientSecret = (config.getString('graph_client_secret') || '').trim()
+    var rawGraphSecret = (config.getString('graph_client_secret') || '').trim()
+    var graphClientSecret = rawGraphSecret
+    if (typeof globalThis.itsmDecrypt === 'function') {
+      graphClientSecret = globalThis.itsmDecrypt(rawGraphSecret)
+    }
     var graphMailbox = (
       config.getString('graph_mailbox') ||
       config.getString('imap_user') ||
@@ -41,7 +45,11 @@ cronAdd('email_checker_cron', '*/2 * * * *', () => {
     var host = config.getString('imap_host')
     var port = config.getInt('imap_port') || 993
     var user = config.getString('imap_user')
-    var pass = config.getString('imap_password')
+    var rawPass = config.getString('imap_password')
+    var pass = rawPass
+    if (typeof globalThis.itsmDecrypt === 'function') {
+      pass = globalThis.itsmDecrypt(rawPass)
+    }
     var encryption = config.getString('imap_encryption') || 'SSL/TLS'
     var inboxFolder = config.getString('inbox_folder') || 'INBOX'
     var processedFolder = config.getString('processed_folder') || ''
