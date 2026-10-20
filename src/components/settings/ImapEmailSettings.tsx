@@ -523,21 +523,30 @@ export function ImapEmailSettings({
       if (res.success && res.result) {
         setDryRunResult(res.result)
         toast({
-          title: 'Simulação concluída!',
-          description: res.result.expected_destination,
+          title: 'Simulação concluída com sucesso!',
+          description: `Destino previsto: ${res.result.expected_destination}`,
         })
         loadAuditHistory()
       } else {
+        const errorMsg = res.error || 'Não foi possível processar a mensagem da caixa.'
         toast({
-          title: 'Erro na simulação',
-          description: res.error || 'Não foi possível processar a mensagem.',
+          title: 'Erro ao executar teste ponta a ponta',
+          description:
+            errorMsg === "The requested resource wasn't found."
+              ? 'Recurso não encontrado no servidor. Verifique a conexão com o backend.'
+              : errorMsg,
           variant: 'destructive',
         })
       }
     } catch (err: any) {
+      const rawMsg = err?.data?.message || err?.message || 'Falha na requisição.'
+      const friendlyMsg =
+        rawMsg === "The requested resource wasn't found."
+          ? 'Serviço de simulação temporariamente indisponível ou rota não encontrada (404).'
+          : rawMsg
       toast({
         title: 'Erro ao executar teste ponta a ponta',
-        description: err.message || 'Falha na requisição.',
+        description: friendlyMsg,
         variant: 'destructive',
       })
     } finally {

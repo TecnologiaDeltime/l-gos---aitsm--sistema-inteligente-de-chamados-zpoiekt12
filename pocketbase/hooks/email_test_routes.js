@@ -883,8 +883,573 @@
   })
 
   // =========================================================================
+  // SIMULAÇÃO PONTA A PONTA (DRY-RUN SEGURO) COM MENSAGEM REAL DA CAIXA
+  // POST /backend/v1/emails/dry-run
+  // =========================================================================
+  function executeDryRunSimulation(c) {
+    var rawBody = {}
+    try {
+      if (typeof c.requestInfo === 'function') {
+        var info = c.requestInfo()
+        rawBody = (info && info.body) || {}
+      }
+    } catch (_) {
+      rawBody = {}
+    }
+
+    var callerAuth = null
+    try {
+      if (c.auth && c.auth.id) {
+        callerAuth = {
+          id: c.auth.id,
+          name: c.auth.getString('name') || '',
+          email: c.auth.getString('email') || '',
+        }
+      }
+    } catch (_) {}
+
+    var configRec = null
+    try {
+      var configs = $app.findRecordsByFilter('email_config', '', '-created', 1, 0)
+      if (configs.length > 0) configRec = configs[0]
+    } catch (_) {}
+
+    var receptionMode =
+      rawBody.reception_mode || (configRec ? configRec.getString('reception_mode') : '') || 'graph'
+
+    var graphTenantId = (
+      rawBody.graph_tenant_id !== undefined
+        ? rawBody.graph_tenant_id
+        : configRec
+          ? configRec.getString('graph_tenant_id')
+          : ''
+    ).trim()
+
+    var graphClientId = (
+      rawBody.graph_client_id !== undefined
+        ? rawBody.graph_client_id
+        : configRec
+          ? configRec.getString('graph_client_id')
+          : ''
+    ).trim()
+
+    var graphClientSecret = (
+      rawBody.graph_client_secret !== undefined
+        ? rawBody.graph_client_secret
+        : configRec
+          ? configRec.getString('graph_client_secret')
+          : ''
+    ).trim()
+
+    var graphMailbox = (
+      rawBody.graph_mailbox !== undefined
+        ? rawBody.graph_mailbox
+        : configRec
+          ? configRec.getString('graph_mailbox') || configRec.getString('imap_user')
+          : ''
+    ).trim()
+
+    var sampledMsg = null
+    var isSynthetic = false
+
+    // Se o cliente forneceu remetente e assunto explícitos no payload, podemos usá-los como fallback/manual
+    if (rawBody.from && rawBody.subject) {
+      sampledMsg = {
+        from: String(rawBody.from || '').trim(),
+        from_name: String(rawBody.from_name || '').trim(),
+        subject: String(rawBody.subject || '').trim(),
+        body: String(rawBody.body || '').trim(),
+        body_preview: String(rawBody.body || '')
+          .trim()
+          .substring(0, 200),
+      }
+      isSynthetic = true
+    } else if (receptionMode === 'graph') {
+      // Modo Microsoft Graph (Oficial): buscar mensagem mais recente na caixa configurada
+      var isGuidSecret =
+        /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(
+          graphClientSecret,
+        )
+
+      if (!graphTenantId || !graphClientId || !graphClientSecret || isGuidSecret) {
+        var authErrMsg = isGuidSecret
+          ? "O campo 'Segredo do Cliente' parece conter o ID do Segredo (identificador) e não o VALOR do segredo. No Entra ID > Certificados e segredos, copie a coluna 'Valor' do segredo."
+          : 'Configurações do Microsoft Graph incompletas (Tenant ID, Client ID ou Segredo não preenchidos). Preencha os parâmetros da caixa antes de executar o teste.'
+        return c.json(200, {
+          success: false,
+          error: authErrMsg,
+        })
+      }
+
+      var client = {
+        urlEncode: function (str) {
+          return encodeURIComponent(String(str || ''))
+            .replace(/%20/g, '+')
+            .replace(/[!'()*]/g, function (sub) {
+              return '%' + sub.charCodeAt(0).toString(16).toUpperCase()
+            })
+        },
+        htmlToText: function (html) {
+          if (!html) return ''
+          return String(html)
+            .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+            .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+            .replace(/<br\s*[\/]?>/gi, '\n')
+            .replace(/<\/p>/gi, '\n\n')
+            .replace(/<\/div>/gi, '\n')
+            .replace(/<[^>]+>/g, ' ')
+            .replace(/&nbsp;/g, ' ')
+            .replace(/&amp;/g, '&')
+            .replace(/&lt;/g, '<')
+            .replace(/&gt;/g, '>')
+            .replace(/&quot;/g, '"')
+            .replace(/&#39;/g, "'")
+            .replace(/[ \t]+/g, ' ')
+            .trim()
+        },
+      }
+
+      var tokenUrl = 'https://login.microsoftonline.com/' + graphTenantId + '/oauth2/v2.0/token'
+      var formBody = [
+        'client_id=' + client.urlEncode(graphClientId),
+        'client_secret=' + client.urlEncode(graphClientSecret),
+        'grant_type=client_credentials',
+        'scope=' + client.urlEncode('https://graph.microsoft.com/.default'),
+      ].join('&')
+
+      var token = ''
+      try {
+        var tokenRes = $http.send({
+          url: tokenUrl,
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            Accept: 'application/json',
+          },
+          body: formBody,
+          timeout: 30,
+        })
+        var tokenData = {}
+        try {
+          tokenData = JSON.parse(tokenRes.raw || '{}')
+        } catch (_) {}
+
+        if (tokenRes.statusCode !== 200 || !tokenData.access_token) {
+          var errDesc =
+            tokenData.error_description ||
+            tokenData.error ||
+            tokenRes.raw ||
+            'HTTP ' + tokenRes.statusCode
+          if (errDesc.indexOf('AADSTS700016') !== -1) {
+            errDesc =
+              'Aplicativo não encontrado no diretório (AADSTS700016). Verifique se o Client ID e Tenant ID estão corretos no Microsoft Entra ID.'
+          } else if (errDesc.indexOf('AADSTS7000215') !== -1) {
+            errDesc =
+              'Segredo do Cliente inválido ou expirado (AADSTS7000215). Gere um novo Segredo no Microsoft Entra ID.'
+          } else if (errDesc.indexOf('AADSTS90002') !== -1) {
+            errDesc = 'Locatário Microsoft (Tenant ID) não encontrado.'
+          }
+          return c.json(200, {
+            success: false,
+            error: 'Falha na autenticação Microsoft Graph: ' + errDesc,
+          })
+        }
+        token = tokenData.access_token
+      } catch (authNetErr) {
+        return c.json(200, {
+          success: false,
+          error: 'Falha de conexão com Microsoft Entra ID: ' + authNetErr.message,
+        })
+      }
+
+      // Buscar mensagens recentes na caixa (primeiro tenta não lidas, se não houver pega a mais recente geral)
+      var messagesUrl =
+        'https://graph.microsoft.com/v1.0/users/' +
+        client.urlEncode(graphMailbox) +
+        '/messages?$top=1&$orderby=' +
+        client.urlEncode('receivedDateTime desc') +
+        '&$select=' +
+        client.urlEncode(
+          'id,internetMessageId,subject,bodyPreview,body,from,toRecipients,receivedDateTime,isRead',
+        )
+
+      try {
+        var msgRes = $http.send({
+          url: messagesUrl,
+          method: 'GET',
+          headers: {
+            Authorization: 'Bearer ' + token,
+            Accept: 'application/json',
+            Prefer: 'outlook.body-content-type="html"',
+          },
+          timeout: 35,
+        })
+
+        var msgData = {}
+        try {
+          msgData = JSON.parse(msgRes.raw || '{}')
+        } catch (_) {}
+
+        if (msgRes.statusCode !== 200) {
+          var gErr = msgData.error || {}
+          var gCode = gErr.code || ''
+          var gMsg = gErr.message || msgRes.raw || 'HTTP ' + msgRes.statusCode
+
+          if (
+            msgRes.statusCode === 404 ||
+            gCode === 'ResourceNotFound' ||
+            gCode === 'Request_ResourceNotFound'
+          ) {
+            return c.json(200, {
+              success: false,
+              error:
+                'Caixa de e-mail "' +
+                graphMailbox +
+                '" não encontrada no locatário Microsoft. Verifique se o endereço está correto e ativo no Microsoft 365.',
+            })
+          }
+          if (
+            msgRes.statusCode === 403 ||
+            gCode === 'ErrorAccessDenied' ||
+            gCode === 'Authorization_RequestDenied'
+          ) {
+            return c.json(200, {
+              success: false,
+              error:
+                'Permissão insuficiente no Microsoft Entra ID (403 Acesso Negado). Conceda a permissão de aplicativo "Mail.Read" com consentimento do administrador.',
+            })
+          }
+
+          return c.json(200, {
+            success: false,
+            error: 'Erro na Graph API (HTTP ' + msgRes.statusCode + '): ' + gMsg,
+          })
+        }
+
+        var items = msgData.value || []
+        if (items.length > 0) {
+          var firstMsg = items[0]
+          var fromObj = firstMsg.from || {}
+          var emailAddr = fromObj.emailAddress || {}
+          var bObj = firstMsg.body || {}
+          var rawContent = bObj.content || firstMsg.bodyPreview || ''
+          var cleanBody =
+            bObj.contentType === 'html' || rawContent.indexOf('<') !== -1
+              ? client.htmlToText(rawContent)
+              : rawContent
+
+          sampledMsg = {
+            from: (emailAddr.address || '').trim(),
+            from_name: (emailAddr.name || '').trim(),
+            subject: (firstMsg.subject || '').trim() || '(Sem assunto)',
+            body: cleanBody || firstMsg.bodyPreview || '',
+            body_preview: (firstMsg.bodyPreview || cleanBody || '').substring(0, 200),
+          }
+        }
+      } catch (graphFetchErr) {
+        return c.json(200, {
+          success: false,
+          error: 'Falha ao buscar mensagem na Graph API: ' + graphFetchErr.message,
+        })
+      }
+    }
+
+    // Se nenhuma mensagem foi encontrada na caixa (caixa vazia) ou em modo IMAP sem rede
+    if (!sampledMsg || !sampledMsg.from) {
+      if (receptionMode === 'imap') {
+        return c.json(200, {
+          success: false,
+          error:
+            'O modo IMAP legado não possui suporte a sockets TCP no ambiente. Utilize o modo "Microsoft Graph (HTTPS)" nas configurações da caixa.',
+        })
+      }
+      return c.json(200, {
+        success: false,
+        error:
+          'Nenhuma mensagem recente encontrada na caixa postal "' +
+          (graphMailbox || 'configurada') +
+          '" para simular o teste ponta a ponta.',
+      })
+    }
+
+    // =========================================================================
+    // EXECUÇÃO DO PIPELINE DE SIMULAÇÃO (DRY-RUN)
+    // Sem gravar em tickets, ticket_interactions ou retained_tickets
+    // =========================================================================
+    var fromEmail = sampledMsg.from.trim()
+    var fromName = sampledMsg.from_name.trim()
+    var subject = sampledMsg.subject.trim()
+    var bodyPreview = sampledMsg.body_preview || sampledMsg.body.substring(0, 160)
+
+    var atIndex = fromEmail.lastIndexOf('@')
+    var domain = atIndex !== -1 ? fromEmail.substring(atIndex).toLowerCase().trim() : ''
+    var plainDomain = domain.startsWith('@') ? domain.substring(1) : domain
+
+    // 1. Verificação de Domínio
+    var domainAllowed = false
+    var companyId = ''
+    var companyName = 'Não identificada'
+
+    if (domain) {
+      try {
+        var domains = $app.findRecordsByFilter('client_email_domains', 'active = true', '', 500, 0)
+        for (var i = 0; i < domains.length; i++) {
+          var d = (domains[i].getString('domain') || '').toLowerCase().trim()
+          if (d === domain || d === plainDomain || d === '@' + plainDomain) {
+            domainAllowed = true
+            companyId = domains[i].getString('client')
+            if (companyId) {
+              try {
+                var compRec = $app.findRecordById('companies', companyId)
+                companyName = compRec.getString('name') || compRec.getString('trade_name') || ''
+              } catch (_) {}
+            }
+            break
+          }
+        }
+      } catch (_) {}
+    }
+
+    // 2. Identificação de Solicitante
+    var matchedUser = null
+    var matchedContact = null
+    var resolvedName = fromName || fromEmail.split('@')[0]
+    var phone = ''
+
+    try {
+      var users = $app.findRecordsByFilter(
+        '_pb_users_auth_',
+        'email = "' + fromEmail.toLowerCase() + '"',
+        '',
+        1,
+        0,
+      )
+      if (users.length > 0) {
+        var u = users[0]
+        matchedUser = {
+          id: u.id,
+          name: u.getString('name') || '',
+          email: u.getString('email') || '',
+          role: u.getString('role') || '',
+        }
+        resolvedName = matchedUser.name || resolvedName
+        phone = u.getString('phone') || u.getString('mobile') || ''
+      }
+    } catch (_) {}
+
+    if (!matchedUser && companyId) {
+      try {
+        var contacts = $app.findRecordsByFilter(
+          'client_contacts',
+          'email = "' + fromEmail.toLowerCase() + '"',
+          '',
+          1,
+          0,
+        )
+        if (contacts.length > 0) {
+          var ct = contacts[0]
+          matchedContact = {
+            id: ct.id,
+            name: ct.getString('full_name') || '',
+            email: ct.getString('email') || '',
+            phone: ct.getString('phone') || ct.getString('cell_phone') || '',
+          }
+          resolvedName = matchedContact.name || resolvedName
+          phone = matchedContact.phone || ''
+        }
+      } catch (_) {}
+    }
+
+    // 3. Detecção de Resposta e Roteamento
+    var isReply = false
+    var existingTicket = null
+    var replyPrefixRegex = /^\s*(re|res|fwd|fw|enc|r)\s*:\s*/i
+    var hasReplyPrefix = replyPrefixRegex.test(subject)
+    var extractedTicketNumber = ''
+    var matchNum = subject.match(/(?:ticket\s*#?|#)\s*\[?(\d{1,6})\]?/i)
+    if (matchNum && matchNum[1]) {
+      extractedTicketNumber = matchNum[1]
+    }
+
+    if (extractedTicketNumber && (hasReplyPrefix || /ticket\s*#?\s*\d+/i.test(subject))) {
+      try {
+        var tList = $app.findRecordsByFilter(
+          'tickets',
+          'number = "' +
+            extractedTicketNumber +
+            '" || number = "#' +
+            extractedTicketNumber +
+            '" || id = "' +
+            extractedTicketNumber +
+            '"',
+          '-created',
+          1,
+          0,
+        )
+        if (tList.length > 0) {
+          var tRec = tList[0]
+          isReply = true
+          existingTicket = {
+            id: tRec.id,
+            number: tRec.getString('number') || extractedTicketNumber,
+            title: tRec.getString('title') || '',
+            status: tRec.getString('status') || '',
+          }
+        }
+      } catch (_) {}
+    }
+
+    // Fila sugerida
+    var suggestedQueue = 'N1 - Suporte Inicial'
+    try {
+      var queues = $app.findRecordsByFilter('queues', 'active = true', 'priority', 1, 0)
+      if (queues.length > 0) {
+        suggestedQueue = queues[0].getString('name') || suggestedQueue
+      }
+    } catch (_) {}
+
+    // Categoria sugerida
+    var suggestedCategory = 'Geral'
+    try {
+      var categories = $app.findRecordsByFilter('tkt_categories', 'active = true', 'name', 50, 0)
+      var fullText = (subject + ' ' + (sampledMsg.body || '')).toLowerCase()
+      var bestScore = 0
+      for (var ci = 0; ci < categories.length; ci++) {
+        var catName = (categories[ci].getString('name') || '').toLowerCase()
+        var words = catName.split(/[\s,/-]+/)
+        var score = 0
+        for (var w = 0; w < words.length; w++) {
+          var word = words[w].trim()
+          if (word.length >= 3 && fullText.indexOf(word) !== -1) {
+            score += 2
+          }
+        }
+        if (score > bestScore) {
+          bestScore = score
+          suggestedCategory = categories[ci].getString('name')
+        }
+      }
+    } catch (_) {}
+
+    // Veredito e Justificativa
+    var expectedDestination = ''
+    var explanation = ''
+
+    if (!domainAllowed) {
+      expectedDestination = 'Retido em moderação'
+      explanation =
+        'O remetente "' +
+        fromEmail +
+        '" pertence ao domínio @' +
+        plainDomain +
+        ', que NÃO está cadastrado na lista de domínios autorizados (client_email_domains). O e-mail será direcionado para Chamados Retidos (/tickets/retained) para moderação manual.'
+    } else if (isReply && existingTicket) {
+      expectedDestination = 'Interação em chamado existente'
+      explanation =
+        'Identificado como resposta vinculada ao chamado existente #' +
+        existingTicket.number +
+        ' (' +
+        existingTicket.title +
+        ', status: ' +
+        existingTicket.status +
+        '). Não criará ticket duplicado; adicionará uma nova interação e reabrirá o chamado caso esteja fechado.'
+    } else {
+      expectedDestination = 'Novo Ticket'
+      explanation =
+        'Remetente autorizado via domínio @' +
+        plainDomain +
+        ' vinculado ao cliente "' +
+        companyName +
+        '". Criará um novo chamado na fila "' +
+        suggestedQueue +
+        '" com prioridade Média e solicitante "' +
+        resolvedName +
+        '".'
+    }
+
+    var resultPayload = {
+      message_sampled: {
+        from: fromEmail,
+        from_name: fromName,
+        subject: subject,
+        body_preview: bodyPreview || '(corpo vazio)',
+        domain: plainDomain ? '@' + plainDomain : '',
+      },
+      domain_check: {
+        domain: plainDomain ? '@' + plainDomain : '',
+        allowed: domainAllowed,
+        company_id: companyId || undefined,
+        company_name: companyName,
+      },
+      requester_identification: {
+        matched_user: matchedUser,
+        matched_contact: matchedContact,
+        resolved_name: resolvedName,
+        phone: phone || undefined,
+      },
+      ticket_routing: {
+        is_reply: isReply,
+        existing_ticket: existingTicket,
+        suggested_queue: suggestedQueue,
+        suggested_category: suggestedCategory,
+        type: 'Incidente',
+        priority: 'Média',
+      },
+      expected_destination: expectedDestination,
+      explanation: explanation,
+      dry_run: true,
+      simulation_time: new Date().toISOString(),
+    }
+
+    // Registrar no histórico de auditoria
+    logAuditRecord({
+      testType: 'dry_run_simulation',
+      status: 'success',
+      host:
+        receptionMode === 'graph'
+          ? 'graph.microsoft.com'
+          : configRec
+            ? configRec.getString('imap_host')
+            : '',
+      port:
+        receptionMode === 'graph' ? 443 : configRec ? configRec.getInt('imap_port') || 993 : 993,
+      userAccount:
+        receptionMode === 'graph'
+          ? graphMailbox
+          : configRec
+            ? configRec.getString('imap_user')
+            : '',
+      inboxFolder:
+        receptionMode === 'graph'
+          ? 'INBOX (Graph)'
+          : configRec
+            ? configRec.getString('inbox_folder')
+            : 'INBOX',
+      encryption: receptionMode === 'graph' ? 'HTTPS (OAuth2 Client Credentials)' : 'IMAP',
+      summaryMessage:
+        'Simulação Dry-Run: ' +
+        expectedDestination +
+        ' | Remetente: ' +
+        fromEmail +
+        ' | Assunto: ' +
+        subject,
+      dryRunResult: resultPayload,
+      executedBy: callerAuth,
+    })
+
+    return c.json(200, {
+      success: true,
+      result: resultPayload,
+    })
+  }
+
+  // Registra /backend/v1/emails/dry-run (chamada pelo frontend para simulação ponta a ponta)
+  routerAdd('POST', '/backend/v1/emails/dry-run', executeDryRunSimulation)
+
+  // =========================================================================
   // TESTE DE FLUXO PONTA A PONTA COM E-MAIL SINTÉTICO OU REAL
   // POST /backend/v1/emails/test-flow
+  // Mantido para compatibilidade reversa
   // =========================================================================
   routerAdd('POST', '/backend/v1/emails/test-flow', function (c) {
     var rawBody = {}
