@@ -180,6 +180,16 @@ export interface RetentionRunResponse {
   message?: string
 }
 
+export const isGuidSecretId = (val?: string): boolean => {
+  if (!val) return false
+  return /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(
+    val.trim(),
+  )
+}
+
+export const GRAPH_SECRET_ID_WARNING =
+  "O campo 'Segredo do Cliente' parece conter o ID do Segredo (identificador) e não o VALOR do segredo. No Entra ID > Certificados e segredos, copie a coluna 'Valor' do segredo — ela só é exibida uma vez na criação; se não estiver mais visível, crie um novo segredo e cole o Valor aqui."
+
 export interface RetentionStatsResponse {
   enabled: boolean
   retention_days: number
@@ -299,6 +309,12 @@ export const saveEmailConfig = async (
 
   const payload = {
     ...data,
+    graph_tenant_id: data.graph_tenant_id ? data.graph_tenant_id.trim() : data.graph_tenant_id,
+    graph_client_id: data.graph_client_id ? data.graph_client_id.trim() : data.graph_client_id,
+    graph_client_secret: data.graph_client_secret
+      ? data.graph_client_secret.trim()
+      : data.graph_client_secret,
+    graph_mailbox: data.graph_mailbox ? data.graph_mailbox.trim() : data.graph_mailbox,
     imap_encryption: encryption,
     imap_ssl: isSsl,
     inbox_folder: data.inbox_folder || 'INBOX',
@@ -347,9 +363,18 @@ export const testEmailConnection = async (data: {
   inbox_folder?: string
   processed_folder?: string
 }): Promise<ImapTestResponse> => {
+  const cleanedData = {
+    ...data,
+    graph_tenant_id: data.graph_tenant_id ? data.graph_tenant_id.trim() : data.graph_tenant_id,
+    graph_client_id: data.graph_client_id ? data.graph_client_id.trim() : data.graph_client_id,
+    graph_client_secret: data.graph_client_secret
+      ? data.graph_client_secret.trim()
+      : data.graph_client_secret,
+    graph_mailbox: data.graph_mailbox ? data.graph_mailbox.trim() : data.graph_mailbox,
+  }
   return pb.send<ImapTestResponse>('/backend/v1/emails/test-connection', {
     method: 'POST',
-    body: data,
+    body: cleanedData,
   })
 }
 

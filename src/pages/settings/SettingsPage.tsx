@@ -8,7 +8,13 @@ import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
 import { useToast } from '@/hooks/use-toast'
 import { FileText, Bell, Save, Mail, User, Settings, Hourglass, Lock } from 'lucide-react'
-import { getEmailConfig, saveEmailConfig, EmailConfigRecord } from '@/services/email-config'
+import {
+  getEmailConfig,
+  saveEmailConfig,
+  EmailConfigRecord,
+  isGuidSecretId,
+  GRAPH_SECRET_ID_WARNING,
+} from '@/services/email-config'
 import { ImapEmailSettings } from '@/components/settings/ImapEmailSettings'
 import VaultPage from '@/pages/vault/VaultPage'
 import {
@@ -158,6 +164,16 @@ export default function SettingsPage() {
 
   const handleEmailConfigSave = async () => {
     if (!emailConfig) return
+
+    const isGraph = (emailConfig.reception_mode || 'graph') === 'graph'
+    if (isGraph && isGuidSecretId(emailConfig.graph_client_secret)) {
+      toast({
+        title: 'Atenção ao Segredo do Cliente',
+        description: GRAPH_SECRET_ID_WARNING,
+        variant: 'destructive',
+      })
+    }
+
     setEmailConfigSaving(true)
     try {
       const saved = await saveEmailConfig({

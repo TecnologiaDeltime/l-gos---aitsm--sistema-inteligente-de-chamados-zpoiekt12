@@ -43,6 +43,14 @@
         throw new Error('Client Secret (Segredo do Cliente) da Microsoft não configurado.')
       }
 
+      var guidRegex =
+        /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/
+      if (guidRegex.test(clientSecret)) {
+        throw new Error(
+          "O campo 'Segredo do Cliente' parece conter o ID do Segredo (identificador) e não o VALOR do segredo. No Entra ID > Certificados e segredos, copie a coluna 'Valor' do segredo — ela só é exibida uma vez na criação; se não estiver mais visível, crie um novo segredo e cole o Valor aqui.",
+        )
+      }
+
       var tokenUrl = 'https://login.microsoftonline.com/' + tenantId + '/oauth2/v2.0/token'
       var formBody = [
         'client_id=' + GraphRetentionClient.urlEncode(clientId),
@@ -386,15 +394,24 @@
         }
       }
 
-      var graphTenantId = config.getString('graph_tenant_id')
-      var graphClientId = config.getString('graph_client_id')
-      var graphClientSecret = config.getString('graph_client_secret')
+      var graphTenantId = (config.getString('graph_tenant_id') || '').trim()
+      var graphClientId = (config.getString('graph_client_id') || '').trim()
+      var graphClientSecret = (config.getString('graph_client_secret') || '').trim()
 
-      if (!graphTenantId || !graphClientId || !graphClientSecret || !mailbox) {
-        var msgMissing =
-          'Credenciais Microsoft Graph (Tenant ID, Client ID, Client Secret ou Caixa) incompletas.'
+      var isGuidSecret =
+        /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(
+          graphClientSecret,
+        )
+
+      if (!graphTenantId || !graphClientId || !graphClientSecret || !mailbox || isGuidSecret) {
+        var msgMissing = isGuidSecret
+          ? "O campo 'Segredo do Cliente' parece conter o ID do Segredo (identificador) e não o VALOR do segredo. No Entra ID > Certificados e segredos, copie a coluna 'Valor' do segredo — ela só é exibida uma vez na criação; se não estiver mais visível, crie um novo segredo e cole o Valor aqui."
+          : 'Credenciais Microsoft Graph (Tenant ID, Client ID, Client Secret ou Caixa) incompletas.'
         config.set('last_retention_at', new Date().toISOString())
-        config.set('last_retention_status', 'Falha na Configuração')
+        config.set(
+          'last_retention_status',
+          isGuidSecret ? 'Falha de Autenticação Graph' : 'Falha na Configuração',
+        )
         config.set('last_retention_error', msgMissing)
         $app.save(config)
         return {

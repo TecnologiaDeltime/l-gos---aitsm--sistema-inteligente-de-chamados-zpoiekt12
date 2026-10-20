@@ -64,6 +64,8 @@ import {
   SmtpTestResponse,
   runEmailRetentionNow,
   getEmailRetentionStats,
+  isGuidSecretId,
+  GRAPH_SECRET_ID_WARNING,
 } from '@/services/email-config'
 interface ImapEmailSettingsProps {
   emailConfig: EmailConfigRecord
@@ -373,17 +375,82 @@ export function ImapEmailSettings({
     const isGraph = (emailConfig.reception_mode || 'graph') === 'graph'
 
     if (isGraph) {
-      if (
-        !emailConfig.graph_tenant_id ||
-        !emailConfig.graph_client_id ||
-        !(graphSecret || emailConfig.graph_client_secret)
-      ) {
+      const secretToTest = (graphSecret || emailConfig.graph_client_secret || '').trim()
+      if (!emailConfig.graph_tenant_id || !emailConfig.graph_client_id || !secretToTest) {
         toast({
           title: 'Preencha as Credenciais do Microsoft Entra ID',
           description:
             'Tenant ID, Client ID e Segredo do Cliente são obrigatórios para testar o Microsoft Graph.',
           variant: 'destructive',
         })
+        return
+      }
+
+      if (isGuidSecretId(secretToTest)) {
+        toast({
+          title: 'Atenção ao Segredo do Cliente',
+          description: GRAPH_SECRET_ID_WARNING,
+          variant: 'destructive',
+        })
+        setTestResponse({
+          success: false,
+          reception_mode: 'graph',
+          summary_message: GRAPH_SECRET_ID_WARNING,
+          steps: [
+            {
+              id: 'graph_credentials_check',
+              name: 'Verificação de Parâmetros e Credenciais',
+              status: 'failed',
+              detail: GRAPH_SECRET_ID_WARNING,
+              duration_ms: 0,
+            },
+            {
+              id: 'graph_token',
+              name: 'Autenticação OAuth2 Client Credentials',
+              status: 'skipped',
+              detail: 'Não executado devido a segredo incorreto.',
+              duration_ms: 0,
+            },
+            {
+              id: 'graph_permission',
+              name: 'Permissões de Aplicativo (Mail.Read)',
+              status: 'skipped',
+              detail: 'Não executado.',
+              duration_ms: 0,
+            },
+            {
+              id: 'graph_list',
+              name: 'Consulta de Mensagens na Caixa',
+              status: 'skipped',
+              detail: 'Não executado.',
+              duration_ms: 0,
+            },
+            {
+              id: 'graph_unread',
+              name: 'Contagem de Mensagens Não Lidas',
+              status: 'skipped',
+              detail: 'Não executado.',
+              duration_ms: 0,
+            },
+            {
+              id: 'graph_sample',
+              name: 'Amostragem de Mensagens Recentes',
+              status: 'skipped',
+              detail: 'Não executado.',
+              duration_ms: 0,
+            },
+            {
+              id: 'graph_cron',
+              name: 'Verificação de Rotina Automática (Cron)',
+              status: 'skipped',
+              detail: 'Não executado.',
+              duration_ms: 0,
+            },
+          ],
+          samples: [],
+          stats: { unread_count: 0, total_recent: 0 },
+        })
+        setActiveTab('test')
         return
       }
     } else {
@@ -843,10 +910,9 @@ export function ImapEmailSettings({
                       <li>
                         No menu lateral, vá em <strong>Certificados e Segredos</strong> &rarr;{' '}
                         <strong>+ Novo segredo do cliente</strong> &rarr; adicione uma descrição e
-                        validade &rarr; copie imediatamente o{' '}
-                        <strong className="text-red-700 dark:text-red-300">Valor (Value)</strong> do
-                        segredo (não o Secret ID) e cole no campo <em>Segredo do Cliente</em>{' '}
-                        abaixo.
+                        validade &rarr; <strong>Copie o VALOR do segredo (não o ID)</strong> (coluna{' '}
+                        <strong className="text-red-700 dark:text-red-300">Valor</strong> / Value do
+                        segredo) e cole no campo <em>Segredo do Cliente</em> abaixo.
                       </li>
                     </ol>
                   </div>
@@ -927,7 +993,11 @@ export function ImapEmailSettings({
                             setGraphSecret(val)
                             setEmailConfig({ ...emailConfig, graph_client_secret: val })
                           }}
-                          className="itsm-input pr-10 font-mono text-xs"
+                          className={`itsm-input pr-10 font-mono text-xs ${
+                            isGuidSecretId(graphSecret || emailConfig.graph_client_secret)
+                              ? 'border-amber-500 focus-visible:ring-amber-500 bg-amber-50/30 dark:bg-amber-950/20'
+                              : ''
+                          }`}
                           disabled={!isGestor}
                         />
                         <button
@@ -943,9 +1013,22 @@ export function ImapEmailSettings({
                           )}
                         </button>
                       </div>
+
+                      {isGuidSecretId(graphSecret || emailConfig.graph_client_secret) && (
+                        <div className="p-2.5 rounded-lg border border-amber-300 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/40 text-amber-900 dark:text-amber-200 text-[11px] leading-relaxed flex items-start gap-2">
+                          <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                          <div>
+                            <strong className="block font-semibold">
+                              Atenção: Você inseriu o ID do Segredo, não o Valor!
+                            </strong>
+                            <span>{GRAPH_SECRET_ID_WARNING}</span>
+                          </div>
+                        </div>
+                      )}
+
                       <p className="text-[10px] text-slate-400">
-                        Copie o campo <strong>Valor (Value)</strong> imediatamente após criá-lo no
-                        portal.
+                        <strong>Copie o VALOR do segredo (não o ID)</strong> imediatamente após
+                        criá-lo no portal.
                       </p>
                     </div>
 

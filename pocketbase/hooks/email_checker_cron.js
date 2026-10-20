@@ -29,10 +29,14 @@ cronAdd('email_checker_cron', '*/2 * * * *', () => {
     config = configs[0]
 
     var receptionMode = config.getString('reception_mode') || 'graph'
-    var graphTenantId = config.getString('graph_tenant_id')
-    var graphClientId = config.getString('graph_client_id')
-    var graphClientSecret = config.getString('graph_client_secret')
-    var graphMailbox = config.getString('graph_mailbox') || config.getString('imap_user')
+    var graphTenantId = (config.getString('graph_tenant_id') || '').trim()
+    var graphClientId = (config.getString('graph_client_id') || '').trim()
+    var graphClientSecret = (config.getString('graph_client_secret') || '').trim()
+    var graphMailbox = (
+      config.getString('graph_mailbox') ||
+      config.getString('imap_user') ||
+      ''
+    ).trim()
 
     var host = config.getString('imap_host')
     var port = config.getInt('imap_port') || 993
@@ -708,6 +712,14 @@ cronAdd('email_checker_cron', '*/2 * * * *', () => {
           throw new Error('Client Secret (Segredo do Cliente) da Microsoft não configurado.')
         }
 
+        var guidRegex =
+          /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/
+        if (guidRegex.test(clientSecret)) {
+          throw new Error(
+            "O campo 'Segredo do Cliente' parece conter o ID do Segredo (identificador) e não o VALOR do segredo. No Entra ID > Certificados e segredos, copie a coluna 'Valor' do segredo — ela só é exibida uma vez na criação; se não estiver mais visível, crie um novo segredo e cole o Valor aqui.",
+          )
+        }
+
         var tokenUrl = 'https://login.microsoftonline.com/' + tenantId + '/oauth2/v2.0/token'
         var formBody = [
           'client_id=' + GraphClient.urlEncode(clientId),
@@ -1077,17 +1089,24 @@ cronAdd('email_checker_cron', '*/2 * * * *', () => {
     // RAMO 1: MICROSOFT GRAPH API (HTTPS via $http.send) - CAMINHO PRINCIPAL M365
     // =========================================================================
     if (receptionMode === 'graph') {
-      if (!graphTenantId || !graphClientId || !graphClientSecret) {
-        config.set('last_check_at', new Date().toISOString())
-        config.set('last_check_status', 'Falha na Configuração')
-        config.set(
-          'last_check_error',
-          'Configuração Microsoft Graph incompleta: Tenant ID, Client ID ou Client Secret ausente.',
+      var isGuidSecret =
+        /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(
+          graphClientSecret,
         )
+
+      if (!graphTenantId || !graphClientId || !graphClientSecret || isGuidSecret) {
+        var configErrMsg = isGuidSecret
+          ? "O campo 'Segredo do Cliente' parece conter o ID do Segredo (identificador) e não o VALOR do segredo. No Entra ID > Certificados e segredos, copie a coluna 'Valor' do segredo — ela só é exibida uma vez na criação; se não estiver mais visível, crie um novo segredo e cole o Valor aqui."
+          : 'Configuração Microsoft Graph incompleta: Tenant ID, Client ID ou Client Secret ausente.'
+        config.set('last_check_at', new Date().toISOString())
+        config.set(
+          'last_check_status',
+          isGuidSecret ? 'Falha de Autenticação Graph' : 'Falha na Configuração',
+        )
+        config.set('last_check_error', configErrMsg)
         $app.save(config)
-        $app
-          .logger()
-          .warn('email_checker_cron: Configuração Graph incompleta (Tenant/Client/Secret).')
+        $app.logger().warn('email_checker_cron: ' + configErrMsg)
+        logAudit(config.id, 'check', 'error', configErrMsg, 0, Date.now() - startTime)
         return
       }
 

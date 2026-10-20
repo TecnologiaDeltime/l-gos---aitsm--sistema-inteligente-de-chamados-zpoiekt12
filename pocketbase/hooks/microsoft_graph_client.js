@@ -55,6 +55,13 @@
       throw new Error('Client Secret (Segredo do Cliente) da Microsoft não configurado.')
     }
 
+    var guidRegex = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/
+    if (guidRegex.test(clientSecret)) {
+      throw new Error(
+        "O campo 'Segredo do Cliente' parece conter o ID do Segredo (identificador) e não o VALOR do segredo. No Entra ID > Certificados e segredos, copie a coluna 'Valor' do segredo — ela só é exibida uma vez na criação; se não estiver mais visível, crie um novo segredo e cole o Valor aqui.",
+      )
+    }
+
     var tokenUrl = 'https://login.microsoftonline.com/' + tenantId + '/oauth2/v2.0/token'
     var formBody = [
       'client_id=' + GraphClient.urlEncode(clientId),
