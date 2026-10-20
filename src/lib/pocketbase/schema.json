@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-20T13:06:33.406Z",
+  "generatedAt": "2026-10-20T15:43:04.171Z",
   "collections": [
     {
       "name": "users",
@@ -131,6 +131,30 @@
         {
           "name": "alerts_muted",
           "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "failed_login_attempts",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "locked_until",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "totp_enabled",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "session_last_activity",
+          "type": "date",
           "required": false,
           "system": false
         }
@@ -10042,6 +10066,199 @@
         "CREATE INDEX idx_vault_audit_status ON vault_audit_logs (status)",
         "CREATE INDEX idx_vault_audit_created ON vault_audit_logs (created DESC)"
       ]
+    },
+    {
+      "name": "security_settings",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != \"\"",
+        "view": "@request.auth.id != \"\"",
+        "create": "@request.auth.id != \"\" && @request.auth.role = \"admin\"",
+        "update": "@request.auth.id != \"\" && @request.auth.role = \"admin\"",
+        "delete": null
+      },
+      "fields": [
+        {
+          "name": "session_timeout_minutes",
+          "type": "number",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "max_login_attempts",
+          "type": "number",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "lockout_duration_minutes",
+          "type": "number",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "require_2fa_admin",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "require_2fa_gestor",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": []
+    },
+    {
+      "name": "login_attempt_logs",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != \"\" && (@request.auth.role = \"admin\" || @request.auth.role = \"auditor\")",
+        "view": "@request.auth.id != \"\" && (@request.auth.role = \"admin\" || @request.auth.role = \"auditor\")",
+        "create": null,
+        "update": null,
+        "delete": null
+      },
+      "fields": [
+        {
+          "name": "email",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "ip_address",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "user_agent",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "outcome",
+          "type": "select",
+          "required": true,
+          "system": false,
+          "selectValues": [
+            "success",
+            "failed_password",
+            "account_locked",
+            "unlocked_by_admin",
+            "totp_failed",
+            "totp_success"
+          ]
+        },
+        {
+          "name": "details",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": [
+        "CREATE INDEX idx_login_logs_email ON login_attempt_logs (email)",
+        "CREATE INDEX idx_login_logs_created ON login_attempt_logs (created DESC)",
+        "CREATE INDEX idx_login_logs_outcome ON login_attempt_logs (outcome)"
+      ]
+    },
+    {
+      "name": "user_totp",
+      "type": "base",
+      "apiRules": {
+        "list": null,
+        "view": null,
+        "create": null,
+        "update": null,
+        "delete": null
+      },
+      "fields": [
+        {
+          "name": "user",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "secret",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "is_enabled",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "recovery_codes",
+          "type": "json",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "last_used_step",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "confirmed_at",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": ["CREATE UNIQUE INDEX idx_user_totp_user ON user_totp (user)"]
     }
   ]
 }

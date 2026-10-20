@@ -49,6 +49,7 @@ import { useToast } from '@/hooks/use-toast'
 import { usePermissions } from '@/hooks/use-permissions'
 import { useRealtime } from '@/hooks/use-realtime'
 import { getCompanies, CompanyRecord } from '@/services/companies'
+import { formatDateTime, formatTicketAge } from '@/lib/date-format'
 import {
   getRetainedTickets,
   releaseRetainedTicket,
@@ -304,7 +305,8 @@ export default function RetainedTickets() {
                     </span>
                     <span className="flex items-center gap-1">
                       <Calendar className="h-3.5 w-3.5 text-slate-400" />
-                      {new Date(t.created).toLocaleString('pt-BR')}
+                      <strong>Recebido em:</strong> {formatDateTime(t.created)} (
+                      {formatTicketAge(t.created)})
                     </span>
                     {t.reason && (
                       <span className="text-amber-700 dark:text-amber-400 font-medium">

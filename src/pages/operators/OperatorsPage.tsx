@@ -17,6 +17,8 @@ import {
   ChevronLeft,
   ChevronRight,
   ShieldAlert,
+  Lock as LockIcon,
+  Smartphone,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -53,6 +55,7 @@ import { usePermissions } from '@/hooks/use-permissions'
 import { useAuth } from '@/hooks/use-auth'
 import { OperatorDialog } from '@/components/operators/OperatorDialog'
 import { ResetPasswordDialog } from '@/components/operators/ResetPasswordDialog'
+import { securityService } from '@/services/security'
 import {
   getOperators,
   createOperator,
@@ -105,6 +108,57 @@ export default function OperatorsPage() {
   const [resetDialogOpen, setResetDialogOpen] = useState(false)
   const [generatedPassword, setGeneratedPassword] = useState<string | null>(null)
   const [isResetting, setIsResetting] = useState(false)
+
+  // Desbloqueio e Reset de 2FA
+  const [unlockingId, setUnlockingId] = useState<string | null>(null)
+  const [resetting2faId, setResetting2faId] = useState<string | null>(null)
+
+  const handleUnlockUser = async (op: OperatorItem) => {
+    try {
+      setUnlockingId(op.id)
+      await securityService.unlockUser(op.id)
+      toast({
+        title: 'Conta desbloqueada',
+        description: `O acesso do usuário ${op.name || op.email} foi liberado.`,
+      })
+      await loadData()
+    } catch (err: any) {
+      toast({
+        title: 'Erro ao desbloquear',
+        description: err.message || 'Falha ao liberar acesso.',
+        variant: 'destructive',
+      })
+    } finally {
+      setUnlockingId(null)
+    }
+  }
+
+  const handleResetUser2Fa = async (op: OperatorItem) => {
+    if (
+      !confirm(
+        `Deseja reiniciar a autenticação em 2 etapas (2FA) de ${op.name || op.email}? O usuário terá que escanear um novo QR Code no próximo login.`,
+      )
+    ) {
+      return
+    }
+    try {
+      setResetting2faId(op.id)
+      await securityService.resetUser2Fa(op.id)
+      toast({
+        title: '2FA Reiniciado',
+        description: `A autenticação em duas etapas de ${op.name || op.email} foi resetada.`,
+      })
+      await loadData()
+    } catch (err: any) {
+      toast({
+        title: 'Erro ao resetar 2FA',
+        description: err.message || 'Falha ao desativar 2FA do usuário.',
+        variant: 'destructive',
+      })
+    } finally {
+      setResetting2faId(null)
+    }
+  }
 
   const loadData = async () => {
     try {
@@ -611,6 +665,37 @@ export default function OperatorsPage() {
 
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-1">
+                          {/* Indicador de Bloqueio por Força Bruta & Desbloqueio */}
+                          {(op as any).locked_until &&
+                            new Date((op as any).locked_until) > new Date() && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="h-8 px-2 text-[11px] text-amber-700 border-amber-300 bg-amber-50 hover:bg-amber-100"
+                                title="Conta bloqueada por excesso de tentativas. Clique para desbloquear."
+                                disabled={unlockingId === op.id || !permissions.isAdmin}
+                                onClick={() => handleUnlockUser(op)}
+                              >
+                                <LockIcon className="h-3.5 w-3.5 mr-1" />
+                                Desbloquear
+                              </Button>
+                            )}
+
+                          {/* Reset de 2FA TOTP (Admin) */}
+                          {permissions.isAdmin &&
+                            (op.role === 'admin' || (op as any).totp_enabled) && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-8 w-8 p-0 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
+                                title="Reiniciar 2FA do Usuário"
+                                disabled={resetting2faId === op.id}
+                                onClick={() => handleResetUser2Fa(op)}
+                              >
+                                <Smartphone className="h-4 w-4" />
+                              </Button>
+                            )}
+
                           {canManage && (
                             <Button
                               variant="ghost"
@@ -741,6 +826,36 @@ export default function OperatorsPage() {
                   </div>
 
                   <div className="flex items-center justify-end gap-2 pt-2 border-t border-border">
+                    {/* Desbloqueio Mobile */}
+                    {(op as any).locked_until &&
+                      new Date((op as any).locked_until) > new Date() &&
+                      permissions.isAdmin && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="text-xs h-8 text-amber-700 border-amber-300 bg-amber-50"
+                          onClick={() => handleUnlockUser(op)}
+                          disabled={unlockingId === op.id}
+                        >
+                          <LockIcon className="h-3.5 w-3.5 mr-1" />
+                          Desbloquear
+                        </Button>
+                      )}
+
+                    {/* Reset 2FA Mobile */}
+                    {permissions.isAdmin && (op.role === 'admin' || (op as any).totp_enabled) && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="text-xs h-8 text-emerald-700 border-emerald-300 hover:bg-emerald-50"
+                        onClick={() => handleResetUser2Fa(op)}
+                        disabled={resetting2faId === op.id}
+                      >
+                        <Smartphone className="h-3.5 w-3.5 mr-1" />
+                        Resetar 2FA
+                      </Button>
+                    )}
+
                     {canManage && (
                       <Button
                         variant="outline"

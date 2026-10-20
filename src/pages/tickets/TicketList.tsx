@@ -33,6 +33,7 @@ import {
 import { getTicketsWithLastInteraction, updateTicket, TicketRecord } from '@/services/tickets'
 import { computeLastActivityMs, isStaleClosed } from '@/lib/stale-time'
 import { StaleBadge } from '@/components/StaleBadge'
+import { formatDateTime, formatTicketAge } from '@/lib/date-format'
 import { useIsMobile } from '@/hooks/use-mobile'
 import { Card, CardContent } from '@/components/ui/card'
 import { getUsers, UserItem } from '@/services/users'
@@ -520,14 +521,18 @@ export default function TicketList() {
                       {t.expand?.assigned_to?.name || 'Não atribuído'}
                     </span>
                   </div>
-                  <div className="flex items-center justify-between gap-2 border-t pt-2">
-                    <span className="text-xs text-muted-foreground">
-                      {t.expand?.company?.trade_name || 'Geral'}
-                    </span>
+                  <div className="flex items-center justify-between gap-2 border-t pt-2 text-xs text-muted-foreground">
+                    <div className="flex flex-col">
+                      <span className="text-[11px] font-medium text-slate-700 dark:text-slate-300">
+                        {t.expand?.company?.trade_name || 'Geral'}
+                      </span>
+                      <span className="text-[10px] text-muted-foreground">
+                        Aberto em: {formatDateTime(t.created)} ({formatTicketAge(t.created, now)})
+                      </span>
+                    </div>
                     <div className="flex items-center gap-2">
                       <span className="inline-flex items-center gap-1 text-xs text-slate-500">
                         <Hourglass className="h-3 w-3" />
-                        Sem atualização
                       </span>
                       <StaleBadge elapsedSeconds={getStaleSeconds(t, now)} />
                     </div>
@@ -560,6 +565,14 @@ export default function TicketList() {
                   />
                   <th className="px-4 py-3">Título</th>
                   <th className="px-4 py-3">Cliente</th>
+                  <SortableTh
+                    sortKey="created"
+                    label="Abertura"
+                    activeKey={sortKey}
+                    dir={sortDir}
+                    onToggle={toggleSort}
+                    title="Data e hora de abertura do chamado"
+                  />
                   <SortableTh
                     sortKey="priority"
                     label="Prioridade"
@@ -645,6 +658,16 @@ export default function TicketList() {
                       </td>
                       <td className="px-4 py-3 text-muted-foreground">
                         {t.expand?.company?.trade_name || 'Geral'}
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap">
+                        <div className="flex flex-col">
+                          <span className="font-mono text-xs text-slate-800 dark:text-slate-200">
+                            {formatDateTime(t.created)}
+                          </span>
+                          <span className="text-[10px] text-muted-foreground">
+                            {formatTicketAge(t.created, now)}
+                          </span>
+                        </div>
                       </td>
                       <td className="px-4 py-3">
                         <PriorityBadge priority={t.priority} />

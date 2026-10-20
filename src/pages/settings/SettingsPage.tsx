@@ -17,6 +17,8 @@ import {
 } from '@/services/email-config'
 import { ImapEmailSettings } from '@/components/settings/ImapEmailSettings'
 import VaultPage from '@/pages/vault/VaultPage'
+import { SecuritySettingsTab } from '@/components/settings/SecuritySettingsTab'
+import { ShieldCheck } from 'lucide-react'
 import {
   getVoiceAlertsEnabled,
   setVoiceAlertsEnabled,
@@ -54,12 +56,22 @@ export default function SettingsPage() {
       ? 'email'
       : searchParams.get('tab') === 'vault'
         ? 'vault'
-        : 'general'
-  const [mainTab, setMainTab] = useState<'general' | 'email' | 'vault'>(initialTab)
+        : searchParams.get('tab') === 'security'
+          ? 'security'
+          : 'general'
+  const [mainTab, setMainTab] = useState<'general' | 'email' | 'vault' | 'security'>(initialTab)
 
-  const handleTabChange = (tab: 'general' | 'email' | 'vault') => {
+  const handleTabChange = (tab: 'general' | 'email' | 'vault' | 'security') => {
     setMainTab(tab)
-    setSearchParams(tab === 'email' ? { tab: 'email' } : tab === 'vault' ? { tab: 'vault' } : {})
+    setSearchParams(
+      tab === 'email'
+        ? { tab: 'email' }
+        : tab === 'vault'
+          ? { tab: 'vault' }
+          : tab === 'security'
+            ? { tab: 'security' }
+            : {},
+    )
   }
 
   // Sincronizar se o parâmetro de URL mudar
@@ -69,8 +81,8 @@ export default function SettingsPage() {
       setMainTab('email')
     } else if (tabFromUrl === 'vault' && mainTab !== 'vault') {
       setMainTab('vault')
-    } else if (!tabFromUrl && (mainTab === 'email' || mainTab === 'vault')) {
-      // Se não houver parâmetro mas o usuário clicou no menu geral
+    } else if (tabFromUrl === 'security' && mainTab !== 'security') {
+      setMainTab('security')
     }
   }, [searchParams])
 
@@ -294,6 +306,21 @@ export default function SettingsPage() {
           <Button
             type="button"
             size="sm"
+            variant={mainTab === 'security' ? 'default' : 'ghost'}
+            onClick={() => handleTabChange('security')}
+            className={`h-8 text-xs font-semibold rounded-lg transition-all ${
+              mainTab === 'security'
+                ? 'bg-emerald-600 text-white shadow-sm'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100'
+            }`}
+          >
+            <ShieldCheck className="h-3.5 w-3.5 mr-1.5" />
+            Segurança & Sessão
+          </Button>
+
+          <Button
+            type="button"
+            size="sm"
             variant={mainTab === 'vault' ? 'default' : 'ghost'}
             onClick={() => handleTabChange('vault')}
             className={`h-8 text-xs font-semibold rounded-lg transition-all ${
@@ -322,6 +349,9 @@ export default function SettingsPage() {
           </Button>
         </div>
       </div>
+
+      {/* SEÇÃO SEGURANÇA & SESSÃO (Expiração, Força Bruta, 2FA) */}
+      {mainTab === 'security' && <SecuritySettingsTab isAdmin={permissions.isAdmin} />}
 
       {/* SEÇÃO 0: COFRE DE SENHAS */}
       {mainTab === 'vault' && (

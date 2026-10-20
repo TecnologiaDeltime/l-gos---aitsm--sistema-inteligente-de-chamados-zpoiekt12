@@ -1,133 +1,466 @@
-import { useState } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
-import { Mail, Lock, Loader2 } from 'lucide-react'
-import { ClientResponseError } from 'pocketbase'
+import React, { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { pb } from '@/lib/pocketbase/client'
 import { useAuth } from '@/hooks/use-auth'
+import { securityService, TwoFactorSetupResponse } from '@/services/security'
+import { QrCodeDisplay } from '@/components/QrCodeDisplay'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Checkbox } from '@/components/ui/checkbox'
+import { Label } from '@/components/ui/label'
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card'
+import { Alert, AlertDescription } from '@/components/ui/alert'
 import { useToast } from '@/hooks/use-toast'
-import serviceOneLogo from '@/assets/chatgpt-image-16-de-ago.de-2026-194645-c96c2.png'
+import {
+  KeyRound,
+  ShieldAlert,
+  ShieldCheck,
+  Smartphone,
+  Copy,
+  Check,
+  ArrowLeft,
+  LifeBuoy,
+} from 'lucide-react'
+
+type LoginStep = 'credentials' | 'totp' | 'totp_setup'
 
 export default function Login() {
-  const [email, setEmail] = useState('inovacao@deltime.com.br')
-  const [password, setPassword] = useState('Skip@Pass')
-  const [loading, setLoading] = useState(false)
-  const { signIn } = useAuth()
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [totpCode, setTotpCode] = useState('')
+  const [isRecoveryMode, setIsRecoveryMode] = useState(false)
+  const [step, setStep] = useState<LoginStep>('credentials')
+
+  // Setup de 2FA
+  const [setupData, setSetupData] = useState<TwoFactorSetupResponse | null>(null)
+  const [copiedSecret, setCopiedSecret] = useState(false)
+  const [copiedCodes, setCopiedCodes] = useState(false)
+  const [setupCode, setSetupCode] = useState('')
+
+  // Armazenamento temporário das credenciais validadas para completar a sessão após 2FA
+  const [tempAuth, setTempAuth] = useState<{ token: string; record: any } | null>(null)
+
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [infoMessage, setInfoMessage] = useState<string | null>(null)
+
   const navigate = useNavigate()
+  const { login, isAuthenticated } = useAuth()
   const { toast } = useToast()
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setLoading(true)
-
-    const { error } = await signIn(email, password)
-    setLoading(false)
-
-    if (error) {
-      // Surface the real backend message instead of a generic string, so
-      // the user knows whether it's a bad password, a disabled account, etc.
-      let description = 'Verifique suas credenciais de e-mail e senha.'
-      if (error instanceof ClientResponseError) {
-        const status = error.status
-        if (status === 0 || error.isAbort) {
-          description =
-            'Não foi possível conectar ao servidor. Verifique sua conexão e tente novamente.'
-        } else if (error.response?.message) {
-          description = error.response.message
-        } else if (error.message) {
-          description = error.message
-        }
-      } else if (error instanceof Error && error.message) {
-        description = error.message
-      }
-      toast({
-        title: 'Falha no login',
-        description,
-        variant: 'destructive',
-      })
-    } else {
-      toast({ title: 'Bem-vindo ao ServiceOne!' })
+  // Se já autenticado e sem etapas intermediárias pendentes, direcionar
+  useEffect(() => {
+    if (isAuthenticated && step === 'credentials') {
       navigate('/dashboard')
+    }
+  }, [isAuthenticated, navigate, step])
+
+  // Checar se há mensagem de sessão expirada
+  useEffect(() => {
+    const expiredMsg = sessionStorage.getItem('itsm_session_expired_message')
+    if (expiredMsg) {
+      setInfoMessage(expiredMsg)
+      sessionStorage.removeItem('itsm_session_expired_message')
+    }
+  }, [])
+
+  // Passo 1: Validação de E-mail e Senha
+  const handleCredentialsSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setIsLoading(true)
+    setError(null)
+    setInfoMessage(null)
+
+    try {
+      // 1. Tentar autenticar com senha no PocketBase
+      const authData = await pb.collection('users').authWithPassword(email, password)
+
+      // 2. Checar requisitos de 2FA
+      const twoFaStatus = await securityService.check2Fa(email)
+
+      if (twoFaStatus.required) {
+        // Guardar authData temporário na memória
+        setTempAuth(authData)
+
+        if (twoFaStatus.needs_setup) {
+          // Primeiro acesso do Admin/Gestor: precisa configurar 2FA TOTP
+          try {
+            const setupRes = await securityService.setup2Fa()
+            setSetupData(setupRes)
+            setStep('totp_setup')
+          } catch (setupErr: any) {
+            setError(
+              setupErr?.message ||
+                'Falha ao iniciar a configuração do segundo fator (2FA). Tente novamente.',
+            )
+          }
+        } else {
+          // Usuário já possui 2FA configurado: pedir código de 6 dígitos
+          setStep('totp')
+        }
+      } else {
+        // Não requer 2FA: concluir login imediatamente
+        login(authData.token, authData.record)
+        navigate('/dashboard')
+      }
+    } catch (err: any) {
+      console.error('Login error:', err)
+      const msg =
+        err?.response?.message ||
+        err?.message ||
+        'E-mail ou senha incorretos. Verifique suas credenciais.'
+      setError(msg)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  // Passo 2: Validação de Código TOTP de 6 dígitos no login
+  const handleTotpSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!totpCode.trim()) {
+      setError('Por favor, informe o código de verificação.')
+      return
+    }
+
+    setIsLoading(true)
+    setError(null)
+
+    try {
+      await securityService.verify2FaLogin(email, totpCode.trim(), isRecoveryMode)
+
+      // Sucesso na verificação do 2FA
+      if (tempAuth) {
+        login(tempAuth.token, tempAuth.record)
+        toast({
+          title: 'Autenticação concluída',
+          description: 'Login seguro realizado com sucesso.',
+        })
+        navigate('/dashboard')
+      } else {
+        // Fallback: refazer auth se tempAuth expirou
+        const authData = await pb.collection('users').authWithPassword(email, password)
+        login(authData.token, authData.record)
+        navigate('/dashboard')
+      }
+    } catch (err: any) {
+      const msg =
+        err?.response?.message ||
+        err?.message ||
+        'Código inválido ou expirado. Verifique o horário do seu dispositivo.'
+      setError(msg)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  // Passo 3: Confirmação do Primeiro Acesso / Setup de TOTP
+  const handleConfirmSetup = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!setupCode.trim()) {
+      setError('Digite o código de 6 dígitos gerado no seu aplicativo.')
+      return
+    }
+
+    setIsLoading(true)
+    setError(null)
+
+    try {
+      await securityService.confirm2Fa(setupCode.trim())
+
+      toast({
+        title: '2FA Ativado com sucesso!',
+        description: 'Autenticação de dois fatores configurada para sua conta.',
+      })
+
+      // Concluir login
+      if (tempAuth) {
+        login(tempAuth.token, tempAuth.record)
+        navigate('/dashboard')
+      } else {
+        const authData = await pb.collection('users').authWithPassword(email, password)
+        login(authData.token, authData.record)
+        navigate('/dashboard')
+      }
+    } catch (err: any) {
+      const msg =
+        err?.response?.message ||
+        err?.message ||
+        'Código inválido ou expirado. Digite o código atual do seu aplicativo autenticador.'
+      setError(msg)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const copyToClipboard = (text: string, type: 'secret' | 'codes') => {
+    navigator.clipboard.writeText(text)
+    if (type === 'secret') {
+      setCopiedSecret(true)
+      setTimeout(() => setCopiedSecret(false), 2000)
+    } else {
+      setCopiedCodes(true)
+      setTimeout(() => setCopiedCodes(false), 2000)
     }
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-900 via-blue-950 to-purple-950 p-4">
-      <div className="w-full max-w-md space-y-6 rounded-2xl bg-white p-8 shadow-2xl dark:bg-slate-900 animate-fade-in-up">
-        <div className="flex flex-col items-center justify-center text-center space-y-2">
-          <img
-            src={serviceOneLogo}
-            alt="ServiceOne"
-            className="h-24 sm:h-28 w-auto max-w-[300px] object-contain mb-1"
-          />
-          <p className="text-sm text-slate-500 dark:text-slate-400">
-            Gestão de Chamados e Controle de SLA
-          </p>
+    <div className="flex min-h-screen items-center justify-center bg-background px-4 py-8">
+      <Card className="w-full max-w-md shadow-lg border">
+        {/* CABEÇALHO */}
+        <CardHeader className="space-y-1 text-center">
+          <div className="flex justify-center mb-2">
+            <div className="p-3 bg-primary/10 rounded-full text-primary">
+              {step === 'credentials' && <KeyRound className="h-6 w-6" />}
+              {step === 'totp' && <Smartphone className="h-6 w-6" />}
+              {step === 'totp_setup' && <ShieldCheck className="h-6 w-6" />}
+            </div>
+          </div>
+
+          <CardTitle className="text-2xl font-bold tracking-tight">
+            {step === 'credentials' && 'Acesso ao Sistema'}
+            {step === 'totp' && 'Verificação em Duas Etapas'}
+            {step === 'totp_setup' && 'Configurar 2FA (Obrigatório)'}
+          </CardTitle>
+
+          <CardDescription>
+            {step === 'credentials' && 'Entre com suas credenciais para continuar'}
+            {step === 'totp' &&
+              (isRecoveryMode
+                ? 'Insira um dos seus códigos de recuperação únicos'
+                : 'Digite o código de 6 dígitos gerado pelo seu app autenticador')}
+            {step === 'totp_setup' &&
+              'Perfis com privilégios administrativos requerem autenticação em duas etapas'}
+          </CardDescription>
+        </CardHeader>
+
+        {/* FEEDBACKS GLOBAIS */}
+        <div className="px-6 space-y-3">
+          {infoMessage && (
+            <Alert className="bg-amber-50 dark:bg-amber-950/30 border-amber-200 text-amber-800 dark:text-amber-300">
+              <ShieldAlert className="h-4 w-4" />
+              <AlertDescription className="text-xs">{infoMessage}</AlertDescription>
+            </Alert>
+          )}
+
+          {error && (
+            <Alert variant="destructive">
+              <ShieldAlert className="h-4 w-4" />
+              <AlertDescription className="text-xs">{error}</AlertDescription>
+            </Alert>
+          )}
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-1">
-            <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-              E-mail
-            </label>
-            <div className="relative">
-              <Mail className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
-              <Input
-                type="email"
-                required
-                placeholder="seu.email@empresa.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="pl-9"
-              />
-            </div>
-          </div>
+        {/* ========================================================= */}
+        {/* ETAPA 1: CREDENCIAIS DE E-MAIL E SENHA                    */}
+        {/* ========================================================= */}
+        {step === 'credentials' && (
+          <form onSubmit={handleCredentialsSubmit}>
+            <CardContent className="space-y-4 pt-4">
+              <div className="space-y-2">
+                <Label htmlFor="email">E-mail</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="exemplo@empresa.com.br"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  disabled={isLoading}
+                  autoComplete="username"
+                />
+              </div>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="password">Senha</Label>
+                  <a
+                    href="/recover-password"
+                    className="text-xs text-primary hover:underline hover:opacity-80"
+                  >
+                    Esqueceu a senha?
+                  </a>
+                </div>
+                <Input
+                  id="password"
+                  type="password"
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  disabled={isLoading}
+                  autoComplete="current-password"
+                />
+              </div>
+            </CardContent>
+            <CardFooter className="flex flex-col gap-4">
+              <Button type="submit" className="w-full" disabled={isLoading}>
+                {isLoading ? 'Autenticando...' : 'Entrar'}
+              </Button>
+            </CardFooter>
+          </form>
+        )}
 
-          <div className="space-y-1">
-            <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-              Senha
-            </label>
-            <div className="relative">
-              <Lock className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
-              <Input
-                type="password"
-                required
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="pl-9"
-              />
-            </div>
-          </div>
+        {/* ========================================================= */}
+        {/* ETAPA 2: DIGITAR CÓDIGO TOTP / CÓDIGO DE RECUPERAÇÃO      */}
+        {/* ========================================================= */}
+        {step === 'totp' && (
+          <form onSubmit={handleTotpSubmit}>
+            <CardContent className="space-y-4 pt-4">
+              <div className="p-3 bg-muted/60 rounded-lg text-xs text-muted-foreground flex items-center justify-between">
+                <span>
+                  Conta: <strong className="text-foreground">{email}</strong>
+                </span>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 text-xs px-2"
+                  onClick={() => {
+                    setStep('credentials')
+                    setTotpCode('')
+                    setError(null)
+                  }}
+                >
+                  <ArrowLeft className="w-3 h-3 mr-1" /> Trocar
+                </Button>
+              </div>
 
-          <div className="flex items-center justify-between text-xs">
-            <div className="flex items-center gap-2">
-              <Checkbox id="remember" defaultChecked />
-              <label htmlFor="remember" className="text-slate-600 cursor-pointer">
-                Lembrar de mim
-              </label>
-            </div>
-            <Link to="/recuperar-senha" className="text-blue-600 hover:underline">
-              Esqueceu sua senha?
-            </Link>
-          </div>
+              <div className="space-y-2">
+                <Label htmlFor="totpCode">
+                  {isRecoveryMode ? 'Código de Recuperação (Ex: ABCD-1234)' : 'Código de 6 Dígitos'}
+                </Label>
+                <Input
+                  id="totpCode"
+                  type="text"
+                  maxLength={isRecoveryMode ? 15 : 6}
+                  placeholder={isRecoveryMode ? 'XXXX-XXXX' : '000000'}
+                  className="text-center font-mono text-xl tracking-widest"
+                  value={totpCode}
+                  onChange={(e) => setTotpCode(e.target.value)}
+                  required
+                  autoFocus
+                  disabled={isLoading}
+                />
+              </div>
 
-          <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-700" disabled={loading}>
-            {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Entrar no Sistema'}
-          </Button>
-        </form>
+              <div className="text-center">
+                <button
+                  type="button"
+                  className="text-xs text-primary hover:underline"
+                  onClick={() => {
+                    setIsRecoveryMode(!isRecoveryMode)
+                    setTotpCode('')
+                    setError(null)
+                  }}
+                >
+                  {isRecoveryMode
+                    ? 'Voltar ao código do aplicativo autenticador'
+                    : 'Perdeu o celular? Usar código de recuperação'}
+                </button>
+              </div>
+            </CardContent>
 
-        <div className="rounded-lg bg-slate-50 p-3 text-center text-xs text-slate-500 border border-slate-200">
-          <p className="font-semibold text-slate-700">Credenciais para teste:</p>
-          <p>
-            E-mail: <code className="text-blue-600">inovacao@deltime.com.br</code>
-          </p>
-          <p>
-            Senha: <code className="text-blue-600">Skip@Pass</code>
-          </p>
-        </div>
-      </div>
+            <CardFooter className="flex flex-col gap-2">
+              <Button type="submit" className="w-full" disabled={isLoading}>
+                {isLoading ? 'Verificando...' : 'Confirmar e Entrar'}
+              </Button>
+            </CardFooter>
+          </form>
+        )}
+
+        {/* ========================================================= */}
+        {/* ETAPA 3: SETUP DO 2FA (PRIMEIRO ACESSO DO ADMIN)          */}
+        {/* ========================================================= */}
+        {step === 'totp_setup' && setupData && (
+          <form onSubmit={handleConfirmSetup}>
+            <CardContent className="space-y-4 pt-2">
+              <div className="text-xs text-muted-foreground">
+                1. Escaneie o código abaixo com o <strong>Google Authenticator</strong>,{' '}
+                <strong>Microsoft Authenticator</strong> ou seu aplicativo preferido:
+              </div>
+
+              {/* QR Code */}
+              <div className="flex justify-center py-2">
+                <QrCodeDisplay value={setupData.otpauth_url} size={180} />
+              </div>
+
+              {/* Chave manual se a câmera falhar */}
+              <div className="space-y-1">
+                <div className="flex justify-between items-center text-xs">
+                  <span className="text-muted-foreground">Ou insira a chave manualmente:</span>
+                  <button
+                    type="button"
+                    onClick={() => copyToClipboard(setupData.secret, 'secret')}
+                    className="flex items-center gap-1 text-primary hover:underline text-xs"
+                  >
+                    {copiedSecret ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+                    {copiedSecret ? 'Copiado!' : 'Copiar'}
+                  </button>
+                </div>
+                <div className="p-2 bg-muted rounded font-mono text-xs text-center select-all break-all">
+                  {setupData.secret}
+                </div>
+              </div>
+
+              {/* Códigos de Recuperação de Uso Único */}
+              <div className="space-y-1 pt-2 border-t">
+                <div className="flex justify-between items-center text-xs">
+                  <span className="font-semibold text-foreground flex items-center gap-1">
+                    <LifeBuoy className="w-3.5 h-3.5 text-amber-500" /> Códigos de recuperação:
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => copyToClipboard(setupData.recovery_codes.join('\n'), 'codes')}
+                    className="flex items-center gap-1 text-primary hover:underline text-xs"
+                  >
+                    {copiedCodes ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+                    {copiedCodes ? 'Copiados!' : 'Copiar todos'}
+                  </button>
+                </div>
+                <div className="p-2 bg-muted/60 border rounded grid grid-cols-2 gap-1 font-mono text-xs text-center">
+                  {setupData.recovery_codes.map((code, idx) => (
+                    <span key={idx} className="bg-background/80 py-1 rounded">
+                      {code}
+                    </span>
+                  ))}
+                </div>
+                <p className="text-[11px] text-muted-foreground">
+                  Guarde estes códigos em local seguro. Eles são a única forma de recuperar seu
+                  acesso se perder o autenticador.
+                </p>
+              </div>
+
+              {/* Campo para o primeiro código de confirmação */}
+              <div className="space-y-2 pt-2 border-t">
+                <Label htmlFor="setupCode">2. Digite o código gerado no app para ativar:</Label>
+                <Input
+                  id="setupCode"
+                  type="text"
+                  maxLength={6}
+                  placeholder="000000"
+                  className="text-center font-mono text-xl tracking-widest"
+                  value={setupCode}
+                  onChange={(e) => setSetupCode(e.target.value)}
+                  required
+                  disabled={isLoading}
+                />
+              </div>
+            </CardContent>
+
+            <CardFooter className="flex flex-col gap-2">
+              <Button type="submit" className="w-full" disabled={isLoading}>
+                {isLoading ? 'Ativando...' : 'Ativar 2FA e Concluir Login'}
+              </Button>
+            </CardFooter>
+          </form>
+        )}
+      </Card>
     </div>
   )
 }

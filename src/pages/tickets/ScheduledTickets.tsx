@@ -58,6 +58,7 @@ import {
 } from '@/components/ui/alert-dialog'
 import { toast } from '@/hooks/use-toast'
 import { usePermissions } from '@/hooks/use-permissions'
+import { formatDateTime, formatTicketAge } from '@/lib/date-format'
 import {
   ScheduledTicketRecord,
   getScheduledTickets,
@@ -578,6 +579,9 @@ export const ScheduledTickets: React.FC = () => {
                           </div>
                           <p className="text-xs text-muted-foreground line-clamp-1">
                             Solicitante: {t.requester_name}
+                          </p>
+                          <p className="text-[10px] text-muted-foreground">
+                            Criado em: {formatDateTime(t.created)} ({formatTicketAge(t.created)})
                           </p>
                           {t.last_ticket_created && t.expand?.last_ticket_created && (
                             <Link
