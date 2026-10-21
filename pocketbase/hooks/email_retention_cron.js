@@ -16,6 +16,43 @@
 // 7. Mensagens de erro amigáveis em português, sem derrubar o cron.
 
 ;(function () {
+  // Descriptografia autocontida AES-256 para execução segura no contexto isolado do cron/rotas
+  function safeDecryptSecret(val) {
+    if (!val || typeof val !== 'string') return ''
+    val = val.trim()
+    var PREFIX = 'enc:v1:'
+    if (val.indexOf(PREFIX) !== 0) return val
+    if (typeof globalThis !== 'undefined' && typeof globalThis.itsmDecrypt === 'function') {
+      try {
+        var decGlobal = globalThis.itsmDecrypt(val)
+        if (decGlobal && decGlobal.indexOf(PREFIX) !== 0) return decGlobal
+      } catch (_) {}
+    }
+    try {
+      var k = ''
+      if (typeof $os !== 'undefined' && typeof $os.getenv === 'function') {
+        k = $os.getenv('ITSM_ENCRYPTION_KEY') || ''
+      }
+      if (!k && typeof $secrets !== 'undefined' && typeof $secrets.get === 'function') {
+        k = $secrets.get('ITSM_ENCRYPTION_KEY') || ''
+      }
+      if (!k) {
+        k = 'itsm_default_fallback_aes256_key_super_safe_2026'
+      }
+      var derivedKey = ''
+      try {
+        derivedKey = $security.sha256(k).substring(0, 32)
+      } catch (_) {
+        derivedKey = (k + '01234567890123456789012345678901').substring(0, 32)
+      }
+      var payload = val.substring(PREFIX.length)
+      var dec = $security.decrypt(payload, derivedKey)
+      return dec || ''
+    } catch (err) {
+      return '__DECRYPT_FAILED__'
+    }
+  }
+
   // =========================================================================
   // CLIENTE MICROSOFT GRAPH API EMBUTIDO
   // =========================================================================
@@ -31,7 +68,8 @@
     getAccessToken: function (params) {
       var tenantId = (params.tenant_id || params.graph_tenant_id || '').trim()
       var clientId = (params.client_id || params.graph_client_id || '').trim()
-      var clientSecret = (params.client_secret || params.graph_client_secret || '').trim()
+      var rawSecret = (params.client_secret || params.graph_client_secret || '').trim()
+      var clientSecret = safeDecryptSecret(rawSecret)
 
       if (!tenantId) {
         throw new Error('Tenant ID (ID do Locatário) da Microsoft não configurado.')
@@ -43,11 +81,15 @@
         throw new Error('Client Secret (Segredo do Cliente) da Microsoft não configurado.')
       }
 
+      if (clientSecret === '__DECRYPT_FAILED__' || clientSecret.indexOf('enc:v1:') === 0) {
+        throw new Error('Falha interna de descriptografia — não é problema no Entra ID.')
+      }
+
       var guidRegex =
         /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/
       if (guidRegex.test(clientSecret)) {
         throw new Error(
-          "O campo 'Segredo do Cliente' parece conter o ID do Segredo (identificador) e não o VALOR do segredo. No Entra ID > Certificados e segredos, copie a coluna 'Valor' do segredo — ela só é exibida uma vez na criação; se não estiver mais visível, crie um novo segredo e cole o Valor aqui.",
+          'O valor salvo parece ser o ID do segredo (formato GUID) — copie o VALOR do segredo.',
         )
       }
 
@@ -98,7 +140,7 @@
           errDesc.indexOf('Invalid client secret') !== -1
         ) {
           throw new Error(
-            'Segredo do Cliente inválido ou expirado (AADSTS7000215). Gere um novo Segredo no portal Entra ID.',
+            'Segredo recusado pela Microsoft (AADSTS7000215). Gere um novo Segredo no portal Entra ID.',
           )
         }
         if (
@@ -397,25 +439,40 @@
       var graphTenantId = (config.getString('graph_tenant_id') || '').trim()
       var graphClientId = (config.getString('graph_client_id') || '').trim()
       var rawGraphSecret = (config.getString('graph_client_secret') || '').trim()
-      var graphClientSecret = rawGraphSecret
-      if (typeof globalThis.itsmDecrypt === 'function') {
-        graphClientSecret = globalThis.itsmDecrypt(rawGraphSecret)
-      }
+      var graphClientSecret = safeDecryptSecret(rawGraphSecret)
 
+      var isDecryptFailed =
+        graphClientSecret === '__DECRYPT_FAILED__' || graphClientSecret.indexOf('enc:v1:') === 0
       var isGuidSecret =
+        !isDecryptFailed &&
         /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(
           graphClientSecret,
         )
 
-      if (!graphTenantId || !graphClientId || !graphClientSecret || !mailbox || isGuidSecret) {
-        var msgMissing = isGuidSecret
-          ? "O campo 'Segredo do Cliente' parece conter o ID do Segredo (identificador) e não o VALOR do segredo. No Entra ID > Certificados e segredos, copie a coluna 'Valor' do segredo — ela só é exibida uma vez na criação; se não estiver mais visível, crie um novo segredo e cole o Valor aqui."
-          : 'Credenciais Microsoft Graph (Tenant ID, Client ID, Client Secret ou Caixa) incompletas.'
+      if (
+        !graphTenantId ||
+        !graphClientId ||
+        !graphClientSecret ||
+        !mailbox ||
+        isDecryptFailed ||
+        isGuidSecret
+      ) {
+        var msgMissing = ''
+        var retentionStatus = 'Falha na Configuração'
+        if (isDecryptFailed) {
+          msgMissing = 'Falha interna de descriptografia — não é problema no Entra ID.'
+          retentionStatus = 'Falha Interna de Descriptografia'
+        } else if (isGuidSecret) {
+          msgMissing =
+            'O valor salvo parece ser o ID do segredo (formato GUID) — copie o VALOR do segredo.'
+          retentionStatus = 'Falha de Autenticação Graph'
+        } else {
+          msgMissing =
+            'Credenciais Microsoft Graph (Tenant ID, Client ID, Client Secret ou Caixa) incompletas.'
+          retentionStatus = 'Falha na Configuração'
+        }
         config.set('last_retention_at', new Date().toISOString())
-        config.set(
-          'last_retention_status',
-          isGuidSecret ? 'Falha de Autenticação Graph' : 'Falha na Configuração',
-        )
+        config.set('last_retention_status', retentionStatus)
         config.set('last_retention_error', msgMissing)
         $app.save(config)
         return {
@@ -800,10 +857,7 @@
     var inspectError = null
 
     // Se Graph configurado, tenta obter contadores em tempo real de forma leve
-    var retentionGraphSecret = config.getString('graph_client_secret')
-    if (typeof globalThis.itsmDecrypt === 'function') {
-      retentionGraphSecret = globalThis.itsmDecrypt(retentionGraphSecret)
-    }
+    var retentionGraphSecret = safeDecryptSecret(config.getString('graph_client_secret'))
 
     if (
       receptionMode === 'graph' &&

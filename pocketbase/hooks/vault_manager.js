@@ -184,12 +184,45 @@ routerAdd(
       },
     )
 
+    // Helper autocontido de descriptografia AES-256
+    function safeDecryptVaultSecret(val) {
+      if (!val || typeof val !== 'string') return ''
+      var PREFIX = 'enc:v1:'
+      if (val.indexOf(PREFIX) !== 0) return val
+      if (typeof globalThis !== 'undefined' && typeof globalThis.itsmDecrypt === 'function') {
+        try {
+          var decGlobal = globalThis.itsmDecrypt(val)
+          if (decGlobal && decGlobal.indexOf(PREFIX) !== 0) return decGlobal
+        } catch (_) {}
+      }
+      try {
+        var k = ''
+        if (typeof $os !== 'undefined' && typeof $os.getenv === 'function') {
+          k = $os.getenv('ITSM_ENCRYPTION_KEY') || ''
+        }
+        if (!k && typeof $secrets !== 'undefined' && typeof $secrets.get === 'function') {
+          k = $secrets.get('ITSM_ENCRYPTION_KEY') || ''
+        }
+        if (!k) {
+          k = 'itsm_default_fallback_aes256_key_super_safe_2026'
+        }
+        var derivedKey = ''
+        try {
+          derivedKey = $security.sha256(k).substring(0, 32)
+        } catch (_) {
+          derivedKey = (k + '01234567890123456789012345678901').substring(0, 32)
+        }
+        var payload = val.substring(PREFIX.length)
+        var dec = $security.decrypt(payload, derivedKey)
+        return dec || ''
+      } catch (err) {
+        return val
+      }
+    }
+
     // 6. Descriptografar a senha caso esteja cifrada
     var rawPassword = credRecord.getString('password')
-    var plainPassword = rawPassword
-    if (typeof globalThis.itsmDecrypt === 'function') {
-      plainPassword = globalThis.itsmDecrypt(rawPassword)
-    }
+    var plainPassword = safeDecryptVaultSecret(rawPassword)
 
     // Retornar credenciais reveladas
     return e.json(200, {

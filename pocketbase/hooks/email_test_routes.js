@@ -10,6 +10,43 @@
 // - GET  /backend/v1/emails/audit-logs
 
 ;(function () {
+  // Descriptografia autocontida AES-256 para execução segura no contexto isolado de rotas/cron
+  function safeDecryptSecret(val) {
+    if (!val || typeof val !== 'string') return ''
+    val = val.trim()
+    var PREFIX = 'enc:v1:'
+    if (val.indexOf(PREFIX) !== 0) return val
+    if (typeof globalThis !== 'undefined' && typeof globalThis.itsmDecrypt === 'function') {
+      try {
+        var decGlobal = globalThis.itsmDecrypt(val)
+        if (decGlobal && decGlobal.indexOf(PREFIX) !== 0) return decGlobal
+      } catch (_) {}
+    }
+    try {
+      var k = ''
+      if (typeof $os !== 'undefined' && typeof $os.getenv === 'function') {
+        k = $os.getenv('ITSM_ENCRYPTION_KEY') || ''
+      }
+      if (!k && typeof $secrets !== 'undefined' && typeof $secrets.get === 'function') {
+        k = $secrets.get('ITSM_ENCRYPTION_KEY') || ''
+      }
+      if (!k) {
+        k = 'itsm_default_fallback_aes256_key_super_safe_2026'
+      }
+      var derivedKey = ''
+      try {
+        derivedKey = $security.sha256(k).substring(0, 32)
+      } catch (_) {
+        derivedKey = (k + '01234567890123456789012345678901').substring(0, 32)
+      }
+      var payload = val.substring(PREFIX.length)
+      var dec = $security.decrypt(payload, derivedKey)
+      return dec || ''
+    } catch (err) {
+      return '__DECRYPT_FAILED__'
+    }
+  }
+
   // Helper para registrar log de auditoria
   function logAuditRecord(params) {
     try {
@@ -131,10 +168,7 @@
           ? configRec.getString('graph_client_secret')
           : ''
     ).trim()
-    var graphClientSecret = rawGraphSecret
-    if (typeof globalThis.itsmDecrypt === 'function') {
-      graphClientSecret = globalThis.itsmDecrypt(rawGraphSecret)
-    }
+    var graphClientSecret = safeDecryptSecret(rawGraphSecret)
 
     var graphMailbox = (
       rawBody.graph_mailbox !== undefined
@@ -174,10 +208,7 @@
           ? configRec.getString('imap_password')
           : ''
     ).trim()
-    var pass = rawImapPass
-    if (typeof globalThis.itsmDecrypt === 'function') {
-      pass = globalThis.itsmDecrypt(rawImapPass)
-    }
+    var pass = safeDecryptSecret(rawImapPass)
 
     var encryption = (
       rawBody.imap_encryption !== undefined
@@ -263,7 +294,8 @@
         getAccessToken: function (params) {
           var tenantId = (params.tenant_id || params.graph_tenant_id || '').trim()
           var clientId = (params.client_id || params.graph_client_id || '').trim()
-          var clientSecret = (params.client_secret || params.graph_client_secret || '').trim()
+          var rawSecret = (params.client_secret || params.graph_client_secret || '').trim()
+          var clientSecret = safeDecryptSecret(rawSecret)
 
           if (!tenantId)
             throw new Error('Tenant ID (ID do Locatário) da Microsoft não configurado.')
@@ -272,11 +304,15 @@
           if (!clientSecret)
             throw new Error('Client Secret (Segredo do Cliente) da Microsoft não configurado.')
 
+          if (clientSecret === '__DECRYPT_FAILED__' || clientSecret.indexOf('enc:v1:') === 0) {
+            throw new Error('Falha interna de descriptografia — não é problema no Entra ID.')
+          }
+
           var guidRegex =
             /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/
           if (guidRegex.test(clientSecret)) {
             throw new Error(
-              "O campo 'Segredo do Cliente' parece conter o ID do Segredo (identificador) e não o VALOR do segredo. No Entra ID > Certificados e segredos, copie a coluna 'Valor' do segredo — ela só é exibida uma vez na criação; se não estiver mais visível, crie um novo segredo e cole o Valor aqui.",
+              'O valor salvo parece ser o ID do segredo (formato GUID) — copie o VALOR do segredo.',
             )
           }
 
@@ -334,7 +370,7 @@
               errDesc.indexOf('Invalid client secret') !== -1
             ) {
               throw new Error(
-                'Segredo do Cliente inválido ou expirado (AADSTS7000215). Gere um novo Segredo do Cliente em Registros de Aplicativo > Certificados e Segredos no Entra ID.',
+                'Segredo recusado pela Microsoft (AADSTS7000215). Gere um novo Segredo do Cliente em Registros de Aplicativo > Certificados e Segredos no Entra ID.',
               )
             }
             if (
@@ -544,11 +580,28 @@
       var client = GraphClient
 
       // Validação prévia de campos
+      var isDecryptFailed =
+        graphClientSecret === '__DECRYPT_FAILED__' || graphClientSecret.indexOf('enc:v1:') === 0
+      if (isDecryptFailed) {
+        var decFailMsg = 'Falha interna de descriptografia — não é problema no Entra ID.'
+        steps[0].status = 'failed'
+        steps[0].detail = decFailMsg
+        for (var siDec = 1; siDec < 7; siDec++) steps[siDec].status = 'skipped'
+        return c.json(200, {
+          success: false,
+          reception_mode: 'graph',
+          summary_message: decFailMsg,
+          steps: steps,
+          samples: [],
+          stats: { unread_count: 0, total_recent: 0 },
+        })
+      }
+
       var guidRegex =
         /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/
       if (guidRegex.test(graphClientSecret)) {
         var guidSecretMsg =
-          "O campo 'Segredo do Cliente' parece conter o ID do Segredo (identificador) e não o VALOR do segredo. No Entra ID > Certificados e segredos, copie a coluna 'Valor' do segredo — ela só é exibida uma vez na criação; se não estiver mais visível, crie um novo segredo e cole o Valor aqui."
+          'O valor salvo parece ser o ID do segredo (formato GUID) — copie o VALOR do segredo.'
         steps[0].status = 'failed'
         steps[0].detail = guidSecretMsg
         for (var siGuid = 1; siGuid < 7; siGuid++) steps[siGuid].status = 'skipped'
@@ -948,10 +1001,7 @@
           ? configRec.getString('graph_client_secret')
           : ''
     ).trim()
-    var graphClientSecret = rawDryRunSecret
-    if (typeof globalThis.itsmDecrypt === 'function') {
-      graphClientSecret = globalThis.itsmDecrypt(rawDryRunSecret)
-    }
+    var graphClientSecret = safeDecryptSecret(rawDryRunSecret)
 
     var graphMailbox = (
       rawBody.graph_mailbox !== undefined
@@ -978,15 +1028,31 @@
       isSynthetic = true
     } else if (receptionMode === 'graph') {
       // Modo Microsoft Graph (Oficial): buscar mensagem mais recente na caixa configurada
+      var isDryDecryptFailed =
+        graphClientSecret === '__DECRYPT_FAILED__' || graphClientSecret.indexOf('enc:v1:') === 0
       var isGuidSecret =
+        !isDryDecryptFailed &&
         /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(
           graphClientSecret,
         )
 
-      if (!graphTenantId || !graphClientId || !graphClientSecret || isGuidSecret) {
-        var authErrMsg = isGuidSecret
-          ? "O campo 'Segredo do Cliente' parece conter o ID do Segredo (identificador) e não o VALOR do segredo. No Entra ID > Certificados e segredos, copie a coluna 'Valor' do segredo."
-          : 'Configurações do Microsoft Graph incompletas (Tenant ID, Client ID ou Segredo não preenchidos). Preencha os parâmetros da caixa antes de executar o teste.'
+      if (
+        !graphTenantId ||
+        !graphClientId ||
+        !graphClientSecret ||
+        isDryDecryptFailed ||
+        isGuidSecret
+      ) {
+        var authErrMsg = ''
+        if (isDryDecryptFailed) {
+          authErrMsg = 'Falha interna de descriptografia — não é problema no Entra ID.'
+        } else if (isGuidSecret) {
+          authErrMsg =
+            'O valor salvo parece ser o ID do segredo (formato GUID) — copie o VALOR do segredo.'
+        } else {
+          authErrMsg =
+            'Configurações do Microsoft Graph incompletas (Tenant ID, Client ID ou Segredo não preenchidos). Preencha os parâmetros da caixa antes de executar o teste.'
+        }
         return c.json(200, {
           success: false,
           error: authErrMsg,
@@ -1605,10 +1671,7 @@
           ? configRec.getString('smtp_password') || configRec.getString('imap_password')
           : ''
     ).trim()
-    var pass = rawSmtpPass
-    if (typeof globalThis.itsmDecrypt === 'function') {
-      pass = globalThis.itsmDecrypt(rawSmtpPass)
-    }
+    var pass = safeDecryptSecret(rawSmtpPass)
 
     var senderName = (
       rawBody.smtp_sender_name !== undefined
@@ -1688,6 +1751,40 @@
     if (!port || isNaN(port)) missing.push('Porta SMTP (smtp_port)')
     if (!user) missing.push('Usuário de Autenticação (smtp_user)')
     if (!pass) missing.push('Senha / Segredo de Envio (smtp_password)')
+    var isSmtpDecryptFailed = pass === '__DECRYPT_FAILED__' || pass.indexOf('enc:v1:') === 0
+    if (isSmtpDecryptFailed) {
+      steps[0].status = 'failed'
+      steps[0].message = 'Falha interna de descriptografia — não é problema no Entra ID.'
+      steps[0].duration_ms = Date.now() - t1Start
+      for (var kDec = 1; kDec < 5; kDec++) {
+        steps[kDec].status = 'skipped'
+        steps[kDec].message = 'Etapa cancelada devido à falha de descriptografia da senha SMTP.'
+      }
+      var failMsgDec = 'Falha interna de descriptografia — não é problema no Entra ID.'
+      logAuditRecord({
+        testType: 'teste-smtp',
+        status: 'failed',
+        host: host,
+        port: port || 0,
+        userAccount: user,
+        encryption: encryption,
+        summaryMessage: failMsgDec,
+        steps: steps,
+        executedBy: callerAuth,
+      })
+      return c.json(200, {
+        success: false,
+        status: 'failed',
+        message: failMsgDec,
+        error: failMsgDec,
+        duration_ms: Date.now() - totalStart,
+        steps: steps,
+        host: host,
+        port: port,
+        user: user,
+        target_email: targetEmail,
+      })
+    }
 
     if (missing.length > 0) {
       steps[0].status = 'failed'

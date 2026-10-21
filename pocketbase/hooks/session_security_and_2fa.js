@@ -629,11 +629,42 @@ routerAdd(
         return e.json(400, { error: 'Configuração de 2FA não iniciada.' })
       }
       var rec = existing[0]
-      var rawSecret = rec.getString('secret')
-      var plainSecret = rawSecret
-      if (typeof globalThis.itsmDecrypt === 'function') {
-        plainSecret = globalThis.itsmDecrypt(rawSecret)
+      // Descriptografia autocontida do segredo TOTP
+      function safeDecryptTotp(val) {
+        if (!val || typeof val !== 'string') return ''
+        var PREFIX = 'enc:v1:'
+        if (val.indexOf(PREFIX) !== 0) return val
+        if (typeof globalThis !== 'undefined' && typeof globalThis.itsmDecrypt === 'function') {
+          try {
+            var decG = globalThis.itsmDecrypt(val)
+            if (decG && decG.indexOf(PREFIX) !== 0) return decG
+          } catch (_) {}
+        }
+        try {
+          var k = ''
+          if (typeof $os !== 'undefined' && typeof $os.getenv === 'function') {
+            k = $os.getenv('ITSM_ENCRYPTION_KEY') || ''
+          }
+          if (!k && typeof $secrets !== 'undefined' && typeof $secrets.get === 'function') {
+            k = $secrets.get('ITSM_ENCRYPTION_KEY') || ''
+          }
+          if (!k) k = 'itsm_default_fallback_aes256_key_super_safe_2026'
+          var derivedKey = ''
+          try {
+            derivedKey = $security.sha256(k).substring(0, 32)
+          } catch (_) {
+            derivedKey = (k + '01234567890123456789012345678901').substring(0, 32)
+          }
+          var payload = val.substring(PREFIX.length)
+          var dec = $security.decrypt(payload, derivedKey)
+          return dec || ''
+        } catch (_) {
+          return val
+        }
       }
+
+      var rawSecret = rec.getString('secret')
+      var plainSecret = safeDecryptTotp(rawSecret)
 
       var nowSec = Math.floor(Date.now() / 1000)
       var currentStep = Math.floor(nowSec / 30)
@@ -712,10 +743,7 @@ routerAdd('POST', '/backend/v1/auth/2fa/verify', (e) => {
       var matchedIndex = -1
       for (var i = 0; i < storedCodes.length; i++) {
         var sc = storedCodes[i]
-        var plainSc = sc
-        if (typeof globalThis.itsmDecrypt === 'function') {
-          plainSc = globalThis.itsmDecrypt(sc)
-        }
+        var plainSc = safeDecryptTotp(sc)
         if (plainSc.toUpperCase() === code.toUpperCase()) {
           matchedIndex = i
           break
@@ -737,10 +765,7 @@ routerAdd('POST', '/backend/v1/auth/2fa/verify', (e) => {
     }
 
     var rawSecret = rec.getString('secret')
-    var plainSecret = rawSecret
-    if (typeof globalThis.itsmDecrypt === 'function') {
-      plainSecret = globalThis.itsmDecrypt(rawSecret)
-    }
+    var plainSecret = safeDecryptTotp(rawSecret)
 
     var nowSec = Math.floor(Date.now() / 1000)
     var currentStep = Math.floor(nowSec / 30)

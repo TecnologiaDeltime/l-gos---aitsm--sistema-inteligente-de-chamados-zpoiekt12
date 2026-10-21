@@ -38,6 +38,43 @@
       .trim()
   }
 
+  // Descriptografia autocontida AES-256 para contextos isolados
+  function safeDecryptSecret(val) {
+    if (!val || typeof val !== 'string') return ''
+    val = val.trim()
+    var PREFIX = 'enc:v1:'
+    if (val.indexOf(PREFIX) !== 0) return val
+    if (typeof globalThis !== 'undefined' && typeof globalThis.itsmDecrypt === 'function') {
+      try {
+        var decGlobal = globalThis.itsmDecrypt(val)
+        if (decGlobal && decGlobal.indexOf(PREFIX) !== 0) return decGlobal
+      } catch (_) {}
+    }
+    try {
+      var k = ''
+      if (typeof $os !== 'undefined' && typeof $os.getenv === 'function') {
+        k = $os.getenv('ITSM_ENCRYPTION_KEY') || ''
+      }
+      if (!k && typeof $secrets !== 'undefined' && typeof $secrets.get === 'function') {
+        k = $secrets.get('ITSM_ENCRYPTION_KEY') || ''
+      }
+      if (!k) {
+        k = 'itsm_default_fallback_aes256_key_super_safe_2026'
+      }
+      var derivedKey = ''
+      try {
+        derivedKey = $security.sha256(k).substring(0, 32)
+      } catch (_) {
+        derivedKey = (k + '01234567890123456789012345678901').substring(0, 32)
+      }
+      var payload = val.substring(PREFIX.length)
+      var dec = $security.decrypt(payload, derivedKey)
+      return dec || ''
+    } catch (err) {
+      return '__DECRYPT_FAILED__'
+    }
+  }
+
   // 1. Obter Token OAuth2 Client Credentials
   // POST https://login.microsoftonline.com/{tenant_id}/oauth2/v2.0/token
   GraphClient.getAccessToken = function (params) {
@@ -45,12 +82,9 @@
     var clientId = (params.client_id || params.graph_client_id || '').trim()
     var rawClientSecret = (params.client_secret || params.graph_client_secret || '').trim()
 
-    var clientSecret = rawClientSecret
-    if (typeof globalThis.itsmDecrypt === 'function') {
-      clientSecret = globalThis.itsmDecrypt(rawClientSecret)
-      if (typeof clientSecret === 'string') {
-        clientSecret = clientSecret.trim()
-      }
+    var clientSecret = safeDecryptSecret(rawClientSecret)
+    if (typeof clientSecret === 'string') {
+      clientSecret = clientSecret.trim()
     }
 
     if (!tenantId) {
@@ -63,10 +97,14 @@
       throw new Error('Client Secret (Segredo do Cliente) da Microsoft não configurado.')
     }
 
+    if (clientSecret === '__DECRYPT_FAILED__' || clientSecret.indexOf('enc:v1:') === 0) {
+      throw new Error('Falha interna de descriptografia — não é problema no Entra ID.')
+    }
+
     var guidRegex = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/
     if (guidRegex.test(clientSecret)) {
       throw new Error(
-        "O campo 'Segredo do Cliente' parece conter o ID do Segredo (identificador) e não o VALOR do segredo. No Entra ID > Certificados e segredos, copie a coluna 'Valor' do segredo — ela só é exibida uma vez na criação; se não estiver mais visível, crie um novo segredo e cole o Valor aqui.",
+        'O valor salvo parece ser o ID do segredo (formato GUID) — copie o VALOR do segredo.',
       )
     }
 
@@ -121,7 +159,7 @@
         errDesc.indexOf('Invalid client secret') !== -1
       ) {
         throw new Error(
-          'Segredo do Cliente inválido ou expirado (AADSTS7000215). Gere um novo Segredo do Cliente em Registros de Aplicativo > Certificados e Segredos no Entra ID.',
+          'Segredo recusado pela Microsoft (AADSTS7000215). Gere um novo Segredo do Cliente em Registros de Aplicativo > Certificados e Segredos no Entra ID.',
         )
       }
       if (

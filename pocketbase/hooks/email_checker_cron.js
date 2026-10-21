@@ -29,13 +29,47 @@ cronAdd('email_checker_cron', '*/2 * * * *', () => {
     config = configs[0]
 
     var receptionMode = config.getString('reception_mode') || 'graph'
+    // Helper autocontido de descriptografia AES-256 para execução segura no contexto isolado do cron
+    function safeDecryptSecret(val) {
+      if (!val || typeof val !== 'string') return ''
+      val = val.trim()
+      var PREFIX = 'enc:v1:'
+      if (val.indexOf(PREFIX) !== 0) return val
+      if (typeof globalThis !== 'undefined' && typeof globalThis.itsmDecrypt === 'function') {
+        try {
+          var decGlobal = globalThis.itsmDecrypt(val)
+          if (decGlobal && decGlobal.indexOf(PREFIX) !== 0) return decGlobal
+        } catch (_) {}
+      }
+      try {
+        var k = ''
+        if (typeof $os !== 'undefined' && typeof $os.getenv === 'function') {
+          k = $os.getenv('ITSM_ENCRYPTION_KEY') || ''
+        }
+        if (!k && typeof $secrets !== 'undefined' && typeof $secrets.get === 'function') {
+          k = $secrets.get('ITSM_ENCRYPTION_KEY') || ''
+        }
+        if (!k) {
+          k = 'itsm_default_fallback_aes256_key_super_safe_2026'
+        }
+        var derivedKey = ''
+        try {
+          derivedKey = $security.sha256(k).substring(0, 32)
+        } catch (_) {
+          derivedKey = (k + '01234567890123456789012345678901').substring(0, 32)
+        }
+        var payload = val.substring(PREFIX.length)
+        var dec = $security.decrypt(payload, derivedKey)
+        return dec || ''
+      } catch (err) {
+        return '__DECRYPT_FAILED__'
+      }
+    }
+
     var graphTenantId = (config.getString('graph_tenant_id') || '').trim()
     var graphClientId = (config.getString('graph_client_id') || '').trim()
     var rawGraphSecret = (config.getString('graph_client_secret') || '').trim()
-    var graphClientSecret = rawGraphSecret
-    if (typeof globalThis.itsmDecrypt === 'function') {
-      graphClientSecret = globalThis.itsmDecrypt(rawGraphSecret)
-    }
+    var graphClientSecret = safeDecryptSecret(rawGraphSecret)
     var graphMailbox = (
       config.getString('graph_mailbox') ||
       config.getString('imap_user') ||
@@ -46,10 +80,7 @@ cronAdd('email_checker_cron', '*/2 * * * *', () => {
     var port = config.getInt('imap_port') || 993
     var user = config.getString('imap_user')
     var rawPass = config.getString('imap_password')
-    var pass = rawPass
-    if (typeof globalThis.itsmDecrypt === 'function') {
-      pass = globalThis.itsmDecrypt(rawPass)
-    }
+    var pass = safeDecryptSecret(rawPass)
     var encryption = config.getString('imap_encryption') || 'SSL/TLS'
     var inboxFolder = config.getString('inbox_folder') || 'INBOX'
     var processedFolder = config.getString('processed_folder') || ''
@@ -723,12 +754,9 @@ cronAdd('email_checker_cron', '*/2 * * * *', () => {
         var clientId = (params.client_id || params.graph_client_id || '').trim()
         var rawClientSecret = (params.client_secret || params.graph_client_secret || '').trim()
 
-        var clientSecret = rawClientSecret
-        if (typeof globalThis.itsmDecrypt === 'function') {
-          clientSecret = globalThis.itsmDecrypt(rawClientSecret)
-          if (typeof clientSecret === 'string') {
-            clientSecret = clientSecret.trim()
-          }
+        var clientSecret = safeDecryptSecret(rawClientSecret)
+        if (typeof clientSecret === 'string') {
+          clientSecret = clientSecret.trim()
         }
 
         if (!tenantId) {
@@ -741,11 +769,15 @@ cronAdd('email_checker_cron', '*/2 * * * *', () => {
           throw new Error('Client Secret (Segredo do Cliente) da Microsoft não configurado.')
         }
 
+        if (clientSecret === '__DECRYPT_FAILED__' || clientSecret.indexOf('enc:v1:') === 0) {
+          throw new Error('Falha interna de descriptografia — não é problema no Entra ID.')
+        }
+
         var guidRegex =
           /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/
         if (guidRegex.test(clientSecret)) {
           throw new Error(
-            "O campo 'Segredo do Cliente' parece conter o ID do Segredo (identificador) e não o VALOR do segredo. No Entra ID > Certificados e segredos, copie a coluna 'Valor' do segredo — ela só é exibida uma vez na criação; se não estiver mais visível, crie um novo segredo e cole o Valor aqui.",
+            'O valor salvo parece ser o ID do segredo (formato GUID) — copie o VALOR do segredo.',
           )
         }
 
@@ -800,7 +832,7 @@ cronAdd('email_checker_cron', '*/2 * * * *', () => {
             errDesc.indexOf('Invalid client secret') !== -1
           ) {
             throw new Error(
-              'Segredo do Cliente inválido ou expirado (AADSTS7000215). Gere um novo Segredo do Cliente em Registros de Aplicativo > Certificados e Segredos no Entra ID.',
+              'Segredo recusado pela Microsoft (AADSTS7000215). Gere um novo Segredo do Cliente em Registros de Aplicativo > Certificados e Segredos no Entra ID.',
             )
           }
           if (
@@ -1120,20 +1152,38 @@ cronAdd('email_checker_cron', '*/2 * * * *', () => {
     // RAMO 1: MICROSOFT GRAPH API (HTTPS via $http.send) - CAMINHO PRINCIPAL M365
     // =========================================================================
     if (receptionMode === 'graph') {
+      var isDecryptFailed =
+        graphClientSecret === '__DECRYPT_FAILED__' || graphClientSecret.indexOf('enc:v1:') === 0
       var isGuidSecret =
+        !isDecryptFailed &&
         /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(
           graphClientSecret,
         )
 
-      if (!graphTenantId || !graphClientId || !graphClientSecret || isGuidSecret) {
-        var configErrMsg = isGuidSecret
-          ? "O campo 'Segredo do Cliente' parece conter o ID do Segredo (identificador) e não o VALOR do segredo. No Entra ID > Certificados e segredos, copie a coluna 'Valor' do segredo — ela só é exibida uma vez na criação; se não estiver mais visível, crie um novo segredo e cole o Valor aqui."
-          : 'Configuração Microsoft Graph incompleta: Tenant ID, Client ID ou Client Secret ausente.'
+      if (
+        !graphTenantId ||
+        !graphClientId ||
+        !graphClientSecret ||
+        isDecryptFailed ||
+        isGuidSecret
+      ) {
+        var configErrMsg = ''
+        var checkStatus = 'Falha na Configuração'
+        if (isDecryptFailed) {
+          configErrMsg = 'Falha interna de descriptografia — não é problema no Entra ID.'
+          checkStatus = 'Falha Interna de Descriptografia'
+        } else if (isGuidSecret) {
+          configErrMsg =
+            'O valor salvo parece ser o ID do segredo (formato GUID) — copie o VALOR do segredo.'
+          checkStatus = 'Falha de Autenticação Graph'
+        } else {
+          configErrMsg =
+            'Configuração Microsoft Graph incompleta: Tenant ID, Client ID ou Client Secret ausente.'
+          checkStatus = 'Falha na Configuração'
+        }
+
         config.set('last_check_at', new Date().toISOString())
-        config.set(
-          'last_check_status',
-          isGuidSecret ? 'Falha de Autenticação Graph' : 'Falha na Configuração',
-        )
+        config.set('last_check_status', checkStatus)
         config.set('last_check_error', configErrMsg)
         $app.save(config)
         $app.logger().warn('email_checker_cron: ' + configErrMsg)

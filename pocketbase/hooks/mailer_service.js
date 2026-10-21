@@ -9,6 +9,43 @@
 // - sendSystemMailMessage(message)
 
 ;(function () {
+  // Descriptografia autocontida AES-256 para execução segura no runtime do mailer
+  function safeDecryptSecret(val) {
+    if (!val || typeof val !== 'string') return ''
+    val = val.trim()
+    var PREFIX = 'enc:v1:'
+    if (val.indexOf(PREFIX) !== 0) return val
+    if (typeof globalThis !== 'undefined' && typeof globalThis.itsmDecrypt === 'function') {
+      try {
+        var decGlobal = globalThis.itsmDecrypt(val)
+        if (decGlobal && decGlobal.indexOf(PREFIX) !== 0) return decGlobal
+      } catch (_) {}
+    }
+    try {
+      var k = ''
+      if (typeof $os !== 'undefined' && typeof $os.getenv === 'function') {
+        k = $os.getenv('ITSM_ENCRYPTION_KEY') || ''
+      }
+      if (!k && typeof $secrets !== 'undefined' && typeof $secrets.get === 'function') {
+        k = $secrets.get('ITSM_ENCRYPTION_KEY') || ''
+      }
+      if (!k) {
+        k = 'itsm_default_fallback_aes256_key_super_safe_2026'
+      }
+      var derivedKey = ''
+      try {
+        derivedKey = $security.sha256(k).substring(0, 32)
+      } catch (_) {
+        derivedKey = (k + '01234567890123456789012345678901').substring(0, 32)
+      }
+      var payload = val.substring(PREFIX.length)
+      var dec = $security.decrypt(payload, derivedKey)
+      return dec || ''
+    } catch (err) {
+      return '__DECRYPT_FAILED__'
+    }
+  }
+
   // Retorna as configurações resolvidas de envio
   globalThis.resolveSystemMailerConfig = function () {
     var dedicated = {
@@ -34,12 +71,15 @@
           cfg.getString('imap_password') ||
           ''
         ).trim()
-        var sPass = rawSPass
-        if (typeof globalThis.itsmDecrypt === 'function') {
-          sPass = globalThis.itsmDecrypt(rawSPass)
-        }
+        var sPass = safeDecryptSecret(rawSPass)
         if (typeof sPass === 'string') {
           sPass = sPass.trim()
+        }
+        if (sPass === '__DECRYPT_FAILED__' || sPass.indexOf('enc:v1:') === 0) {
+          $app
+            .logger()
+            .error('resolveSystemMailerConfig: falha interna de descriptografia da senha SMTP')
+          sPass = ''
         }
         var sPort = cfg.getInt('smtp_port') || 587
         var sEnc = (cfg.getString('smtp_encryption') || 'STARTTLS').trim()
@@ -178,9 +218,12 @@
           }
 
           // Garantir que a senha está descriptografada antes de atribuir ao transporte
-          var resolvedPassword = mailerConfig.password
-          if (typeof globalThis.itsmDecrypt === 'function') {
-            resolvedPassword = globalThis.itsmDecrypt(resolvedPassword)
+          var resolvedPassword = safeDecryptSecret(mailerConfig.password)
+          if (
+            resolvedPassword === '__DECRYPT_FAILED__' ||
+            resolvedPassword.indexOf('enc:v1:') === 0
+          ) {
+            throw new Error('Falha interna de descriptografia da senha SMTP — envio abortado.')
           }
 
           s.smtp.enabled = true
