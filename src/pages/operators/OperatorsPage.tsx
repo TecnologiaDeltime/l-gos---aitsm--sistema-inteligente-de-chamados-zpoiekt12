@@ -83,7 +83,8 @@ export default function OperatorsPage() {
   const { toast } = useToast()
   const { user: currentUser } = useAuth()
   const permissions = usePermissions()
-  const canManage = permissions.canManageOperators
+  // Somente perfil Administrador pode incluir e excluir operadores
+  const canManage = permissions.isAdmin
 
   const [operators, setOperators] = useState<OperatorItem[]>([])
   const [profiles, setProfiles] = useState<ProfileRecord[]>([])
@@ -267,10 +268,21 @@ export default function OperatorsPage() {
 
   const handleDeleteOperator = async () => {
     if (!deleteTarget) return
+
+    if (!permissions.isAdmin) {
+      toast({
+        title: 'Permissão negada',
+        description: 'Apenas administradores podem excluir operadores.',
+        variant: 'destructive',
+      })
+      setDeleteTarget(null)
+      return
+    }
+
     if (deleteTarget.id === currentUser?.id) {
       toast({
         title: 'Ação não permitida',
-        description: 'Você não pode excluir sua própria conta.',
+        description: 'Você não pode excluir sua própria conta de administrador.',
         variant: 'destructive',
       })
       setDeleteTarget(null)
@@ -281,15 +293,16 @@ export default function OperatorsPage() {
       setDeleting(true)
       await deleteOperator(deleteTarget.id)
       toast({
-        title: 'Operador excluído',
+        title: 'Operador excluído com sucesso',
         description: `A conta de "${deleteTarget.name || deleteTarget.email}" foi removida.`,
       })
       setDeleteTarget(null)
       await loadData()
     } catch (err: any) {
+      const errMsg = err?.message || getErrorMessage(err) || 'Não foi possível excluir o operador.'
       toast({
         title: 'Erro ao excluir operador',
-        description: getErrorMessage(err),
+        description: errMsg,
         variant: 'destructive',
       })
     } finally {

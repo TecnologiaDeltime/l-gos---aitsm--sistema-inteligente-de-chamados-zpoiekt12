@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-21T21:27:08.660Z",
+  "generatedAt": "2026-10-21T21:58:14.377Z",
   "collections": [
     {
       "name": "users",
@@ -7,8 +7,8 @@
       "apiRules": {
         "list": "@request.auth.id != \"\" && (id = @request.auth.id || @request.auth.role = \"admin\" || @request.auth.role = \"gestor\" || @request.auth.role = \"operador\" || @request.auth.role = \"tecnico\" || @request.auth.role = \"auditor\" || @request.auth.role = \"\")",
         "view": "@request.auth.id != \"\" && (id = @request.auth.id || @request.auth.role = \"admin\" || @request.auth.role = \"gestor\" || @request.auth.role = \"operador\" || @request.auth.role = \"tecnico\" || @request.auth.role = \"auditor\" || @request.auth.role = \"\")",
-        "create": "@request.auth.id != \"\" && (@request.auth.role = \"admin\" || @request.auth.role = \"gestor\")",
-        "update": "@request.auth.id != \"\" && (id = @request.auth.id || @request.auth.role = \"admin\" || @request.auth.role = \"gestor\")",
+        "create": "@request.auth.id != \"\" && @request.auth.role = \"admin\"",
+        "update": "@request.auth.id != \"\" && (id = @request.auth.id || @request.auth.role = \"admin\")",
         "delete": "@request.auth.id != \"\" && @request.auth.role = \"admin\""
       },
       "fields": [

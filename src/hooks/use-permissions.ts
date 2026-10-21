@@ -104,7 +104,8 @@ export function usePermissions() {
 
   // Specific module checks for fast access
   const canManageProfiles = canWriteModule('profiles') || isAdmin
-  const canManageOperators = canWriteModule('operators') || isAdmin
+  // Somente administradores podem incluir e excluir operadores
+  const canManageOperators = isAdmin
   const canAccessVault = canReadModule('vault') || isAdmin || isGestor
   const canManageVault = canWriteModule('vault') || isAdmin
   const canManageClients = canWriteModule('clients')

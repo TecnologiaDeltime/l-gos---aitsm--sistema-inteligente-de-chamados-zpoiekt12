@@ -1,7 +1,8 @@
 // pocketbase/hooks/operator_management.js
-// Criação de operadores pelo admin/gestor, envio de e-mail de primeiro acesso e troca obrigatória de senha
+// Criação e exclusão de operadores restritas exclusivamente ao perfil administrador,
+// envio de e-mail de primeiro acesso e troca obrigatória de senha
 ;(function () {
-  // Rota para criação de operador com envio de e-mail de primeiro acesso
+  // Rota para criação de operador com envio de e-mail de primeiro acesso (Apenas Admin)
   // POST /backend/v1/operators/create
   routerAdd(
     'POST',
@@ -13,9 +14,9 @@
       }
 
       var role = authUser.getString('role')
-      if (role !== 'admin' && role !== 'gestor') {
+      if (role !== 'admin') {
         return c.json(403, {
-          error: 'Apenas administradores e gestores podem cadastrar novos operadores.',
+          error: 'Apenas administradores podem cadastrar novos operadores.',
         })
       }
 
@@ -195,6 +196,295 @@
             (emailError || 'erro SMTP') +
             '). Forneça a senha manualmente.',
       })
+    },
+    $apis.requireAuth(),
+  )
+
+  // Rota para exclusão segura de operador (Apenas Admin)
+  // DELETE /backend/v1/operators/{id}
+  routerAdd(
+    'DELETE',
+    '/backend/v1/operators/{id}',
+    function (c) {
+      var authUser = c.auth
+      if (!authUser) {
+        return c.json(401, { error: 'Não autenticado.' })
+      }
+
+      var role = authUser.getString('role')
+      if (role !== 'admin') {
+        return c.json(403, {
+          error: 'Apenas administradores podem excluir operadores.',
+        })
+      }
+
+      var id = c.request.pathValue('id')
+      if (!id) {
+        return c.json(400, { error: 'ID do operador não fornecido.' })
+      }
+
+      if (id === authUser.id) {
+        return c.json(400, { error: 'Você não pode excluir sua própria conta de administrador.' })
+      }
+
+      var targetRecord
+      try {
+        targetRecord = $app.findRecordById('_pb_users_auth_', id)
+      } catch (err) {
+        return c.json(404, { error: 'Operador não encontrado.' })
+      }
+
+      // Verificação detalhada de vínculos operacionais para preservar a integridade dos dados históricos
+      var blockingReasons = []
+
+      // 1. Chamados atribuídos
+      try {
+        var tktAssigned = $app.findRecordsByFilter(
+          'tickets',
+          'assigned_to = "' + id + '"',
+          '',
+          10,
+          0,
+        )
+        if (tktAssigned && tktAssigned.length > 0) {
+          blockingReasons.push(
+            'possui chamados atribuídos como responsável (' +
+              tktAssigned.length +
+              ' ou mais chamados)',
+          )
+        }
+      } catch (_) {}
+
+      // 2. Apontamentos de horas / interações em chamados
+      try {
+        var interactions = $app.findRecordsByFilter(
+          'ticket_interactions',
+          'author = "' + id + '"',
+          '',
+          10,
+          0,
+        )
+        if (interactions && interactions.length > 0) {
+          blockingReasons.push('possui interações ou apontamentos de horas registrados em chamados')
+        }
+      } catch (_) {}
+
+      // 3. Anexos postados
+      try {
+        var attachments = $app.findRecordsByFilter(
+          'ticket_attachments',
+          'uploaded_by = "' + id + '"',
+          '',
+          10,
+          0,
+        )
+        if (attachments && attachments.length > 0) {
+          blockingReasons.push('possui anexos de chamados enviados')
+        }
+      } catch (_) {}
+
+      // 4. Visitas técnicas atribuídas
+      try {
+        var visits = $app.findRecordsByFilter(
+          'technical_visits',
+          'technician = "' + id + '"',
+          '',
+          10,
+          0,
+        )
+        if (visits && visits.length > 0) {
+          blockingReasons.push(
+            'possui visitas técnicas atribuídas (' + visits.length + ' ou mais visitas)',
+          )
+        }
+      } catch (_) {}
+
+      // 5. Apontamentos avulsos de tempo (time_entries)
+      try {
+        var timeEntries = $app.findRecordsByFilter(
+          'time_entries',
+          'technician = "' + id + '"',
+          '',
+          10,
+          0,
+        )
+        if (timeEntries && timeEntries.length > 0) {
+          blockingReasons.push('possui lançamentos de horas de atendimento registrados')
+        }
+      } catch (_) {}
+
+      // 6. Aprovações atribuídas como aprovador pendente
+      try {
+        var pendingApprovals = $app.findRecordsByFilter(
+          'approvals',
+          'approver = "' + id + '" && status = "Pendente"',
+          '',
+          10,
+          0,
+        )
+        if (pendingApprovals && pendingApprovals.length > 0) {
+          blockingReasons.push('possui aprovações pendentes atribuídas aguardando decisão')
+        }
+      } catch (_) {}
+
+      // 7. Chamados agendados
+      try {
+        var schedTkts = $app.findRecordsByFilter(
+          'scheduled_tickets',
+          'assigned_to = "' + id + '" && status = "agendado"',
+          '',
+          10,
+          0,
+        )
+        if (schedTkts && schedTkts.length > 0) {
+          blockingReasons.push('possui chamados agendados recorrentes atribuídos')
+        }
+      } catch (_) {}
+
+      if (blockingReasons.length > 0) {
+        var msg =
+          'Não é possível excluir este operador porque ele possui registros operacionais vinculados: ' +
+          blockingReasons.join('; ') +
+          '. Para revogar o acesso sem comprometer o histórico, desative a conta do operador ou reatribua seus chamados pendentes.'
+        return c.json(400, { error: msg })
+      }
+
+      // Se não há vínculos impeditivos (ou após limpeza das referências transitórias):
+      // Remover de filas de atendimento (members relation)
+      try {
+        var queues = $app.findRecordsByFilter('queues', 'members ~ "' + id + '"', '', 100, 0)
+        for (var q = 0; q < queues.length; q++) {
+          try {
+            var queueRec = queues[q]
+            var currentMembers = queueRec.getStringSlice('members') || []
+            var newMembers = []
+            for (var m = 0; m < currentMembers.length; m++) {
+              if (currentMembers[m] !== id) {
+                newMembers.push(currentMembers[m])
+              }
+            }
+            queueRec.set('members', newMembers)
+            $app.save(queueRec)
+          } catch (_) {}
+        }
+      } catch (_) {}
+
+      // Remover comitê de mudanças se membro
+      try {
+        var committees = $app.findRecordsByFilter(
+          'change_committee',
+          'members ~ "' + id + '"',
+          '',
+          100,
+          0,
+        )
+        for (var cm = 0; cm < committees.length; cm++) {
+          try {
+            var cRec = committees[cm]
+            var cmMembers = cRec.getStringSlice('members') || []
+            var newCmMembers = []
+            for (var cmi = 0; cmi < cmMembers.length; cmi++) {
+              if (cmMembers[cmi] !== id) {
+                newCmMembers.push(cmMembers[cmi])
+              }
+            }
+            cRec.set('members', newCmMembers)
+            $app.save(cRec)
+          } catch (_) {}
+        }
+      } catch (_) {}
+
+      // Remover registros auxiliares não essenciais do operador (totp, snapshots diários, metas, notificações)
+      try {
+        var totpRecords = $app.findRecordsByFilter('user_totp', 'user = "' + id + '"', '', 10, 0)
+        for (var t = 0; t < totpRecords.length; t++) {
+          try {
+            $app.delete(totpRecords[t])
+          } catch (_) {}
+        }
+      } catch (_) {}
+
+      try {
+        var notifs = $app.findRecordsByFilter('notifications', 'user = "' + id + '"', '', 500, 0)
+        for (var n = 0; n < notifs.length; n++) {
+          try {
+            $app.delete(notifs[n])
+          } catch (_) {}
+        }
+      } catch (_) {}
+
+      try {
+        var snapshots = $app.findRecordsByFilter(
+          'operator_daily_snapshots',
+          'operator = "' + id + '"',
+          '',
+          100,
+          0,
+        )
+        for (var s = 0; s < snapshots.length; s++) {
+          try {
+            $app.delete(snapshots[s])
+          } catch (_) {}
+        }
+      } catch (_) {}
+
+      try {
+        var goals = $app.findRecordsByFilter(
+          'technician_goals',
+          'technician = "' + id + '"',
+          '',
+          100,
+          0,
+        )
+        for (var g = 0; g < goals.length; g++) {
+          try {
+            $app.delete(goals[g])
+          } catch (_) {}
+        }
+      } catch (_) {}
+
+      try {
+        var slaGoals = $app.findRecordsByFilter(
+          'sla_goals',
+          'technician = "' + id + '"',
+          '',
+          100,
+          0,
+        )
+        for (var sg = 0; sg < slaGoals.length; sg++) {
+          try {
+            $app.delete(slaGoals[sg])
+          } catch (_) {}
+        }
+      } catch (_) {}
+
+      try {
+        var tviews = $app.findRecordsByFilter('ticket_views', 'user = "' + id + '"', '', 500, 0)
+        for (var tv = 0; tv < tviews.length; tv++) {
+          try {
+            $app.delete(tviews[tv])
+          } catch (_) {}
+        }
+      } catch (_) {}
+
+      // Tentar a exclusão do registro do usuário
+      try {
+        $app.delete(targetRecord)
+        return c.json(200, {
+          success: true,
+          message: 'Operador excluído com sucesso.',
+        })
+      } catch (delErr) {
+        $app
+          .logger()
+          .error('operator_management: erro ao deletar usuario', 'id', id, 'err', delErr.message)
+        return c.json(400, {
+          error:
+            'Não foi possível excluir o operador: ' +
+            (delErr.message ||
+              'Existem registros vinculados que impedem a exclusão. Tente desativar o operador.'),
+        })
+      }
     },
     $apis.requireAuth(),
   )

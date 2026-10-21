@@ -194,6 +194,33 @@ export const updateOperator = async (
 }
 
 export const deleteOperator = async (id: string): Promise<boolean> => {
+  // 1. Tenta a rota dedicada backend (com verificação de vínculos operacionais e permissão de admin)
+  try {
+    const res = await pb.send<{
+      success: boolean
+      message?: string
+    }>(`/backend/v1/operators/${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+    })
+    if (res && res.success) {
+      return true
+    }
+  } catch (backendErr: any) {
+    if (backendErr?.status && backendErr.status < 500) {
+      const serverMessage =
+        backendErr?.response?.error ||
+        backendErr?.data?.error ||
+        backendErr?.message ||
+        'Erro ao excluir operador'
+      throw new Error(serverMessage)
+    }
+    console.warn(
+      'Rota /backend/v1/operators/:id falhou ou indisponível, tentando fallback na coleção users:',
+      backendErr,
+    )
+  }
+
+  // 2. Fallback direto na coleção users
   return await pb.collection('users').delete(id)
 }
 

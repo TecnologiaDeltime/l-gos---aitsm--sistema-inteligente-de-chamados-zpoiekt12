@@ -106,7 +106,8 @@ export const SYSTEM_MODULES: ModuleDefinition[] = [
   {
     key: 'operators',
     label: 'Operadores',
-    description: 'Cadastro, gerenciamento e controle de acesso dos operadores',
+    description:
+      'Visualização da equipe de operadores (inclusão e exclusão restritas ao perfil Administrador)',
     category: 'Administração',
   },
   {

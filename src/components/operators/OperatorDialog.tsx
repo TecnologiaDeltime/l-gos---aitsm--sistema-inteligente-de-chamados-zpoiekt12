@@ -36,6 +36,7 @@ import {
 } from '@/types/operators'
 import { ProfileRecord } from '@/types/profiles'
 import { getErrorMessage } from '@/lib/pocketbase/errors'
+import { usePermissions } from '@/hooks/use-permissions'
 
 interface OperatorDialogProps {
   open: boolean
@@ -54,6 +55,7 @@ export function OperatorDialog({
   teams,
   onSave,
 }: OperatorDialogProps) {
+  const permissions = usePermissions()
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName] = useState('')
   const [email, setEmail] = useState('')
@@ -214,6 +216,12 @@ export function OperatorDialog({
             </div>
           </div>
         </DialogHeader>
+
+        {!isEditing && !permissions.isAdmin && (
+          <div className="p-4 mx-6 mt-4 rounded-lg bg-amber-50 text-amber-800 border border-amber-200 text-xs">
+            Apenas usuários com perfil Administrador têm permissão para cadastrar novos operadores.
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} className="flex-1 flex flex-col min-h-0">
           <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
@@ -511,7 +519,7 @@ export function OperatorDialog({
             <Button
               type="submit"
               className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold"
-              disabled={saving}
+              disabled={saving || (!isEditing && !permissions.isAdmin)}
             >
               {saving ? (
                 <>
