@@ -187,13 +187,131 @@ cronAdd('sla_response_alerts', '* * * * *', function () {
       } catch (_) {}
     }
 
-    // ---- E-mail para o(s) responsável(is) ----
+    // ---- E-mail para o(s) responsável(is) / operador(es) ----
     if (emailEnabled) {
-      var subject = '⚠️ SLA de Resposta prestes a vencer - Ticket #' + ticketNumber
+      var subject =
+        '⚠️ Alerta de SLA: Chamado #' +
+        ticketNumber +
+        ' prestes a vencer (' +
+        remainingMin +
+        ' min)'
+      var esc =
+        typeof globalThis.itsmEscapeHtml === 'function'
+          ? globalThis.itsmEscapeHtml
+          : function (s) {
+              return String(s || '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+            }
+
+      var deadlineFormatted = ''
+      try {
+        var dlDate = new Date(ticket.getString('sla_response_deadline'))
+        deadlineFormatted =
+          ('0' + dlDate.getDate()).slice(-2) +
+          '/' +
+          ('0' + (dlDate.getMonth() + 1)).slice(-2) +
+          '/' +
+          dlDate.getFullYear() +
+          ' às ' +
+          ('0' + dlDate.getHours()).slice(-2) +
+          ':' +
+          ('0' + dlDate.getMinutes()).slice(-2)
+      } catch (_) {
+        deadlineFormatted = remainingMin + ' min restantes'
+      }
+
+      var contentHtml =
+        '<!-- AVISO CRÍTICO -->\n' +
+        '<div style="background-color: #fef2f2; border-left: 4px solid #ef4444; padding: 14px 18px; border-radius: 0 8px 8px 0; margin-bottom: 20px;">\n' +
+        '  <table border="0" cellpadding="0" cellspacing="0" width="100%">\n' +
+        '    <tr>\n' +
+        '      <td style="font-size: 20px; width: 30px; vertical-align: top;">⚠️</td>\n' +
+        '      <td style="vertical-align: top;">\n' +
+        '        <div style="font-size: 14px; font-weight: 700; color: #991b1b;">SLA de Primeiro Atendimento Prestes a Expirar</div>\n' +
+        '        <div style="font-size: 13px; color: #b91c1c; margin-top: 3px; line-height: 18px;">Restam aproximadamente <strong>' +
+        esc(remainingMin) +
+        ' minutos</strong> para a expiração do prazo de resposta contratual.</div>\n' +
+        '      </td>\n' +
+        '    </tr>\n' +
+        '  </table>\n' +
+        '</div>\n' +
+        '\n' +
+        '<!-- DETALHES DO TICKET -->\n' +
+        '<table border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; margin-bottom: 20px;">\n' +
+        '  <tr>\n' +
+        '    <td style="padding: 16px 20px;">\n' +
+        '      <table border="0" cellpadding="0" cellspacing="0" width="100%">\n' +
+        '        <tr>\n' +
+        '          <td style="padding-bottom: 10px; width: 50%; vertical-align: top;">\n' +
+        '            <div style="font-size: 11px; text-transform: uppercase; color: #64748b; font-weight: 600; letter-spacing: 0.5px;">Número do Chamado</div>\n' +
+        '            <div style="font-size: 16px; font-weight: 800; color: #0284c7; margin-top: 2px;">#' +
+        esc(ticketNumber) +
+        '</div>\n' +
+        '          </td>\n' +
+        '          <td style="padding-bottom: 10px; width: 50%; vertical-align: top;">\n' +
+        '            <div style="font-size: 11px; text-transform: uppercase; color: #64748b; font-weight: 600; letter-spacing: 0.5px;">Prazo Limite (SLA)</div>\n' +
+        '            <div style="font-size: 14px; font-weight: 700; color: #dc2626; margin-top: 2px;">' +
+        esc(deadlineFormatted) +
+        '</div>\n' +
+        '          </td>\n' +
+        '        </tr>\n' +
+        '        <tr>\n' +
+        '          <td style="padding-bottom: 10px; vertical-align: top;">\n' +
+        '            <div style="font-size: 11px; text-transform: uppercase; color: #64748b; font-weight: 600; letter-spacing: 0.5px;">Empresa / Cliente</div>\n' +
+        '            <div style="font-size: 13px; font-weight: 600; color: #334155; margin-top: 2px;">' +
+        esc(companyName) +
+        ' • ' +
+        esc(clientName) +
+        '</div>\n' +
+        '          </td>\n' +
+        '          <td style="padding-bottom: 10px; vertical-align: top;">\n' +
+        '            <div style="font-size: 11px; text-transform: uppercase; color: #64748b; font-weight: 600; letter-spacing: 0.5px;">Prioridade</div>\n' +
+        '            <div style="font-size: 13px; font-weight: 700; color: #b45309; margin-top: 2px;">' +
+        esc(ticket.getString('priority') || 'Média') +
+        '</div>\n' +
+        '          </td>\n' +
+        '        </tr>\n' +
+        '        <tr>\n' +
+        '          <td colspan="2" style="padding-top: 6px; border-top: 1px dashed #cbd5e1; vertical-align: top;">\n' +
+        '            <div style="font-size: 11px; text-transform: uppercase; color: #64748b; font-weight: 600; letter-spacing: 0.5px; margin-bottom: 4px;">Assunto do Chamado</div>\n' +
+        '            <div style="font-size: 14px; font-weight: 700; color: #0f172a;">' +
+        esc(ticketTitle) +
+        '</div>\n' +
+        '          </td>\n' +
+        '        </tr>\n' +
+        '      </table>\n' +
+        '    </td>\n' +
+        '  </tr>\n' +
+        '</table>'
+
+      var htmlBody = ''
+      if (typeof globalThis.itsmRenderBaseEmailTemplate === 'function') {
+        htmlBody = globalThis.itsmRenderBaseEmailTemplate({
+          preheader:
+            'Alerta de SLA prestes a vencer para o chamado #' +
+            ticketNumber +
+            ' (' +
+            remainingMin +
+            ' min restantes)',
+          badgeText: 'Alerta de SLA',
+          badgeColor: '#dc2626',
+          title: 'SLA de Resposta Prestes a Vencer',
+          subtitle: 'Chamado #' + ticketNumber + ' requer atendimento imediato',
+          contentHtml: contentHtml,
+          footerNote:
+            'Este é um alerta operacional gerado automaticamente para operadores e gestores de serviço ITSM.',
+        })
+      } else {
+        htmlBody = '<div>' + contentHtml + '</div>'
+      }
+
       var bodyText =
-        'Olá,\n\n' +
+        'ALERTA OPERACIONAL DE SLA\n\n' +
         'O SLA de Resposta do chamado abaixo está prestes a vencer:\n\n' +
-        'Ticket: #' +
+        'Chamado: #' +
         ticketNumber +
         '\n' +
         'Título: ' +
@@ -202,28 +320,44 @@ cronAdd('sla_response_alerts', '* * * * *', function () {
         'Empresa: ' +
         companyName +
         '\n' +
-        'Cliente: ' +
+        'Solicitante: ' +
         clientName +
         '\n' +
-        'Tempo restante: ' +
+        'Tempo Restante: ' +
         remainingMin +
-        ' minutos\n\n' +
-        'Acesse o sistema para responder o chamado imediatamente.\n\n' +
-        '-- Sistema ITSM'
+        ' minutos\n' +
+        'Prazo Limite: ' +
+        deadlineFormatted +
+        '\n\n' +
+        'Acesse o sistema ITSM para responder ao chamado imediatamente.\n\n' +
+        '-- ServiceOne ITSM'
 
       for (var m = 0; m < recipients.length; m++) {
         if (!recipients[m].email) continue
         try {
-          var message = new MailerMessage()
-          message.from = { address: 'noreply@serviceone.com.br', name: 'ServiceOne' }
-          message.to = [{ address: recipients[m].email }]
-          message.subject = subject
-          message.text = bodyText
-          if (globalThis.sendSystemMailMessage) {
-            globalThis.sendSystemMailMessage(message)
-          } else {
-            var mailClient = $app.newMailClient()
-            mailClient.send(message)
+          if (typeof globalThis.itsmSendWithAudit === 'function') {
+            globalThis.itsmSendWithAudit({
+              testType: 'alerta_sla',
+              to: recipients[m].email,
+              subject: subject,
+              html: htmlBody,
+              text: bodyText,
+              meta: {
+                ticket_id: ticketId,
+                ticket_number: ticketNumber,
+                operator_id: recipients[m].id,
+                operator_name: recipients[m].name,
+                remaining_min: remainingMin,
+                sla_type: 'response',
+              },
+            })
+          } else if (typeof globalThis.sendSystemEmail === 'function') {
+            globalThis.sendSystemEmail({
+              to: recipients[m].email,
+              subject: subject,
+              html: htmlBody,
+              text: bodyText,
+            })
           }
         } catch (err) {
           $app

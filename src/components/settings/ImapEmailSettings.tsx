@@ -2889,7 +2889,13 @@ export function ImapEmailSettings({
                               ? 'Envio de Teste (SMTP)'
                               : log.test_type === 'retencao'
                                 ? 'Retenção da Caixa'
-                                : 'Simulação Ponta a Ponta'}
+                                : log.test_type === 'abertura_chamado'
+                                  ? 'Abertura de Chamado'
+                                  : log.test_type === 'alerta_sla'
+                                    ? 'Alerta de SLA'
+                                    : log.test_type === 'aprovacao_chamado'
+                                      ? 'Aprovação de Chamado'
+                                      : 'Simulação Ponta a Ponta'}
                         </Badge>
                         <span className="font-semibold text-slate-800 dark:text-slate-200">
                           {log.summary_message || 'Execução de teste'}

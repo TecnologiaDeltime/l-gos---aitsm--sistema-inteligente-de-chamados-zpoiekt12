@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-21T01:40:25.503Z",
+  "generatedAt": "2026-10-21T15:38:09.418Z",
   "collections": [
     {
       "name": "users",
@@ -9630,7 +9630,10 @@
             "dry_run_simulation",
             "teste-envio",
             "teste-smtp",
-            "retencao"
+            "retencao",
+            "abertura_chamado",
+            "alerta_sla",
+            "aprovacao_chamado"
           ]
         },
         {

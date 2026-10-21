@@ -215,6 +215,9 @@ export type EmailAuditTestType =
   | 'teste-envio'
   | 'teste-smtp'
   | 'retencao'
+  | 'abertura_chamado'
+  | 'alerta_sla'
+  | 'aprovacao_chamado'
 
 export interface EmailAuditLogRecord {
   id: string
