@@ -25,6 +25,11 @@ const STATUS_CONFIG: Record<string, { dot: string; className: string }> = {
     className:
       'bg-sky-100 text-sky-800 border-sky-200 dark:bg-sky-500/15 dark:text-sky-400 dark:border-sky-500/30',
   },
+  'Em aberto': {
+    dot: 'bg-sky-400',
+    className:
+      'bg-sky-100 text-sky-800 border-sky-200 dark:bg-sky-500/15 dark:text-sky-400 dark:border-sky-500/30',
+  },
   'Em Atendimento': {
     dot: 'bg-emerald-400',
     className:
@@ -63,16 +68,18 @@ const STATUS_CONFIG: Record<string, { dot: string; className: string }> = {
 }
 
 export function StatusBadge({ status }: StatusBadgeProps) {
-  const config = STATUS_CONFIG[status] || {
-    dot: 'bg-slate-500',
-    className:
-      'bg-slate-100 text-slate-700 border-slate-300 dark:bg-slate-500/15 dark:text-slate-400 dark:border-slate-500/30',
-  }
+  const displayLabel = status === 'Atribuído' ? 'Em aberto' : status
+  const config = STATUS_CONFIG[status] ||
+    STATUS_CONFIG[displayLabel] || {
+      dot: 'bg-slate-500',
+      className:
+        'bg-slate-100 text-slate-700 border-slate-300 dark:bg-slate-500/15 dark:text-slate-400 dark:border-slate-500/30',
+    }
 
   return (
     <Badge variant="outline" className={`itsm-badge ${config.className}`}>
       <span className={`h-1.5 w-1.5 rounded-full ${config.dot}`} />
-      {status}
+      {displayLabel}
     </Badge>
   )
 }

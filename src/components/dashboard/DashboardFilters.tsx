@@ -92,7 +92,10 @@ export function DashboardFilters({ filters, options, onUpdate, onClear }: Dashbo
           label="Status"
           value={filters.status}
           onChange={(v) => onUpdate('status', v)}
-          options={TICKET_STATUSES.map((s) => ({ value: s, label: s }))}
+          options={TICKET_STATUSES.map((s) => ({
+            value: s,
+            label: s === 'Atribuído' ? 'Em aberto' : s,
+          }))}
         />
         <FilterSelect
           label="Tipo"

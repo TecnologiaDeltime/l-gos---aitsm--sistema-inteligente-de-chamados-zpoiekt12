@@ -404,7 +404,7 @@ export default function TicketList() {
               <SelectItem value="all">Todos (Abertos)</SelectItem>
               {TICKET_STATUSES.map((status) => (
                 <SelectItem key={status} value={status}>
-                  {status}
+                  {status === 'Atribuído' ? 'Em aberto' : status}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -509,12 +509,12 @@ export default function TicketList() {
                         }
                       />
                       <label htmlFor={`col-${status}`} className="text-xs cursor-pointer">
-                        {status}
+                        {status === 'Atribuído' ? 'Em aberto' : status}
                       </label>
                     </div>
                   ))}
                 </div>
-              </PopoverContent>
+              </PopoverContent>{' '}
             </Popover>
           )}
           <Link to="/tickets/new">

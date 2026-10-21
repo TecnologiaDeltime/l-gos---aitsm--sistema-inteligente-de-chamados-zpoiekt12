@@ -286,7 +286,9 @@ export default function UnitReportsPage() {
                         <td className="p-3.5 font-medium text-slate-900 max-w-sm truncate dark:text-slate-100">
                           {t.title}
                         </td>
-                        <td className="p-3.5">{t.status}</td>
+                        <td className="p-3.5">
+                          {t.status === 'Atribuído' ? 'Em aberto' : t.status}
+                        </td>
                         <td className="p-3.5">{t.sla_status || '-'}</td>
                       </tr>
                     ))
