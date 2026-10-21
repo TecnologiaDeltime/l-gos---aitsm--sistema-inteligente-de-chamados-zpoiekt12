@@ -4,6 +4,7 @@ import { Toaster as Sonner } from '@/components/ui/sonner'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { AuthProvider } from '@/hooks/use-auth'
 import { ThemeProvider } from '@/hooks/use-theme'
+import { AutoRefreshProvider } from '@/contexts/AutoRefreshContext'
 import { ProtectedRoute } from '@/components/ProtectedRoute'
 import Layout from '@/components/Layout'
 
@@ -130,176 +131,181 @@ const App = () => (
   <BrowserRouter>
     <ThemeProvider>
       <AuthProvider>
-        <TooltipProvider>
-          <Toaster />
-          <Sonner />
-          <GlobalNotifications />
-          <AlertNotificationPopup />
-          <Routes>
-            {/* Public Auth Routes */}
-            <Route path="/login" element={<Login />} />
-            <Route path="/recuperar-senha" element={<RecoverPassword />} />
-            <Route path="/recover-password" element={<RecoverPassword />} />
-            <Route path="/approval/:token" element={<ApprovalPublic />} />
-            <Route path="/survey/:token" element={<SurveyPublic />} />
+        <AutoRefreshProvider>
+          <TooltipProvider>
+            <Toaster />
+            <Sonner />
+            <GlobalNotifications />
+            <AlertNotificationPopup />
+            <Routes>
+              {/* Public Auth Routes */}
+              <Route path="/login" element={<Login />} />
+              <Route path="/recuperar-senha" element={<RecoverPassword />} />
+              <Route path="/recover-password" element={<RecoverPassword />} />
+              <Route path="/approval/:token" element={<ApprovalPublic />} />
+              <Route path="/survey/:token" element={<SurveyPublic />} />
 
-            {/* Portal Route (protected, separate layout) */}
-            <Route
-              path="/portal"
-              element={
-                <ProtectedRoute>
-                  <PortalPage />
-                </ProtectedRoute>
-              }
-            />
-
-            {/* Protected Routes inside Layout */}
-            <Route
-              element={
-                <ProtectedRoute>
-                  <Layout />
-                </ProtectedRoute>
-              }
-            >
-              <Route path="/" element={<RootRedirect />} />
-              <Route path="/dashboard" element={<Dashboard />} />
-              <Route path="/dashboard-gerencial" element={<ExecutiveDashboard />} />
-              <Route path="/tickets" element={<TicketList />} />
-              <Route path="/tickets/new" element={<TicketCreate />} />
-              <Route path="/tickets/scheduled" element={<ScheduledTickets />} />
-              <Route path="/tickets/tree" element={<TicketTree />} />
-              <Route path="/tickets/retained" element={<RetainedTickets />} />
-              <Route path="/tickets/:id" element={<TicketDetail />} />
-              <Route path="/chamados/novo" element={<TicketCreate />} />
-              <Route path="/aprovacoes" element={<ApprovalList />} />
-              <Route path="/categorias" element={<CategoryManagement />} />
-              <Route path="/catalogo" element={<ActivityCatalog />} />
-              <Route path="/clients" element={<ClientList />} />
-              <Route path="/clients/new" element={<ClientDetail />} />
-              <Route path="/clients/:id/edit" element={<ClientEdit />} />
-              <Route path="/contracts" element={<ContractList />} />
-              <Route path="/contracts/dashboard" element={<ContractsDashboard />} />
-              <Route path="/contracts/new" element={<ContractDetail />} />
-              <Route path="/contracts/:id" element={<ContractView />} />
-              <Route path="/contracts/:id/edit" element={<ContractEdit />} />
-              {/* Perfis de Acesso & Cadastro de Operadores */}
+              {/* Portal Route (protected, separate layout) */}
               <Route
-                path="/profiles"
+                path="/portal"
                 element={
-                  <ProtectedRoute requiredModule="profiles">
-                    <ProfilesPage />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/operators"
-                element={
-                  <ProtectedRoute requiredModule="operators">
-                    <OperatorsPage />
+                  <ProtectedRoute>
+                    <PortalPage />
                   </ProtectedRoute>
                 }
               />
 
-              <Route path="/team" element={<TeamList />} />
-              <Route path="/team/new" element={<TeamDetail />} />
-              <Route path="/queues" element={<QueueManagement />} />
-              <Route path="/categories" element={<CategoryManagement />} />
-              <Route path="/activity-catalog" element={<ActivityCatalog />} />
-              <Route path="/sla-dashboard" element={<SlaDashboard />} />
-              <Route path="/recurrent-activities" element={<RecurrentActivities />} />
-              <Route path="/reports" element={<ReportsPage />} />
-              <Route path="/reports/implemented-features" element={<ImplementedFeaturesReport />} />
-              <Route path="/reports/alert-audit" element={<AlertAuditPage />} />
-              <Route path="/sla-goals" element={<SlaGoalsPage />} />
-              <Route path="/scheduled-reports" element={<ScheduledReportsPage />} />
-              <Route path="/reports/unit" element={<UnitReportsPage />} />
-              <Route path="/reports/clients" element={<ClientExtractionPage />} />
-              <Route path="/reports/monthly-client" element={<MonthlyClientReportPage />} />
-              <Route path="/knowledge-base" element={<KnowledgeBase />} />
-              <Route path="/cmdb" element={<CmdbDashboard />} />
-              <Route path="/cmdb/assets" element={<CiList />} />
-              <Route path="/cmdb/assets/new" element={<CiCreate />} />
-              <Route path="/cmdb/assets/:id" element={<CiDetail />} />
-              <Route path="/cmdb/configuration-items" element={<ConfigurationItemList />} />
-              <Route path="/cmdb/configuration-items/new" element={<ConfigurationItemCreate />} />
-              <Route path="/cmdb/configuration-items/:id" element={<ConfigurationItemDetail />} />
+              {/* Protected Routes inside Layout */}
               <Route
-                path="/cmdb/configuration-items/:id/edit"
-                element={<ConfigurationItemEdit />}
-              />
-              <Route path="/cmdb/import" element={<CiImport />} />
-              <Route path="/cmdb/types" element={<CiTypes />} />
-              <Route path="/approvals" element={<ApprovalList />} />
-              <Route path="/visits" element={<VisitList />} />
-              <Route path="/satisfaction" element={<SatisfactionDashboard />} />
-              <Route path="/settings" element={<SettingsPage />} />
-              <Route path="/settings/sla" element={<SlaSettings />} />
-              <Route path="/settings/ticket-templates" element={<TicketTemplates />} />
-              <Route
-                path="/vault"
                 element={
-                  <ProtectedRoute requiredModule="vault">
-                    <VaultPage />
+                  <ProtectedRoute>
+                    <Layout />
                   </ProtectedRoute>
                 }
-              />
-              <Route path="/notifications" element={<NotificationsPage />} />
-              <Route path="/operator-dashboard" element={<OperatorDashboard />} />
-              <Route path="/manager-dashboard" element={<ManagerDashboard />} />
-              <Route path="/contracts/consumption" element={<ContractConsumptionDashboard />} />
-              <Route path="/consumo-contratos" element={<ConsumoContratosPlaceholder />} />
-              <Route path="/dashboard-contratos" element={<DashboardContratosPlaceholder />} />
-              <Route path="/horas-clientes" element={<ClientHoursPage />} />
-              <Route path="/blocking" element={<BlockingManagement />} />
-              <Route path="/automations" element={<AutomationList />} />
-              <Route path="/automations/:id/edit" element={<AutomationEditor />} />
-              <Route path="/approval-center" element={<ApprovalCenter />} />
-              <Route path="/agenda-tecnica" element={<TechnicalAgenda />} />
-              <Route path="/visits/dashboard" element={<VisitManagerDashboard />} />
-              <Route path="/visits/technician-dashboard" element={<TechnicianDashboardPage />} />
-              <Route path="/changes" element={<ChangeDashboard />} />
-              <Route path="/changes/list" element={<ChangeList />} />
-              <Route path="/changes/new" element={<ChangeCreate />} />
-              <Route path="/changes/my" element={<MyChanges />} />
-              <Route path="/changes/pending" element={<PendingApprovals />} />
-              <Route path="/changes/calendar" element={<ChangeCalendar />} />
-              <Route path="/changes/committee" element={<ChangeCommittee />} />
-              <Route path="/changes/types" element={<ChangeTypes />} />
-              <Route path="/changes/templates" element={<ChangeTemplates />} />
-              <Route path="/changes/reports" element={<ChangeReports />} />
-              <Route path="/changes/settings" element={<ChangeSettings />} />
-              <Route path="/changes/:id" element={<ChangeDetail />} />
-              <Route path="/problems" element={<ProblemDashboard />} />
-              <Route path="/problems/list" element={<ProblemList />} />
-              <Route path="/problems/new" element={<ProblemCreate />} />
-              <Route path="/problems/my" element={<MyProblems />} />
-              <Route path="/problems/investigation" element={<ProblemInvestigation />} />
-              <Route path="/problems/effectiveness" element={<ProblemEffectivenessAnalysis />} />
-              <Route path="/problems/pending" element={<ProblemPending />} />
-              <Route path="/problems/closed" element={<ProblemClosed />} />
-              <Route path="/problems/known-errors" element={<KnownErrors />} />
-              <Route path="/problems/reports" element={<ProblemReports />} />
-              <Route path="/problems/settings" element={<ProblemSettings />} />
-              <Route path="/problems/:id" element={<ProblemDetail />} />
-              <Route path="/visitas-n2/dashboard" element={<VisitManagerDashboard />} />
-              <Route path="/visitas-n2/calendar" element={<TechnicalAgenda />} />
-              <Route path="/visitas-n2/list" element={<VisitList />} />
-              <Route path="/visitas-n2/new" element={<VisitCreatePage />} />
-              <Route path="/visitas-n2/my" element={<MyVisitsPage />} />
-              <Route path="/visitas-n2/expenses" element={<ExpensesPage />} />
-              <Route path="/visitas-n2/service-orders" element={<ServiceOrdersPage />} />
-              <Route path="/visitas-n2/signatures" element={<ClientSignaturesPage />} />
-              <Route path="/visitas-n2/checklists" element={<VisitChecklistsPage />} />
-              <Route path="/visitas-n2/recurring" element={<RecurringVisitsPage />} />
-              <Route path="/visitas-n2/availability" element={<TechnicianAvailabilityPage />} />
-              <Route path="/visitas-n2/km-rates" element={<KmRatesPage />} />
-              <Route path="/visitas-n2/reports" element={<VisitReportsPage />} />
-              <Route path="/visitas-n2/:id" element={<VisitDetailPage />} />
-            </Route>
+              >
+                <Route path="/" element={<RootRedirect />} />
+                <Route path="/dashboard" element={<Dashboard />} />
+                <Route path="/dashboard-gerencial" element={<ExecutiveDashboard />} />
+                <Route path="/tickets" element={<TicketList />} />
+                <Route path="/tickets/new" element={<TicketCreate />} />
+                <Route path="/tickets/scheduled" element={<ScheduledTickets />} />
+                <Route path="/tickets/tree" element={<TicketTree />} />
+                <Route path="/tickets/retained" element={<RetainedTickets />} />
+                <Route path="/tickets/:id" element={<TicketDetail />} />
+                <Route path="/chamados/novo" element={<TicketCreate />} />
+                <Route path="/aprovacoes" element={<ApprovalList />} />
+                <Route path="/categorias" element={<CategoryManagement />} />
+                <Route path="/catalogo" element={<ActivityCatalog />} />
+                <Route path="/clients" element={<ClientList />} />
+                <Route path="/clients/new" element={<ClientDetail />} />
+                <Route path="/clients/:id/edit" element={<ClientEdit />} />
+                <Route path="/contracts" element={<ContractList />} />
+                <Route path="/contracts/dashboard" element={<ContractsDashboard />} />
+                <Route path="/contracts/new" element={<ContractDetail />} />
+                <Route path="/contracts/:id" element={<ContractView />} />
+                <Route path="/contracts/:id/edit" element={<ContractEdit />} />
+                {/* Perfis de Acesso & Cadastro de Operadores */}
+                <Route
+                  path="/profiles"
+                  element={
+                    <ProtectedRoute requiredModule="profiles">
+                      <ProfilesPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/operators"
+                  element={
+                    <ProtectedRoute requiredModule="operators">
+                      <OperatorsPage />
+                    </ProtectedRoute>
+                  }
+                />
 
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </TooltipProvider>
+                <Route path="/team" element={<TeamList />} />
+                <Route path="/team/new" element={<TeamDetail />} />
+                <Route path="/queues" element={<QueueManagement />} />
+                <Route path="/categories" element={<CategoryManagement />} />
+                <Route path="/activity-catalog" element={<ActivityCatalog />} />
+                <Route path="/sla-dashboard" element={<SlaDashboard />} />
+                <Route path="/recurrent-activities" element={<RecurrentActivities />} />
+                <Route path="/reports" element={<ReportsPage />} />
+                <Route
+                  path="/reports/implemented-features"
+                  element={<ImplementedFeaturesReport />}
+                />
+                <Route path="/reports/alert-audit" element={<AlertAuditPage />} />
+                <Route path="/sla-goals" element={<SlaGoalsPage />} />
+                <Route path="/scheduled-reports" element={<ScheduledReportsPage />} />
+                <Route path="/reports/unit" element={<UnitReportsPage />} />
+                <Route path="/reports/clients" element={<ClientExtractionPage />} />
+                <Route path="/reports/monthly-client" element={<MonthlyClientReportPage />} />
+                <Route path="/knowledge-base" element={<KnowledgeBase />} />
+                <Route path="/cmdb" element={<CmdbDashboard />} />
+                <Route path="/cmdb/assets" element={<CiList />} />
+                <Route path="/cmdb/assets/new" element={<CiCreate />} />
+                <Route path="/cmdb/assets/:id" element={<CiDetail />} />
+                <Route path="/cmdb/configuration-items" element={<ConfigurationItemList />} />
+                <Route path="/cmdb/configuration-items/new" element={<ConfigurationItemCreate />} />
+                <Route path="/cmdb/configuration-items/:id" element={<ConfigurationItemDetail />} />
+                <Route
+                  path="/cmdb/configuration-items/:id/edit"
+                  element={<ConfigurationItemEdit />}
+                />
+                <Route path="/cmdb/import" element={<CiImport />} />
+                <Route path="/cmdb/types" element={<CiTypes />} />
+                <Route path="/approvals" element={<ApprovalList />} />
+                <Route path="/visits" element={<VisitList />} />
+                <Route path="/satisfaction" element={<SatisfactionDashboard />} />
+                <Route path="/settings" element={<SettingsPage />} />
+                <Route path="/settings/sla" element={<SlaSettings />} />
+                <Route path="/settings/ticket-templates" element={<TicketTemplates />} />
+                <Route
+                  path="/vault"
+                  element={
+                    <ProtectedRoute requiredModule="vault">
+                      <VaultPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route path="/notifications" element={<NotificationsPage />} />
+                <Route path="/operator-dashboard" element={<OperatorDashboard />} />
+                <Route path="/manager-dashboard" element={<ManagerDashboard />} />
+                <Route path="/contracts/consumption" element={<ContractConsumptionDashboard />} />
+                <Route path="/consumo-contratos" element={<ConsumoContratosPlaceholder />} />
+                <Route path="/dashboard-contratos" element={<DashboardContratosPlaceholder />} />
+                <Route path="/horas-clientes" element={<ClientHoursPage />} />
+                <Route path="/blocking" element={<BlockingManagement />} />
+                <Route path="/automations" element={<AutomationList />} />
+                <Route path="/automations/:id/edit" element={<AutomationEditor />} />
+                <Route path="/approval-center" element={<ApprovalCenter />} />
+                <Route path="/agenda-tecnica" element={<TechnicalAgenda />} />
+                <Route path="/visits/dashboard" element={<VisitManagerDashboard />} />
+                <Route path="/visits/technician-dashboard" element={<TechnicianDashboardPage />} />
+                <Route path="/changes" element={<ChangeDashboard />} />
+                <Route path="/changes/list" element={<ChangeList />} />
+                <Route path="/changes/new" element={<ChangeCreate />} />
+                <Route path="/changes/my" element={<MyChanges />} />
+                <Route path="/changes/pending" element={<PendingApprovals />} />
+                <Route path="/changes/calendar" element={<ChangeCalendar />} />
+                <Route path="/changes/committee" element={<ChangeCommittee />} />
+                <Route path="/changes/types" element={<ChangeTypes />} />
+                <Route path="/changes/templates" element={<ChangeTemplates />} />
+                <Route path="/changes/reports" element={<ChangeReports />} />
+                <Route path="/changes/settings" element={<ChangeSettings />} />
+                <Route path="/changes/:id" element={<ChangeDetail />} />
+                <Route path="/problems" element={<ProblemDashboard />} />
+                <Route path="/problems/list" element={<ProblemList />} />
+                <Route path="/problems/new" element={<ProblemCreate />} />
+                <Route path="/problems/my" element={<MyProblems />} />
+                <Route path="/problems/investigation" element={<ProblemInvestigation />} />
+                <Route path="/problems/effectiveness" element={<ProblemEffectivenessAnalysis />} />
+                <Route path="/problems/pending" element={<ProblemPending />} />
+                <Route path="/problems/closed" element={<ProblemClosed />} />
+                <Route path="/problems/known-errors" element={<KnownErrors />} />
+                <Route path="/problems/reports" element={<ProblemReports />} />
+                <Route path="/problems/settings" element={<ProblemSettings />} />
+                <Route path="/problems/:id" element={<ProblemDetail />} />
+                <Route path="/visitas-n2/dashboard" element={<VisitManagerDashboard />} />
+                <Route path="/visitas-n2/calendar" element={<TechnicalAgenda />} />
+                <Route path="/visitas-n2/list" element={<VisitList />} />
+                <Route path="/visitas-n2/new" element={<VisitCreatePage />} />
+                <Route path="/visitas-n2/my" element={<MyVisitsPage />} />
+                <Route path="/visitas-n2/expenses" element={<ExpensesPage />} />
+                <Route path="/visitas-n2/service-orders" element={<ServiceOrdersPage />} />
+                <Route path="/visitas-n2/signatures" element={<ClientSignaturesPage />} />
+                <Route path="/visitas-n2/checklists" element={<VisitChecklistsPage />} />
+                <Route path="/visitas-n2/recurring" element={<RecurringVisitsPage />} />
+                <Route path="/visitas-n2/availability" element={<TechnicianAvailabilityPage />} />
+                <Route path="/visitas-n2/km-rates" element={<KmRatesPage />} />
+                <Route path="/visitas-n2/reports" element={<VisitReportsPage />} />
+                <Route path="/visitas-n2/:id" element={<VisitDetailPage />} />
+              </Route>
+
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </TooltipProvider>
+        </AutoRefreshProvider>
       </AuthProvider>
     </ThemeProvider>
   </BrowserRouter>

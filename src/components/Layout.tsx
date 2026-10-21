@@ -76,6 +76,7 @@ import {
 } from '@/services/notifications'
 import { AiAssistantDrawer } from '@/components/AiAssistantDrawer'
 import { NewTicketToast } from '@/components/NewTicketToast'
+import { RefreshIndicator } from '@/components/RefreshIndicator'
 
 export default function Layout() {
   const { user, signOut } = useAuth()
@@ -1074,6 +1075,9 @@ export default function Layout() {
                 <Moon className="h-5 w-5 text-primary" />
               )}
             </Button>
+
+            {/* Timer de atualização automática com opções e botão manual ao lado do sino de notificações */}
+            <RefreshIndicator />
 
             {/* Botão de silenciar voz e alertas de tela ao lado do sino de notificações */}
             <Tooltip>

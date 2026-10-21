@@ -17,6 +17,7 @@ import { getTickets, TicketRecord } from '@/services/tickets'
 import { PriorityBadge } from '@/components/PriorityBadge'
 import { StatusBadge } from '@/components/StatusBadge'
 import { SlaProgressBar } from '@/components/SlaProgressBar'
+import { useRegisterRefresh } from '@/contexts/AutoRefreshContext'
 import { Link } from 'react-router-dom'
 import { cn } from '@/lib/utils'
 
@@ -68,10 +69,12 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState<string | null>(null)
 
-  const fetchTickets = () => {
-    setLoading(true)
+  const fetchTickets = (isBackground: boolean = false) => {
+    if (!isBackground) {
+      setLoading(true)
+    }
     setLoadError(null)
-    getTickets()
+    return getTickets()
       .then((data) => {
         setTickets(data)
         setLoadError(null)
@@ -88,6 +91,8 @@ export default function Dashboard() {
         setLoading(false)
       })
   }
+
+  useRegisterRefresh('dashboard-page', () => fetchTickets(true))
 
   useEffect(() => {
     fetchTickets()
@@ -257,7 +262,7 @@ export default function Dashboard() {
             </span>
           </div>
           <button
-            onClick={fetchTickets}
+            onClick={() => fetchTickets(false)}
             className="text-xs font-semibold underline hover:opacity-80"
           >
             Tentar novamente

@@ -53,6 +53,7 @@ import { getHiddenColumns, setHiddenColumns } from '@/lib/kanban-columns'
 import { useToast } from '@/hooks/use-toast'
 import { isSoundEnabled, setSoundEnabled } from '@/lib/ticket-alerts'
 import { usePbHealth } from '@/hooks/use-pb-health'
+import { useRegisterRefresh } from '@/contexts/AutoRefreshContext'
 import { cn } from '@/lib/utils'
 
 const TICKET_STATUSES = [
@@ -139,6 +140,8 @@ export default function TicketList() {
   const [users, setUsers] = useState<UserItem[]>([])
   const [companies, setCompanies] = useState<CompanyRecord[]>([])
   const [loading, setLoading] = useState(true)
+  const [isBackgroundRefreshing, setIsBackgroundRefreshing] = useState(false)
+  const [newTicketsHighlight, setNewTicketsHighlight] = useState<Set<string>>(new Set())
   const [loadError, setLoadError] = useState<string | null>(null)
   const [view, setView] = useState<'table' | 'kanban'>('table')
   const [search, setSearch] = useState('')
@@ -160,15 +163,47 @@ export default function TicketList() {
   const pbConnected = usePbHealth()
   const isMobile = useIsMobile()
 
-  const loadData = async () => {
+  const loadData = async (isBackground: boolean = false) => {
     try {
+      if (isBackground) {
+        setIsBackgroundRefreshing(true)
+      }
       setLoadError(null)
       const [t, u, c] = await Promise.all([
         getTicketsWithLastInteraction(),
         getUsers().catch(() => [] as UserItem[]),
         getCompanies().catch(() => [] as CompanyRecord[]),
       ])
-      setTickets(t)
+
+      // Se for atualização em background, verificar se há chamados novos
+      if (isBackground) {
+        setTickets((prev) => {
+          const oldIds = new Set(prev.map((item) => item.id))
+          const brandNew = t.filter((item) => !oldIds.has(item.id))
+          if (brandNew.length > 0) {
+            const newIds = new Set(brandNew.map((item) => item.id))
+            setNewTicketsHighlight(newIds)
+            // Remove o destaque após 6 segundos
+            setTimeout(() => {
+              setNewTicketsHighlight(new Set())
+            }, 6000)
+            toast({
+              title:
+                brandNew.length === 1
+                  ? '1 novo chamado recebido'
+                  : `${brandNew.length} novos chamados recebidos`,
+              description:
+                brandNew.length === 1
+                  ? `${brandNew[0].number} - ${brandNew[0].title}`
+                  : 'A fila de chamados foi atualizada automaticamente.',
+            })
+          }
+          return t
+        })
+      } else {
+        setTickets(t)
+      }
+
       setUsers(u)
       setCompanies(c)
       setLoadError(null)
@@ -181,15 +216,19 @@ export default function TicketList() {
       setLoadError(msg)
     } finally {
       setLoading(false)
+      setIsBackgroundRefreshing(false)
     }
   }
+
+  // Registra no AutoRefreshContext para atualizar conforme o timer global e botão manual
+  useRegisterRefresh('tickets-page', () => loadData(true))
 
   useEffect(() => {
     setHiddenColumnsState(getHiddenColumns())
     loadData()
   }, [])
   useRealtime('tickets', () => {
-    loadData()
+    loadData(true)
   })
   // Atualiza o relógio a cada minuto para o "Tempo sem Atualização".
   useEffect(() => {
@@ -522,7 +561,14 @@ export default function TicketList() {
             </Card>
           ) : (
             sorted.map((t) => (
-              <Card key={t.id} className="overflow-hidden">
+              <Card
+                key={t.id}
+                className={cn(
+                  'overflow-hidden transition-colors duration-500',
+                  newTicketsHighlight.has(t.id) &&
+                    'ring-2 ring-primary bg-primary/5 dark:bg-primary/10',
+                )}
+              >
                 <CardContent className="p-4 space-y-3">
                   <div className="flex items-center justify-between gap-2">
                     <Link
@@ -632,7 +678,12 @@ export default function TicketList() {
                   sorted.map((t, idx) => (
                     <tr
                       key={t.id}
-                      className={`itsm-table-row itsm-table-row-hover ${idx % 2 === 1 ? 'itsm-table-row-alt' : ''}`}
+                      className={cn(
+                        'itsm-table-row itsm-table-row-hover transition-colors duration-500',
+                        idx % 2 === 1 ? 'itsm-table-row-alt' : '',
+                        newTicketsHighlight.has(t.id) &&
+                          'bg-primary/10 dark:bg-primary/20 font-medium',
+                      )}
                     >
                       <td className="px-4 py-3 w-10">
                         <Checkbox
