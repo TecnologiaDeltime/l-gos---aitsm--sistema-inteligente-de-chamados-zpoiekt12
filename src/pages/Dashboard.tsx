@@ -65,11 +65,32 @@ interface KpiConfig {
 export default function Dashboard() {
   const [tickets, setTickets] = useState<TicketRecord[]>([])
   const [activeFilter, setActiveFilter] = useState<FilterKey | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState<string | null>(null)
+
+  const fetchTickets = () => {
+    setLoading(true)
+    setLoadError(null)
+    getTickets()
+      .then((data) => {
+        setTickets(data)
+        setLoadError(null)
+      })
+      .catch((err: any) => {
+        console.error('Falha ao carregar chamados no Dashboard:', err)
+        const msg =
+          err?.response?.message ||
+          err?.message ||
+          'Erro ao carregar chamados. Verifique sua conexão ou permissões.'
+        setLoadError(msg)
+      })
+      .finally(() => {
+        setLoading(false)
+      })
+  }
 
   useEffect(() => {
-    getTickets()
-      .then(setTickets)
-      .catch(() => {})
+    fetchTickets()
   }, [])
 
   const openTickets = tickets.filter((t) => !CLOSED_STATUSES.includes(t.status))
@@ -227,6 +248,23 @@ export default function Dashboard() {
         })}
       </div>
 
+      {loadError && (
+        <div className="p-4 rounded-lg bg-red-500/10 border border-red-500/30 text-red-600 dark:text-red-400 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="h-5 w-5 shrink-0" />
+            <span className="text-sm">
+              Não foi possível carregar os dados dos chamados: {loadError}
+            </span>
+          </div>
+          <button
+            onClick={fetchTickets}
+            className="text-xs font-semibold underline hover:opacity-80"
+          >
+            Tentar novamente
+          </button>
+        </div>
+      )}
+
       <Card className="itsm-card">
         <CardHeader className="flex flex-row items-center justify-between border-b border-border pb-3">
           <CardTitle className="text-base font-semibold text-foreground">
@@ -253,10 +291,18 @@ export default function Dashboard() {
                 </tr>
               </thead>
               <tbody>
-                {tableTickets.length === 0 ? (
+                {loading ? (
                   <tr>
                     <td colSpan={6} className="px-4 py-8 text-center text-muted-foreground">
-                      Nenhum chamado encontrado para este filtro.
+                      Carregando chamados...
+                    </td>
+                  </tr>
+                ) : tableTickets.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="px-4 py-8 text-center text-muted-foreground">
+                      {loadError
+                        ? 'Ocorreu um erro ao carregar os chamados.'
+                        : 'Nenhum chamado encontrado para este filtro.'}
                     </td>
                   </tr>
                 ) : (

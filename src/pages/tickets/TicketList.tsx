@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
+  AlertTriangle,
   PlusCircle,
   Search,
   Filter,
@@ -138,6 +139,7 @@ export default function TicketList() {
   const [users, setUsers] = useState<UserItem[]>([])
   const [companies, setCompanies] = useState<CompanyRecord[]>([])
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState<string | null>(null)
   const [view, setView] = useState<'table' | 'kanban'>('table')
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
@@ -160,6 +162,7 @@ export default function TicketList() {
 
   const loadData = async () => {
     try {
+      setLoadError(null)
       const [t, u, c] = await Promise.all([
         getTicketsWithLastInteraction(),
         getUsers().catch(() => [] as UserItem[]),
@@ -168,8 +171,14 @@ export default function TicketList() {
       setTickets(t)
       setUsers(u)
       setCompanies(c)
-    } catch {
-      /* noop */
+      setLoadError(null)
+    } catch (err: any) {
+      console.error('Falha ao carregar lista de chamados:', err)
+      const msg =
+        err?.response?.message ||
+        err?.message ||
+        'Erro ao carregar chamados. Verifique suas permissões ou tente novamente.'
+      setLoadError(msg)
     } finally {
       setLoading(false)
     }
@@ -481,6 +490,18 @@ export default function TicketList() {
         <div className="flex items-center gap-2 rounded-lg border border-amber-300 bg-amber-50 px-4 py-2 text-sm text-amber-800 dark:bg-amber-950 dark:text-amber-200">
           <WifiOff className="h-4 w-4" />
           <span>Tempo real desconectado — as atualizações automáticas estão pausadas.</span>
+        </div>
+      )}
+
+      {loadError && (
+        <div className="flex items-center justify-between rounded-lg border border-red-300 bg-red-50 p-4 text-sm text-red-800 dark:bg-red-950/40 dark:border-red-900 dark:text-red-300">
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="h-5 w-5 shrink-0" />
+            <span>Não foi possível carregar os chamados: {loadError}</span>
+          </div>
+          <Button variant="outline" size="sm" onClick={() => loadData()}>
+            Tentar novamente
+          </Button>
         </div>
       )}
       {view === 'kanban' ? (
