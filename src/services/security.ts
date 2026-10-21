@@ -137,6 +137,39 @@ export const securityService = {
     })
   },
 
+  // Solicitar recuperação de senha
+  async requestPasswordReset(
+    email: string,
+  ): Promise<{ success: boolean; message: string; email_sent?: boolean }> {
+    try {
+      return await pb.send<{ success: boolean; message: string; email_sent?: boolean }>(
+        '/backend/v1/auth/request-password-reset',
+        {
+          method: 'POST',
+          body: { email },
+        },
+      )
+    } catch (err: any) {
+      // Fallback para chamada padrão de requestPasswordReset do SDK caso a rota personalizada falhe
+      try {
+        await pb.collection('users').requestPasswordReset(email)
+        return {
+          success: true,
+          email_sent: true,
+          message:
+            'Se o e-mail estiver cadastrado, as orientações de recuperação foram encaminhadas.',
+        }
+      } catch (fallbackErr: any) {
+        return {
+          success: true,
+          email_sent: false,
+          message:
+            'Solicitação registrada. Se não receber o link em alguns minutos, contate o administrador para obter uma nova senha provisória.',
+        }
+      }
+    }
+  },
+
   // Buscar logs recentes de tentativas de login
   async getLoginLogs(limit = 50): Promise<LoginAttemptLog[]> {
     try {

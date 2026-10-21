@@ -1,17 +1,39 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Mail, ArrowLeft } from 'lucide-react'
+import { Mail, ArrowLeft, Loader2, CheckCircle, AlertCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { securityService } from '@/services/security'
 import serviceOneLogo from '@/assets/chatgpt-image-16-de-ago.de-2026-194645-c96c2.png'
 
 export default function RecoverPassword() {
   const [sent, setSent] = useState(false)
   const [email, setEmail] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [feedbackMessage, setFeedbackMessage] = useState('')
+  const [isWarning, setIsWarning] = useState(false)
 
-  const handleRecover = (e: React.FormEvent) => {
+  const handleRecover = async (e: React.FormEvent) => {
     e.preventDefault()
-    setSent(true)
+    if (!email.trim()) return
+
+    setLoading(true)
+    try {
+      const res = await securityService.requestPasswordReset(email.trim())
+      setFeedbackMessage(
+        res.message ||
+          'Se o e-mail estiver cadastrado, as orientações de recuperação foram encaminhadas.',
+      )
+      setIsWarning(!res.email_sent)
+      setSent(true)
+    } catch (_) {
+      setFeedbackMessage(
+        'Solicitação registrada com sucesso. Se o e-mail estiver cadastrado, as orientações foram encaminhadas ou contate o administrador.',
+      )
+      setSent(true)
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -27,16 +49,29 @@ export default function RecoverPassword() {
         </div>
 
         {sent ? (
-          <div className="rounded-lg bg-blue-50 p-4 text-center text-sm text-blue-800 space-y-3">
-            <p>
-              Se o e-mail estiver cadastrado, você receberá um link de recuperação em instantes.
-            </p>
-            <Link
-              to="/login"
-              className="inline-flex items-center text-blue-600 font-semibold hover:underline"
-            >
-              <ArrowLeft className="mr-1 h-4 w-4" /> Voltar para o Login
-            </Link>
+          <div
+            className={`rounded-lg p-4 text-center text-sm space-y-3 ${
+              isWarning
+                ? 'bg-amber-50 text-amber-900 border border-amber-200 dark:bg-amber-950/40 dark:text-amber-200 dark:border-amber-900'
+                : 'bg-blue-50 text-blue-900 border border-blue-200 dark:bg-blue-950/40 dark:text-blue-200 dark:border-blue-900'
+            }`}
+          >
+            <div className="flex justify-center">
+              {isWarning ? (
+                <AlertCircle className="h-8 w-8 text-amber-600" />
+              ) : (
+                <CheckCircle className="h-8 w-8 text-blue-600" />
+              )}
+            </div>
+            <p className="font-medium">{feedbackMessage}</p>
+            <div className="pt-2">
+              <Link
+                to="/login"
+                className="inline-flex items-center text-primary font-semibold hover:underline text-xs"
+              >
+                <ArrowLeft className="mr-1 h-3.5 w-3.5" /> Voltar para o Login
+              </Link>
+            </div>
           </div>
         ) : (
           <form onSubmit={handleRecover} className="space-y-4">
@@ -47,6 +82,7 @@ export default function RecoverPassword() {
                 <Input
                   type="email"
                   required
+                  disabled={loading}
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="pl-9"
@@ -55,8 +91,19 @@ export default function RecoverPassword() {
               </div>
             </div>
 
-            <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-700">
-              Enviar Link de Recuperação
+            <Button
+              type="submit"
+              disabled={loading}
+              className="w-full bg-blue-600 hover:bg-blue-700"
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Processando...
+                </>
+              ) : (
+                'Enviar Solicitação de Recuperação'
+              )}
             </Button>
 
             <div className="text-center">

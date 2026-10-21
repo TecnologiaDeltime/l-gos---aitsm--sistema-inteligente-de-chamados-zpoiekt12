@@ -139,6 +139,7 @@ const App = () => (
             {/* Public Auth Routes */}
             <Route path="/login" element={<Login />} />
             <Route path="/recuperar-senha" element={<RecoverPassword />} />
+            <Route path="/recover-password" element={<RecoverPassword />} />
             <Route path="/approval/:token" element={<ApprovalPublic />} />
             <Route path="/survey/:token" element={<SurveyPublic />} />
 
