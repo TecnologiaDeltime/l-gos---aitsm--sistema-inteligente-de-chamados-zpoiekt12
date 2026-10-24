@@ -146,18 +146,46 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [user])
 
+  // Ouvir evento customizado de expiração de sessão disparado pelo heartbeat
+  useEffect(() => {
+    const handleSessionExpired = (evt: Event) => {
+      const customEvt = evt as CustomEvent<{ reason?: string }>
+      const reason =
+        customEvt.detail?.reason || 'Sua sessão expirou por inatividade. Faça login novamente.'
+      logout(reason)
+    }
+
+    window.addEventListener('itsm:session-expired', handleSessionExpired)
+    return () => {
+      window.removeEventListener('itsm:session-expired', handleSessionExpired)
+    }
+  }, [logout])
+
+  // Referência para evitar concorrência/reentrância de heartbeat
+  const isHeartbeatSendingRef = useRef<boolean>(false)
+
   // Monitorar eventos de atividade do usuário
   useEffect(() => {
-    if (!pb.authStore.isValid) return
+    if (!pb.authStore.isValid || !token) return
 
     const handleUserActivity = () => {
       const now = Date.now()
       lastActivityRef.current = now
 
       // Enviar heartbeat a cada 5 minutos de atividade contínua
-      if (now - lastHeartbeatSentRef.current > 5 * 60 * 1000) {
+      if (
+        now - lastHeartbeatSentRef.current > 5 * 60 * 1000 &&
+        !isHeartbeatSendingRef.current &&
+        pb.authStore.isValid
+      ) {
         lastHeartbeatSentRef.current = now
-        securityService.sendHeartbeat().catch(() => {})
+        isHeartbeatSendingRef.current = true
+        securityService
+          .sendHeartbeat()
+          .catch(() => {})
+          .finally(() => {
+            isHeartbeatSendingRef.current = false
+          })
       }
     }
 

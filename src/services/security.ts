@@ -81,9 +81,37 @@ export const securityService = {
 
   // Heartbeat de sessão
   async sendHeartbeat(): Promise<void> {
-    await pb.send('/backend/v1/auth/session/heartbeat', {
-      method: 'POST',
-    })
+    // Se o cliente nem sequer tiver token válido no authStore, evita chamada inútil
+    if (!pb.authStore.isValid || !pb.authStore.token) {
+      return
+    }
+
+    try {
+      await pb.send('/backend/v1/auth/session/heartbeat', {
+        method: 'POST',
+        headers: {
+          Authorization: pb.authStore.token,
+        },
+      })
+    } catch (err: any) {
+      const status = err?.status || err?.response?.status || err?.statusCode
+      if (status === 401) {
+        // Disparar evento global e/ou limpar sessão expirada para que a aplicação realize o logout
+        console.warn('Sessão expirada ou token revogado no heartbeat (401).')
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(
+            new CustomEvent('itsm:session-expired', {
+              detail: {
+                reason: 'Sua sessão expirou por inatividade. Faça login novamente.',
+              },
+            }),
+          )
+        }
+      } else {
+        // Outros erros de rede/conexão são ignorados silenciosamente para não quebrar a UI
+        console.log('Heartbeat de sessão ignorado por falha temporária:', err?.message || err)
+      }
+    }
   },
 
   // Desbloquear usuário manualmente (Admin)

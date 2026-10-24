@@ -314,27 +314,54 @@ cronAdd('itsm_session_invalidation', '*/5 * * * *', () => {
 // =========================================================================
 
 // 1. Rota de Renovação / Heartbeat de Sessão (Keep-Alive)
-routerAdd(
-  'POST',
-  '/backend/v1/auth/session/heartbeat',
-  (e) => {
-    var authUser = e.auth
-    if (!authUser) {
-      return e.json(401, { error: 'Não autenticado.' })
-    }
+routerAdd('POST', '/backend/v1/auth/session/heartbeat', (e) => {
+  var authUser = e.auth
+
+  // Fallback: se e.auth não estiver preenchido pelo middleware, tentar resolver pelo token do cabeçalho
+  if (!authUser) {
     try {
-      authUser.set('session_last_activity', new Date().toISOString())
-      $app.save(authUser)
-      return e.json(200, {
-        success: true,
-        session_last_activity: authUser.getString('session_last_activity'),
-      })
-    } catch (err) {
-      return e.json(500, { error: 'Falha ao atualizar sessão: ' + err.message })
-    }
-  },
-  $apis.requireAuth(),
-)
+      var authHeader = ''
+      if (typeof e.requestInfo === 'function') {
+        var info = e.requestInfo()
+        if (info && info.headers) {
+          authHeader = info.headers['authorization'] || info.headers['Authorization'] || ''
+        }
+      }
+      if (!authHeader && e.httpContext && typeof e.httpContext.request === 'function') {
+        var req = e.httpContext.request()
+        if (req && req.header) {
+          authHeader = req.header.get('Authorization') || req.header.get('authorization') || ''
+        }
+      }
+
+      var token = authHeader.replace(/^Bearer\s+/i, '').trim()
+      if (token) {
+        try {
+          authUser = $app.findAuthRecordByToken(token, 'auth')
+        } catch (_) {
+          try {
+            authUser = $app.findAuthRecordByToken(token)
+          } catch (_) {}
+        }
+      }
+    } catch (_) {}
+  }
+
+  if (!authUser) {
+    return e.json(401, { error: 'Sessão expirada ou não autenticado.' })
+  }
+
+  try {
+    authUser.set('session_last_activity', new Date().toISOString())
+    $app.save(authUser)
+    return e.json(200, {
+      success: true,
+      session_last_activity: authUser.getString('session_last_activity'),
+    })
+  } catch (err) {
+    return e.json(500, { error: 'Falha ao atualizar sessão: ' + err.message })
+  }
+})
 
 // 2. Rota para Obter Configurações de Sessão e Política de 2FA
 routerAdd('GET', '/backend/v1/auth/security-policy', (e) => {
