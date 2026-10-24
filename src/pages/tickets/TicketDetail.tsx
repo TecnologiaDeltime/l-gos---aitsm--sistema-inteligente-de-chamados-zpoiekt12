@@ -99,7 +99,6 @@ import { OriginalEmailCard } from '@/components/OriginalEmailCard'
 import { sanitizeEmailHtml } from '@/lib/sanitize-email-html'
 import { SlaDetailBlock } from '@/components/SlaDetailBlock'
 import { computeSlaResponseStatus, computeSlaSolutionStatus } from '@/lib/sla-status'
-import { ApprovalDialog } from '@/components/ApprovalDialog'
 import { VisitDialog } from '@/components/VisitDialog'
 import { SlaPauseDialog, STATUS_BY_REASON } from '@/components/SlaPauseDialog'
 import { formatMinutes, formatHours } from '@/lib/duration'
@@ -137,7 +136,6 @@ export default function TicketDetail() {
   const [hourType, setHourType] = useState('Contratada')
   const [billingStatus, setBillingStatus] = useState('Faturável')
   const [sending, setSending] = useState(false)
-  const [showApproval, setShowApproval] = useState(false)
   const [showVisit, setShowVisit] = useState(false)
   const [contracts, setContracts] = useState<ContractRecord[]>([])
   const [timerRunning, setTimerRunning] = useState(false)
@@ -898,14 +896,9 @@ export default function TicketDetail() {
                 </Button>
               )}
             {(perms.isAdmin || perms.isGestor || perms.isClienteGestor) && (
-              <>
-                <Button size="sm" variant="outline" onClick={() => setShowApproval(true)}>
-                  <FileCheck className="mr-1.5 h-4 w-4" /> Solicitar Aprovação
-                </Button>
-                <Button size="sm" variant="outline" onClick={() => setShowVisit(true)}>
-                  <MapPin className="mr-1.5 h-4 w-4" /> Agendar Visita
-                </Button>
-              </>
+              <Button size="sm" variant="outline" onClick={() => setShowVisit(true)}>
+                <MapPin className="mr-1.5 h-4 w-4" /> Agendar Visita
+              </Button>
             )}
           </div>
         </div>
@@ -1698,7 +1691,6 @@ export default function TicketDetail() {
           </div>
         )}
       </div>
-      <ApprovalDialog ticketId={id!} open={showApproval} onOpenChange={setShowApproval} />
       <VisitDialog
         ticketId={id!}
         companyId={ticket.company}

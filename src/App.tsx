@@ -50,8 +50,6 @@ import ConfigurationItemDetail from '@/pages/cmdb/ConfigurationItemDetail'
 import ConfigurationItemEdit from '@/pages/cmdb/ConfigurationItemEdit'
 import CiImport from '@/pages/cmdb/CiImport'
 import CiTypes from '@/pages/cmdb/CiTypes'
-import ApprovalList from '@/pages/approvals/ApprovalList'
-import ApprovalPublic from '@/pages/approvals/ApprovalPublic'
 import VisitList from '@/pages/visits/VisitList'
 import SatisfactionDashboard from '@/pages/satisfaction/SatisfactionDashboard'
 import SurveyPublic from '@/pages/satisfaction/SurveyPublic'
@@ -70,7 +68,6 @@ import ClientExtractionPage from '@/pages/reports/ClientExtractionPage'
 import MonthlyClientReportPage from '@/pages/reports/MonthlyClientReportPage'
 import AutomationList from '@/pages/automations/AutomationList'
 import AutomationEditor from '@/pages/automations/AutomationEditor'
-import ApprovalCenter from '@/pages/approvals/ApprovalCenter'
 import TechnicalAgenda from '@/pages/visits/TechnicalAgenda'
 import VisitManagerDashboard from '@/pages/visits/VisitManagerDashboard'
 import TechnicianDashboardPage from '@/pages/visits/TechnicianDashboardPage'
@@ -141,7 +138,6 @@ const App = () => (
               <Route path="/login" element={<Login />} />
               <Route path="/recuperar-senha" element={<RecoverPassword />} />
               <Route path="/recover-password" element={<RecoverPassword />} />
-              <Route path="/approval/:token" element={<ApprovalPublic />} />
               <Route path="/survey/:token" element={<SurveyPublic />} />
 
               {/* Portal Route (protected, separate layout) */}
@@ -171,7 +167,6 @@ const App = () => (
                 <Route path="/tickets/retained" element={<RetainedTickets />} />
                 <Route path="/tickets/:id" element={<TicketDetail />} />
                 <Route path="/chamados/novo" element={<TicketCreate />} />
-                <Route path="/aprovacoes" element={<ApprovalList />} />
                 <Route path="/categorias" element={<CategoryManagement />} />
                 <Route path="/catalogo" element={<ActivityCatalog />} />
                 <Route path="/clients" element={<ClientList />} />
@@ -232,7 +227,6 @@ const App = () => (
                 />
                 <Route path="/cmdb/import" element={<CiImport />} />
                 <Route path="/cmdb/types" element={<CiTypes />} />
-                <Route path="/approvals" element={<ApprovalList />} />
                 <Route path="/visits" element={<VisitList />} />
                 <Route path="/satisfaction" element={<SatisfactionDashboard />} />
                 <Route path="/settings" element={<SettingsPage />} />
@@ -256,7 +250,6 @@ const App = () => (
                 <Route path="/blocking" element={<BlockingManagement />} />
                 <Route path="/automations" element={<AutomationList />} />
                 <Route path="/automations/:id/edit" element={<AutomationEditor />} />
-                <Route path="/approval-center" element={<ApprovalCenter />} />
                 <Route path="/agenda-tecnica" element={<TechnicalAgenda />} />
                 <Route path="/visits/dashboard" element={<VisitManagerDashboard />} />
                 <Route path="/visits/technician-dashboard" element={<TechnicianDashboardPage />} />

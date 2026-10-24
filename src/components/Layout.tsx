@@ -203,7 +203,6 @@ export default function Layout() {
       icon: PlusCircle,
       show: permissions.canWriteModule('tickets'),
     },
-    { label: 'Aprovações', path: '/aprovacoes', icon: FileCheck, show: true },
     {
       label: 'Categorias',
       path: '/categorias',
@@ -428,7 +427,6 @@ export default function Layout() {
       icon: ShieldOff,
       show: permissions.isAdmin,
     },
-    { label: 'Central de Aprovações', path: '/approval-center', icon: FileCheck, show: true },
     {
       label: 'Notificações',
       path: '/notifications',
