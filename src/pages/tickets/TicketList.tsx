@@ -18,7 +18,6 @@ import {
   ArrowUp,
   ChevronsUpDown,
   Hourglass,
-  Network,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -472,11 +471,6 @@ export default function TicketList() {
           >
             <List className="mr-1.5 h-4 w-4" /> Tabela
           </Button>
-          <Link to="/tickets/tree">
-            <Button variant="outline" size="sm" title="Visão em árvore de tickets pai/filho">
-              <Network className="mr-1.5 h-4 w-4" /> Árvore
-            </Button>
-          </Link>
           {view === 'table' && selectedIds.size > 0 && (
             <Button
               variant="default"

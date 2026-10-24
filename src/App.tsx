@@ -14,7 +14,6 @@ import Dashboard from '@/pages/Dashboard'
 import TicketList from '@/pages/tickets/TicketList'
 import TicketDetail from '@/pages/tickets/TicketDetail'
 import TicketCreate from '@/pages/tickets/TicketCreate'
-import TicketTree from '@/pages/tickets/TicketTree'
 import RetainedTickets from '@/pages/tickets/RetainedTickets'
 import ScheduledTickets from '@/pages/tickets/ScheduledTickets'
 import ClientList from '@/pages/clients/ClientList'
@@ -169,7 +168,6 @@ const App = () => (
                 <Route path="/tickets" element={<TicketList />} />
                 <Route path="/tickets/new" element={<TicketCreate />} />
                 <Route path="/tickets/scheduled" element={<ScheduledTickets />} />
-                <Route path="/tickets/tree" element={<TicketTree />} />
                 <Route path="/tickets/retained" element={<RetainedTickets />} />
                 <Route path="/tickets/:id" element={<TicketDetail />} />
                 <Route path="/chamados/novo" element={<TicketCreate />} />

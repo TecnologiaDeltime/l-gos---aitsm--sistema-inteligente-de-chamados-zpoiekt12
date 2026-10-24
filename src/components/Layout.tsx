@@ -45,7 +45,6 @@ import {
   CheckCircle2,
   RefreshCw,
   DollarSign,
-  Network,
   FileSearch,
   Volume2,
   VolumeX,
@@ -191,12 +190,6 @@ export default function Layout() {
       path: '/tickets/scheduled',
       icon: CalendarClock,
       show: permissions.canReadModule('tickets'),
-    },
-    {
-      label: 'Hierarquia de Tickets',
-      path: '/tickets/tree',
-      icon: Network,
-      show: permissions.canReadModule('tickets_children'),
     },
     {
       label: 'Chamados Retidos',

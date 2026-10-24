@@ -127,13 +127,6 @@ const FEATURE_CATEGORIES: FeatureCategory[] = [
         tag: 'Financeiro / Apuração',
       },
       {
-        id: 'tk-12',
-        title: 'Visão em Árvore de tickets (/tickets/tree)',
-        description:
-          'Visualização hierárquica e relacional de chamados pais, filhos e ramificações.',
-        tag: 'Visualização',
-      },
-      {
         id: 'tk-13',
         title: 'Coluna "Tempo sem Atualização" com código de cores',
         description:
