@@ -248,6 +248,12 @@ export default function Layout() {
       icon: Boxes,
       show: permissions.canReadModule('cmdb'),
     },
+    {
+      label: 'Cofre de Senhas',
+      path: '/vault',
+      icon: Lock,
+      show: permissions.canAccessVault,
+    },
   ]
   const cmdbGroupVisible =
     !permissions.isModuleHidden('cmdb') && cmdbSubmenuItems.some((i) => i.show)
@@ -382,26 +388,12 @@ export default function Layout() {
       icon: Shield,
       show: permissions.canReadModule('profiles') || permissions.isAdmin,
     },
-    {
-      label: 'Cofre de Senhas',
-      path: '/vault',
-      icon: Lock,
-      show: permissions.canAccessVault,
-    },
   ]
   const adminGroupVisible =
-    (!permissions.isModuleHidden('operators') ||
-      !permissions.isModuleHidden('profiles') ||
-      !permissions.isModuleHidden('vault')) &&
+    (!permissions.isModuleHidden('operators') || !permissions.isModuleHidden('profiles')) &&
     adminSubmenuItems.some((i) => i.show)
 
   const configuracoesSubmenuItems = [
-    {
-      label: 'Cofre de Senhas',
-      path: '/vault',
-      icon: Lock,
-      show: permissions.canAccessVault,
-    },
     {
       label: 'Caixa de E-mail & IMAP',
       path: '/settings?tab=email',
