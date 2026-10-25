@@ -63,11 +63,15 @@ export function DesignSettingsTab({ isAdminOrGestor }: DesignSettingsTabProps) {
   }, [designSettings])
 
   // Aplicar preview imediato sempre que o usuário alterar um valor no formulário
-  const handleSidebarBgChange = (newColor: string) => {
+  const handleSidebarBgChange = (newColor: string, suggestedTextColor?: string) => {
     setSidebarBg(newColor)
+    const newTextColor = suggestedTextColor || sidebarText
+    if (suggestedTextColor) {
+      setSidebarText(suggestedTextColor)
+    }
     applyDesignPreview({
       sidebar_bg_color: newColor,
-      sidebar_text_color: sidebarText,
+      sidebar_text_color: newTextColor,
       system_theme_variant: systemVariant,
     })
   }
@@ -222,44 +226,110 @@ export function DesignSettingsTab({ isAdminOrGestor }: DesignSettingsTabProps) {
               </div>
             </div>
 
-            {/* Swatches predefinidos */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5 pt-1">
-              {SIDEBAR_BG_SWATCHES.map((swatch) => {
-                const isSelected = sidebarBg.toLowerCase() === swatch.value.toLowerCase()
-                return (
-                  <button
-                    key={swatch.value}
-                    type="button"
-                    onClick={() => handleSidebarBgChange(swatch.value)}
-                    disabled={!isAdminOrGestor}
-                    className={`group relative p-2.5 rounded-xl border text-left transition-all duration-200 flex flex-col gap-2 ${
-                      isSelected
-                        ? 'border-primary ring-2 ring-primary/40 bg-card shadow-md'
-                        : 'border-border/80 hover:border-border hover:bg-secondary/40'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between w-full">
-                      <div
-                        className="h-6 w-6 rounded-lg border border-white/10 shadow-xs flex items-center justify-center shrink-0"
-                        style={{ backgroundColor: swatch.value }}
+            {/* Swatches predefinidos organizados por tom (Escuros vs Claros) */}
+            <div className="space-y-3 pt-1">
+              {/* Grupo: Paletas Escuras (Dark Tech) */}
+              <div className="space-y-1.5">
+                <div className="flex items-center gap-2">
+                  <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
+                    Paletas Escuras (Dark Tech)
+                  </span>
+                  <span className="text-[10px] text-muted-foreground font-mono">
+                    (6 opções originais)
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5">
+                  {SIDEBAR_BG_SWATCHES.filter((s) => s.tone === 'dark').map((swatch) => {
+                    const isSelected = sidebarBg.toLowerCase() === swatch.value.toLowerCase()
+                    return (
+                      <button
+                        key={swatch.value}
+                        type="button"
+                        onClick={() => handleSidebarBgChange(swatch.value, swatch.defaultText)}
+                        disabled={!isAdminOrGestor}
+                        className={`group relative p-2.5 rounded-xl border text-left transition-all duration-200 flex flex-col gap-2 ${
+                          isSelected
+                            ? 'border-primary ring-2 ring-primary/40 bg-card shadow-md'
+                            : 'border-border/80 hover:border-border hover:bg-secondary/40'
+                        }`}
                       >
-                        {isSelected && <Check className="h-3.5 w-3.5 text-white" />}
-                      </div>
-                      <span className="text-[10px] font-mono text-muted-foreground">
-                        {swatch.value}
-                      </span>
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-xs font-semibold text-foreground truncate group-hover:text-primary transition-colors">
-                        {swatch.label}
-                      </p>
-                      <p className="text-[10px] text-muted-foreground line-clamp-1">
-                        {swatch.desc}
-                      </p>
-                    </div>
-                  </button>
-                )
-              })}
+                        <div className="flex items-center justify-between w-full">
+                          <div
+                            className="h-6 w-6 rounded-lg border border-white/10 shadow-xs flex items-center justify-center shrink-0"
+                            style={{ backgroundColor: swatch.value }}
+                          >
+                            {isSelected && <Check className="h-3.5 w-3.5 text-white" />}
+                          </div>
+                          <span className="text-[10px] font-mono text-muted-foreground">
+                            {swatch.value}
+                          </span>
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-xs font-semibold text-foreground truncate group-hover:text-primary transition-colors">
+                            {swatch.label}
+                          </p>
+                          <p className="text-[10px] text-muted-foreground line-clamp-1">
+                            {swatch.desc}
+                          </p>
+                        </div>
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+
+              {/* Grupo: Paletas Claras (Light / Soft) */}
+              <div className="space-y-1.5 pt-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
+                    Paletas Claras (Novas)
+                  </span>
+                  <Badge
+                    variant="outline"
+                    className="text-[9px] px-1.5 py-0 h-4 border-cyan-500/40 text-cyan-400"
+                  >
+                    Auto-harmonização WCAG
+                  </Badge>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5">
+                  {SIDEBAR_BG_SWATCHES.filter((s) => s.tone === 'light').map((swatch) => {
+                    const isSelected = sidebarBg.toLowerCase() === swatch.value.toLowerCase()
+                    return (
+                      <button
+                        key={swatch.value}
+                        type="button"
+                        onClick={() => handleSidebarBgChange(swatch.value, swatch.defaultText)}
+                        disabled={!isAdminOrGestor}
+                        className={`group relative p-2.5 rounded-xl border text-left transition-all duration-200 flex flex-col gap-2 ${
+                          isSelected
+                            ? 'border-primary ring-2 ring-primary/40 bg-card shadow-md'
+                            : 'border-border/80 hover:border-border hover:bg-secondary/40'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between w-full">
+                          <div
+                            className="h-6 w-6 rounded-lg border border-black/10 shadow-xs flex items-center justify-center shrink-0"
+                            style={{ backgroundColor: swatch.value }}
+                          >
+                            {isSelected && <Check className="h-3.5 w-3.5 text-slate-900" />}
+                          </div>
+                          <span className="text-[10px] font-mono text-muted-foreground">
+                            {swatch.value}
+                          </span>
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-xs font-semibold text-foreground truncate group-hover:text-primary transition-colors">
+                            {swatch.label}
+                          </p>
+                          <p className="text-[10px] text-muted-foreground line-clamp-1">
+                            {swatch.desc}
+                          </p>
+                        </div>
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
             </div>
           </div>
 
@@ -430,15 +500,15 @@ export function DesignSettingsTab({ isAdminOrGestor }: DesignSettingsTabProps) {
             <div className="space-y-0.5">
               <Label className="text-sm font-semibold text-foreground flex items-center gap-2">
                 <Sparkles className="h-4 w-4 text-primary" />
-                Variações de Cores do Sistema (Temas Dark Tech)
+                Variações de Cores do Sistema (5 Temas Disponíveis)
               </Label>
               <p className="text-xs text-muted-foreground">
-                Além do tema Cyber Cyan padrão, escolha entre mais duas variações harmoniosas com
-                acentos em neon e acentos primários calibrados para o tema dark.
+                Além do tema Cyber Cyan original, escolha entre quatro variações calibradas (Neon
+                Purple, Emerald Teal, Ice Blue Light e Solar Amber) com persistência em tempo real.
               </p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-1">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pt-1">
               {THEME_VARIANTS.map((variant) => {
                 const isSelected = systemVariant === variant.id
                 return (

@@ -1,6 +1,11 @@
 import pb from '@/lib/pocketbase/client'
 
-export type SystemThemeVariant = 'cyber_cyan' | 'neon_purple' | 'emerald_teal'
+export type SystemThemeVariant =
+  | 'cyber_cyan'
+  | 'neon_purple'
+  | 'emerald_teal'
+  | 'ice_blue'
+  | 'solar_amber'
 
 export interface DesignSettings {
   id?: string
@@ -19,14 +24,95 @@ export const DEFAULT_DESIGN_SETTINGS: DesignSettings = {
   scope: 'global',
 }
 
-// Swatches predefinidos harmoniosos para a barra lateral
-export const SIDEBAR_BG_SWATCHES = [
-  { label: 'Dark Tech Original', value: '#070b14', desc: 'Preto slate tecnológico profundo' },
-  { label: 'Azul Marinho Tech', value: '#0a1628', desc: 'Marinho aeroespacial com tom azulado' },
-  { label: 'Grafite Ônix', value: '#121824', desc: 'Cinza grafite escuro com alto contraste' },
-  { label: 'Violeta Escuro', value: '#130d24', desc: 'Roxo sideral escuro cyberpunk' },
-  { label: 'Verde Petróleo Escuro', value: '#071b18', desc: 'Teal esmeralda escuro profundo' },
-  { label: 'Carvão Neutro', value: '#18181b', desc: 'Cinza carvão neutro zinc/slate' },
+export interface SidebarSwatch {
+  label: string
+  value: string
+  desc: string
+  tone: 'dark' | 'light'
+  defaultText: string
+}
+
+// Swatches predefinidos harmoniosos para a barra lateral (combinando opções escuras e claras)
+export const SIDEBAR_BG_SWATCHES: SidebarSwatch[] = [
+  // Swatches Escuros (Dark Tech)
+  {
+    label: 'Dark Tech Original',
+    value: '#070b14',
+    desc: 'Preto slate tecnológico profundo',
+    tone: 'dark',
+    defaultText: '#22d3ee',
+  },
+  {
+    label: 'Azul Marinho Tech',
+    value: '#0a1628',
+    desc: 'Marinho aeroespacial com tom azulado',
+    tone: 'dark',
+    defaultText: '#38bdf8',
+  },
+  {
+    label: 'Grafite Ônix',
+    value: '#121824',
+    desc: 'Cinza grafite escuro com alto contraste',
+    tone: 'dark',
+    defaultText: '#ffffff',
+  },
+  {
+    label: 'Violeta Escuro',
+    value: '#130d24',
+    desc: 'Roxo sideral escuro cyberpunk',
+    tone: 'dark',
+    defaultText: '#c084fc',
+  },
+  {
+    label: 'Verde Petróleo Escuro',
+    value: '#071b18',
+    desc: 'Teal esmeralda escuro profundo',
+    tone: 'dark',
+    defaultText: '#34d399',
+  },
+  {
+    label: 'Carvão Neutro',
+    value: '#18181b',
+    desc: 'Cinza carvão neutro zinc/slate',
+    tone: 'dark',
+    defaultText: '#e2e8f0',
+  },
+  // Swatches Claros (Light / Soft) - combinando harmoniosamente com o sistema
+  {
+    label: 'Azul Claro Sky',
+    value: '#E8F1FA',
+    desc: 'Azul céu suave e arejado',
+    tone: 'light',
+    defaultText: '#1e293b',
+  },
+  {
+    label: 'Cinza Perla',
+    value: '#F1F3F5',
+    desc: 'Neutro contemporâneo elegante',
+    tone: 'light',
+    defaultText: '#0f172a',
+  },
+  {
+    label: 'Lavanda Suave',
+    value: '#EDE9F7',
+    desc: 'Lavanda pastel refinada e calma',
+    tone: 'light',
+    defaultText: '#2e1065',
+  },
+  {
+    label: 'Verde Menta Claro',
+    value: '#E6F6F0',
+    desc: 'Menta bio-tech refrescante e limpa',
+    tone: 'light',
+    defaultText: '#064e3b',
+  },
+  {
+    label: 'Âmbar Claro / Bege',
+    value: '#F5EFE3',
+    desc: 'Bege quente sofisticado e acolhedor',
+    tone: 'light',
+    defaultText: '#451a03',
+  },
 ]
 
 // Swatches predefinidos para letras e ícones da barra lateral
@@ -126,6 +212,52 @@ export const THEME_VARIANTS: ThemeVariantDefinition[] = [
       chart2: '190 95% 48%',
       chart3: '215 90% 60%',
       chart4: '38 96% 54%',
+      chart5: '280 80% 65%',
+    },
+  },
+  {
+    id: 'ice_blue',
+    name: 'Ice Blue Light',
+    subtitle: 'Azul Glacial & Ciano Cristal',
+    description:
+      'Variação gelada e luminosa com acentos azul-royal e ciano cristal para alta clareza visual.',
+    primaryHex: '#38bdf8',
+    accentHex: '#0284c7',
+    previewBg: 'linear-gradient(135deg, #0a1e36 0%, #0c3359 50%, #164e63 100%)',
+    chips: ['#38bdf8', '#0284c7', '#22d3ee'],
+    hslVariables: {
+      primary: '199 89% 48%',
+      primaryForeground: '204 80% 6%',
+      accent: '217 91% 60%',
+      accentForeground: '0 0% 100%',
+      ring: '199 89% 48%',
+      chart1: '199 89% 48%',
+      chart2: '217 91% 60%',
+      chart3: '172 75% 46%',
+      chart4: '262 83% 68%',
+      chart5: '38 92% 50%',
+    },
+  },
+  {
+    id: 'solar_amber',
+    name: 'Solar Amber',
+    subtitle: 'Âmbar Dourado & Laranja Quente',
+    description:
+      'Acentos âmbar, dourado e laranja energéticos sobre o fundo grafite escuro com alto contraste.',
+    primaryHex: '#f59e0b',
+    accentHex: '#f97316',
+    previewBg: 'linear-gradient(135deg, #1c1407 0%, #291b07 50%, #362208 100%)',
+    chips: ['#f59e0b', '#fbbf24', '#f97316'],
+    hslVariables: {
+      primary: '38 92% 50%',
+      primaryForeground: '30 50% 6%',
+      accent: '24 95% 53%',
+      accentForeground: '0 0% 100%',
+      ring: '38 92% 50%',
+      chart1: '38 92% 50%',
+      chart2: '24 95% 53%',
+      chart3: '45 93% 58%',
+      chart4: '142 71% 45%',
       chart5: '280 80% 65%',
     },
   },
