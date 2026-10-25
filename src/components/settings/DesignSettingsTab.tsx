@@ -159,7 +159,7 @@ export function DesignSettingsTab({ isAdminOrGestor }: DesignSettingsTabProps) {
                 variant="secondary"
                 className="bg-primary/10 text-primary border-primary/30 text-[10px] font-mono h-6"
               >
-                Dark Tech v0.0.220
+                Dark Tech v0.0.223
               </Badge>
             </div>
           </div>
@@ -286,7 +286,7 @@ export function DesignSettingsTab({ isAdminOrGestor }: DesignSettingsTabProps) {
                   </span>
                   <Badge
                     variant="outline"
-                    className="text-[9px] px-1.5 py-0 h-4 border-cyan-500/40 text-cyan-400"
+                    className="text-[9px] px-1.5 py-0 h-4 border-primary/40 text-primary"
                   >
                     Auto-harmonização WCAG
                   </Badge>
@@ -500,11 +500,12 @@ export function DesignSettingsTab({ isAdminOrGestor }: DesignSettingsTabProps) {
             <div className="space-y-0.5">
               <Label className="text-sm font-semibold text-foreground flex items-center gap-2">
                 <Sparkles className="h-4 w-4 text-primary" />
-                Variações de Cores do Sistema (5 Temas Disponíveis)
+                Variações de Cores do Sistema (6 Temas Disponíveis)
               </Label>
               <p className="text-xs text-muted-foreground">
-                Além do tema Cyber Cyan original, escolha entre quatro variações calibradas (Neon
-                Purple, Emerald Teal, Ice Blue Light e Solar Amber) com persistência em tempo real.
+                Escolha entre os 6 temas disponíveis (Cyber Cyan, Neon Purple &amp; Magenta, Emerald
+                Teal Tech, Ice Blue Light, Solar Amber e Candy Neon) com preview em tempo real e
+                persistência global.
               </p>
             </div>
 

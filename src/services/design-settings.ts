@@ -6,6 +6,7 @@ export type SystemThemeVariant =
   | 'emerald_teal'
   | 'ice_blue'
   | 'solar_amber'
+  | 'candy'
 
 export interface DesignSettings {
   id?: string
@@ -261,6 +262,29 @@ export const THEME_VARIANTS: ThemeVariantDefinition[] = [
       chart5: '280 80% 65%',
     },
   },
+  {
+    id: 'candy',
+    name: 'Candy Neon (Doce Vibrante)',
+    subtitle: 'Rosa Chiclete & Lilás Neon',
+    description:
+      'Acentos em rosa chiclete vibrante e lilás suave sobre fundo escuro grafite, com contraste otimizado.',
+    primaryHex: '#ec4899',
+    accentHex: '#c084fc',
+    previewBg: 'linear-gradient(135deg, #18111e 0%, #29122e 100%)',
+    chips: ['#ec4899', '#f472b6', '#c084fc', '#e879f9', '#fbcfe8'],
+    hslVariables: {
+      primary: '330 81% 60%',
+      primaryForeground: '330 50% 6%',
+      accent: '270 95% 75%',
+      accentForeground: '0 0% 100%',
+      ring: '330 81% 60%',
+      chart1: '330 81% 60%',
+      chart2: '270 95% 75%',
+      chart3: '315 90% 70%',
+      chart4: '290 85% 65%',
+      chart5: '340 82% 52%',
+    },
+  },
 ]
 
 const STORAGE_KEY = 'itsm-design-settings'
@@ -393,6 +417,10 @@ export function applyDesignToDOM(settings: DesignSettings, isDark: boolean = tru
     root.style.setProperty('--accent', variant.hslVariables.accent)
     root.style.setProperty('--accent-foreground', variant.hslVariables.accentForeground)
     root.style.setProperty('--ring', variant.hslVariables.ring)
+    root.style.setProperty('--sidebar-primary', variant.hslVariables.primary)
+    root.style.setProperty('--sidebar-primary-foreground', variant.hslVariables.primaryForeground)
+    root.style.setProperty('--sidebar-ring', variant.hslVariables.ring)
+    root.style.setProperty('--sidebar-accent-foreground', variant.hslVariables.primary)
     root.style.setProperty('--chart-1', variant.hslVariables.chart1)
     root.style.setProperty('--chart-2', variant.hslVariables.chart2)
     root.style.setProperty('--chart-3', variant.hslVariables.chart3)

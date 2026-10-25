@@ -548,7 +548,7 @@ export default function Layout() {
       >
         {active && (
           <span
-            className="absolute left-0 top-1.5 bottom-1.5 w-1 rounded-r-full bg-primary shadow-[0_0_8px_rgba(6,182,212,0.8)]"
+            className="absolute left-0 top-1.5 bottom-1.5 w-1 rounded-r-full bg-primary shadow-[0_0_8px_hsl(var(--primary)/0.8)]"
             style={
               customSidebarText
                 ? {
@@ -597,7 +597,7 @@ export default function Layout() {
             <img
               src={serviceOneLogo}
               alt="ServiceOne Logo"
-              className="h-9 w-auto max-w-[170px] object-contain drop-shadow-[0_0_8px_rgba(6,182,212,0.25)] transition-transform duration-300 group-hover:scale-105"
+              className="h-9 w-auto max-w-[170px] object-contain drop-shadow-[0_0_8px_hsl(var(--primary)/0.25)] transition-transform duration-300 group-hover:scale-105"
             />
           </div>
         </Link>
@@ -631,7 +631,7 @@ export default function Layout() {
                 }`}
               >
                 <LayoutDashboard
-                  className="h-4 w-4 shrink-0 text-cyan-400"
+                  className="h-4 w-4 shrink-0 text-primary"
                   style={customSidebarText ? { color: customSidebarText } : undefined}
                 />
                 <span className="truncate">Dashboard</span>
@@ -703,7 +703,7 @@ export default function Layout() {
                 }`}
               >
                 <Ticket
-                  className="h-4 w-4 shrink-0 text-cyan-400"
+                  className="h-4 w-4 shrink-0 text-primary"
                   style={customSidebarText ? { color: customSidebarText } : undefined}
                 />
                 <span className="truncate">Tickets</span>
@@ -782,7 +782,7 @@ export default function Layout() {
                 }`}
               >
                 <Building2
-                  className="h-4 w-4 shrink-0 text-cyan-400"
+                  className="h-4 w-4 shrink-0 text-primary"
                   style={customSidebarText ? { color: customSidebarText } : undefined}
                 />
                 <span className="truncate">Cliente</span>
@@ -854,7 +854,7 @@ export default function Layout() {
                 }`}
               >
                 <Server
-                  className="h-4 w-4 shrink-0 text-cyan-400"
+                  className="h-4 w-4 shrink-0 text-primary"
                   style={customSidebarText ? { color: customSidebarText } : undefined}
                 />
                 <span className="truncate">CMDB</span>
@@ -928,7 +928,7 @@ export default function Layout() {
                 }`}
               >
                 <GitBranch
-                  className="h-4 w-4 shrink-0 text-cyan-400"
+                  className="h-4 w-4 shrink-0 text-primary"
                   style={customSidebarText ? { color: customSidebarText } : undefined}
                 />
                 <span className="truncate">Gestão de Mudanças</span>
@@ -1002,7 +1002,7 @@ export default function Layout() {
                 }`}
               >
                 <Bug
-                  className="h-4 w-4 shrink-0 text-cyan-400"
+                  className="h-4 w-4 shrink-0 text-primary"
                   style={customSidebarText ? { color: customSidebarText } : undefined}
                 />
                 <span className="truncate">Gestão de Problemas</span>
@@ -1074,7 +1074,7 @@ export default function Layout() {
                 }`}
               >
                 <MapPin
-                  className="h-4 w-4 shrink-0 text-cyan-400"
+                  className="h-4 w-4 shrink-0 text-primary"
                   style={customSidebarText ? { color: customSidebarText } : undefined}
                 />
                 <span className="truncate">Gestão de Visitas</span>
@@ -1148,7 +1148,7 @@ export default function Layout() {
                 }`}
               >
                 <BarChart3
-                  className="h-4 w-4 shrink-0 text-cyan-400"
+                  className="h-4 w-4 shrink-0 text-primary"
                   style={customSidebarText ? { color: customSidebarText } : undefined}
                 />
                 <span className="truncate">Relatórios</span>
@@ -1223,7 +1223,7 @@ export default function Layout() {
                 }`}
               >
                 <Shield
-                  className="h-4 w-4 shrink-0 text-cyan-400"
+                  className="h-4 w-4 shrink-0 text-primary"
                   style={customSidebarText ? { color: customSidebarText } : undefined}
                 />
                 <span className="truncate">Administração</span>
@@ -1298,7 +1298,7 @@ export default function Layout() {
                 }`}
               >
                 <Settings
-                  className="h-4 w-4 shrink-0 text-cyan-400"
+                  className="h-4 w-4 shrink-0 text-primary"
                   style={customSidebarText ? { color: customSidebarText } : undefined}
                 />
                 <span className="truncate">Configurações</span>
@@ -1365,8 +1365,8 @@ export default function Layout() {
           <span
             className="h-1.5 w-1.5 rounded-full animate-pulse shadow-xs"
             style={{
-              backgroundColor: customSidebarText || '#22d3ee',
-              boxShadow: `0 0 6px ${customSidebarText || '#22d3ee'}`,
+              backgroundColor: customSidebarText || 'hsl(var(--primary))',
+              boxShadow: `0 0 6px ${customSidebarText || 'hsl(var(--primary))'}`,
             }}
           />
           ONLINE
@@ -1402,7 +1402,7 @@ export default function Layout() {
               </Sheet>
             )}
             <div className="flex items-center gap-2">
-              <span className="hidden sm:inline-block h-2 w-2 rounded-full bg-primary shadow-[0_0_8px_rgba(6,182,212,0.8)]" />
+              <span className="hidden sm:inline-block h-2 w-2 rounded-full bg-primary shadow-[0_0_8px_hsl(var(--primary)/0.8)]" />
               <h1 className="text-base sm:text-lg font-semibold tracking-tight text-foreground">
                 {[
                   ...navItems,
@@ -1444,7 +1444,7 @@ export default function Layout() {
               className="transition-all duration-300 hover:scale-105 hover:bg-secondary/70"
             >
               {theme === 'dark' ? (
-                <Sun className="h-4 w-4 text-cyan-400 drop-shadow-[0_0_6px_rgba(34,211,238,0.7)]" />
+                <Sun className="h-4 w-4 text-primary drop-shadow-[0_0_6px_hsl(var(--primary)/0.7)]" />
               ) : (
                 <Moon className="h-4 w-4 text-primary" />
               )}

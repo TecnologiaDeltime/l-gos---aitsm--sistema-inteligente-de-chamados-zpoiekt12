@@ -328,11 +328,11 @@ export default function SettingsPage() {
             onClick={() => handleTabChange('design')}
             className={`h-8 text-xs font-semibold rounded-lg transition-all ${
               mainTab === 'design'
-                ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 shadow-xs shadow-cyan-500/10'
+                ? 'bg-primary/20 text-primary border border-primary/30 shadow-xs shadow-primary/10'
                 : 'text-muted-foreground hover:text-foreground'
             }`}
           >
-            <Palette className="h-3.5 w-3.5 mr-1.5 text-cyan-400" />
+            <Palette className="h-3.5 w-3.5 mr-1.5 text-primary" />
             Design & Cores
           </Button>
 
