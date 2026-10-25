@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-25T01:20:42.660Z",
+  "generatedAt": "2026-10-25T01:55:43.153Z",
   "collections": [
     {
       "name": "users",
@@ -10404,6 +10404,60 @@
         "CREATE INDEX idx_client_notif_scope ON client_notification_settings (scope)",
         "CREATE INDEX idx_client_notif_company ON client_notification_settings (company)"
       ]
+    },
+    {
+      "name": "design_settings",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != ''",
+        "view": "@request.auth.id != ''",
+        "create": "@request.auth.id != '' && (@request.auth.role = \"admin\" || @request.auth.role = \"gestor\")",
+        "update": "@request.auth.id != '' && (@request.auth.role = \"admin\" || @request.auth.role = \"gestor\")",
+        "delete": "@request.auth.id != '' && @request.auth.role = \"admin\""
+      },
+      "fields": [
+        {
+          "name": "sidebar_bg_color",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "sidebar_text_color",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "system_theme_variant",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["cyber_cyan", "neon_purple", "emerald_teal"]
+        },
+        {
+          "name": "scope",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["global"]
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": ["CREATE INDEX idx_design_settings_scope ON design_settings (scope)"]
     }
   ]
 }

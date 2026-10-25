@@ -442,10 +442,35 @@
   }
 
   .sidebar-scroll::-webkit-scrollbar-thumb {
-    background-color: rgb(148 163 184 / 0.4);
-    border-radius: 3px;
+    background-color: rgba(255, 255, 255, 0.08);
+    border-radius: 9999px;
   }
 
+  /* Suporte à barra lateral customizada */
+  aside,
+  [data-sidebar='true'] {
+    background-color: var(--custom-sidebar-bg, hsl(var(--sidebar-background)));
+    color: var(--custom-sidebar-text, hsl(var(--sidebar-foreground)));
+  }
+
+  /* Garante que links e botões inativos dentro do menu lateral respeitem a cor definida */
+  aside a:not([class*='bg-primary']):not([class*='from-primary']),
+  aside button:not([class*='bg-primary']) {
+    color: var(--custom-sidebar-text, hsl(var(--sidebar-foreground)));
+    opacity: 0.85;
+  }
+
+  aside a:not([class*='bg-primary']):not([class*='from-primary']):hover,
+  aside button:not([class*='bg-primary']):hover {
+    opacity: 1;
+    filter: brightness(1.2);
+  }
+
+  /* Ícones inativos na barra lateral */
+  aside a svg,
+  aside button svg {
+    color: var(--custom-sidebar-text, inherit);
+  }
   .sidebar-scroll::-webkit-scrollbar-thumb:hover {
     background-color: rgb(148 163 184 / 0.6);
   }

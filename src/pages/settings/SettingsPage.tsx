@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
 import { useToast } from '@/hooks/use-toast'
-import { FileText, Bell, Save, Mail, User, Settings, Hourglass, Lock } from 'lucide-react'
+import { FileText, Bell, Save, Mail, User, Settings, Hourglass, Lock, Palette } from 'lucide-react'
 import {
   getEmailConfig,
   saveEmailConfig,
@@ -19,6 +19,7 @@ import { ImapEmailSettings } from '@/components/settings/ImapEmailSettings'
 import VaultPage from '@/pages/vault/VaultPage'
 import { SecuritySettingsTab } from '@/components/settings/SecuritySettingsTab'
 import { ClientNotificationSettingsTab } from '@/components/settings/ClientNotificationSettingsTab'
+import { DesignSettingsTab } from '@/components/settings/DesignSettingsTab'
 import { ShieldCheck } from 'lucide-react'
 import {
   getVoiceAlertsEnabled,
@@ -53,38 +54,46 @@ export default function SettingsPage() {
 
   // Aba ativa de primeiro nível em Configurações
   const initialTab =
-    searchParams.get('tab') === 'email'
-      ? 'email'
-      : searchParams.get('tab') === 'client_notif'
-        ? 'client_notif'
-        : searchParams.get('tab') === 'vault'
-          ? 'vault'
-          : searchParams.get('tab') === 'security'
-            ? 'security'
-            : 'general'
+    searchParams.get('tab') === 'design'
+      ? 'design'
+      : searchParams.get('tab') === 'email'
+        ? 'email'
+        : searchParams.get('tab') === 'client_notif'
+          ? 'client_notif'
+          : searchParams.get('tab') === 'vault'
+            ? 'vault'
+            : searchParams.get('tab') === 'security'
+              ? 'security'
+              : 'general'
   const [mainTab, setMainTab] = useState<
-    'general' | 'client_notif' | 'email' | 'vault' | 'security'
+    'general' | 'design' | 'client_notif' | 'email' | 'vault' | 'security'
   >(initialTab)
 
-  const handleTabChange = (tab: 'general' | 'client_notif' | 'email' | 'vault' | 'security') => {
+  const handleTabChange = (
+    tab: 'general' | 'design' | 'client_notif' | 'email' | 'vault' | 'security',
+  ) => {
     setMainTab(tab)
     setSearchParams(
-      tab === 'client_notif'
-        ? { tab: 'client_notif' }
-        : tab === 'email'
-          ? { tab: 'email' }
-          : tab === 'vault'
-            ? { tab: 'vault' }
-            : tab === 'security'
-              ? { tab: 'security' }
-              : {},
+      tab === 'design'
+        ? { tab: 'design' }
+        : tab === 'client_notif'
+          ? { tab: 'client_notif' }
+          : tab === 'email'
+            ? { tab: 'email' }
+            : tab === 'vault'
+              ? { tab: 'vault' }
+              : tab === 'security'
+                ? { tab: 'security' }
+                : {},
     )
   }
 
   // Sincronizar se o parâmetro de URL mudar
   useEffect(() => {
     const tabFromUrl = searchParams.get('tab')
-    if (tabFromUrl === 'client_notif' && mainTab !== 'client_notif') {
+    if (tabFromUrl === 'design' && mainTab !== 'design') {
+      setMainTab('design')
+    } else if (tabFromUrl === 'client_notif' && mainTab !== 'client_notif') {
       setMainTab('client_notif')
     } else if (tabFromUrl === 'email' && mainTab !== 'email') {
       setMainTab('email')
@@ -315,6 +324,21 @@ export default function SettingsPage() {
           <Button
             type="button"
             size="sm"
+            variant={mainTab === 'design' ? 'default' : 'ghost'}
+            onClick={() => handleTabChange('design')}
+            className={`h-8 text-xs font-semibold rounded-lg transition-all ${
+              mainTab === 'design'
+                ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 shadow-xs shadow-cyan-500/10'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            <Palette className="h-3.5 w-3.5 mr-1.5 text-cyan-400" />
+            Design & Cores
+          </Button>
+
+          <Button
+            type="button"
+            size="sm"
             variant={mainTab === 'client_notif' ? 'default' : 'ghost'}
             onClick={() => handleTabChange('client_notif')}
             className={`h-8 text-xs font-semibold rounded-lg transition-all ${
@@ -373,6 +397,9 @@ export default function SettingsPage() {
           </Button>
         </div>
       </div>
+
+      {/* SEÇÃO DESIGN & APARÊNCIA */}
+      {mainTab === 'design' && <DesignSettingsTab isAdminOrGestor={permissions.isGestor} />}
 
       {/* SEÇÃO NOTIFICAÇÕES DO CLIENTE */}
       {mainTab === 'client_notif' && (
