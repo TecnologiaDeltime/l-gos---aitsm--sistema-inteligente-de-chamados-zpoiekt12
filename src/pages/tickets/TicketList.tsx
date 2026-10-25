@@ -7,6 +7,9 @@ import {
   Filter,
   LayoutGrid,
   List,
+  Columns2,
+  ArrowLeft,
+  ExternalLink,
   Settings2,
   Volume2,
   VolumeX,
@@ -43,6 +46,7 @@ import { StatusBadge } from '@/components/StatusBadge'
 import { SlaStatusBadge } from '@/components/SlaStatusBadge'
 import { computeSlaResponseStatus, computeSlaSolutionStatus } from '@/lib/sla-status'
 import { KanbanBoard } from '@/components/KanbanBoard'
+import TicketDetail from '@/pages/tickets/TicketDetail'
 import { BatchDelegateDialog } from '@/components/BatchDelegateDialog'
 import { useRealtime } from '@/hooks/use-realtime'
 import { usePermissions } from '@/hooks/use-permissions'
@@ -142,7 +146,8 @@ export default function TicketList() {
   const [isBackgroundRefreshing, setIsBackgroundRefreshing] = useState(false)
   const [newTicketsHighlight, setNewTicketsHighlight] = useState<Set<string>>(new Set())
   const [loadError, setLoadError] = useState<string | null>(null)
-  const [view, setView] = useState<'table' | 'kanban'>('table')
+  const [view, setView] = useState<'table' | 'kanban' | 'split'>('table')
+  const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null)
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
   const [prioridadeFilter, setPrioridadeFilter] = useState('all')
@@ -347,6 +352,21 @@ export default function TicketList() {
     return arr
   }, [filtered, sortKey, sortDir, now])
 
+  // Ticket selecionado para a visão dividida (se o selecionado não existir mais na lista filtrada, pega o primeiro)
+  const activeSplitTicket = useMemo(() => {
+    if (!selectedTicketId) return sorted[0] || null
+    return sorted.find((t) => t.id === selectedTicketId) || sorted[0] || null
+  }, [sorted, selectedTicketId])
+
+  // Mantém a seleção consistente quando os chamados mudam
+  useEffect(() => {
+    if (view === 'split' && sorted.length > 0) {
+      if (!selectedTicketId || !sorted.some((t) => t.id === selectedTicketId)) {
+        setSelectedTicketId(sorted[0].id)
+      }
+    }
+  }, [view, sorted, selectedTicketId])
+
   const allFilteredSelected = sorted.length > 0 && sorted.every((t) => selectedIds.has(t.id))
   const someFilteredSelected = sorted.some((t) => selectedIds.has(t.id)) && !allFilteredSelected
 
@@ -458,6 +478,19 @@ export default function TicketList() {
             {soundOn ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
           </Button>
           <Button
+            variant={view === 'split' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => {
+              setView('split')
+              if (!selectedTicketId && sorted.length > 0) {
+                setSelectedTicketId(sorted[0].id)
+              }
+            }}
+            title="Visão dividida (Lista à esquerda e detalhe/logs à direita)"
+          >
+            <Columns2 className="mr-1.5 h-4 w-4" /> Dividida
+          </Button>
+          <Button
             variant={view === 'kanban' ? 'default' : 'outline'}
             size="sm"
             onClick={() => setView('kanban')}
@@ -544,6 +577,175 @@ export default function TicketList() {
           onStatusChange={handleKanbanStatusChange}
           hiddenColumns={hiddenColumns}
         />
+      ) : view === 'split' ? (
+        // ---- Visualização Dividida (Lista à Esquerda / Detalhe e Logs à Direita) ----
+        <div className="rounded-xl border border-border bg-card shadow-sm overflow-hidden min-h-[640px]">
+          {/* Seletor mobile: quando há chamado selecionado em tela pequena, permite voltar para a lista */}
+          <div className="flex flex-col md:flex-row md:divide-x divide-border">
+            {/* PAINEL ESQUERDO: Lista compacta */}
+            <div
+              className={cn(
+                'w-full md:w-80 lg:w-96 shrink-0 flex flex-col border-b md:border-b-0 border-border bg-muted/20',
+                selectedTicketId && isMobile ? 'hidden md:flex' : 'flex',
+              )}
+            >
+              {/* Header compacto da lista */}
+              <div className="flex items-center justify-between px-3.5 py-2.5 border-b border-border bg-muted/50">
+                <span className="text-xs font-semibold text-foreground uppercase tracking-wider">
+                  Chamados ({sorted.length})
+                </span>
+                <span className="text-[11px] text-muted-foreground">
+                  {selectedTicketId ? '1 selecionado' : 'Selecione'}
+                </span>
+              </div>
+
+              {/* Lista rolável de chamados */}
+              <div className="divide-y divide-border/60 overflow-y-auto max-h-[calc(100vh-280px)] md:max-h-[820px]">
+                {sorted.length === 0 ? (
+                  <div className="p-8 text-center text-xs text-muted-foreground">
+                    Nenhum chamado encontrado com os filtros aplicados.
+                  </div>
+                ) : (
+                  sorted.map((t) => {
+                    const isSelected = activeSplitTicket?.id === t.id
+                    const operatorName = t.expand?.assigned_to?.name || 'Não atribuído'
+                    return (
+                      <div
+                        key={t.id}
+                        onClick={() => setSelectedTicketId(t.id)}
+                        className={cn(
+                          'p-3 cursor-pointer transition-all text-left relative flex flex-col gap-1.5 select-none',
+                          isSelected
+                            ? 'bg-primary/10 dark:bg-primary/15 border-l-4 border-l-primary'
+                            : 'hover:bg-muted/60 dark:hover:bg-muted/40 border-l-4 border-l-transparent',
+                          newTicketsHighlight.has(t.id) && 'ring-2 ring-primary bg-primary/20',
+                        )}
+                      >
+                        {/* Linha superior: Nº Ticket e Prioridade */}
+                        <div className="flex items-center justify-between gap-1.5">
+                          <div className="flex items-center gap-1.5 min-w-0">
+                            <span
+                              className={cn(
+                                'font-bold text-xs truncate',
+                                isSelected ? 'text-primary' : 'text-foreground',
+                              )}
+                            >
+                              {t.number}
+                            </span>
+                            {t.parent_ticket_id && (
+                              <GitBranch className="h-3 w-3 text-blue-600 shrink-0" />
+                            )}
+                            {associatedIds.has(t.id) && (
+                              <Link2 className="h-3 w-3 text-blue-600 shrink-0" />
+                            )}
+                          </div>
+                          <PriorityBadge priority={t.priority} />
+                        </div>
+
+                        {/* Assunto / Título do ticket */}
+                        <p
+                          className={cn(
+                            'text-xs font-medium line-clamp-2 leading-snug',
+                            isSelected ? 'text-foreground font-semibold' : 'text-foreground/90',
+                          )}
+                          title={t.title}
+                        >
+                          {t.title}
+                        </p>
+
+                        {/* Linha inferior: Operador responsável e Status */}
+                        <div className="flex items-center justify-between gap-2 pt-1 border-t border-border/40 text-[11px]">
+                          <div className="flex items-center gap-1 min-w-0 text-muted-foreground">
+                            <span className="font-semibold text-foreground/80 shrink-0">
+                              Operador:
+                            </span>
+                            <span className="truncate" title={operatorName}>
+                              {operatorName}
+                            </span>
+                          </div>
+                          <StatusBadge status={t.status} />
+                        </div>
+
+                        {/* Detalhe extra sutil: Cliente + Tempo de abertura */}
+                        <div className="flex items-center justify-between gap-1 text-[10px] text-muted-foreground/80">
+                          <span className="truncate max-w-[140px]">
+                            {t.expand?.company?.trade_name || 'Geral'}
+                          </span>
+                          <span>{formatTicketAge(t.created, now)}</span>
+                        </div>
+                      </div>
+                    )
+                  })
+                )}
+              </div>
+            </div>
+
+            {/* PAINEL DIREITO: Detalhe e Logs do Ticket selecionado */}
+            <div
+              className={cn(
+                'flex-1 min-w-0 bg-background flex flex-col',
+                !selectedTicketId && isMobile ? 'hidden' : 'flex',
+              )}
+            >
+              {activeSplitTicket ? (
+                <div className="flex flex-col h-full">
+                  {/* Barra superior de ações do detalhe */}
+                  <div className="flex items-center justify-between px-4 py-2.5 border-b border-border bg-muted/30">
+                    <div className="flex items-center gap-2 min-w-0">
+                      {isMobile && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setSelectedTicketId(null)}
+                          className="h-8 px-2 text-xs"
+                        >
+                          <ArrowLeft className="h-3.5 w-3.5 mr-1" />
+                          Lista
+                        </Button>
+                      )}
+                      <span className="text-xs font-bold text-primary truncate">
+                        {activeSplitTicket.number}
+                      </span>
+                      <span className="text-xs text-muted-foreground truncate hidden sm:inline">
+                        — {activeSplitTicket.title}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <Link
+                        to={`/tickets/${activeSplitTicket.id}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-primary transition-colors"
+                        title="Abrir em aba separada"
+                      >
+                        <span className="hidden sm:inline text-[11px]">Abrir página inteira</span>
+                        <ExternalLink className="h-3.5 w-3.5" />
+                      </Link>
+                    </div>
+                  </div>
+
+                  {/* Conteúdo rolável do detalhe com logs e interações */}
+                  <div className="p-4 md:p-6 overflow-y-auto max-h-[calc(100vh-280px)] md:max-h-[820px]">
+                    <TicketDetail
+                      key={activeSplitTicket.id}
+                      ticketId={activeSplitTicket.id}
+                      onTicketUpdated={() => loadData(true)}
+                    />
+                  </div>
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center p-12 text-center text-muted-foreground my-auto space-y-2">
+                  <Columns2 className="h-10 w-10 text-muted-foreground/40" />
+                  <p className="text-sm font-medium">Nenhum chamado selecionado</p>
+                  <p className="text-xs text-muted-foreground max-w-sm">
+                    Selecione um chamado na lista à esquerda para carregar seus detalhes, histórico
+                    e interações.
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
       ) : isMobile ? (
         // ---- Visualização mobile: cards ----
         <div className="space-y-3">

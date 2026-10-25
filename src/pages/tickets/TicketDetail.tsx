@@ -116,8 +116,17 @@ import { usePermissions } from '@/hooks/use-permissions'
 import { useRealtime } from '@/hooks/use-realtime'
 import { useToast } from '@/hooks/use-toast'
 
-export default function TicketDetail() {
-  const { id } = useParams<{ id: string }>()
+interface TicketDetailProps {
+  ticketId?: string
+  onTicketUpdated?: () => void
+}
+
+export default function TicketDetail({
+  ticketId: propTicketId,
+  onTicketUpdated,
+}: TicketDetailProps = {}) {
+  const params = useParams<{ id: string }>()
+  const id = propTicketId || params.id
   const { user } = useAuth()
   const perms = usePermissions()
   const { toast } = useToast()
@@ -181,6 +190,9 @@ export default function TicketDetail() {
           getCategoryById(t.category)
             .then(setCategoryData)
             .catch(() => {})
+        }
+        if (onTicketUpdated) {
+          onTicketUpdated()
         }
       })
       .catch(() => {})
