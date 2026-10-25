@@ -105,7 +105,7 @@ export default function ConfigurationItemList() {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-xl font-bold tracking-tight text-foreground flex items-center gap-2">
-            <Boxes className="h-6 w-6 text-primary drop-shadow-[0_0_8px_rgba(6,182,212,0.6)]" />
+            <Boxes className="h-6 w-6 text-primary drop-shadow-[0_0_8px_hsl(var(--primary)/0.6)]" />
             Itens de Configuração (CMDB)
           </h1>
           <p className="text-xs text-muted-foreground mt-0.5">

@@ -116,7 +116,7 @@ export default function ManagerDashboard() {
   if (loading)
     return (
       <div className="flex items-center justify-center py-12">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent shadow-[0_0_12px_rgba(6,182,212,0.5)]" />
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent shadow-[0_0_12px_hsl(var(--primary)/0.5)]" />
       </div>
     )
 
@@ -237,7 +237,7 @@ export default function ManagerDashboard() {
                   <TableCell className="text-xs text-emerald-400 font-medium">
                     {r.resolved}
                   </TableCell>
-                  <TableCell className="text-xs font-bold text-cyan-400">
+                  <TableCell className="text-xs font-bold text-primary">
                     {r.slaPct.toFixed(1)}%
                   </TableCell>
                   <TableCell className="text-xs text-foreground">{r.hours.toFixed(1)}h</TableCell>

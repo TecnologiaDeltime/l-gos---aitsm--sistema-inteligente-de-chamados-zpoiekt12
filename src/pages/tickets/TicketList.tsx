@@ -592,7 +592,7 @@ export default function TicketList() {
               {/* Header compacto da lista */}
               <div className="flex items-center justify-between px-4 py-3 border-b border-border/80 bg-secondary/30">
                 <div className="flex items-center gap-2">
-                  <span className="h-1.5 w-1.5 rounded-full bg-cyan-400 shadow-[0_0_6px_rgba(34,211,238,0.8)]" />
+                  <span className="h-1.5 w-1.5 rounded-full bg-primary shadow-[0_0_6px_hsl(var(--primary)/0.8)]" />
                   <span className="text-xs font-semibold text-foreground uppercase tracking-wider">
                     Fila ({sorted.length})
                   </span>
@@ -626,7 +626,7 @@ export default function TicketList() {
                       >
                         {/* Efeito de brilho no ticket selecionado */}
                         {isSelected && (
-                          <div className="absolute right-2 top-2 h-1.5 w-1.5 rounded-full bg-primary shadow-[0_0_8px_rgba(6,182,212,0.9)]" />
+                          <div className="absolute right-2 top-2 h-1.5 w-1.5 rounded-full bg-primary shadow-[0_0_8px_hsl(var(--primary)/0.9)]" />
                         )}
 
                         {/* Linha superior: Nº Ticket e Prioridade */}

@@ -375,7 +375,7 @@ export default function OperatorsPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-border/80">
         <div>
           <div className="flex items-center gap-2.5">
-            <div className="p-2 rounded-xl bg-primary/10 text-primary border border-primary/20 shadow-[0_0_12px_rgba(6,182,212,0.2)]">
+            <div className="p-2 rounded-xl bg-primary/10 text-primary border border-primary/20 shadow-[0_0_12px_hsl(var(--primary)/0.2)]">
               <Users className="h-6 w-6" />
             </div>
             <div>

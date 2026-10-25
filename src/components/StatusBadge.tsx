@@ -6,9 +6,9 @@ interface StatusBadgeProps {
 
 const STATUS_CONFIG: Record<string, { dot: string; className: string }> = {
   Novo: {
-    dot: 'bg-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.8)] animate-pulse',
+    dot: 'bg-primary shadow-[0_0_8px_hsl(var(--primary)/0.8)] animate-pulse',
     className:
-      'bg-cyan-500/10 text-cyan-700 border-cyan-300 dark:bg-cyan-500/15 dark:text-cyan-300 dark:border-cyan-500/40 shadow-xs shadow-cyan-500/10',
+      'bg-primary/10 text-primary border-primary/30 dark:bg-primary/15 dark:text-primary dark:border-primary/40 shadow-xs shadow-primary/10',
   },
   'Em Triagem': {
     dot: 'bg-purple-400 shadow-[0_0_6px_rgba(192,132,252,0.8)]',

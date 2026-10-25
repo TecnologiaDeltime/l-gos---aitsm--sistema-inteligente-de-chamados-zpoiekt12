@@ -165,7 +165,7 @@ export default function OperatorDashboard() {
   if (loading)
     return (
       <div className="flex items-center justify-center py-12">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent shadow-[0_0_12px_rgba(6,182,212,0.5)]" />
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent shadow-[0_0_12px_hsl(var(--primary)/0.5)]" />
       </div>
     )
 

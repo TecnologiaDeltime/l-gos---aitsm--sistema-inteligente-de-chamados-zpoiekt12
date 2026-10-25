@@ -141,6 +141,21 @@ export interface ThemeVariantDefinition {
     accent: string
     accentForeground: string
     ring: string
+    background?: string
+    foreground?: string
+    card?: string
+    cardForeground?: string
+    popover?: string
+    popoverForeground?: string
+    border?: string
+    input?: string
+    muted?: string
+    mutedForeground?: string
+    secondary?: string
+    secondaryForeground?: string
+    sidebarBackground?: string
+    sidebarForeground?: string
+    sidebarBorder?: string
     chart1: string
     chart2: string
     chart3: string
@@ -165,6 +180,21 @@ export const THEME_VARIANTS: ThemeVariantDefinition[] = [
       accent: '250 85% 65%',
       accentForeground: '0 0% 100%',
       ring: '200 98% 50%',
+      background: '228 35% 6%',
+      foreground: '214 32% 95%',
+      card: '226 30% 9.5%',
+      cardForeground: '214 32% 95%',
+      popover: '226 32% 11%',
+      popoverForeground: '214 32% 95%',
+      border: '226 24% 18%',
+      input: '226 24% 18%',
+      muted: '226 28% 12.5%',
+      mutedForeground: '217 19% 68%',
+      secondary: '226 26% 14%',
+      secondaryForeground: '214 32% 92%',
+      sidebarBackground: '228 38% 5%',
+      sidebarForeground: '214 32% 94%',
+      sidebarBorder: '226 24% 15%',
       chart1: '200 98% 50%',
       chart2: '152 80% 48%',
       chart3: '260 90% 66%',
@@ -187,6 +217,21 @@ export const THEME_VARIANTS: ThemeVariantDefinition[] = [
       accent: '320 85% 60%',
       accentForeground: '0 0% 100%',
       ring: '272 90% 65%',
+      background: '265 40% 6%',
+      foreground: '270 30% 96%',
+      card: '265 32% 9.5%',
+      cardForeground: '270 30% 96%',
+      popover: '265 34% 11%',
+      popoverForeground: '270 30% 96%',
+      border: '265 25% 18%',
+      input: '265 25% 18%',
+      muted: '265 28% 13%',
+      mutedForeground: '265 18% 70%',
+      secondary: '265 26% 15%',
+      secondaryForeground: '270 30% 92%',
+      sidebarBackground: '265 45% 5%',
+      sidebarForeground: '270 30% 95%',
+      sidebarBorder: '265 25% 15%',
       chart1: '272 90% 65%',
       chart2: '320 85% 60%',
       chart3: '220 90% 65%',
@@ -209,6 +254,21 @@ export const THEME_VARIANTS: ThemeVariantDefinition[] = [
       accent: '190 95% 48%',
       accentForeground: '0 0% 100%',
       ring: '160 84% 45%',
+      background: '168 40% 5.5%',
+      foreground: '160 30% 95%',
+      card: '168 32% 9%',
+      cardForeground: '160 30% 95%',
+      popover: '168 34% 11%',
+      popoverForeground: '160 30% 95%',
+      border: '168 25% 17%',
+      input: '168 25% 17%',
+      muted: '168 26% 12.5%',
+      mutedForeground: '165 18% 68%',
+      secondary: '168 25% 14%',
+      secondaryForeground: '160 30% 92%',
+      sidebarBackground: '168 45% 4.5%',
+      sidebarForeground: '160 30% 94%',
+      sidebarBorder: '168 25% 14%',
       chart1: '160 84% 45%',
       chart2: '190 95% 48%',
       chart3: '215 90% 60%',
@@ -222,16 +282,31 @@ export const THEME_VARIANTS: ThemeVariantDefinition[] = [
     subtitle: 'Azul Glacial & Ciano Cristal',
     description:
       'Variação gelada e luminosa com acentos azul-royal e ciano cristal para alta clareza visual.',
-    primaryHex: '#38bdf8',
-    accentHex: '#0284c7',
-    previewBg: 'linear-gradient(135deg, #0a1e36 0%, #0c3359 50%, #164e63 100%)',
-    chips: ['#38bdf8', '#0284c7', '#22d3ee'],
+    primaryHex: '#0284c7',
+    accentHex: '#0ea5e9',
+    previewBg: 'linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 50%, #bae6fd 100%)',
+    chips: ['#0284c7', '#0ea5e9', '#38bdf8'],
     hslVariables: {
       primary: '199 89% 48%',
-      primaryForeground: '204 80% 6%',
+      primaryForeground: '0 0% 100%',
       accent: '217 91% 60%',
       accentForeground: '0 0% 100%',
       ring: '199 89% 48%',
+      background: '204 45% 98%',
+      foreground: '215 28% 17%',
+      card: '0 0% 100%',
+      cardForeground: '215 28% 17%',
+      popover: '0 0% 100%',
+      popoverForeground: '215 28% 17%',
+      border: '205 30% 88%',
+      input: '205 30% 88%',
+      muted: '204 35% 94%',
+      mutedForeground: '215 16% 40%',
+      secondary: '204 40% 95%',
+      secondaryForeground: '215 28% 17%',
+      sidebarBackground: '204 35% 94%',
+      sidebarForeground: '215 28% 17%',
+      sidebarBorder: '205 30% 86%',
       chart1: '199 89% 48%',
       chart2: '217 91% 60%',
       chart3: '172 75% 46%',
@@ -255,6 +330,21 @@ export const THEME_VARIANTS: ThemeVariantDefinition[] = [
       accent: '24 95% 53%',
       accentForeground: '0 0% 100%',
       ring: '38 92% 50%',
+      background: '30 35% 6%',
+      foreground: '38 30% 95%',
+      card: '30 28% 9.5%',
+      cardForeground: '38 30% 95%',
+      popover: '30 30% 11%',
+      popoverForeground: '38 30% 95%',
+      border: '30 22% 18%',
+      input: '30 22% 18%',
+      muted: '30 25% 13%',
+      mutedForeground: '35 18% 68%',
+      secondary: '30 24% 15%',
+      secondaryForeground: '38 30% 92%',
+      sidebarBackground: '30 40% 5%',
+      sidebarForeground: '38 30% 94%',
+      sidebarBorder: '30 22% 15%',
       chart1: '38 92% 50%',
       chart2: '24 95% 53%',
       chart3: '45 93% 58%',
@@ -278,6 +368,21 @@ export const THEME_VARIANTS: ThemeVariantDefinition[] = [
       accent: '270 95% 75%',
       accentForeground: '0 0% 100%',
       ring: '330 81% 60%',
+      background: '320 35% 6.5%',
+      foreground: '330 30% 96%',
+      card: '320 28% 10%',
+      cardForeground: '330 30% 96%',
+      popover: '320 30% 11.5%',
+      popoverForeground: '330 30% 96%',
+      border: '320 22% 19%',
+      input: '320 22% 19%',
+      muted: '320 25% 13.5%',
+      mutedForeground: '325 18% 70%',
+      secondary: '320 24% 15.5%',
+      secondaryForeground: '330 30% 93%',
+      sidebarBackground: '320 40% 5.5%',
+      sidebarForeground: '330 30% 95%',
+      sidebarBorder: '320 22% 15.5%',
       chart1: '330 81% 60%',
       chart2: '270 95% 75%',
       chart3: '315 90% 70%',
@@ -407,25 +512,78 @@ export function applyDesignToDOM(settings: DesignSettings, isDark: boolean = tru
     root.style.setProperty('--custom-sidebar-text', settings.sidebar_text_color)
   }
 
-  // 2. Variação do tema do sistema (Primária, Acento, Gráficos)
+  // 2. Variação do tema do sistema (Primária, Acento, Gráficos, Background, Foreground, etc.)
   const variant =
     THEME_VARIANTS.find((v) => v.id === settings.system_theme_variant) || THEME_VARIANTS[0]
 
-  if (isDark) {
-    root.style.setProperty('--primary', variant.hslVariables.primary)
-    root.style.setProperty('--primary-foreground', variant.hslVariables.primaryForeground)
-    root.style.setProperty('--accent', variant.hslVariables.accent)
-    root.style.setProperty('--accent-foreground', variant.hslVariables.accentForeground)
-    root.style.setProperty('--ring', variant.hslVariables.ring)
-    root.style.setProperty('--sidebar-primary', variant.hslVariables.primary)
-    root.style.setProperty('--sidebar-primary-foreground', variant.hslVariables.primaryForeground)
-    root.style.setProperty('--sidebar-ring', variant.hslVariables.ring)
-    root.style.setProperty('--sidebar-accent-foreground', variant.hslVariables.primary)
-    root.style.setProperty('--chart-1', variant.hslVariables.chart1)
-    root.style.setProperty('--chart-2', variant.hslVariables.chart2)
-    root.style.setProperty('--chart-3', variant.hslVariables.chart3)
-    root.style.setProperty('--chart-4', variant.hslVariables.chart4)
-    root.style.setProperty('--chart-5', variant.hslVariables.chart5)
+  // Se o tema for ice_blue (modo claro característico), remove a classe .dark se o usuário estiver usando ice_blue
+  // mas se o usuário estiver no modo dark padrão ou outro variant, segue a regra:
+  const isIceBlue = variant.id === 'ice_blue'
+  if (isIceBlue) {
+    root.classList.remove('dark')
+  }
+
+  // Aplicação de variáveis HSL do variant
+  root.style.setProperty('--primary', variant.hslVariables.primary)
+  root.style.setProperty('--primary-foreground', variant.hslVariables.primaryForeground)
+  root.style.setProperty('--accent', variant.hslVariables.accent)
+  root.style.setProperty('--accent-foreground', variant.hslVariables.accentForeground)
+  root.style.setProperty('--ring', variant.hslVariables.ring)
+  root.style.setProperty('--sidebar-primary', variant.hslVariables.primary)
+  root.style.setProperty('--sidebar-primary-foreground', variant.hslVariables.primaryForeground)
+  root.style.setProperty('--sidebar-ring', variant.hslVariables.ring)
+  root.style.setProperty('--sidebar-accent-foreground', variant.hslVariables.primary)
+  root.style.setProperty('--chart-1', variant.hslVariables.chart1)
+  root.style.setProperty('--chart-2', variant.hslVariables.chart2)
+  root.style.setProperty('--chart-3', variant.hslVariables.chart3)
+  root.style.setProperty('--chart-4', variant.hslVariables.chart4)
+  root.style.setProperty('--chart-5', variant.hslVariables.chart5)
+
+  // Variáveis semânticas estruturais: background, foreground, card, border, muted, secondary
+  if (variant.hslVariables.background) {
+    root.style.setProperty('--background', variant.hslVariables.background)
+  }
+  if (variant.hslVariables.foreground) {
+    root.style.setProperty('--foreground', variant.hslVariables.foreground)
+  }
+  if (variant.hslVariables.card) {
+    root.style.setProperty('--card', variant.hslVariables.card)
+  }
+  if (variant.hslVariables.cardForeground) {
+    root.style.setProperty('--card-foreground', variant.hslVariables.cardForeground)
+  }
+  if (variant.hslVariables.popover) {
+    root.style.setProperty('--popover', variant.hslVariables.popover)
+  }
+  if (variant.hslVariables.popoverForeground) {
+    root.style.setProperty('--popover-foreground', variant.hslVariables.popoverForeground)
+  }
+  if (variant.hslVariables.border) {
+    root.style.setProperty('--border', variant.hslVariables.border)
+  }
+  if (variant.hslVariables.input) {
+    root.style.setProperty('--input', variant.hslVariables.input)
+  }
+  if (variant.hslVariables.muted) {
+    root.style.setProperty('--muted', variant.hslVariables.muted)
+  }
+  if (variant.hslVariables.mutedForeground) {
+    root.style.setProperty('--muted-foreground', variant.hslVariables.mutedForeground)
+  }
+  if (variant.hslVariables.secondary) {
+    root.style.setProperty('--secondary', variant.hslVariables.secondary)
+  }
+  if (variant.hslVariables.secondaryForeground) {
+    root.style.setProperty('--secondary-foreground', variant.hslVariables.secondaryForeground)
+  }
+  if (variant.hslVariables.sidebarBackground) {
+    root.style.setProperty('--sidebar-background', variant.hslVariables.sidebarBackground)
+  }
+  if (variant.hslVariables.sidebarForeground) {
+    root.style.setProperty('--sidebar-foreground', variant.hslVariables.sidebarForeground)
+  }
+  if (variant.hslVariables.sidebarBorder) {
+    root.style.setProperty('--sidebar-border', variant.hslVariables.sidebarBorder)
   }
 }
 

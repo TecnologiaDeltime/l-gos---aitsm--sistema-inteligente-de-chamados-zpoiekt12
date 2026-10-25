@@ -14,8 +14,8 @@ export function ExecutiveKpiCard({
   label,
   value,
   icon: Icon,
-  color = 'text-cyan-400',
-  bg = 'bg-cyan-500/10 border border-cyan-500/20',
+  color = 'text-primary',
+  bg = 'bg-primary/10 border border-primary/20',
   onClick,
 }: ExecutiveKpiCardProps) {
   return (

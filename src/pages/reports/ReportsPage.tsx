@@ -191,7 +191,7 @@ export default function ReportsPage() {
       <div className="flex items-center justify-between flex-wrap gap-2 pb-1 border-b border-border/80">
         <div>
           <h2 className="text-xl font-bold tracking-tight text-foreground flex items-center gap-2">
-            <BarChart3 className="h-5 w-5 text-primary drop-shadow-[0_0_8px_rgba(6,182,212,0.6)]" />{' '}
+            <BarChart3 className="h-5 w-5 text-primary drop-shadow-[0_0_8px_hsl(var(--primary)/0.6)]" />{' '}
             Relatórios Gerenciais
           </h2>
           <p className="text-xs text-muted-foreground mt-0.5">

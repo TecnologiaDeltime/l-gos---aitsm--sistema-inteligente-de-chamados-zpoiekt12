@@ -15,7 +15,7 @@ export function ChartCard({ title, children, action, className }: ChartCardProps
     >
       <CardHeader className="flex flex-row items-center justify-between border-b border-border/70 pb-3 px-5 pt-4">
         <div className="flex items-center gap-2">
-          <span className="h-2 w-2 rounded-full bg-cyan-400 shadow-[0_0_6px_rgba(34,211,238,0.8)]" />
+          <span className="h-2 w-2 rounded-full bg-primary shadow-[0_0_6px_hsl(var(--primary)/0.8)]" />
           <CardTitle className="text-sm font-semibold tracking-tight text-foreground">
             {title}
           </CardTitle>
