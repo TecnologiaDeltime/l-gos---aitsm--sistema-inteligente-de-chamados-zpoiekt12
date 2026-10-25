@@ -630,41 +630,41 @@ export default function TicketDetail({
   return (
     <div className="grid gap-6 lg:grid-cols-3">
       <div className="space-y-6 lg:col-span-2">
-        <div className="itsm-card p-6 space-y-4">
+        <div className="itsm-card p-6 space-y-5 border border-border/80 bg-card shadow-sm">
           {ticket.parent_ticket_id && (
             <Link
               to={`/tickets/${ticket.parent_ticket_id}`}
-              className="flex items-center gap-2 rounded-lg border border-blue-300 bg-blue-50 px-3 py-2 text-sm font-medium text-blue-700 hover:bg-blue-100 transition-colors dark:bg-blue-950/40 dark:border-blue-800 dark:text-blue-300"
+              className="flex items-center gap-2 rounded-lg border border-cyan-500/30 bg-cyan-500/10 px-3.5 py-2 text-sm font-medium text-cyan-300 hover:bg-cyan-500/20 transition-all shadow-xs"
               title="Ir para o ticket pai"
             >
-              <ArrowUpRight className="h-4 w-4 shrink-0" />
-              <span className="shrink-0">
+              <ArrowUpRight className="h-4 w-4 shrink-0 text-cyan-400" />
+              <span className="shrink-0 font-mono">
                 Ticket Filho de{' '}
-                <strong className="font-bold">
+                <strong className="font-bold text-cyan-300">
                   #{ticket.expand?.parent_ticket_id?.number || ticket.parent_ticket_id}
                 </strong>
               </span>
               {ticket.expand?.parent_ticket_id?.title && (
-                <span className="truncate text-blue-600/80 dark:text-blue-400/80">
+                <span className="truncate text-cyan-300/80">
                   — {ticket.expand.parent_ticket_id.title}
                 </span>
               )}
             </Link>
           )}
 
-          {/* Banner de Sugestões de Triagem da IA */}
+          {/* Banner de Sugestões de Triagem da IA com visual Cyber Tech */}
           {ticket.triage_suggestions && (
-            <div className="rounded-xl border border-indigo-200 bg-indigo-50/70 dark:border-indigo-900/60 dark:bg-indigo-950/30 p-4 space-y-3">
+            <div className="rounded-xl border border-indigo-500/30 bg-gradient-to-r from-indigo-500/15 via-purple-500/10 to-transparent p-4 space-y-3 shadow-sm">
               <div className="flex items-center justify-between gap-2">
-                <div className="flex items-center gap-2 text-indigo-950 dark:text-indigo-200">
-                  <Sparkles className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
-                  <span className="font-semibold text-xs uppercase tracking-wider">
+                <div className="flex items-center gap-2 text-foreground">
+                  <Sparkles className="h-4 w-4 text-cyan-400 animate-pulse" />
+                  <span className="font-semibold text-xs uppercase tracking-wider text-cyan-300 font-mono">
                     Sugestões de Triagem Inteligente (IA)
                   </span>
                   {ticket.triage_suggestions.confidence && (
                     <Badge
                       variant="outline"
-                      className="bg-indigo-100/70 dark:bg-indigo-900/70 text-indigo-700 dark:text-indigo-300 text-[10px] border-indigo-300 dark:border-indigo-800"
+                      className="bg-indigo-500/20 text-indigo-300 text-[10px] border-indigo-500/40 font-mono"
                     >
                       Confiança: {Math.round(ticket.triage_suggestions.confidence * 100)}%
                     </Badge>
@@ -674,7 +674,7 @@ export default function TicketDetail({
                   size="sm"
                   onClick={handleApplyTriage}
                   disabled={applyingTriage}
-                  className="h-7 text-xs bg-indigo-600 hover:bg-indigo-700 text-white shadow-none"
+                  className="h-7 text-xs bg-indigo-600 hover:bg-indigo-500 text-white shadow-xs font-semibold"
                 >
                   <CheckCheck className="mr-1 h-3.5 w-3.5" />
                   {applyingTriage ? 'Aplicando...' : 'Aplicar Sugestão'}
@@ -683,33 +683,33 @@ export default function TicketDetail({
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
                 {ticket.triage_suggestions.type && (
-                  <div className="bg-white/80 dark:bg-slate-900/80 p-2 rounded-md border border-indigo-100 dark:border-indigo-900/40">
-                    <span className="text-slate-400 block text-[10px] font-medium">
+                  <div className="bg-card/80 p-2.5 rounded-lg border border-indigo-500/20">
+                    <span className="text-muted-foreground block text-[10px] uppercase font-mono">
                       Tipo Sugerido
                     </span>
-                    <span className="font-semibold text-slate-800 dark:text-slate-200">
+                    <span className="font-semibold text-foreground">
                       {ticket.triage_suggestions.type}
                     </span>
                   </div>
                 )}
                 {(ticket.triage_suggestions.category_name ||
                   ticket.triage_suggestions.category) && (
-                  <div className="bg-white/80 dark:bg-slate-900/80 p-2 rounded-md border border-indigo-100 dark:border-indigo-900/40">
-                    <span className="text-slate-400 block text-[10px] font-medium">
+                  <div className="bg-card/80 p-2.5 rounded-lg border border-indigo-500/20">
+                    <span className="text-muted-foreground block text-[10px] uppercase font-mono">
                       Categoria Sugerida
                     </span>
-                    <span className="font-semibold text-slate-800 dark:text-slate-200">
+                    <span className="font-semibold text-foreground">
                       {ticket.triage_suggestions.category_name ||
                         ticket.triage_suggestions.category}
                     </span>
                   </div>
                 )}
                 {ticket.triage_suggestions.service && (
-                  <div className="bg-white/80 dark:bg-slate-900/80 p-2 rounded-md border border-indigo-100 dark:border-indigo-900/40">
-                    <span className="text-slate-400 block text-[10px] font-medium">
+                  <div className="bg-card/80 p-2.5 rounded-lg border border-indigo-500/20">
+                    <span className="text-muted-foreground block text-[10px] uppercase font-mono">
                       Serviço / Atividade
                     </span>
-                    <span className="font-semibold text-slate-800 dark:text-slate-200">
+                    <span className="font-semibold text-foreground">
                       {ticket.triage_suggestions.service}
                     </span>
                   </div>
@@ -717,7 +717,7 @@ export default function TicketDetail({
               </div>
 
               {ticket.triage_suggestions.reason && (
-                <p className="text-[11px] text-indigo-900/80 dark:text-indigo-300/80 italic">
+                <p className="text-[11px] text-muted-foreground italic">
                   💡 {ticket.triage_suggestions.reason}
                 </p>
               )}

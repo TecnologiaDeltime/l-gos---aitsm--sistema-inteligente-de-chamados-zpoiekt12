@@ -520,507 +520,548 @@ export default function Layout() {
         key={item.path}
         to={item.path}
         onClick={() => setMobileOpen(false)}
-        className={`flex items-center gap-3 px-4 py-2.5 text-sm font-medium transition-all duration-200 border-l-2 ${
+        className={`relative flex items-center gap-3 mx-2 my-0.5 px-3 py-2 text-[13px] font-medium rounded-lg transition-all duration-200 ${
           active
-            ? 'border-primary bg-primary/10 text-primary'
-            : 'border-transparent text-muted-foreground hover:bg-secondary/50 hover:text-foreground'
+            ? 'bg-gradient-to-r from-primary/20 via-primary/10 to-transparent text-primary font-semibold shadow-xs shadow-primary/10 ring-1 ring-primary/30'
+            : 'text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground'
         }`}
       >
-        <Icon className="h-[18px] w-[18px] shrink-0" />
+        {active && (
+          <span className="absolute left-0 top-1.5 bottom-1.5 w-1 rounded-r-full bg-primary shadow-[0_0_8px_rgba(6,182,212,0.8)]" />
+        )}
+        <Icon className={`h-4 w-4 shrink-0 transition-colors ${active ? 'text-primary' : 'text-muted-foreground'}`} />
         <span className="truncate">{item.label}</span>
       </Link>
     )
   }
 
   const navContent = (
-    <div className="flex h-full flex-col bg-sidebar border-r border-sidebar-border">
-      <div className="flex h-16 items-center px-4 border-b border-border">
-        <Link to="/" className="flex items-center gap-2.5">
-          <img
-            src={serviceOneLogo}
-            alt="ServiceOne Logo"
-            className="h-9 w-auto max-w-[180px] object-contain"
-          />
+    <div className="flex h-full flex-col bg-sidebar border-r border-sidebar-border relative backdrop-blur">
+      <div className="flex h-16 items-center px-4 border-b border-sidebar-border/80 bg-sidebar/50">
+        <Link to="/" className="flex items-center gap-2.5 group">
+          <div className="relative">
+            <img
+              src={serviceOneLogo}
+              alt="ServiceOne Logo"
+              className="h-9 w-auto max-w-[170px] object-contain drop-shadow-[0_0_8px_rgba(6,182,212,0.25)] transition-transform duration-300 group-hover:scale-105"
+            />
+          </div>
         </Link>
       </div>
 
       <nav className="sidebar-scroll flex-1 overflow-y-auto py-2 scroll-smooth">
         {navBeforeClient.map(renderNavItem)}
         {
-          <div key="dashboard-group">
-            <div className="flex items-center">
+          <div key="dashboard-group" className="my-0.5">
+            <div className="flex items-center px-2">
               <button
                 onClick={() => setDashboardMenuOpen(!dashboardMenuOpen)}
-                className={`flex flex-1 items-center gap-3 px-4 py-2.5 text-sm font-medium transition-all duration-200 border-l-2 ${
+                className={`flex flex-1 items-center gap-3 px-3 py-2 text-[13px] font-medium rounded-lg transition-all duration-200 ${
                   dashboardSubmenuItems.some((i) => location.pathname === i.path)
-                    ? 'border-primary bg-primary/10 text-primary'
-                    : 'border-transparent text-muted-foreground hover:bg-secondary/50 hover:text-foreground'
+                    ? 'text-primary bg-primary/10 font-semibold'
+                    : 'text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground'
                 }`}
               >
-                <LayoutDashboard className="h-[18px] w-[18px] shrink-0" />
+                <LayoutDashboard className="h-4 w-4 shrink-0 text-cyan-400" />
                 <span className="truncate">Dashboard</span>
                 {dashboardMenuOpen ? (
-                  <ChevronDown className="ml-auto h-4 w-4" />
+                  <ChevronDown className="ml-auto h-3.5 w-3.5 opacity-60" />
                 ) : (
-                  <ChevronRight className="ml-auto h-4 w-4" />
+                  <ChevronRight className="ml-auto h-3.5 w-3.5 opacity-60" />
                 )}
               </button>
             </div>
-            {dashboardMenuOpen &&
-              dashboardSubmenuItems.map((sub) => {
-                const SubIcon = sub.icon
-                const subActive = location.pathname === sub.path
-                return (
-                  <Link
-                    key={sub.path}
-                    to={sub.path}
-                    onClick={() => setMobileOpen(false)}
-                    className={`flex items-center gap-3 pl-10 pr-4 py-2 text-[13px] font-medium transition-all duration-200 border-l-2 ${
-                      subActive
-                        ? 'border-primary bg-primary/10 text-primary'
-                        : 'border-transparent text-muted-foreground hover:bg-secondary/50 hover:text-foreground'
-                    }`}
-                  >
-                    <SubIcon className="h-4 w-4 shrink-0" />
-                    <span className="truncate">{sub.label}</span>
-                  </Link>
-                )
-              })}
+            {dashboardMenuOpen && (
+              <div className="ml-4 pl-2 my-1 border-l border-sidebar-border/70 space-y-0.5">
+                {dashboardSubmenuItems.map((sub) => {
+                  const SubIcon = sub.icon
+                  const subActive = location.pathname === sub.path
+                  return (
+                    <Link
+                      key={sub.path}
+                      to={sub.path}
+                      onClick={() => setMobileOpen(false)}
+                      className={`relative flex items-center gap-2.5 px-2.5 py-1.5 text-xs font-medium rounded-md transition-all duration-150 ${
+                        subActive
+                          ? 'bg-primary/20 text-primary font-semibold shadow-xs ring-1 ring-primary/30'
+                          : 'text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground'
+                      }`}
+                    >
+                      <SubIcon className={`h-3.5 w-3.5 shrink-0 ${subActive ? 'text-primary' : 'opacity-70'}`} />
+                      <span className="truncate">{sub.label}</span>
+                    </Link>
+                  )
+                })}
+              </div>
+            )}
           </div>
         }
         {chamadosGroupVisible && (
-          <div key="chamados-group">
-            <div className="flex items-center">
+          <div key="chamados-group" className="my-0.5">
+            <div className="flex items-center px-2">
               <button
                 onClick={() => setChamadosMenuOpen(!chamadosMenuOpen)}
-                className={`flex flex-1 items-center gap-3 px-4 py-2.5 text-sm font-medium transition-all duration-200 border-l-2 ${
+                className={`flex flex-1 items-center gap-3 px-3 py-2 text-[13px] font-medium rounded-lg transition-all duration-200 ${
                   chamadosSubmenuItems.some((i) => i.show && location.pathname === i.path)
-                    ? 'border-primary bg-primary/10 text-primary'
-                    : 'border-transparent text-muted-foreground hover:bg-secondary/50 hover:text-foreground'
+                    ? 'text-primary bg-primary/10 font-semibold'
+                    : 'text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground'
                 }`}
               >
-                <Ticket className="h-[18px] w-[18px] shrink-0" />
+                <Ticket className="h-4 w-4 shrink-0 text-cyan-400" />
                 <span className="truncate">Tickets</span>
                 {chamadosMenuOpen ? (
-                  <ChevronDown className="ml-auto h-4 w-4" />
+                  <ChevronDown className="ml-auto h-3.5 w-3.5 opacity-60" />
                 ) : (
-                  <ChevronRight className="ml-auto h-4 w-4" />
+                  <ChevronRight className="ml-auto h-3.5 w-3.5 opacity-60" />
                 )}
               </button>
             </div>
-            {chamadosMenuOpen &&
-              chamadosSubmenuItems
-                .filter((i) => i.show)
-                .map((sub) => {
-                  const SubIcon = sub.icon
-                  const currentFull = `${location.pathname}${location.search}`
-                  const subActive =
-                    currentFull === sub.path ||
-                    (location.pathname === sub.path && !location.search && !sub.path.includes('?'))
-                  return (
-                    <Link
-                      key={sub.path}
-                      to={sub.path}
-                      onClick={() => setMobileOpen(false)}
-                      className={`flex items-center gap-3 pl-10 pr-4 py-2 text-[13px] font-medium transition-all duration-200 border-l-2 ${
-                        subActive
-                          ? 'border-primary bg-primary/10 text-primary'
-                          : 'border-transparent text-muted-foreground hover:bg-secondary/50 hover:text-foreground'
-                      }`}
-                    >
-                      <SubIcon className="h-4 w-4 shrink-0" />
-                      <span className="truncate">{sub.label}</span>
-                    </Link>
-                  )
-                })}
+            {chamadosMenuOpen && (
+              <div className="ml-4 pl-2 my-1 border-l border-sidebar-border/70 space-y-0.5">
+                {chamadosSubmenuItems
+                  .filter((i) => i.show)
+                  .map((sub) => {
+                    const SubIcon = sub.icon
+                    const currentFull = `${location.pathname}${location.search}`
+                    const subActive =
+                      currentFull === sub.path ||
+                      (location.pathname === sub.path && !location.search && !sub.path.includes('?'))
+                    return (
+                      <Link
+                        key={sub.path}
+                        to={sub.path}
+                        onClick={() => setMobileOpen(false)}
+                        className={`relative flex items-center gap-2.5 px-2.5 py-1.5 text-xs font-medium rounded-md transition-all duration-150 ${
+                          subActive
+                            ? 'bg-primary/20 text-primary font-semibold shadow-xs ring-1 ring-primary/30'
+                            : 'text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground'
+                        }`}
+                      >
+                        <SubIcon className={`h-3.5 w-3.5 shrink-0 ${subActive ? 'text-primary' : 'opacity-70'}`} />
+                        <span className="truncate">{sub.label}</span>
+                      </Link>
+                    )
+                  })}
+              </div>
+            )}
           </div>
         )}
         {clientGroupVisible && (
-          <div key="cliente-group">
-            <div className="flex items-center">
+          <div key="cliente-group" className="my-0.5">
+            <div className="flex items-center px-2">
               <button
                 onClick={() => setClientMenuOpen(!clientMenuOpen)}
-                className={`flex flex-1 items-center gap-3 px-4 py-2.5 text-sm font-medium transition-all duration-200 border-l-2 ${
+                className={`flex flex-1 items-center gap-3 px-3 py-2 text-[13px] font-medium rounded-lg transition-all duration-200 ${
                   clientSubmenuItems.some((i) => i.show && location.pathname === i.path)
-                    ? 'border-primary bg-primary/10 text-primary'
-                    : 'border-transparent text-muted-foreground hover:bg-secondary/50 hover:text-foreground'
+                    ? 'text-primary bg-primary/10 font-semibold'
+                    : 'text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground'
                 }`}
               >
-                <Building2 className="h-[18px] w-[18px] shrink-0" />
+                <Building2 className="h-4 w-4 shrink-0 text-cyan-400" />
                 <span className="truncate">Cliente</span>
                 {clientMenuOpen ? (
-                  <ChevronDown className="ml-auto h-4 w-4" />
+                  <ChevronDown className="ml-auto h-3.5 w-3.5 opacity-60" />
                 ) : (
-                  <ChevronRight className="ml-auto h-4 w-4" />
+                  <ChevronRight className="ml-auto h-3.5 w-3.5 opacity-60" />
                 )}
               </button>
             </div>
-            {clientMenuOpen &&
-              clientSubmenuItems
-                .filter((i) => i.show)
-                .map((sub) => {
-                  const SubIcon = sub.icon
-                  const subActive = location.pathname === sub.path
-                  return (
-                    <Link
-                      key={sub.path}
-                      to={sub.path}
-                      onClick={() => setMobileOpen(false)}
-                      className={`flex items-center gap-3 pl-10 pr-4 py-2 text-[13px] font-medium transition-all duration-200 border-l-2 ${
-                        subActive
-                          ? 'border-primary bg-primary/10 text-primary'
-                          : 'border-transparent text-muted-foreground hover:bg-secondary/50 hover:text-foreground'
-                      }`}
-                    >
-                      <SubIcon className="h-4 w-4 shrink-0" />
-                      <span className="truncate">{sub.label}</span>
-                    </Link>
-                  )
-                })}
+            {clientMenuOpen && (
+              <div className="ml-4 pl-2 my-1 border-l border-sidebar-border/70 space-y-0.5">
+                {clientSubmenuItems
+                  .filter((i) => i.show)
+                  .map((sub) => {
+                    const SubIcon = sub.icon
+                    const subActive = location.pathname === sub.path
+                    return (
+                      <Link
+                        key={sub.path}
+                        to={sub.path}
+                        onClick={() => setMobileOpen(false)}
+                        className={`relative flex items-center gap-2.5 px-2.5 py-1.5 text-xs font-medium rounded-md transition-all duration-150 ${
+                          subActive
+                            ? 'bg-primary/20 text-primary font-semibold shadow-xs ring-1 ring-primary/30'
+                            : 'text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground'
+                        }`}
+                      >
+                        <SubIcon className={`h-3.5 w-3.5 shrink-0 ${subActive ? 'text-primary' : 'opacity-70'}`} />
+                        <span className="truncate">{sub.label}</span>
+                      </Link>
+                    )
+                  })}
+              </div>
+            )}
           </div>
         )}
         {cmdbGroupVisible && (
-          <div key="cmdb-group">
-            <div className="flex items-center">
+          <div key="cmdb-group" className="my-0.5">
+            <div className="flex items-center px-2">
               <button
                 onClick={() => setCmdbMenuOpen(!cmdbMenuOpen)}
-                className={`flex flex-1 items-center gap-3 px-4 py-2.5 text-sm font-medium transition-all duration-200 border-l-2 ${
+                className={`flex flex-1 items-center gap-3 px-3 py-2 text-[13px] font-medium rounded-lg transition-all duration-200 ${
                   cmdbSubmenuItems.some((i) => i.show && location.pathname === i.path)
-                    ? 'border-primary bg-primary/10 text-primary'
-                    : 'border-transparent text-muted-foreground hover:bg-secondary/50 hover:text-foreground'
+                    ? 'text-primary bg-primary/10 font-semibold'
+                    : 'text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground'
                 }`}
               >
-                <Server className="h-[18px] w-[18px] shrink-0" />
+                <Server className="h-4 w-4 shrink-0 text-cyan-400" />
                 <span className="truncate">CMDB</span>
                 {cmdbMenuOpen ? (
-                  <ChevronDown className="ml-auto h-4 w-4" />
+                  <ChevronDown className="ml-auto h-3.5 w-3.5 opacity-60" />
                 ) : (
-                  <ChevronRight className="ml-auto h-4 w-4" />
+                  <ChevronRight className="ml-auto h-3.5 w-3.5 opacity-60" />
                 )}
               </button>
             </div>
-            {cmdbMenuOpen &&
-              cmdbSubmenuItems
-                .filter((i) => i.show)
-                .map((sub) => {
-                  const SubIcon = sub.icon
-                  const subActive = location.pathname === sub.path
-                  return (
-                    <Link
-                      key={sub.path}
-                      to={sub.path}
-                      onClick={() => setMobileOpen(false)}
-                      className={`flex items-center gap-3 pl-10 pr-4 py-2 text-[13px] font-medium transition-all duration-200 border-l-2 ${
-                        subActive
-                          ? 'border-primary bg-primary/10 text-primary'
-                          : 'border-transparent text-muted-foreground hover:bg-secondary/50 hover:text-foreground'
-                      }`}
-                    >
-                      <SubIcon className="h-4 w-4 shrink-0" />
-                      <span className="truncate">{sub.label}</span>
-                    </Link>
-                  )
-                })}
+            {cmdbMenuOpen && (
+              <div className="ml-4 pl-2 my-1 border-l border-sidebar-border/70 space-y-0.5">
+                {cmdbSubmenuItems
+                  .filter((i) => i.show)
+                  .map((sub) => {
+                    const SubIcon = sub.icon
+                    const subActive = location.pathname === sub.path
+                    return (
+                      <Link
+                        key={sub.path}
+                        to={sub.path}
+                        onClick={() => setMobileOpen(false)}
+                        className={`relative flex items-center gap-2.5 px-2.5 py-1.5 text-xs font-medium rounded-md transition-all duration-150 ${
+                          subActive
+                            ? 'bg-primary/20 text-primary font-semibold shadow-xs ring-1 ring-primary/30'
+                            : 'text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground'
+                        }`}
+                      >
+                        <SubIcon className={`h-3.5 w-3.5 shrink-0 ${subActive ? 'text-primary' : 'opacity-70'}`} />
+                        <span className="truncate">{sub.label}</span>
+                      </Link>
+                    )
+                  })}
+              </div>
+            )}
           </div>
         )}
         {changesGroupVisible && (
-          <div key="changes-group">
-            <div className="flex items-center">
+          <div key="changes-group" className="my-0.5">
+            <div className="flex items-center px-2">
               <button
                 onClick={() => setChangesMenuOpen(!changesMenuOpen)}
-                className={`flex flex-1 items-center gap-3 px-4 py-2.5 text-sm font-medium transition-all duration-200 border-l-2 ${
+                className={`flex flex-1 items-center gap-3 px-3 py-2 text-[13px] font-medium rounded-lg transition-all duration-200 ${
                   changesSubmenuItems.some((i) => i.show && location.pathname === i.path)
-                    ? 'border-primary bg-primary/10 text-primary'
-                    : 'border-transparent text-muted-foreground hover:bg-secondary/50 hover:text-foreground'
+                    ? 'text-primary bg-primary/10 font-semibold'
+                    : 'text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground'
                 }`}
               >
-                <GitBranch className="h-[18px] w-[18px] shrink-0" />
+                <GitBranch className="h-4 w-4 shrink-0 text-cyan-400" />
                 <span className="truncate">Gestão de Mudanças</span>
                 {changesMenuOpen ? (
-                  <ChevronDown className="ml-auto h-4 w-4" />
+                  <ChevronDown className="ml-auto h-3.5 w-3.5 opacity-60" />
                 ) : (
-                  <ChevronRight className="ml-auto h-4 w-4" />
+                  <ChevronRight className="ml-auto h-3.5 w-3.5 opacity-60" />
                 )}
               </button>
             </div>
-            {changesMenuOpen &&
-              changesSubmenuItems
-                .filter((i) => i.show)
-                .map((sub) => {
-                  const SubIcon = sub.icon
-                  const subActive = location.pathname === sub.path
-                  return (
-                    <Link
-                      key={sub.path}
-                      to={sub.path}
-                      onClick={() => setMobileOpen(false)}
-                      className={`flex items-center gap-3 pl-10 pr-4 py-2 text-[13px] font-medium transition-all duration-200 border-l-2 ${
-                        subActive
-                          ? 'border-primary bg-primary/10 text-primary'
-                          : 'border-transparent text-muted-foreground hover:bg-secondary/50 hover:text-foreground'
-                      }`}
-                    >
-                      <SubIcon className="h-4 w-4 shrink-0" />
-                      <span className="truncate">{sub.label}</span>
-                    </Link>
-                  )
-                })}
+            {changesMenuOpen && (
+              <div className="ml-4 pl-2 my-1 border-l border-sidebar-border/70 space-y-0.5">
+                {changesSubmenuItems
+                  .filter((i) => i.show)
+                  .map((sub) => {
+                    const SubIcon = sub.icon
+                    const subActive = location.pathname === sub.path
+                    return (
+                      <Link
+                        key={sub.path}
+                        to={sub.path}
+                        onClick={() => setMobileOpen(false)}
+                        className={`relative flex items-center gap-2.5 px-2.5 py-1.5 text-xs font-medium rounded-md transition-all duration-150 ${
+                          subActive
+                            ? 'bg-primary/20 text-primary font-semibold shadow-xs ring-1 ring-primary/30'
+                            : 'text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground'
+                        }`}
+                      >
+                        <SubIcon className={`h-3.5 w-3.5 shrink-0 ${subActive ? 'text-primary' : 'opacity-70'}`} />
+                        <span className="truncate">{sub.label}</span>
+                      </Link>
+                    )
+                  })}
+              </div>
+            )}
           </div>
         )}
         {problemsGroupVisible && (
-          <div key="problems-group">
-            <div className="flex items-center">
+          <div key="problems-group" className="my-0.5">
+            <div className="flex items-center px-2">
               <button
                 onClick={() => setProblemsMenuOpen(!problemsMenuOpen)}
-                className={`flex flex-1 items-center gap-3 px-4 py-2.5 text-sm font-medium transition-all duration-200 border-l-2 ${
+                className={`flex flex-1 items-center gap-3 px-3 py-2 text-[13px] font-medium rounded-lg transition-all duration-200 ${
                   problemsSubmenuItems.some((i) => i.show && location.pathname === i.path)
-                    ? 'border-primary bg-primary/10 text-primary'
-                    : 'border-transparent text-muted-foreground hover:bg-secondary/50 hover:text-foreground'
+                    ? 'text-primary bg-primary/10 font-semibold'
+                    : 'text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground'
                 }`}
               >
-                <Bug className="h-[18px] w-[18px] shrink-0" />
+                <Bug className="h-4 w-4 shrink-0 text-cyan-400" />
                 <span className="truncate">Gestão de Problemas</span>
                 {problemsMenuOpen ? (
-                  <ChevronDown className="ml-auto h-4 w-4" />
+                  <ChevronDown className="ml-auto h-3.5 w-3.5 opacity-60" />
                 ) : (
-                  <ChevronRight className="ml-auto h-4 w-4" />
+                  <ChevronRight className="ml-auto h-3.5 w-3.5 opacity-60" />
                 )}
               </button>
             </div>
-            {problemsMenuOpen &&
-              problemsSubmenuItems
-                .filter((i) => i.show)
-                .map((sub) => {
-                  const SubIcon = sub.icon
-                  const subActive = location.pathname === sub.path
-                  return (
-                    <Link
-                      key={sub.path}
-                      to={sub.path}
-                      onClick={() => setMobileOpen(false)}
-                      className={`flex items-center gap-3 pl-10 pr-4 py-2 text-[13px] font-medium transition-all duration-200 border-l-2 ${
-                        subActive
-                          ? 'border-primary bg-primary/10 text-primary'
-                          : 'border-transparent text-muted-foreground hover:bg-secondary/50 hover:text-foreground'
-                      }`}
-                    >
-                      <SubIcon className="h-4 w-4 shrink-0" />
-                      <span className="truncate">{sub.label}</span>
-                    </Link>
-                  )
-                })}
+            {problemsMenuOpen && (
+              <div className="ml-4 pl-2 my-1 border-l border-sidebar-border/70 space-y-0.5">
+                {problemsSubmenuItems
+                  .filter((i) => i.show)
+                  .map((sub) => {
+                    const SubIcon = sub.icon
+                    const subActive = location.pathname === sub.path
+                    return (
+                      <Link
+                        key={sub.path}
+                        to={sub.path}
+                        onClick={() => setMobileOpen(false)}
+                        className={`relative flex items-center gap-2.5 px-2.5 py-1.5 text-xs font-medium rounded-md transition-all duration-150 ${
+                          subActive
+                            ? 'bg-primary/20 text-primary font-semibold shadow-xs ring-1 ring-primary/30'
+                            : 'text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground'
+                        }`}
+                      >
+                        <SubIcon className={`h-3.5 w-3.5 shrink-0 ${subActive ? 'text-primary' : 'opacity-70'}`} />
+                        <span className="truncate">{sub.label}</span>
+                      </Link>
+                    )
+                  })}
+              </div>
+            )}
           </div>
         )}
         {visitsN2GroupVisible && (
-          <div key="visits-n2-group">
-            <div className="flex items-center">
+          <div key="visits-n2-group" className="my-0.5">
+            <div className="flex items-center px-2">
               <button
                 onClick={() => setVisitsN2MenuOpen(!visitsN2MenuOpen)}
-                className={`flex flex-1 items-center gap-3 px-4 py-2.5 text-sm font-medium transition-all duration-200 border-l-2 ${
+                className={`flex flex-1 items-center gap-3 px-3 py-2 text-[13px] font-medium rounded-lg transition-all duration-200 ${
                   visitsN2SubmenuItems.some((i) => location.pathname === i.path)
-                    ? 'border-primary bg-primary/10 text-primary'
-                    : 'border-transparent text-muted-foreground hover:bg-secondary/50 hover:text-foreground'
+                    ? 'text-primary bg-primary/10 font-semibold'
+                    : 'text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground'
                 }`}
               >
-                <MapPin className="h-[18px] w-[18px] shrink-0" />
+                <MapPin className="h-4 w-4 shrink-0 text-cyan-400" />
                 <span className="truncate">Gestão de Visitas</span>
                 {visitsN2MenuOpen ? (
-                  <ChevronDown className="ml-auto h-4 w-4" />
+                  <ChevronDown className="ml-auto h-3.5 w-3.5 opacity-60" />
                 ) : (
-                  <ChevronRight className="ml-auto h-4 w-4" />
+                  <ChevronRight className="ml-auto h-3.5 w-3.5 opacity-60" />
                 )}
               </button>
             </div>
-            {visitsN2MenuOpen &&
-              visitsN2SubmenuItems
-                .filter((i) => i.show)
-                .map((sub) => {
-                  const SubIcon = sub.icon
-                  const subActive = location.pathname === sub.path
-                  return (
-                    <Link
-                      key={sub.path}
-                      to={sub.path}
-                      onClick={() => setMobileOpen(false)}
-                      className={`flex items-center gap-3 pl-10 pr-4 py-2 text-[13px] font-medium transition-all duration-200 border-l-2 ${
-                        subActive
-                          ? 'border-primary bg-primary/10 text-primary'
-                          : 'border-transparent text-muted-foreground hover:bg-secondary/50 hover:text-foreground'
-                      }`}
-                    >
-                      <SubIcon className="h-4 w-4 shrink-0" />
-                      <span className="truncate">{sub.label}</span>
-                    </Link>
-                  )
-                })}
+            {visitsN2MenuOpen && (
+              <div className="ml-4 pl-2 my-1 border-l border-sidebar-border/70 space-y-0.5">
+                {visitsN2SubmenuItems
+                  .filter((i) => i.show)
+                  .map((sub) => {
+                    const SubIcon = sub.icon
+                    const subActive = location.pathname === sub.path
+                    return (
+                      <Link
+                        key={sub.path}
+                        to={sub.path}
+                        onClick={() => setMobileOpen(false)}
+                        className={`relative flex items-center gap-2.5 px-2.5 py-1.5 text-xs font-medium rounded-md transition-all duration-150 ${
+                          subActive
+                            ? 'bg-primary/20 text-primary font-semibold shadow-xs ring-1 ring-primary/30'
+                            : 'text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground'
+                        }`}
+                      >
+                        <SubIcon className={`h-3.5 w-3.5 shrink-0 ${subActive ? 'text-primary' : 'opacity-70'}`} />
+                        <span className="truncate">{sub.label}</span>
+                      </Link>
+                    )
+                  })}
+              </div>
+            )}
           </div>
         )}
         {relatoriosGroupVisible && (
-          <div key="relatorios-group">
-            <div className="flex items-center">
+          <div key="relatorios-group" className="my-0.5">
+            <div className="flex items-center px-2">
               <button
                 onClick={() => setRelatoriosMenuOpen(!relatoriosMenuOpen)}
-                className={`flex flex-1 items-center gap-3 px-4 py-2.5 text-sm font-medium transition-all duration-200 border-l-2 ${
+                className={`flex flex-1 items-center gap-3 px-3 py-2 text-[13px] font-medium rounded-lg transition-all duration-200 ${
                   relatoriosSubmenuItems.some((i) => i.show && location.pathname === i.path)
-                    ? 'border-primary bg-primary/10 text-primary'
-                    : 'border-transparent text-muted-foreground hover:bg-secondary/50 hover:text-foreground'
+                    ? 'text-primary bg-primary/10 font-semibold'
+                    : 'text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground'
                 }`}
               >
-                <BarChart3 className="h-[18px] w-[18px] shrink-0" />
+                <BarChart3 className="h-4 w-4 shrink-0 text-cyan-400" />
                 <span className="truncate">Relatórios</span>
                 {relatoriosMenuOpen ? (
-                  <ChevronDown className="ml-auto h-4 w-4" />
+                  <ChevronDown className="ml-auto h-3.5 w-3.5 opacity-60" />
                 ) : (
-                  <ChevronRight className="ml-auto h-4 w-4" />
+                  <ChevronRight className="ml-auto h-3.5 w-3.5 opacity-60" />
                 )}
               </button>
             </div>
-            {relatoriosMenuOpen &&
-              relatoriosSubmenuItems
-                .filter((i) => i.show)
-                .map((sub) => {
-                  const SubIcon = sub.icon
-                  const subActive = location.pathname === sub.path
-                  return (
-                    <Link
-                      key={sub.path}
-                      to={sub.path}
-                      onClick={() => setMobileOpen(false)}
-                      className={`flex items-center gap-3 pl-10 pr-4 py-2 text-[13px] font-medium transition-all duration-200 border-l-2 ${
-                        subActive
-                          ? 'border-primary bg-primary/10 text-primary'
-                          : 'border-transparent text-muted-foreground hover:bg-secondary/50 hover:text-foreground'
-                      }`}
-                    >
-                      <SubIcon className="h-4 w-4 shrink-0" />
-                      <span className="truncate">{sub.label}</span>
-                    </Link>
-                  )
-                })}
+            {relatoriosMenuOpen && (
+              <div className="ml-4 pl-2 my-1 border-l border-sidebar-border/70 space-y-0.5">
+                {relatoriosSubmenuItems
+                  .filter((i) => i.show)
+                  .map((sub) => {
+                    const SubIcon = sub.icon
+                    const subActive = location.pathname === sub.path
+                    return (
+                      <Link
+                        key={sub.path}
+                        to={sub.path}
+                        onClick={() => setMobileOpen(false)}
+                        className={`relative flex items-center gap-2.5 px-2.5 py-1.5 text-xs font-medium rounded-md transition-all duration-150 ${
+                          subActive
+                            ? 'bg-primary/20 text-primary font-semibold shadow-xs ring-1 ring-primary/30'
+                            : 'text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground'
+                        }`}
+                      >
+                        <SubIcon className={`h-3.5 w-3.5 shrink-0 ${subActive ? 'text-primary' : 'opacity-70'}`} />
+                        <span className="truncate">{sub.label}</span>
+                      </Link>
+                    )
+                  })}
+              </div>
+            )}
           </div>
         )}
         {navAfterClient.map(renderNavItem)}
 
         {/* Grupo Administração (Operadores e Perfis de Acesso) */}
         {adminGroupVisible && (
-          <div key="administracao-group">
-            <div className="flex items-center">
+          <div key="administracao-group" className="my-0.5">
+            <div className="flex items-center px-2">
               <button
                 onClick={() => setAdminMenuOpen(!adminMenuOpen)}
-                className={`flex flex-1 items-center gap-3 px-4 py-2.5 text-sm font-medium transition-all duration-200 border-l-2 ${
+                className={`flex flex-1 items-center gap-3 px-3 py-2 text-[13px] font-medium rounded-lg transition-all duration-200 ${
                   adminSubmenuItems.some((i) => i.show && location.pathname === i.path)
-                    ? 'border-primary bg-primary/10 text-primary'
-                    : 'border-transparent text-muted-foreground hover:bg-secondary/50 hover:text-foreground'
+                    ? 'text-primary bg-primary/10 font-semibold'
+                    : 'text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground'
                 }`}
               >
-                <Shield className="h-[18px] w-[18px] shrink-0 text-primary" />
+                <Shield className="h-4 w-4 shrink-0 text-cyan-400" />
                 <span className="truncate">Administração</span>
                 {adminMenuOpen ? (
-                  <ChevronDown className="ml-auto h-4 w-4" />
+                  <ChevronDown className="ml-auto h-3.5 w-3.5 opacity-60" />
                 ) : (
-                  <ChevronRight className="ml-auto h-4 w-4" />
+                  <ChevronRight className="ml-auto h-3.5 w-3.5 opacity-60" />
                 )}
               </button>
             </div>
-            {adminMenuOpen &&
-              adminSubmenuItems
-                .filter((i) => i.show)
-                .map((sub) => {
-                  const SubIcon = sub.icon
-                  const subActive = location.pathname === sub.path
-                  return (
-                    <Link
-                      key={sub.path}
-                      to={sub.path}
-                      onClick={() => setMobileOpen(false)}
-                      className={`flex items-center gap-3 pl-10 pr-4 py-2 text-[13px] font-medium transition-all duration-200 border-l-2 ${
-                        subActive
-                          ? 'border-primary bg-primary/10 text-primary'
-                          : 'border-transparent text-muted-foreground hover:bg-secondary/50 hover:text-foreground'
-                      }`}
-                    >
-                      <SubIcon className="h-4 w-4 shrink-0" />
-                      <span className="truncate">{sub.label}</span>
-                    </Link>
-                  )
-                })}
+            {adminMenuOpen && (
+              <div className="ml-4 pl-2 my-1 border-l border-sidebar-border/70 space-y-0.5">
+                {adminSubmenuItems
+                  .filter((i) => i.show)
+                  .map((sub) => {
+                    const SubIcon = sub.icon
+                    const subActive = location.pathname === sub.path
+                    return (
+                      <Link
+                        key={sub.path}
+                        to={sub.path}
+                        onClick={() => setMobileOpen(false)}
+                        className={`relative flex items-center gap-2.5 px-2.5 py-1.5 text-xs font-medium rounded-md transition-all duration-150 ${
+                          subActive
+                            ? 'bg-primary/20 text-primary font-semibold shadow-xs ring-1 ring-primary/30'
+                            : 'text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground'
+                        }`}
+                      >
+                        <SubIcon className={`h-3.5 w-3.5 shrink-0 ${subActive ? 'text-primary' : 'opacity-70'}`} />
+                        <span className="truncate">{sub.label}</span>
+                      </Link>
+                    )
+                  })}
+              </div>
+            )}
           </div>
         )}
 
         {configuracoesGroupVisible && (
-          <div key="configuracoes-group">
-            <div className="flex items-center">
+          <div key="configuracoes-group" className="my-0.5">
+            <div className="flex items-center px-2">
               <button
                 onClick={() => setConfiguracoesMenuOpen(!configuracoesMenuOpen)}
-                className={`flex flex-1 items-center gap-3 px-4 py-2.5 text-sm font-medium transition-all duration-200 border-l-2 ${
+                className={`flex flex-1 items-center gap-3 px-3 py-2 text-[13px] font-medium rounded-lg transition-all duration-200 ${
                   configuracoesSubmenuItems.some((i) => i.show && location.pathname === i.path)
-                    ? 'border-primary bg-primary/10 text-primary'
-                    : 'border-transparent text-muted-foreground hover:bg-secondary/50 hover:text-foreground'
+                    ? 'text-primary bg-primary/10 font-semibold'
+                    : 'text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground'
                 }`}
               >
-                <Settings className="h-[18px] w-[18px] shrink-0" />
+                <Settings className="h-4 w-4 shrink-0 text-cyan-400" />
                 <span className="truncate">Configurações</span>
                 {configuracoesMenuOpen ? (
-                  <ChevronDown className="ml-auto h-4 w-4" />
+                  <ChevronDown className="ml-auto h-3.5 w-3.5 opacity-60" />
                 ) : (
-                  <ChevronRight className="ml-auto h-4 w-4" />
+                  <ChevronRight className="ml-auto h-3.5 w-3.5 opacity-60" />
                 )}
               </button>
             </div>
-            {configuracoesMenuOpen &&
-              configuracoesSubmenuItems
-                .filter((i) => i.show)
-                .map((sub) => {
-                  const SubIcon = sub.icon
-                  const subActive = location.pathname === sub.path
-                  return (
-                    <Link
-                      key={sub.path}
-                      to={sub.path}
-                      onClick={() => setMobileOpen(false)}
-                      className={`flex items-center gap-3 pl-10 pr-4 py-2 text-[13px] font-medium transition-all duration-200 border-l-2 ${
-                        subActive
-                          ? 'border-primary bg-primary/10 text-primary'
-                          : 'border-transparent text-muted-foreground hover:bg-secondary/50 hover:text-foreground'
-                      }`}
-                    >
-                      <SubIcon className="h-4 w-4 shrink-0" />
-                      <span className="truncate">{sub.label}</span>
-                    </Link>
-                  )
-                })}
+            {configuracoesMenuOpen && (
+              <div className="ml-4 pl-2 my-1 border-l border-sidebar-border/70 space-y-0.5">
+                {configuracoesSubmenuItems
+                  .filter((i) => i.show)
+                  .map((sub) => {
+                    const SubIcon = sub.icon
+                    const subActive = location.pathname === sub.path
+                    return (
+                      <Link
+                        key={sub.path}
+                        to={sub.path}
+                        onClick={() => setMobileOpen(false)}
+                        className={`relative flex items-center gap-2.5 px-2.5 py-1.5 text-xs font-medium rounded-md transition-all duration-150 ${
+                          subActive
+                            ? 'bg-primary/20 text-primary font-semibold shadow-xs ring-1 ring-primary/30'
+                            : 'text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground'
+                        }`}
+                      >
+                        <SubIcon className={`h-3.5 w-3.5 shrink-0 ${subActive ? 'text-primary' : 'opacity-70'}`} />
+                        <span className="truncate">{sub.label}</span>
+                      </Link>
+                    )
+                  })}
+              </div>
+            )}
           </div>
         )}
       </nav>
 
-      <div className="px-5 py-3 border-t border-border">
-        <p className="text-[10px] text-muted-foreground font-medium">ServiceOne v1.0 &copy; 2026</p>
+      <div className="px-4 py-3 border-t border-sidebar-border/80 bg-sidebar/60 flex items-center justify-between">
+        <p className="text-[10px] text-muted-foreground font-mono">ServiceOne ITSM</p>
+        <span className="inline-flex items-center gap-1 text-[10px] text-cyan-400/90 font-mono">
+          <span className="h-1.5 w-1.5 rounded-full bg-cyan-400 shadow-[0_0_6px_rgba(34,211,238,0.8)] animate-pulse" />
+          ONLINE
+        </span>
       </div>
     </div>
   )
 
   return (
-    <div className="flex min-h-screen bg-background">
+    <div className="flex min-h-screen bg-background text-foreground selection:bg-primary/30 selection:text-primary">
       {!isMobile && (
-        <aside className="sticky top-0 h-screen w-64 flex-shrink-0">{navContent}</aside>
+        <aside className="sticky top-0 h-screen w-64 flex-shrink-0 border-r border-sidebar-border shadow-xl shadow-black/20 z-30">{navContent}</aside>
       )}
 
       <div className="flex flex-1 flex-col min-w-0">
-        <header className="flex h-16 items-center justify-between border-b border-border bg-card px-4 md:px-6 transition-colors duration-300">
+        <header className="sticky top-0 z-20 flex h-16 items-center justify-between border-b border-border/80 bg-card/80 backdrop-blur-md px-4 md:px-6 transition-colors duration-300 shadow-xs">
           <div className="flex items-center gap-3">
             {isMobile && (
               <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
                 <SheetTrigger asChild>
-                  <Button variant="ghost" size="icon">
+                  <Button variant="ghost" size="icon" className="hover:bg-sidebar-accent">
                     <Menu className="h-5 w-5" />
                   </Button>
                 </SheetTrigger>
-                <SheetContent side="left" className="p-0 w-64 border-none">
+                <SheetContent side="left" className="p-0 w-64 border-r border-sidebar-border bg-sidebar">
                   {navContent}
                 </SheetContent>
               </Sheet>
             )}
-            <h1 className="text-lg font-semibold text-foreground">
+            <div className="flex items-center gap-2">
+              <span className="hidden sm:inline-block h-2 w-2 rounded-full bg-primary shadow-[0_0_8px_rgba(6,182,212,0.8)]" />
+              <h1 className="text-base sm:text-lg font-semibold tracking-tight text-foreground">
               {[
                 ...navItems,
                 ...dashboardSubmenuItems,
@@ -1057,12 +1098,12 @@ export default function Layout() {
               size="icon"
               onClick={toggleTheme}
               title={theme === 'dark' ? 'Mudar para tema claro' : 'Mudar para tema escuro'}
-              className="transition-transform duration-300 hover:scale-110"
+              className="transition-all duration-300 hover:scale-105 hover:bg-secondary/70"
             >
               {theme === 'dark' ? (
-                <Sun className="h-5 w-5 text-primary" />
+                <Sun className="h-4 w-4 text-cyan-400 drop-shadow-[0_0_6px_rgba(34,211,238,0.7)]" />
               ) : (
-                <Moon className="h-5 w-5 text-primary" />
+                <Moon className="h-4 w-4 text-primary" />
               )}
             </Button>
 

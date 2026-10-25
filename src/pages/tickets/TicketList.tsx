@@ -582,25 +582,28 @@ export default function TicketList() {
         <div className="rounded-xl border border-border bg-card shadow-sm overflow-hidden min-h-[640px]">
           {/* Seletor mobile: quando há chamado selecionado em tela pequena, permite voltar para a lista */}
           <div className="flex flex-col md:flex-row md:divide-x divide-border">
-            {/* PAINEL ESQUERDO: Lista compacta */}
+            {/* PAINEL ESQUERDO: Lista compacta com visual tech e realce neon do item ativo */}
             <div
               className={cn(
-                'w-full md:w-80 lg:w-96 shrink-0 flex flex-col border-b md:border-b-0 border-border bg-muted/20',
+                'w-full md:w-80 lg:w-96 shrink-0 flex flex-col border-b md:border-b-0 border-border bg-card/60 backdrop-blur-sm',
                 selectedTicketId && isMobile ? 'hidden md:flex' : 'flex',
               )}
             >
               {/* Header compacto da lista */}
-              <div className="flex items-center justify-between px-3.5 py-2.5 border-b border-border bg-muted/50">
-                <span className="text-xs font-semibold text-foreground uppercase tracking-wider">
-                  Chamados ({sorted.length})
-                </span>
-                <span className="text-[11px] text-muted-foreground">
-                  {selectedTicketId ? '1 selecionado' : 'Selecione'}
+              <div className="flex items-center justify-between px-4 py-3 border-b border-border/80 bg-secondary/30">
+                <div className="flex items-center gap-2">
+                  <span className="h-1.5 w-1.5 rounded-full bg-cyan-400 shadow-[0_0_6px_rgba(34,211,238,0.8)]" />
+                  <span className="text-xs font-semibold text-foreground uppercase tracking-wider">
+                    Fila ({sorted.length})
+                  </span>
+                </div>
+                <span className="text-[11px] font-mono px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
+                  {selectedTicketId ? '1 ativo' : 'Selecione'}
                 </span>
               </div>
 
               {/* Lista rolável de chamados */}
-              <div className="divide-y divide-border/60 overflow-y-auto max-h-[calc(100vh-280px)] md:max-h-[820px]">
+              <div className="divide-y divide-border/50 overflow-y-auto max-h-[calc(100vh-280px)] md:max-h-[820px]">
                 {sorted.length === 0 ? (
                   <div className="p-8 text-center text-xs text-muted-foreground">
                     Nenhum chamado encontrado com os filtros aplicados.
@@ -614,29 +617,36 @@ export default function TicketList() {
                         key={t.id}
                         onClick={() => setSelectedTicketId(t.id)}
                         className={cn(
-                          'p-3 cursor-pointer transition-all text-left relative flex flex-col gap-1.5 select-none',
+                          'p-3.5 cursor-pointer transition-all duration-150 text-left relative flex flex-col gap-2 select-none group',
                           isSelected
-                            ? 'bg-primary/10 dark:bg-primary/15 border-l-4 border-l-primary'
-                            : 'hover:bg-muted/60 dark:hover:bg-muted/40 border-l-4 border-l-transparent',
+                            ? 'bg-gradient-to-r from-primary/15 via-primary/5 to-transparent border-l-4 border-l-primary shadow-xs'
+                            : 'hover:bg-secondary/40 border-l-4 border-l-transparent',
                           newTicketsHighlight.has(t.id) && 'ring-2 ring-primary bg-primary/20',
                         )}
                       >
+                        {/* Efeito de brilho no ticket selecionado */}
+                        {isSelected && (
+                          <div className="absolute right-2 top-2 h-1.5 w-1.5 rounded-full bg-primary shadow-[0_0_8px_rgba(6,182,212,0.9)]" />
+                        )}
+
                         {/* Linha superior: Nº Ticket e Prioridade */}
                         <div className="flex items-center justify-between gap-1.5">
                           <div className="flex items-center gap-1.5 min-w-0">
                             <span
                               className={cn(
-                                'font-bold text-xs truncate',
-                                isSelected ? 'text-primary' : 'text-foreground',
+                                'font-bold text-xs font-mono tracking-tight truncate',
+                                isSelected
+                                  ? 'text-primary'
+                                  : 'text-foreground group-hover:text-primary transition-colors',
                               )}
                             >
                               {t.number}
                             </span>
                             {t.parent_ticket_id && (
-                              <GitBranch className="h-3 w-3 text-blue-600 shrink-0" />
+                              <GitBranch className="h-3 w-3 text-cyan-400 shrink-0" />
                             )}
                             {associatedIds.has(t.id) && (
-                              <Link2 className="h-3 w-3 text-blue-600 shrink-0" />
+                              <Link2 className="h-3 w-3 text-cyan-400 shrink-0" />
                             )}
                           </div>
                           <PriorityBadge priority={t.priority} />
@@ -645,8 +655,10 @@ export default function TicketList() {
                         {/* Assunto / Título do ticket */}
                         <p
                           className={cn(
-                            'text-xs font-medium line-clamp-2 leading-snug',
-                            isSelected ? 'text-foreground font-semibold' : 'text-foreground/90',
+                            'text-xs font-medium line-clamp-2 leading-relaxed',
+                            isSelected
+                              ? 'text-foreground font-semibold'
+                              : 'text-foreground/80 group-hover:text-foreground',
                           )}
                           title={t.title}
                         >
@@ -654,12 +666,15 @@ export default function TicketList() {
                         </p>
 
                         {/* Linha inferior: Operador responsável e Status */}
-                        <div className="flex items-center justify-between gap-2 pt-1 border-t border-border/40 text-[11px]">
+                        <div className="flex items-center justify-between gap-2 pt-1.5 border-t border-border/40 text-[11px]">
                           <div className="flex items-center gap-1 min-w-0 text-muted-foreground">
-                            <span className="font-semibold text-foreground/80 shrink-0">
-                              Operador:
+                            <span className="font-semibold text-foreground/70 shrink-0 text-[10px] uppercase">
+                              Op:
                             </span>
-                            <span className="truncate" title={operatorName}>
+                            <span
+                              className="truncate text-foreground/90 font-medium"
+                              title={operatorName}
+                            >
                               {operatorName}
                             </span>
                           </div>
@@ -667,11 +682,13 @@ export default function TicketList() {
                         </div>
 
                         {/* Detalhe extra sutil: Cliente + Tempo de abertura */}
-                        <div className="flex items-center justify-between gap-1 text-[10px] text-muted-foreground/80">
-                          <span className="truncate max-w-[140px]">
+                        <div className="flex items-center justify-between gap-1 text-[10px] text-muted-foreground font-mono">
+                          <span className="truncate max-w-[140px] text-muted-foreground/90">
                             {t.expand?.company?.trade_name || 'Geral'}
                           </span>
-                          <span>{formatTicketAge(t.created, now)}</span>
+                          <span className="text-muted-foreground/70">
+                            {formatTicketAge(t.created, now)}
+                          </span>
                         </div>
                       </div>
                     )
@@ -679,7 +696,6 @@ export default function TicketList() {
                 )}
               </div>
             </div>
-
             {/* PAINEL DIREITO: Detalhe e Logs do Ticket selecionado */}
             <div
               className={cn(

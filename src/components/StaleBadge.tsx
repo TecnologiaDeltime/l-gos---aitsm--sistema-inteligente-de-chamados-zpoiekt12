@@ -3,19 +3,19 @@ import { formatStaleDuration, getStaleLevel, type StaleLevel } from '@/lib/stale
 
 const LEVEL_CLASSES: Record<StaleLevel, string> = {
   green:
-    'bg-green-100 text-green-700 border-green-200 dark:bg-green-500/15 dark:text-green-400 dark:border-green-500/30',
+    'bg-emerald-500/10 text-emerald-700 border-emerald-300 dark:bg-emerald-500/15 dark:text-emerald-300 dark:border-emerald-500/40',
   yellow:
-    'bg-yellow-100 text-yellow-700 border-yellow-200 dark:bg-yellow-500/15 dark:text-yellow-400 dark:border-yellow-500/30',
+    'bg-amber-500/10 text-amber-700 border-amber-300 dark:bg-amber-500/15 dark:text-amber-300 dark:border-amber-500/40',
   orange:
-    'bg-orange-100 text-orange-700 border-orange-200 dark:bg-orange-500/15 dark:text-orange-400 dark:border-orange-500/30',
-  red: 'bg-red-100 text-red-700 border-red-200 dark:bg-red-500/15 dark:text-red-400 dark:border-red-500/30',
+    'bg-orange-500/10 text-orange-700 border-orange-300 dark:bg-orange-500/15 dark:text-orange-300 dark:border-orange-500/40 shadow-xs shadow-orange-500/10',
+  red: 'bg-red-500/15 text-red-700 border-red-300 dark:bg-red-500/20 dark:text-red-300 dark:border-red-500/50 shadow-xs shadow-red-500/20 font-bold',
 }
 
 const LEVEL_DOT: Record<StaleLevel, string> = {
-  green: 'bg-green-500',
-  yellow: 'bg-yellow-500',
-  orange: 'bg-orange-500',
-  red: 'bg-red-500',
+  green: 'bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.8)]',
+  yellow: 'bg-amber-400 shadow-[0_0_6px_rgba(251,191,36,0.8)]',
+  orange: 'bg-orange-500 shadow-[0_0_6px_rgba(249,115,22,0.8)]',
+  red: 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.9)] animate-pulse',
 }
 
 interface StaleBadgeProps {

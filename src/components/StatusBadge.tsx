@@ -6,64 +6,64 @@ interface StatusBadgeProps {
 
 const STATUS_CONFIG: Record<string, { dot: string; className: string }> = {
   Novo: {
-    dot: 'bg-blue-400',
+    dot: 'bg-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.8)] animate-pulse',
     className:
-      'bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-500/15 dark:text-blue-400 dark:border-blue-500/30',
+      'bg-cyan-500/10 text-cyan-700 border-cyan-300 dark:bg-cyan-500/15 dark:text-cyan-300 dark:border-cyan-500/40 shadow-xs shadow-cyan-500/10',
   },
   'Em Triagem': {
-    dot: 'bg-purple-400',
+    dot: 'bg-purple-400 shadow-[0_0_6px_rgba(192,132,252,0.8)]',
     className:
-      'bg-purple-100 text-purple-800 border-purple-200 dark:bg-purple-500/15 dark:text-purple-400 dark:border-purple-500/30',
+      'bg-purple-500/10 text-purple-700 border-purple-300 dark:bg-purple-500/15 dark:text-purple-300 dark:border-purple-500/40',
   },
   'Aguardando Atribuição': {
-    dot: 'bg-indigo-400',
+    dot: 'bg-indigo-400 shadow-[0_0_6px_rgba(129,140,248,0.8)]',
     className:
-      'bg-indigo-100 text-indigo-800 border-indigo-200 dark:bg-indigo-500/15 dark:text-indigo-400 dark:border-indigo-500/30',
+      'bg-indigo-500/10 text-indigo-700 border-indigo-300 dark:bg-indigo-500/15 dark:text-indigo-300 dark:border-indigo-500/40',
   },
   Atribuído: {
-    dot: 'bg-sky-400',
+    dot: 'bg-blue-400 shadow-[0_0_6px_rgba(96,165,250,0.8)]',
     className:
-      'bg-sky-100 text-sky-800 border-sky-200 dark:bg-sky-500/15 dark:text-sky-400 dark:border-sky-500/30',
+      'bg-blue-500/10 text-blue-700 border-blue-300 dark:bg-blue-500/15 dark:text-blue-300 dark:border-blue-500/40',
   },
   'Em aberto': {
-    dot: 'bg-sky-400',
+    dot: 'bg-blue-400 shadow-[0_0_6px_rgba(96,165,250,0.8)]',
     className:
-      'bg-sky-100 text-sky-800 border-sky-200 dark:bg-sky-500/15 dark:text-sky-400 dark:border-sky-500/30',
+      'bg-blue-500/10 text-blue-700 border-blue-300 dark:bg-blue-500/15 dark:text-blue-300 dark:border-blue-500/40',
   },
   'Em Atendimento': {
-    dot: 'bg-emerald-400',
+    dot: 'bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]',
     className:
-      'bg-emerald-100 text-emerald-800 border-emerald-200 dark:bg-emerald-500/15 dark:text-emerald-400 dark:border-emerald-500/30',
+      'bg-emerald-500/10 text-emerald-700 border-emerald-300 dark:bg-emerald-500/15 dark:text-emerald-300 dark:border-emerald-500/40 font-medium',
   },
   'Aguardando Cliente': {
-    dot: 'bg-slate-400',
+    dot: 'bg-amber-400 shadow-[0_0_6px_rgba(251,191,36,0.8)]',
     className:
-      'bg-slate-100 text-slate-800 border-slate-300 dark:bg-amber-500/15 dark:text-amber-400 dark:border-amber-500/30',
+      'bg-amber-500/10 text-amber-700 border-amber-300 dark:bg-amber-500/15 dark:text-amber-300 dark:border-amber-500/40',
   },
   'Aguardando Aprovação': {
-    dot: 'bg-orange-400',
+    dot: 'bg-orange-400 shadow-[0_0_6px_rgba(251,146,60,0.8)]',
     className:
-      'bg-orange-100 text-orange-800 border-orange-200 dark:bg-orange-500/15 dark:text-orange-400 dark:border-orange-500/30',
+      'bg-orange-500/10 text-orange-700 border-orange-300 dark:bg-orange-500/15 dark:text-orange-300 dark:border-orange-500/40',
   },
   Resolvido: {
-    dot: 'bg-green-500',
+    dot: 'bg-green-400 shadow-[0_0_6px_rgba(74,222,128,0.8)]',
     className:
-      'bg-green-100 text-green-800 border-green-200 dark:bg-green-500/15 dark:text-green-400 dark:border-green-500/30',
+      'bg-green-500/10 text-green-700 border-green-300 dark:bg-green-500/15 dark:text-green-300 dark:border-green-500/40',
   },
   Encerrado: {
-    dot: 'bg-slate-500',
+    dot: 'bg-slate-400',
     className:
-      'bg-slate-100 text-slate-700 border-slate-300 dark:bg-slate-500/15 dark:text-slate-400 dark:border-slate-500/30',
+      'bg-slate-500/10 text-slate-700 border-slate-300 dark:bg-slate-500/15 dark:text-slate-300 dark:border-slate-500/40',
   },
   Cancelado: {
-    dot: 'bg-red-500',
+    dot: 'bg-red-400 shadow-[0_0_6px_rgba(248,113,113,0.7)]',
     className:
-      'bg-red-100 text-red-800 border-red-200 dark:bg-red-500/15 dark:text-red-400 dark:border-red-500/30',
+      'bg-red-500/10 text-red-700 border-red-300 dark:bg-red-500/15 dark:text-red-300 dark:border-red-500/40',
   },
   Reaberto: {
-    dot: 'bg-rose-400',
+    dot: 'bg-rose-400 shadow-[0_0_8px_rgba(251,113,133,0.8)] animate-pulse',
     className:
-      'bg-rose-100 text-rose-800 border-rose-200 dark:bg-rose-500/15 dark:text-rose-400 dark:border-rose-500/30',
+      'bg-rose-500/10 text-rose-700 border-rose-300 dark:bg-rose-500/15 dark:text-rose-300 dark:border-rose-500/40 font-medium',
   },
 }
 

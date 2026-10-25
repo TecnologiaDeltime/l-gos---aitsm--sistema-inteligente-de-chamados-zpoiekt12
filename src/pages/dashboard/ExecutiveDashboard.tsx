@@ -166,16 +166,16 @@ export default function ExecutiveDashboard() {
           label="Chamados Abertos"
           value={kpis.opened}
           icon={Inbox}
-          color="text-blue-600"
-          bg="bg-blue-50"
+          color="text-cyan-400"
+          bg="bg-cyan-500/10 border border-cyan-500/20"
           onClick={() => openDrillDown(data.tickets, 'Chamados Abertos')}
         />
         <ExecutiveKpiCard
           label="Chamados Resolvidos"
           value={kpis.resolved}
           icon={CheckCircle}
-          color="text-green-600"
-          bg="bg-green-50"
+          color="text-emerald-400"
+          bg="bg-emerald-500/10 border border-emerald-500/20"
           onClick={() =>
             openDrillDown(
               data.tickets.filter((t) => t.status === 'Resolvido'),
@@ -187,8 +187,8 @@ export default function ExecutiveDashboard() {
           label="Chamados Fechados"
           value={kpis.closed}
           icon={XCircle}
-          color="text-slate-600"
-          bg="bg-slate-100"
+          color="text-slate-400"
+          bg="bg-slate-500/10 border border-slate-500/20"
           onClick={() =>
             openDrillDown(
               data.tickets.filter((t) => t.status === 'Encerrado'),
@@ -200,8 +200,8 @@ export default function ExecutiveDashboard() {
           label="Chamados em Aberto"
           value={kpis.pending}
           icon={Clock}
-          color="text-orange-600"
-          bg="bg-orange-50"
+          color="text-amber-400"
+          bg="bg-amber-500/10 border border-amber-500/20"
           onClick={() =>
             openDrillDown(
               data.tickets.filter(
@@ -215,29 +215,33 @@ export default function ExecutiveDashboard() {
           label="Horas Contratadas"
           value={kpis.contractedDisplay}
           icon={Hourglass}
-          color="text-indigo-600"
-          bg="bg-indigo-50"
+          color="text-indigo-400"
+          bg="bg-indigo-500/10 border border-indigo-500/20"
         />
         <ExecutiveKpiCard
           label="Horas Consumidas"
           value={kpis.consumedDisplay}
           icon={Timer}
-          color="text-purple-600"
-          bg="bg-purple-50"
+          color="text-purple-400"
+          bg="bg-purple-500/10 border border-purple-500/20"
         />
         <ExecutiveKpiCard
           label="Saldo de Horas"
           value={kpis.balanceDisplay}
           icon={Hourglass}
-          color={kpis.balanceHours < 0 ? 'text-red-600' : 'text-green-600'}
-          bg={kpis.balanceHours < 0 ? 'bg-red-50' : 'bg-green-50'}
+          color={kpis.balanceHours < 0 ? 'text-rose-400' : 'text-emerald-400'}
+          bg={
+            kpis.balanceHours < 0
+              ? 'bg-rose-500/10 border border-rose-500/20'
+              : 'bg-emerald-500/10 border border-emerald-500/20'
+          }
         />
         <ExecutiveKpiCard
           label="Visitas Técnicas"
           value={kpis.visits}
           icon={MapPin}
-          color="text-cyan-600"
-          bg="bg-cyan-50"
+          color="text-sky-400"
+          bg="bg-sky-500/10 border border-sky-500/20"
         />
       </div>
 
