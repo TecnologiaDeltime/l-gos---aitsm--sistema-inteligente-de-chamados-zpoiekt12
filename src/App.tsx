@@ -115,6 +115,8 @@ import { StaleTicketAlerts } from '@/components/StaleTicketAlerts'
 import { AlertNotificationPopup } from '@/components/AlertNotificationPopup'
 import AlertAuditPage from '@/pages/reports/AlertAuditPage'
 import ImplementedFeaturesReport from '@/pages/reports/ImplementedFeaturesReport'
+import TicketApprovalsPage from '@/pages/tickets/TicketApprovalsPage'
+import ApprovalPublic from '@/pages/tickets/ApprovalPublic'
 import { useAuth } from '@/hooks/use-auth'
 
 function RootRedirect() {
@@ -139,6 +141,7 @@ const App = () => (
               <Route path="/recuperar-senha" element={<RecoverPassword />} />
               <Route path="/recover-password" element={<RecoverPassword />} />
               <Route path="/survey/:token" element={<SurveyPublic />} />
+              <Route path="/approval/:token" element={<ApprovalPublic />} />
 
               {/* Portal Route (protected, separate layout) */}
               <Route
@@ -167,6 +170,7 @@ const App = () => (
                 <Route path="/tickets/retained" element={<RetainedTickets />} />
                 <Route path="/tickets/:id" element={<TicketDetail />} />
                 <Route path="/chamados/novo" element={<TicketCreate />} />
+                <Route path="/tickets/approvals" element={<TicketApprovalsPage />} />
                 <Route path="/categorias" element={<CategoryManagement />} />
                 <Route path="/catalogo" element={<ActivityCatalog />} />
                 <Route path="/clients" element={<ClientList />} />

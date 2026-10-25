@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-25T00:21:44.241Z",
+  "generatedAt": "2026-10-25T00:51:04.841Z",
   "collections": [
     {
       "name": "users",
@@ -2741,6 +2741,45 @@
           "required": false,
           "system": false,
           "collectionRef": "workflow_executions"
+        },
+        {
+          "name": "approval_config",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "approval_configs"
+        },
+        {
+          "name": "stage",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "escalation_deadline",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "target_contact",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "client_contacts"
+        },
+        {
+          "name": "target_email",
+          "type": "email",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "mode",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["Individual", "Sequencial", "Paralela"]
         }
       ],
       "indexes": [
@@ -6220,6 +6259,39 @@
           "required": false,
           "system": false,
           "collectionRef": "tkt_categories"
+        },
+        {
+          "name": "mode",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["Individual", "Sequencial", "Paralela"]
+        },
+        {
+          "name": "escalation_timeout_minutes",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "focal_points",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "client_contacts"
+        },
+        {
+          "name": "internal_approvers",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "description",
+          "type": "text",
+          "required": false,
+          "system": false
         }
       ],
       "indexes": [

@@ -14,12 +14,16 @@ routerAdd('POST', '/backend/v1/approvals/{token}/decide', (e) => {
     }
 
     const now = new Date().toISOString()
-    approval.set('status', body.decision === 'approved' ? 'Aprovado' : 'Reprovado')
-    approval.set('approver_comment', body.comment || '')
+    const isApproved = body.decision === 'approved'
+    approval.set('status', isApproved ? 'Aprovado' : 'Reprovado')
+    approval.set(
+      'approver_comment',
+      body.comment || (isApproved ? 'Aprovado via interface web' : 'Reprovado via interface web'),
+    )
     if (e.auth) {
       approval.set('approver', e.auth.id)
     }
-    if (body.decision === 'approved') {
+    if (isApproved) {
       approval.set('approved_at', now)
     } else {
       approval.set('rejected_at', now)
@@ -29,31 +33,67 @@ routerAdd('POST', '/backend/v1/approvals/{token}/decide', (e) => {
     const ticketId = approval.getString('ticket')
     const ticket = $app.findRecordById('tickets', ticketId)
     var oldTicketStatus = ticket.getString('status')
-    if (body.decision === 'approved') {
+
+    if (isApproved) {
+      // Se for modo paralelo, cancela outros tokens pendentes deste ticket
+      try {
+        var otherPending = $app.findRecordsByFilter(
+          'approvals',
+          'ticket = "' + ticketId + '" && id != "' + approval.id + '" && status = "Pendente"',
+          '',
+          50,
+          0,
+        )
+        for (var op = 0; op < otherPending.length; op++) {
+          otherPending[op].set('status', 'Aprovado')
+          otherPending[op].set(
+            'approver_comment',
+            'Aprovado por outro participante (Modo Paralelo)',
+          )
+          otherPending[op].set('approved_at', now)
+          $app.save(otherPending[op])
+        }
+      } catch (_) {}
+
       ticket.set('status', 'Novo')
+      $app.save(ticket)
     } else {
+      // Reprovado -> cancela o chamado e outras aprovações pendentes
+      try {
+        var otherPendingRej = $app.findRecordsByFilter(
+          'approvals',
+          'ticket = "' + ticketId + '" && id != "' + approval.id + '" && status = "Pendente"',
+          '',
+          50,
+          0,
+        )
+        for (var or = 0; or < otherPendingRej.length; or++) {
+          otherPendingRej[or].set('status', 'Reprovado')
+          otherPendingRej[or].set('approver_comment', 'Cancelado devido à reprovação')
+          otherPendingRej[or].set('rejected_at', now)
+          $app.save(otherPendingRej[or])
+        }
+      } catch (_) {}
+
       ticket.set('status', 'Cancelado')
+      $app.save(ticket)
     }
-    $app.save(ticket)
 
     const historyCol = $app.findCollectionByNameOrId('ticket_history')
     const hist = new Record(historyCol)
     hist.set('ticket', ticketId)
     hist.set('user', approval.getString('requester'))
-    hist.set('action', body.decision === 'approved' ? 'Aprovação aprovada' : 'Reprovação')
+    hist.set('action', isApproved ? 'Aprovação autorizada' : 'Aprovação recusada')
     hist.set('field', 'status')
     hist.set('old_value', oldTicketStatus)
-    hist.set('new_value', body.decision === 'approved' ? 'Novo' : 'Cancelado')
+    hist.set('new_value', isApproved ? 'Novo' : 'Cancelado')
     $app.save(hist)
 
     const notifsCol = $app.findCollectionByNameOrId('notifications')
     const requesterId = approval.getString('requester')
     const assignedId = ticket.getString('assigned_to')
     const msg =
-      'Aprovação ' +
-      (body.decision === 'approved' ? 'aprovada' : 'reprovada') +
-      ' - #' +
-      ticket.getString('number')
+      'Aprovação ' + (isApproved ? 'aprovada' : 'reprovada') + ' - #' + ticket.getString('number')
 
     ;[requesterId, assignedId].filter(Boolean).forEach(function (uid) {
       try {
@@ -193,13 +233,14 @@ routerAdd('GET', '/backend/v1/approvals/act', (e) => {
     }
 
     var now = new Date().toISOString()
-    var newApprovalStatus = action === 'approve' ? 'Aprovado' : 'Reprovado'
+    var isApprove = action === 'approve'
+    var newApprovalStatus = isApprove ? 'Aprovado' : 'Reprovado'
     approval.set('status', newApprovalStatus)
     approval.set(
       'approver_comment',
       'Decisão registrada diretamente via botão do e-mail institucional',
     )
-    if (action === 'approve') {
+    if (isApprove) {
       approval.set('approved_at', now)
     } else {
       approval.set('rejected_at', now)
@@ -207,8 +248,48 @@ routerAdd('GET', '/backend/v1/approvals/act', (e) => {
     $app.save(approval)
 
     var oldTicketStatus = ticket ? ticket.getString('status') : 'Aguardando Aprovação'
-    var newTicketStatus = action === 'approve' ? 'Novo' : 'Cancelado'
+    var newTicketStatus = isApprove ? 'Novo' : 'Cancelado'
     if (ticket) {
+      // Se aprovado em modo paralelo ou sequencial, encerra outras aprovações pendentes
+      if (isApprove) {
+        try {
+          var others = $app.findRecordsByFilter(
+            'approvals',
+            'ticket = "' + ticketId + '" && id != "' + approval.id + '" && status = "Pendente"',
+            '',
+            50,
+            0,
+          )
+          for (var o = 0; o < others.length; o++) {
+            others[o].set('status', 'Aprovado')
+            others[o].set(
+              'approver_comment',
+              'Aprovado por outro participante (Modo ' +
+                (approval.getString('mode') || 'Geral') +
+                ')',
+            )
+            others[o].set('approved_at', now)
+            $app.save(others[o])
+          }
+        } catch (_) {}
+      } else {
+        try {
+          var othersRej = $app.findRecordsByFilter(
+            'approvals',
+            'ticket = "' + ticketId + '" && id != "' + approval.id + '" && status = "Pendente"',
+            '',
+            50,
+            0,
+          )
+          for (var or2 = 0; or2 < othersRej.length; or2++) {
+            othersRej[or2].set('status', 'Reprovado')
+            othersRej[or2].set('approver_comment', 'Chamado reprovado')
+            othersRej[or2].set('rejected_at', now)
+            $app.save(othersRej[or2])
+          }
+        } catch (_) {}
+      }
+
       ticket.set('status', newTicketStatus)
       $app.save(ticket)
     }
@@ -221,7 +302,7 @@ routerAdd('GET', '/backend/v1/approvals/act', (e) => {
       hist.set('user', approval.getString('requester') || '')
       hist.set(
         'action',
-        action === 'approve' ? 'Aprovação autorizada via e-mail' : 'Aprovação recusada via e-mail',
+        isApprove ? 'Aprovação autorizada via e-mail' : 'Aprovação recusada via e-mail',
       )
       hist.set('field', 'status')
       hist.set('old_value', oldTicketStatus)
@@ -238,7 +319,7 @@ routerAdd('GET', '/backend/v1/approvals/act', (e) => {
       var assignedId = ticket ? ticket.getString('assigned_to') : ''
       var msg =
         'Aprovação ' +
-        (action === 'approve' ? 'aprovada' : 'reprovada') +
+        (isApprove ? 'aprovada' : 'reprovada') +
         ' via e-mail - Chamado #' +
         ticketNumber
 
@@ -269,17 +350,16 @@ routerAdd('GET', '/backend/v1/approvals/act', (e) => {
       '<strong>Data do Registro:</strong> ' +
       new Date().toLocaleString('pt-BR')
 
-    var successMsg =
-      action === 'approve'
-        ? 'Você aprovou a solicitação com sucesso! O chamado foi movido para o status "' +
-          newTicketStatus +
-          '" e o atendimento continuará.'
-        : 'Você reprovou a solicitação. O chamado foi alterado para o status "' +
-          newTicketStatus +
-          '" e o solicitante foi notificado.'
+    var successMsg = isApprove
+      ? 'Você aprovou a solicitação com sucesso! O chamado foi movido para o status "' +
+        newTicketStatus +
+        '" e o atendimento continuará.'
+      : 'Você reprovou a solicitação. O chamado foi cancelado com o status "' +
+        newTicketStatus +
+        '" e o solicitante foi notificado.'
 
     return renderResultHtml(
-      action === 'approve' ? 'Chamado Aprovado com Sucesso' : 'Chamado Reprovado',
+      isApprove ? 'Chamado Aprovado com Sucesso' : 'Chamado Reprovado',
       true,
       successMsg,
       successDetails,

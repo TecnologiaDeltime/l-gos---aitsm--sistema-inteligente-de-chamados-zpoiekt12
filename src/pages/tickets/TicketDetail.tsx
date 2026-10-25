@@ -780,6 +780,20 @@ export default function TicketDetail() {
               <StatusBadge status={ticket.status} />
             </div>
           </div>
+
+          {ticket.status === 'Aguardando Aprovação' && (
+            <div className="rounded-lg border border-amber-300 bg-amber-50 p-4 dark:bg-amber-950/40 dark:border-amber-800 space-y-1">
+              <div className="flex items-center gap-2 text-amber-800 dark:text-amber-300 font-bold text-sm">
+                <Clock className="h-4 w-4" />
+                Chamado Aguardando Aprovação
+              </div>
+              <p className="text-xs text-amber-700 dark:text-amber-400">
+                Este chamado foi submetido a fluxo de aprovação com base na atividade selecionada.
+                Os aprovadores designados receberam um e-mail para decisão com botões diretos
+                (Aprovar / Reprovar).
+              </p>
+            </div>
+          )}
           <p className="text-xs text-muted-foreground">
             Aberto por{' '}
             <span className="font-semibold text-foreground">{ticket.requester_name}</span> em{' '}

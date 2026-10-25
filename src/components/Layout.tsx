@@ -21,6 +21,7 @@ import {
   Menu,
   Shield,
   ShieldAlert,
+  ShieldCheck,
   User,
   CheckCheck,
   Upload,
@@ -214,6 +215,12 @@ export default function Layout() {
       path: '/catalogo',
       icon: ListTree,
       show: permissions.canManageCategories,
+    },
+    {
+      label: 'Aprovações',
+      path: '/tickets/approvals',
+      icon: ShieldCheck,
+      show: permissions.canReadModule('tickets'),
     },
   ]
 
