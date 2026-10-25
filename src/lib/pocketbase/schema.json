@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-25T02:05:26.721Z",
+  "generatedAt": "2026-10-25T02:38:29.546Z",
   "collections": [
     {
       "name": "users",
@@ -10433,7 +10433,14 @@
           "type": "select",
           "required": false,
           "system": false,
-          "selectValues": ["cyber_cyan", "neon_purple", "emerald_teal", "ice_blue", "solar_amber"]
+          "selectValues": [
+            "cyber_cyan",
+            "neon_purple",
+            "emerald_teal",
+            "ice_blue",
+            "solar_amber",
+            "candy"
+          ]
         },
         {
           "name": "scope",
