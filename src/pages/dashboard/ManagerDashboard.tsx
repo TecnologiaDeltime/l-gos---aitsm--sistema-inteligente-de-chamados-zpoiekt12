@@ -116,17 +116,22 @@ export default function ManagerDashboard() {
   if (loading)
     return (
       <div className="flex items-center justify-center py-12">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-600 border-t-transparent" />
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent shadow-[0_0_12px_rgba(6,182,212,0.5)]" />
       </div>
     )
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h2 className="text-xl font-bold">Dashboard Gerencial</h2>
-        <div className="flex gap-2">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2 className="text-xl font-bold tracking-tight text-foreground">Dashboard Gerencial</h2>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Métricas de equipe, SLA e desempenho operacional
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
           <Select value={period} onValueChange={setPeriod}>
-            <SelectTrigger className="w-32 h-8 text-xs">
+            <SelectTrigger className="w-32 h-9 text-xs bg-secondary/50 border-border">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -137,7 +142,7 @@ export default function ManagerDashboard() {
             </SelectContent>
           </Select>
           <Select value={metric} onValueChange={(v) => setMetric(v as MetricKey)}>
-            <SelectTrigger className="w-36 h-8 text-xs">
+            <SelectTrigger className="w-36 h-9 text-xs bg-secondary/50 border-border">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -152,6 +157,7 @@ export default function ManagerDashboard() {
           <Button
             size="sm"
             variant="outline"
+            className="h-9 hover:border-primary/40"
             onClick={() =>
               exportToCsv(
                 'ranking-operadores.csv',
@@ -178,31 +184,35 @@ export default function ManagerDashboard() {
               )
             }
           >
-            CSV
+            Exportar CSV
           </Button>
         </div>
       </div>
-      <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+
+      <div className="grid grid-cols-2 gap-3.5 md:grid-cols-4">
         {kpis.map((k, i) => (
-          <Card key={i}>
+          <Card key={i} className="itsm-card itsm-card-hover border-border/80 bg-card/90">
             <CardContent className="p-4">
-              <p className="text-xs text-slate-500">{k.label}</p>
-              <p className="text-2xl font-bold">{k.value}</p>
+              <p className="text-xs font-medium text-muted-foreground">{k.label}</p>
+              <p className="text-2xl font-bold tracking-tight text-foreground mt-1 tabular-nums">
+                {k.value}
+              </p>
             </CardContent>
           </Card>
         ))}
       </div>
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-sm flex items-center gap-2">
-            <Crown className="h-4 w-4 text-amber-500" />
+
+      <Card className="itsm-card overflow-hidden">
+        <CardHeader className="border-b border-border/80 bg-secondary/20 px-5 py-3.5">
+          <CardTitle className="text-sm font-semibold flex items-center gap-2 text-foreground">
+            <Crown className="h-4 w-4 text-amber-400 drop-shadow-[0_0_6px_rgba(251,191,36,0.6)]" />
             Ranking de Operadores
           </CardTitle>
         </CardHeader>
         <CardContent className="p-0">
           <Table>
-            <TableHeader>
-              <TableRow>
+            <TableHeader className="itsm-table-header">
+              <TableRow className="border-border/80">
                 <TableHead className="text-xs">#</TableHead>
                 <TableHead className="text-xs">Operador</TableHead>
                 <TableHead className="text-xs">Atendidos</TableHead>
@@ -216,18 +226,30 @@ export default function ManagerDashboard() {
             </TableHeader>
             <TableBody>
               {sorted.map((r, idx) => (
-                <TableRow key={r.op.id}>
-                  <TableCell className="text-xs font-bold">
+                <TableRow key={r.op.id} className="itsm-table-row itsm-table-row-hover">
+                  <TableCell className="text-xs font-bold text-foreground">
                     {idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : idx + 1}
                   </TableCell>
-                  <TableCell className="text-xs font-medium">{r.op.name || r.op.email}</TableCell>
-                  <TableCell className="text-xs">{r.attended}</TableCell>
-                  <TableCell className="text-xs">{r.resolved}</TableCell>
-                  <TableCell className="text-xs font-bold">{r.slaPct.toFixed(1)}%</TableCell>
-                  <TableCell className="text-xs">{r.hours.toFixed(1)}h</TableCell>
-                  <TableCell className="text-xs">{r.reopenRate.toFixed(1)}%</TableCell>
-                  <TableCell className="text-xs">{r.resolutionRate.toFixed(1)}%</TableCell>
-                  <TableCell className="text-xs">{r.backlog}</TableCell>
+                  <TableCell className="text-xs font-medium text-foreground">
+                    {r.op.name || r.op.email}
+                  </TableCell>
+                  <TableCell className="text-xs text-muted-foreground">{r.attended}</TableCell>
+                  <TableCell className="text-xs text-emerald-400 font-medium">
+                    {r.resolved}
+                  </TableCell>
+                  <TableCell className="text-xs font-bold text-cyan-400">
+                    {r.slaPct.toFixed(1)}%
+                  </TableCell>
+                  <TableCell className="text-xs text-foreground">{r.hours.toFixed(1)}h</TableCell>
+                  <TableCell className="text-xs text-muted-foreground">
+                    {r.reopenRate.toFixed(1)}%
+                  </TableCell>
+                  <TableCell className="text-xs text-muted-foreground">
+                    {r.resolutionRate.toFixed(1)}%
+                  </TableCell>
+                  <TableCell className="text-xs text-amber-400 font-semibold">
+                    {r.backlog}
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>

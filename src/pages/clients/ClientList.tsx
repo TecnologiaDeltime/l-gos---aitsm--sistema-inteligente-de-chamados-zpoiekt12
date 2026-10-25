@@ -137,17 +137,26 @@ export default function ClientList() {
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex justify-between items-center">
-        <h2 className="text-lg font-bold">Gestão de Clientes</h2>
+    <div className="space-y-5">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2 className="text-xl font-bold tracking-tight text-foreground">Gestão de Clientes</h2>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Empresas contratantes, filiais, contatos e configurações contratuais
+          </p>
+        </div>
         <div className="flex items-center gap-2">
           {selectedIds.size > 0 && (
-            <Button variant="destructive" onClick={() => setShowDeleteDialog(true)}>
+            <Button
+              variant="destructive"
+              onClick={() => setShowDeleteDialog(true)}
+              className="shadow-sm"
+            >
               <Trash2 className="mr-2 h-4 w-4" /> Excluir Selecionados ({selectedIds.size})
             </Button>
           )}
           <Link to="/clients/new">
-            <Button className="bg-blue-600 hover:bg-blue-700">
+            <Button className="bg-primary text-primary-foreground hover:brightness-110 shadow-md shadow-primary/20">
               <PlusCircle className="mr-2 h-4 w-4" /> Novo Cliente
             </Button>
           </Link>
@@ -201,7 +210,9 @@ export default function ClientList() {
             {companies.map((c) => (
               <div
                 key={c.id}
-                className={`rounded-xl border bg-white p-5 shadow-sm space-y-3 dark:bg-slate-900 transition-shadow hover:shadow-md ${selectedIds.has(c.id) ? 'ring-2 ring-blue-500' : ''}`}
+                className={`itsm-card itsm-card-hover p-5 space-y-3.5 border-border/80 bg-card/90 transition-all ${
+                  selectedIds.has(c.id) ? 'ring-2 ring-primary border-primary/60' : ''
+                }`}
               >
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex items-center gap-3">
@@ -210,16 +221,16 @@ export default function ClientList() {
                       onCheckedChange={() => toggleSelectOne(c.id)}
                       id={`client-${c.id}`}
                     />
-                    <div className="p-2.5 rounded-lg bg-blue-50 text-blue-600">
+                    <div className="p-2.5 rounded-lg bg-primary/10 text-primary border border-primary/20">
                       <Building2 className="h-5 w-5" />
                     </div>
                     <div>
                       <label htmlFor={`client-${c.id}`} className="cursor-pointer">
-                        <p className="font-bold text-slate-900 dark:text-slate-100">
+                        <p className="font-bold text-foreground hover:text-primary transition-colors">
                           {c.trade_name}
                         </p>
                       </label>
-                      <p className="text-xs text-slate-500">
+                      <p className="text-xs text-muted-foreground">
                         {c.code} - {c.document}
                       </p>
                     </div>
@@ -228,35 +239,55 @@ export default function ClientList() {
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-8 w-8 text-slate-500 hover:text-blue-600"
+                      className="h-8 w-8 text-muted-foreground hover:text-primary hover:bg-secondary/60"
                     >
                       <Pencil className="h-4 w-4" />
                     </Button>
                   </Link>
                 </div>
 
-                <div className="text-xs text-slate-600 space-y-1 pt-2 border-t">
-                  <p>Razão Social: {c.legal_name}</p>
-                  <p>Cidade: {c.address_city || 'N/A'}</p>
-                  <p>E-mail: {c.email || 'N/A'}</p>
+                <div className="text-xs text-muted-foreground space-y-1 pt-2.5 border-t border-border/70">
+                  <p>
+                    <span className="text-foreground/75 font-medium">Razão Social:</span>{' '}
+                    {c.legal_name}
+                  </p>
+                  <p>
+                    <span className="text-foreground/75 font-medium">Cidade:</span>{' '}
+                    {c.address_city || 'N/A'}
+                  </p>
+                  <p>
+                    <span className="text-foreground/75 font-medium">E-mail:</span>{' '}
+                    {c.email || 'N/A'}
+                  </p>
                 </div>
 
-                <div className="flex gap-4 pt-2 text-xs text-slate-500">
-                  <span>Colaboradores: {contactCounts[c.id] || 0}</span>
-                  <span>Filiais: {branchCounts[c.id] || 0}</span>
+                <div className="flex gap-4 pt-1 text-xs text-muted-foreground">
+                  <span className="rounded-md bg-secondary/50 px-2 py-0.5 border border-border/40">
+                    Colaboradores:{' '}
+                    <strong className="text-foreground">{contactCounts[c.id] || 0}</strong>
+                  </span>
+                  <span className="rounded-md bg-secondary/50 px-2 py-0.5 border border-border/40">
+                    Filiais: <strong className="text-foreground">{branchCounts[c.id] || 0}</strong>
+                  </span>
                 </div>
 
-                <div className="pt-1">
+                <div className="pt-1 flex items-center justify-between">
                   <Badge
-                    variant={c.status === 'Ativo' ? 'default' : 'secondary'}
+                    variant="outline"
                     className={
                       c.status === 'Ativo'
-                        ? 'bg-green-100 text-green-700 hover:bg-green-100'
-                        : 'bg-slate-200 text-slate-600 hover:bg-slate-200'
+                        ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-400 font-semibold'
+                        : 'border-border bg-secondary text-muted-foreground'
                     }
                   >
                     {c.status || 'Ativo'}
                   </Badge>
+                  <Link
+                    to={`/clients/${c.id}/edit`}
+                    className="text-xs text-primary hover:underline"
+                  >
+                    Ver detalhes →
+                  </Link>
                 </div>
               </div>
             ))}

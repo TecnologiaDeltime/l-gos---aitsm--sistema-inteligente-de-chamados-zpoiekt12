@@ -529,7 +529,9 @@ export default function Layout() {
         {active && (
           <span className="absolute left-0 top-1.5 bottom-1.5 w-1 rounded-r-full bg-primary shadow-[0_0_8px_rgba(6,182,212,0.8)]" />
         )}
-        <Icon className={`h-4 w-4 shrink-0 transition-colors ${active ? 'text-primary' : 'text-muted-foreground'}`} />
+        <Icon
+          className={`h-4 w-4 shrink-0 transition-colors ${active ? 'text-primary' : 'text-muted-foreground'}`}
+        />
         <span className="truncate">{item.label}</span>
       </Link>
     )
@@ -587,7 +589,9 @@ export default function Layout() {
                           : 'text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground'
                       }`}
                     >
-                      <SubIcon className={`h-3.5 w-3.5 shrink-0 ${subActive ? 'text-primary' : 'opacity-70'}`} />
+                      <SubIcon
+                        className={`h-3.5 w-3.5 shrink-0 ${subActive ? 'text-primary' : 'opacity-70'}`}
+                      />
                       <span className="truncate">{sub.label}</span>
                     </Link>
                   )
@@ -625,7 +629,9 @@ export default function Layout() {
                     const currentFull = `${location.pathname}${location.search}`
                     const subActive =
                       currentFull === sub.path ||
-                      (location.pathname === sub.path && !location.search && !sub.path.includes('?'))
+                      (location.pathname === sub.path &&
+                        !location.search &&
+                        !sub.path.includes('?'))
                     return (
                       <Link
                         key={sub.path}
@@ -637,7 +643,9 @@ export default function Layout() {
                             : 'text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground'
                         }`}
                       >
-                        <SubIcon className={`h-3.5 w-3.5 shrink-0 ${subActive ? 'text-primary' : 'opacity-70'}`} />
+                        <SubIcon
+                          className={`h-3.5 w-3.5 shrink-0 ${subActive ? 'text-primary' : 'opacity-70'}`}
+                        />
                         <span className="truncate">{sub.label}</span>
                       </Link>
                     )
@@ -684,7 +692,9 @@ export default function Layout() {
                             : 'text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground'
                         }`}
                       >
-                        <SubIcon className={`h-3.5 w-3.5 shrink-0 ${subActive ? 'text-primary' : 'opacity-70'}`} />
+                        <SubIcon
+                          className={`h-3.5 w-3.5 shrink-0 ${subActive ? 'text-primary' : 'opacity-70'}`}
+                        />
                         <span className="truncate">{sub.label}</span>
                       </Link>
                     )
@@ -731,7 +741,9 @@ export default function Layout() {
                             : 'text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground'
                         }`}
                       >
-                        <SubIcon className={`h-3.5 w-3.5 shrink-0 ${subActive ? 'text-primary' : 'opacity-70'}`} />
+                        <SubIcon
+                          className={`h-3.5 w-3.5 shrink-0 ${subActive ? 'text-primary' : 'opacity-70'}`}
+                        />
                         <span className="truncate">{sub.label}</span>
                       </Link>
                     )
@@ -778,7 +790,9 @@ export default function Layout() {
                             : 'text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground'
                         }`}
                       >
-                        <SubIcon className={`h-3.5 w-3.5 shrink-0 ${subActive ? 'text-primary' : 'opacity-70'}`} />
+                        <SubIcon
+                          className={`h-3.5 w-3.5 shrink-0 ${subActive ? 'text-primary' : 'opacity-70'}`}
+                        />
                         <span className="truncate">{sub.label}</span>
                       </Link>
                     )
@@ -825,7 +839,9 @@ export default function Layout() {
                             : 'text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground'
                         }`}
                       >
-                        <SubIcon className={`h-3.5 w-3.5 shrink-0 ${subActive ? 'text-primary' : 'opacity-70'}`} />
+                        <SubIcon
+                          className={`h-3.5 w-3.5 shrink-0 ${subActive ? 'text-primary' : 'opacity-70'}`}
+                        />
                         <span className="truncate">{sub.label}</span>
                       </Link>
                     )
@@ -872,7 +888,9 @@ export default function Layout() {
                             : 'text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground'
                         }`}
                       >
-                        <SubIcon className={`h-3.5 w-3.5 shrink-0 ${subActive ? 'text-primary' : 'opacity-70'}`} />
+                        <SubIcon
+                          className={`h-3.5 w-3.5 shrink-0 ${subActive ? 'text-primary' : 'opacity-70'}`}
+                        />
                         <span className="truncate">{sub.label}</span>
                       </Link>
                     )
@@ -919,7 +937,9 @@ export default function Layout() {
                             : 'text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground'
                         }`}
                       >
-                        <SubIcon className={`h-3.5 w-3.5 shrink-0 ${subActive ? 'text-primary' : 'opacity-70'}`} />
+                        <SubIcon
+                          className={`h-3.5 w-3.5 shrink-0 ${subActive ? 'text-primary' : 'opacity-70'}`}
+                        />
                         <span className="truncate">{sub.label}</span>
                       </Link>
                     )
@@ -969,7 +989,9 @@ export default function Layout() {
                             : 'text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground'
                         }`}
                       >
-                        <SubIcon className={`h-3.5 w-3.5 shrink-0 ${subActive ? 'text-primary' : 'opacity-70'}`} />
+                        <SubIcon
+                          className={`h-3.5 w-3.5 shrink-0 ${subActive ? 'text-primary' : 'opacity-70'}`}
+                        />
                         <span className="truncate">{sub.label}</span>
                       </Link>
                     )
@@ -1017,7 +1039,9 @@ export default function Layout() {
                             : 'text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground'
                         }`}
                       >
-                        <SubIcon className={`h-3.5 w-3.5 shrink-0 ${subActive ? 'text-primary' : 'opacity-70'}`} />
+                        <SubIcon
+                          className={`h-3.5 w-3.5 shrink-0 ${subActive ? 'text-primary' : 'opacity-70'}`}
+                        />
                         <span className="truncate">{sub.label}</span>
                       </Link>
                     )
@@ -1041,7 +1065,9 @@ export default function Layout() {
   return (
     <div className="flex min-h-screen bg-background text-foreground selection:bg-primary/30 selection:text-primary">
       {!isMobile && (
-        <aside className="sticky top-0 h-screen w-64 flex-shrink-0 border-r border-sidebar-border shadow-xl shadow-black/20 z-30">{navContent}</aside>
+        <aside className="sticky top-0 h-screen w-64 flex-shrink-0 border-r border-sidebar-border shadow-xl shadow-black/20 z-30">
+          {navContent}
+        </aside>
       )}
 
       <div className="flex flex-1 flex-col min-w-0">
@@ -1054,7 +1080,10 @@ export default function Layout() {
                     <Menu className="h-5 w-5" />
                   </Button>
                 </SheetTrigger>
-                <SheetContent side="left" className="p-0 w-64 border-r border-sidebar-border bg-sidebar">
+                <SheetContent
+                  side="left"
+                  className="p-0 w-64 border-r border-sidebar-border bg-sidebar"
+                >
                   {navContent}
                 </SheetContent>
               </Sheet>
@@ -1062,20 +1091,7 @@ export default function Layout() {
             <div className="flex items-center gap-2">
               <span className="hidden sm:inline-block h-2 w-2 rounded-full bg-primary shadow-[0_0_8px_rgba(6,182,212,0.8)]" />
               <h1 className="text-base sm:text-lg font-semibold tracking-tight text-foreground">
-              {[
-                ...navItems,
-                ...dashboardSubmenuItems,
-                ...clientSubmenuItems,
-                ...cmdbSubmenuItems,
-                ...chamadosSubmenuItems,
-                ...changesSubmenuItems,
-                ...problemsSubmenuItems,
-                ...visitsN2SubmenuItems,
-                ...relatoriosSubmenuItems,
-                ...adminSubmenuItems,
-                ...configuracoesSubmenuItems,
-              ].find((i) => i.path === `${location.pathname}${location.search}`)?.label ||
-                [
+                {[
                   ...navItems,
                   ...dashboardSubmenuItems,
                   ...clientSubmenuItems,
@@ -1087,9 +1103,23 @@ export default function Layout() {
                   ...relatoriosSubmenuItems,
                   ...adminSubmenuItems,
                   ...configuracoesSubmenuItems,
-                ].find((i) => i.path === location.pathname)?.label ||
-                'Painel'}{' '}
-            </h1>
+                ].find((i) => i.path === `${location.pathname}${location.search}`)?.label ||
+                  [
+                    ...navItems,
+                    ...dashboardSubmenuItems,
+                    ...clientSubmenuItems,
+                    ...cmdbSubmenuItems,
+                    ...chamadosSubmenuItems,
+                    ...changesSubmenuItems,
+                    ...problemsSubmenuItems,
+                    ...visitsN2SubmenuItems,
+                    ...relatoriosSubmenuItems,
+                    ...adminSubmenuItems,
+                    ...configuracoesSubmenuItems,
+                  ].find((i) => i.path === location.pathname)?.label ||
+                  'Painel'}{' '}
+              </h1>
+            </div>
           </div>
 
           <div className="flex items-center gap-3">

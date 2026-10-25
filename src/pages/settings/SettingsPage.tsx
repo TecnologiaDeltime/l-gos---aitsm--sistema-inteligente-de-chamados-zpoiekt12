@@ -287,16 +287,16 @@ export default function SettingsPage() {
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       {/* Cabeçalho e Navegação de Primeiro Nível */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-border/80">
         <div>
-          <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100">Configurações</h2>
-          <p className="text-sm text-slate-500 mt-0.5">
+          <h2 className="text-xl font-bold tracking-tight text-foreground">Configurações</h2>
+          <p className="text-xs text-muted-foreground mt-0.5">
             Gerencie preferências do sistema, perfil e integrações de comunicação
           </p>
         </div>
 
         {/* Abas de Primeiro Nível em Configurações */}
-        <div className="inline-flex items-center gap-1.5 p-1 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700/80 self-start sm:self-auto">
+        <div className="inline-flex flex-wrap items-center gap-1.5 p-1 rounded-xl bg-secondary/60 border border-border self-start sm:self-auto">
           <Button
             type="button"
             size="sm"
@@ -304,12 +304,12 @@ export default function SettingsPage() {
             onClick={() => handleTabChange('general')}
             className={`h-8 text-xs font-semibold rounded-lg transition-all ${
               mainTab === 'general'
-                ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 shadow-sm'
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100'
+                ? 'bg-card text-foreground shadow-sm border border-border'
+                : 'text-muted-foreground hover:text-foreground'
             }`}
           >
-            <Settings className="h-3.5 w-3.5 mr-1.5" />
-            Configurações Gerais
+            <Settings className="h-3.5 w-3.5 mr-1.5 text-primary" />
+            Gerais
           </Button>
 
           <Button
@@ -319,12 +319,12 @@ export default function SettingsPage() {
             onClick={() => handleTabChange('client_notif')}
             className={`h-8 text-xs font-semibold rounded-lg transition-all ${
               mainTab === 'client_notif'
-                ? 'bg-sky-600 text-white shadow-sm'
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100'
+                ? 'bg-sky-500/20 text-sky-400 border border-sky-500/30'
+                : 'text-muted-foreground hover:text-foreground'
             }`}
           >
-            <Bell className="h-3.5 w-3.5 mr-1.5" />
-            Notificações do Cliente
+            <Bell className="h-3.5 w-3.5 mr-1.5 text-sky-400" />
+            Notificações
           </Button>
 
           <Button
@@ -334,11 +334,11 @@ export default function SettingsPage() {
             onClick={() => handleTabChange('security')}
             className={`h-8 text-xs font-semibold rounded-lg transition-all ${
               mainTab === 'security'
-                ? 'bg-emerald-600 text-white shadow-sm'
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100'
+                ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                : 'text-muted-foreground hover:text-foreground'
             }`}
           >
-            <ShieldCheck className="h-3.5 w-3.5 mr-1.5" />
+            <ShieldCheck className="h-3.5 w-3.5 mr-1.5 text-emerald-400" />
             Segurança & Sessão
           </Button>
 
@@ -349,11 +349,11 @@ export default function SettingsPage() {
             onClick={() => handleTabChange('vault')}
             className={`h-8 text-xs font-semibold rounded-lg transition-all ${
               mainTab === 'vault'
-                ? 'bg-amber-600 text-white shadow-sm'
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100'
+                ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
+                : 'text-muted-foreground hover:text-foreground'
             }`}
           >
-            <Lock className="h-3.5 w-3.5 mr-1.5" />
+            <Lock className="h-3.5 w-3.5 mr-1.5 text-amber-400" />
             Cofre de Senhas
           </Button>
 
@@ -364,12 +364,12 @@ export default function SettingsPage() {
             onClick={() => handleTabChange('email')}
             className={`h-8 text-xs font-semibold rounded-lg transition-all ${
               mainTab === 'email'
-                ? 'bg-blue-600 text-white shadow-sm'
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100'
+                ? 'bg-primary/20 text-primary border border-primary/30'
+                : 'text-muted-foreground hover:text-foreground'
             }`}
           >
-            <Mail className="h-3.5 w-3.5 mr-1.5" />
-            Conexão IMAP & Caixa de E-mail
+            <Mail className="h-3.5 w-3.5 mr-1.5 text-primary" />
+            IMAP & E-mail
           </Button>
         </div>
       </div>

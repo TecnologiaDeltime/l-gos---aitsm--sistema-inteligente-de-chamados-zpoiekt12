@@ -165,7 +165,7 @@ export default function OperatorDashboard() {
   if (loading)
     return (
       <div className="flex items-center justify-center py-12">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-600 border-t-transparent" />
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent shadow-[0_0_12px_rgba(6,182,212,0.5)]" />
       </div>
     )
 
@@ -177,10 +177,17 @@ export default function OperatorDashboard() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h2 className="text-xl font-bold">Meu Painel de Performance</h2>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2 className="text-xl font-bold tracking-tight text-foreground">
+            Meu Painel de Performance
+          </h2>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Indicadores individuais de produtividade e cumprimento de SLA
+          </p>
+        </div>
         <Select value={period} onValueChange={(v) => setPeriod(v as PeriodOption)}>
-          <SelectTrigger className="w-40 h-8 text-xs">
+          <SelectTrigger className="w-44 h-9 text-xs bg-secondary/50 border-border">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -191,73 +198,85 @@ export default function OperatorDashboard() {
           </SelectContent>
         </Select>
       </div>
-      <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+
+      <div className="grid grid-cols-2 gap-3.5 md:grid-cols-4">
         {kpis.map((k, i) => {
           const Icon = k.icon
           return (
-            <Card key={i} className="border border-slate-200">
+            <Card key={i} className="itsm-card itsm-card-hover border-border/80 bg-card/90">
               <CardContent className="p-4">
-                <div className="flex items-center justify-between mb-2">
-                  <div className={`p-2 rounded-lg ${k.bg}`}>
+                <div className="flex items-center justify-between mb-2.5">
+                  <div className={`p-2 rounded-lg bg-secondary/70 border border-border/60`}>
                     <Icon className={`h-4 w-4 ${k.color}`} />
                   </div>
-                  <div className="flex items-center gap-1">
+                  <div className="flex items-center gap-1 rounded-full bg-secondary/50 px-2 py-0.5 border border-border/50">
                     <TrendIcon dir={k.dir} />
-                    <span className="text-[10px] text-slate-500">
+                    <span className="text-[10px] font-medium text-muted-foreground">
                       {Math.abs(k.pct).toFixed(0)}%
                     </span>
                   </div>
                 </div>
-                <p className="text-xs text-slate-500">{k.label}</p>
-                <p className="text-xl font-bold text-slate-900">{k.value}</p>
+                <p className="text-xs font-medium text-muted-foreground">{k.label}</p>
+                <p className="text-xl font-bold tracking-tight text-foreground mt-0.5 tabular-nums">
+                  {k.value}
+                </p>
               </CardContent>
             </Card>
           )
         })}
       </div>
+
       <div className="grid gap-4 md:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm">SLA Compliance</CardTitle>
+        <Card className="itsm-card overflow-hidden">
+          <CardHeader className="border-b border-border/80 bg-secondary/20 px-5 py-3.5">
+            <CardTitle className="text-sm font-semibold text-foreground">SLA Compliance</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-2">
-            <div className="flex justify-between text-xs">
-              <span className="text-slate-500">Dentro do Prazo</span>
-              <span className="font-bold text-green-600">{slaMet.length}</span>
+          <CardContent className="p-5 space-y-3">
+            <div className="flex justify-between items-center text-xs p-2 rounded-lg bg-secondary/30">
+              <span className="text-muted-foreground">Dentro do Prazo</span>
+              <span className="font-bold text-emerald-400 tabular-nums">{slaMet.length}</span>
             </div>
-            <div className="flex justify-between text-xs">
-              <span className="text-slate-500">Violado</span>
-              <span className="font-bold text-red-600">{slaViolated.length}</span>
+            <div className="flex justify-between items-center text-xs p-2 rounded-lg bg-secondary/30">
+              <span className="text-muted-foreground">Violado</span>
+              <span className="font-bold text-rose-400 tabular-nums">{slaViolated.length}</span>
             </div>
-            <div className="flex justify-between text-xs">
-              <span className="text-slate-500">Em Risco</span>
-              <span className="font-bold text-amber-600">
+            <div className="flex justify-between items-center text-xs p-2 rounded-lg bg-secondary/30">
+              <span className="text-muted-foreground">Em Risco</span>
+              <span className="font-bold text-amber-400 tabular-nums">
                 {currT.filter((t) => t.sla_status === 'Risco' || t.sla_status === 'Crítico').length}
               </span>
             </div>
-            <div className="flex justify-between text-xs">
-              <span className="text-slate-500">Pausado</span>
-              <span className="font-bold text-slate-600">
+            <div className="flex justify-between items-center text-xs p-2 rounded-lg bg-secondary/30">
+              <span className="text-muted-foreground">Pausado</span>
+              <span className="font-bold text-slate-400 tabular-nums">
                 {currT.filter((t) => t.sla_status === 'Pausado').length}
               </span>
             </div>
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm">Horas por Tipo</CardTitle>
+
+        <Card className="itsm-card overflow-hidden">
+          <CardHeader className="border-b border-border/80 bg-secondary/20 px-5 py-3.5">
+            <CardTitle className="text-sm font-semibold text-foreground">Horas por Tipo</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-2">
+          <CardContent className="p-5 space-y-3">
             {Object.entries(hoursByType)
               .sort((a, b) => b[1] - a[1])
               .map(([type, hours]) => (
-                <div key={type} className="flex justify-between text-xs">
-                  <span className="text-slate-500">{type}</span>
-                  <span className="font-bold">{formatMinutes(hours * 60)}</span>
+                <div
+                  key={type}
+                  className="flex justify-between items-center text-xs p-2 rounded-lg bg-secondary/30"
+                >
+                  <span className="text-muted-foreground">{type}</span>
+                  <span className="font-bold text-foreground tabular-nums">
+                    {formatMinutes(hours * 60)}
+                  </span>
                 </div>
               ))}
             {interactions.length === 0 && (
-              <p className="text-xs text-slate-500 text-center py-4">Sem dados</p>
+              <p className="text-xs text-muted-foreground text-center py-6">
+                Sem apontamentos no período
+              </p>
             )}
           </CardContent>
         </Card>

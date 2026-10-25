@@ -372,17 +372,17 @@ export default function OperatorsPage() {
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-border">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-border/80">
         <div>
           <div className="flex items-center gap-2.5">
-            <div className="p-2 rounded-lg bg-blue-100 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300">
+            <div className="p-2 rounded-xl bg-primary/10 text-primary border border-primary/20 shadow-[0_0_12px_rgba(6,182,212,0.2)]">
               <Users className="h-6 w-6" />
             </div>
             <div>
               <h1 className="text-2xl font-bold tracking-tight text-foreground">
                 Cadastro de Operadores
               </h1>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-xs text-muted-foreground mt-0.5">
                 Gerencie contas de acesso, equipes, ramais, perfis de permissão e senhas
               </p>
             </div>
@@ -390,8 +390,14 @@ export default function OperatorsPage() {
         </div>
 
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={loadData} disabled={loading} className="h-9">
-            <RefreshCw className={`h-4 w-4 mr-1.5 ${loading ? 'animate-spin' : ''}`} />
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={loadData}
+            disabled={loading}
+            className="h-9 hover:border-primary/40"
+          >
+            <RefreshCw className={`h-4 w-4 mr-1.5 ${loading ? 'animate-spin text-primary' : ''}`} />
             Atualizar
           </Button>
 
@@ -401,7 +407,7 @@ export default function OperatorsPage() {
                 setEditingOperator(null)
                 setDialogOpen(true)
               }}
-              className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold h-9 shadow-sm"
+              className="bg-primary hover:brightness-110 text-primary-foreground font-semibold h-9 shadow-md shadow-primary/20"
             >
               <UserPlus className="h-4 w-4 mr-1.5" />
               Novo Operador

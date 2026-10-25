@@ -182,26 +182,36 @@ export default function RetainedTickets() {
   return (
     <div className="space-y-6">
       {/* Cabeçalho */}
-      <div className="flex flex-wrap items-center justify-between gap-4">
+      <div className="flex flex-wrap items-center justify-between gap-4 pb-1">
         <div>
-          <div className="flex items-center gap-2">
-            <ShieldAlert className="h-6 w-6 text-amber-600" />
-            <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">
-              Chamados Retidos (Moderação de E-mail)
-            </h1>
+          <div className="flex items-center gap-2.5">
+            <div className="p-2 rounded-xl bg-amber-500/10 text-amber-400 border border-amber-500/30">
+              <ShieldAlert className="h-6 w-6" />
+            </div>
+            <div>
+              <h1 className="text-xl font-bold tracking-tight text-foreground">
+                Chamados Retidos (Moderação de E-mail)
+              </h1>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                E-mails recebidos de domínios não autorizados aguardando revisão e liberação para
+                abertura de tickets
+              </p>
+            </div>
           </div>
-          <p className="text-sm text-slate-500 mt-1">
-            E-mails recebidos de domínios não autorizados aguardando revisão e liberação para
-            abertura de tickets.
-          </p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={loadData} disabled={loading}>
-            <RefreshCw className={`mr-1.5 h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={loadData}
+            disabled={loading}
+            className="h-9 hover:border-primary/40"
+          >
+            <RefreshCw className={`mr-1.5 h-4 w-4 ${loading ? 'animate-spin text-primary' : ''}`} />
             Atualizar
           </Button>
           <Link to="/settings">
-            <Button variant="outline" size="sm">
+            <Button variant="outline" size="sm" className="h-9 hover:border-primary/40">
               <Mail className="mr-1.5 h-4 w-4" />
               Configurar Caixa IMAP
             </Button>
@@ -210,24 +220,24 @@ export default function RetainedTickets() {
       </div>
 
       {/* Barra de Filtros */}
-      <div className="flex flex-col sm:flex-row gap-3 items-center justify-between bg-white dark:bg-slate-900 p-4 rounded-xl border">
+      <div className="flex flex-col sm:flex-row gap-3 items-center justify-between bg-card p-4 rounded-xl border border-border/80 shadow-xs">
         <div className="relative w-full sm:w-80">
-          <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+          <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Buscar por remetente, assunto, domínio..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="pl-9 text-sm"
+            className="pl-9 text-xs bg-secondary/50 border-border"
           />
         </div>
 
         <div className="flex items-center gap-3 w-full sm:w-auto">
           <div className="flex items-center gap-1.5">
-            <Filter className="h-4 w-4 text-slate-400" />
-            <span className="text-xs text-slate-500 font-medium">Status:</span>
+            <Filter className="h-4 w-4 text-muted-foreground" />
+            <span className="text-xs text-muted-foreground font-medium">Status:</span>
           </div>
           <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-36 h-9 text-xs">
+            <SelectTrigger className="w-36 h-9 text-xs bg-secondary/50 border-border">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -264,76 +274,71 @@ export default function RetainedTickets() {
           {filteredTickets.map((t) => (
             <div
               key={t.id}
-              className={`rounded-xl border bg-white dark:bg-slate-900 p-4 transition-all duration-200 hover:shadow-sm ${
+              className={`itsm-card itsm-card-hover p-4 transition-all duration-200 ${
                 t.status === 'Pendente'
-                  ? 'border-amber-200 bg-amber-50/20 dark:border-amber-900/50'
+                  ? 'border-amber-500/30 bg-amber-500/5'
                   : t.status === 'Liberado'
-                    ? 'border-emerald-200 bg-emerald-50/10 dark:border-emerald-900/40'
-                    : 'border-slate-200 opacity-75'
+                    ? 'border-emerald-500/30 bg-emerald-500/5'
+                    : 'border-border/80 opacity-75'
               }`}
             >
               <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
                 {/* Informações Principais */}
                 <div className="space-y-1.5 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className="font-bold text-sm text-slate-900 dark:text-slate-100">
-                      {t.subject}
-                    </span>
+                    <span className="font-bold text-sm text-foreground">{t.subject}</span>
                     <Badge
+                      variant="outline"
                       className={
                         t.status === 'Pendente'
-                          ? 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 hover:bg-amber-100'
+                          ? 'bg-amber-500/10 text-amber-400 border-amber-500/30'
                           : t.status === 'Liberado'
-                            ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 hover:bg-emerald-100'
-                            : 'bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-300'
+                            ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
+                            : 'bg-secondary text-muted-foreground border-border'
                       }
                     >
                       {t.status}
                     </Badge>
                     {t.domain && (
-                      <span className="inline-flex items-center text-xs font-mono px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
+                      <span className="inline-flex items-center text-xs font-mono px-2 py-0.5 rounded bg-secondary text-muted-foreground border border-border">
                         {t.domain}
                       </span>
                     )}
                   </div>
 
-                  <div className="flex flex-wrap items-center gap-y-1 gap-x-4 text-xs text-slate-500">
+                  <div className="flex flex-wrap items-center gap-y-1 gap-x-4 text-xs text-muted-foreground">
                     <span className="flex items-center gap-1">
-                      <Mail className="h-3.5 w-3.5 text-slate-400" />
-                      <strong>De:</strong>{' '}
+                      <Mail className="h-3.5 w-3.5 text-muted-foreground" />
+                      <strong className="text-foreground/80">De:</strong>{' '}
                       {t.from_name ? `${t.from_name} <${t.from_email}>` : t.from_email}
                     </span>
                     <span className="flex items-center gap-1">
-                      <Calendar className="h-3.5 w-3.5 text-slate-400" />
-                      <strong>Recebido em:</strong> {formatDateTime(t.created)} (
-                      {formatTicketAge(t.created)})
+                      <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
+                      <strong className="text-foreground/80">Recebido em:</strong>{' '}
+                      {formatDateTime(t.created)} ({formatTicketAge(t.created)})
                     </span>
                     {t.reason && (
-                      <span className="text-amber-700 dark:text-amber-400 font-medium">
-                        Motivo: {t.reason}
-                      </span>
+                      <span className="text-amber-400 font-medium">Motivo: {t.reason}</span>
                     )}
                   </div>
 
                   {/* Prévia do corpo */}
-                  <p className="text-xs text-slate-600 dark:text-slate-400 line-clamp-2 pt-1">
-                    {t.body}
-                  </p>
+                  <p className="text-xs text-muted-foreground line-clamp-2 pt-1">{t.body}</p>
 
                   {/* Informações de Moderação / Ticket Criado */}
                   {t.status === 'Liberado' && t.expand?.ticket && (
-                    <div className="pt-2 flex items-center gap-2 text-xs text-emerald-700 dark:text-emerald-400 font-medium">
+                    <div className="pt-2 flex items-center gap-2 text-xs text-emerald-400 font-medium">
                       <CheckCircle2 className="h-4 w-4" />
                       Chamado Criado:{' '}
                       <Link
                         to={`/tickets/${t.expand.ticket.id}`}
-                        className="underline hover:text-emerald-800 flex items-center gap-1"
+                        className="underline hover:text-emerald-300 flex items-center gap-1"
                       >
                         #{t.expand.ticket.number || t.expand.ticket.id}
                         <ExternalLink className="h-3 w-3" />
                       </Link>
                       {t.reviewed_at && (
-                        <span className="text-slate-400 font-normal">
+                        <span className="text-muted-foreground font-normal">
                           (em {new Date(t.reviewed_at).toLocaleString('pt-BR')})
                         </span>
                       )}
@@ -346,7 +351,7 @@ export default function RetainedTickets() {
                   <Button
                     size="sm"
                     variant="outline"
-                    className="h-8 text-xs"
+                    className="h-8 text-xs hover:border-primary/40"
                     onClick={() => setViewTicket(t)}
                   >
                     Ver Conteúdo
@@ -356,7 +361,7 @@ export default function RetainedTickets() {
                     <>
                       <Button
                         size="sm"
-                        className="h-8 text-xs bg-emerald-600 hover:bg-emerald-700 text-white"
+                        className="h-8 text-xs bg-emerald-600 hover:bg-emerald-500 text-white font-semibold shadow-xs"
                         onClick={() => handleOpenRelease(t)}
                       >
                         <CheckCircle2 className="mr-1 h-3.5 w-3.5" />
@@ -365,7 +370,7 @@ export default function RetainedTickets() {
                       <Button
                         size="sm"
                         variant="outline"
-                        className="h-8 text-xs text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700 dark:border-red-900/50 dark:hover:bg-red-950"
+                        className="h-8 text-xs text-rose-400 border-rose-500/30 hover:bg-rose-500/10 hover:text-rose-300"
                         onClick={() => {
                           setDismissTarget(t)
                           setDismissNotes(
@@ -383,7 +388,7 @@ export default function RetainedTickets() {
                     <Button
                       size="icon"
                       variant="ghost"
-                      className="h-8 w-8 text-slate-400 hover:text-red-600"
+                      className="h-8 w-8 text-muted-foreground hover:text-rose-400 hover:bg-rose-500/10"
                       title="Excluir do histórico"
                       onClick={() => handleDeletePermanent(t.id)}
                     >

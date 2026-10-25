@@ -100,21 +100,24 @@ export default function ConfigurationItemList() {
     permissions.canWriteModule('cmdb')
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       {/* Header */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-xl font-bold tracking-tight text-foreground flex items-center gap-2">
-            <Boxes className="h-6 w-6 text-primary" />
+            <Boxes className="h-6 w-6 text-primary drop-shadow-[0_0_8px_rgba(6,182,212,0.6)]" />
             Itens de Configuração (CMDB)
           </h1>
-          <p className="text-xs text-muted-foreground">
+          <p className="text-xs text-muted-foreground mt-0.5">
             Gerenciamento de infraestrutura: roteadores, switches, servidores, impressoras e outros.
           </p>
         </div>
         {canEdit && (
           <Link to="/cmdb/configuration-items/new">
-            <Button size="sm" className="gap-1.5">
+            <Button
+              size="sm"
+              className="gap-1.5 bg-primary text-primary-foreground hover:brightness-110 shadow-md shadow-primary/20"
+            >
               <Plus className="h-4 w-4" /> Novo Item de Configuração
             </Button>
           </Link>
@@ -129,11 +132,11 @@ export default function ConfigurationItemList() {
             placeholder="Buscar por nome, marca, modelo, série, local..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="pl-9 text-xs"
+            className="pl-9 text-xs bg-secondary/50 border-border"
           />
         </div>
         <Select value={companyFilter} onValueChange={setCompanyFilter}>
-          <SelectTrigger className="w-[180px] text-xs">
+          <SelectTrigger className="w-[180px] text-xs bg-secondary/50 border-border">
             <SelectValue placeholder="Empresa" />
           </SelectTrigger>
           <SelectContent>
@@ -146,7 +149,7 @@ export default function ConfigurationItemList() {
           </SelectContent>
         </Select>
         <Select value={typeFilter} onValueChange={setTypeFilter}>
-          <SelectTrigger className="w-[170px] text-xs">
+          <SelectTrigger className="w-[170px] text-xs bg-secondary/50 border-border">
             <SelectValue placeholder="Tipo" />
           </SelectTrigger>
           <SelectContent>
@@ -159,7 +162,7 @@ export default function ConfigurationItemList() {
           </SelectContent>
         </Select>
         <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-[150px] text-xs">
+          <SelectTrigger className="w-[150px] text-xs bg-secondary/50 border-border">
             <SelectValue placeholder="Status" />
           </SelectTrigger>
           <SelectContent>
@@ -185,7 +188,7 @@ export default function ConfigurationItemList() {
           filtered.map((item) => (
             <Card
               key={item.id}
-              className="cursor-pointer hover:border-primary transition-colors"
+              className="itsm-card itsm-card-hover cursor-pointer border-border/80 bg-card/90"
               onClick={() => navigate(`/cmdb/configuration-items/${item.id}`)}
             >
               <CardContent className="p-4 space-y-2">
@@ -201,7 +204,7 @@ export default function ConfigurationItemList() {
                     </span>
                   )}
                 </div>
-                <div className="flex items-center justify-between text-xs text-muted-foreground pt-1 border-t">
+                <div className="flex items-center justify-between text-xs text-muted-foreground pt-2 border-t border-border/80">
                   <span className="flex items-center gap-1">
                     <Building2 className="h-3 w-3" />
                     {item.expand?.company?.trade_name || '—'}
@@ -218,10 +221,10 @@ export default function ConfigurationItemList() {
       </div>
 
       {/* Desktop view - Table */}
-      <div className="hidden sm:block rounded-xl border bg-card shadow-sm overflow-hidden">
+      <div className="hidden sm:block itsm-table-container">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs text-muted-foreground">
-            <thead className="bg-muted/50 border-b font-semibold text-foreground">
+            <thead className="itsm-table-header">
               <tr>
                 <th
                   className="p-3 cursor-pointer hover:bg-muted/70"
@@ -279,24 +282,32 @@ export default function ConfigurationItemList() {
                 filtered.map((item) => (
                   <tr
                     key={item.id}
-                    className="cursor-pointer hover:bg-muted/50 transition-colors"
+                    className="itsm-table-row itsm-table-row-hover cursor-pointer"
                     onClick={() => navigate(`/cmdb/configuration-items/${item.id}`)}
                   >
-                    <td className="p-3 font-medium text-foreground">{item.name}</td>
+                    <td className="p-3 font-medium text-foreground hover:text-primary transition-colors">
+                      {item.name}
+                    </td>
                     <td className="p-3">
                       <ConfigurationItemTypeBadge type={item.type} />
                     </td>
-                    <td className="p-3">
+                    <td className="p-3 text-foreground/80">
                       {item.brand ? `${item.brand} ${item.model || ''}`.trim() : item.model || '—'}
                     </td>
-                    <td className="p-3 font-mono">{item.serial_number || '—'}</td>
+                    <td className="p-3 font-mono text-muted-foreground">
+                      {item.serial_number || '—'}
+                    </td>
                     <td className="p-3">{item.location || '—'}</td>
-                    <td className="p-3">{item.expand?.company?.trade_name || '—'}</td>
+                    <td className="p-3 text-foreground/90">
+                      {item.expand?.company?.trade_name || '—'}
+                    </td>
                     <td className="p-3">{item.expand?.unit?.name || 'Sede'}</td>
                     <td className="p-3">
                       <CiStatusBadge status={item.status} />
                     </td>
-                    <td className="p-3">{new Date(item.updated).toLocaleDateString('pt-BR')}</td>
+                    <td className="p-3 text-muted-foreground">
+                      {new Date(item.updated).toLocaleDateString('pt-BR')}
+                    </td>
                   </tr>
                 ))
               )}

@@ -188,19 +188,32 @@ export default function ReportsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between flex-wrap gap-2">
-        <h2 className="text-xl font-bold flex items-center gap-2">
-          <BarChart3 className="h-5 w-5 text-blue-600" /> Relatórios Gerenciais
-        </h2>
+      <div className="flex items-center justify-between flex-wrap gap-2 pb-1 border-b border-border/80">
+        <div>
+          <h2 className="text-xl font-bold tracking-tight text-foreground flex items-center gap-2">
+            <BarChart3 className="h-5 w-5 text-primary drop-shadow-[0_0_8px_rgba(6,182,212,0.6)]" />{' '}
+            Relatórios Gerenciais
+          </h2>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Apurações consolidadas de apontamento, SLA, atendimento e contratos
+          </p>
+        </div>
       </div>
 
       {/* Relatório principal: Horas por Cronômetro */}
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between pb-3">
+      <Card className="itsm-card border-border/80 bg-card/90">
+        <CardHeader className="flex flex-row items-center justify-between pb-3 border-b border-border/80 bg-secondary/15">
           <div className="flex items-center gap-2">
-            <Timer className="h-5 w-5 text-blue-600" />
-            <CardTitle className="text-base">Horas por Cronômetro</CardTitle>
-            <Badge variant="secondary" className="ml-1">
+            <div className="p-1.5 rounded-lg bg-primary/10 text-primary border border-primary/20">
+              <Timer className="h-4 w-4" />
+            </div>
+            <CardTitle className="text-sm font-semibold text-foreground">
+              Horas por Cronômetro
+            </CardTitle>
+            <Badge
+              variant="outline"
+              className="ml-1 text-[10px] bg-primary/10 text-primary border-primary/30"
+            >
               origin = Cronômetro
             </Badge>
           </div>
@@ -210,11 +223,18 @@ export default function ReportsPage() {
               variant="outline"
               onClick={handleExport}
               disabled={loading || rows.length === 0}
+              className="h-8 text-xs hover:border-primary/40"
             >
-              <Download className="h-4 w-4 mr-1.5" /> Exportar CSV
+              <Download className="h-3.5 w-3.5 mr-1.5" /> Exportar CSV
             </Button>
-            <Button size="sm" onClick={loadData} disabled={loading}>
-              <RefreshCw className={`h-4 w-4 mr-1.5 ${loading ? 'animate-spin' : ''}`} /> Atualizar
+            <Button
+              size="sm"
+              onClick={loadData}
+              disabled={loading}
+              className="h-8 text-xs bg-primary text-primary-foreground hover:brightness-110 shadow-xs"
+            >
+              <RefreshCw className={`h-3.5 w-3.5 mr-1.5 ${loading ? 'animate-spin' : ''}`} />{' '}
+              Atualizar
             </Button>
           </div>
         </CardHeader>
@@ -259,19 +279,19 @@ export default function ReportsPage() {
 
           {/* Resumo */}
           <div className="grid gap-3 sm:grid-cols-3">
-            <div className="rounded-lg border bg-secondary/30 p-3">
+            <div className="rounded-xl border border-border/80 bg-secondary/30 p-3.5">
               <p className="text-xs text-muted-foreground">Total de Horas</p>
-              <p className="text-2xl font-bold font-mono text-blue-700">
+              <p className="text-2xl font-bold font-mono text-cyan-400 mt-1">
                 {formatMinutes(totalMinutes)}
               </p>
             </div>
-            <div className="rounded-lg border bg-secondary/30 p-3">
+            <div className="rounded-xl border border-border/80 bg-secondary/30 p-3.5">
               <p className="text-xs text-muted-foreground">Interações</p>
-              <p className="text-2xl font-bold">{rows.length}</p>
+              <p className="text-2xl font-bold text-foreground mt-1 tabular-nums">{rows.length}</p>
             </div>
-            <div className="rounded-lg border bg-secondary/30 p-3">
+            <div className="rounded-xl border border-border/80 bg-secondary/30 p-3.5">
               <p className="text-xs text-muted-foreground">Período</p>
-              <p className="text-sm font-semibold mt-1">
+              <p className="text-sm font-semibold text-foreground/90 mt-2">
                 {startDate} → {endDate}
               </p>
             </div>
@@ -348,14 +368,19 @@ export default function ReportsPage() {
         </h3>
         <div className="grid gap-4 md:grid-cols-2">
           {OTHER_REPORTS.map((r) => (
-            <Card key={r.path}>
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-semibold">{r.title}</CardTitle>
-                <BarChart3 className="h-4 w-4 text-blue-600" />
+            <Card key={r.path} className="itsm-card itsm-card-hover border-border/80 bg-card/90">
+              <CardHeader className="flex flex-row items-center justify-between pb-2 border-b border-border/60 bg-secondary/10">
+                <CardTitle className="text-sm font-semibold text-foreground">{r.title}</CardTitle>
+                <BarChart3 className="h-4 w-4 text-primary" />
               </CardHeader>
-              <CardContent className="space-y-3">
-                <p className="text-xs text-slate-500">{r.desc}</p>
-                <Button size="sm" variant="outline" className="w-full" asChild>
+              <CardContent className="p-4 space-y-3">
+                <p className="text-xs text-muted-foreground leading-relaxed">{r.desc}</p>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="w-full h-8 text-xs hover:border-primary/40 hover:text-primary"
+                  asChild
+                >
                   <Link to={r.path}>
                     <Download className="mr-1.5 h-3.5 w-3.5" /> Visualizar
                     <ChevronRight className="ml-1.5 h-3.5 w-3.5" />
