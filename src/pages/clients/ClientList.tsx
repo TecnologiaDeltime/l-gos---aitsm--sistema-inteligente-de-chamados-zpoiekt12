@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react'
 import { Link } from 'react-router-dom'
-import { PlusCircle, Building2, Pencil, Loader2, Trash2 } from 'lucide-react'
+import { PlusCircle, Building2, Pencil, Loader2, Trash2, AlertTriangle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Badge } from '@/components/ui/badge'
@@ -32,12 +32,15 @@ export default function ClientList() {
   const [deleting, setDeleting] = useState(false)
   const { toast } = useToast()
 
+  const [loadError, setLoadError] = useState<string | null>(null)
+
   const loadData = useCallback(async () => {
     try {
+      setLoadError(null)
       const [data, contacts, units] = await Promise.all([
         getCompanies(),
-        getAllClientContacts(),
-        getAllCompanyUnits(),
+        getAllClientContacts().catch(() => []),
+        getAllCompanyUnits().catch(() => []),
       ])
       setCompanies(data)
       const cc: Record<string, number> = {}
@@ -50,8 +53,14 @@ export default function ClientList() {
         bc[u.company] = (bc[u.company] || 0) + 1
       })
       setBranchCounts(bc)
-    } catch {
-      /* ignore */
+      setLoadError(null)
+    } catch (err: any) {
+      console.error('Falha ao carregar lista de clientes:', err)
+      const msg =
+        err?.response?.message ||
+        err?.message ||
+        'Não foi possível carregar os clientes cadastrados. Verifique sua conexão ou tente novamente.'
+      setLoadError(msg)
     } finally {
       setLoading(false)
     }
@@ -145,18 +154,38 @@ export default function ClientList() {
         </div>
       </div>
 
+      {loadError && (
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 rounded-lg border border-red-300 bg-red-50 p-4 text-sm text-red-800 dark:bg-red-950/40 dark:border-red-900 dark:text-red-300">
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="h-5 w-5 shrink-0 text-red-600 dark:text-red-400" />
+            <span>{loadError}</span>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              setLoading(true)
+              loadData()
+            }}
+            className="shrink-0 border-red-300 text-red-800 hover:bg-red-100 dark:border-red-800 dark:text-red-200"
+          >
+            Tentar novamente
+          </Button>
+        </div>
+      )}
+
       {loading ? (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {Array.from({ length: 6 }).map((_, i) => (
             <Skeleton key={i} className="h-40 w-full rounded-xl" />
           ))}
         </div>
-      ) : companies.length === 0 ? (
+      ) : companies.length === 0 && !loadError ? (
         <div className="text-center py-12 text-slate-500">
           <Building2 className="h-10 w-10 mx-auto mb-2 text-slate-300" />
           <p>Nenhum cliente cadastrado.</p>
         </div>
-      ) : (
+      ) : companies.length === 0 && loadError ? null : (
         <>
           <div className="flex items-center gap-2">
             <Checkbox

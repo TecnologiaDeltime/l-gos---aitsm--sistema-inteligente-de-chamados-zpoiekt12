@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-25T00:00:17.896Z",
+  "generatedAt": "2026-10-25T00:21:44.241Z",
   "collections": [
     {
       "name": "users",
@@ -175,11 +175,11 @@
       "name": "companies",
       "type": "base",
       "apiRules": {
-        "list": "@request.auth.id != ''",
-        "view": "@request.auth.id != ''",
-        "create": "@request.auth.id != ''",
-        "update": "@request.auth.id != ''",
-        "delete": "@request.auth.id != ''"
+        "list": "@request.auth.id != \"\" && (@request.auth.role = \"admin\" || @request.auth.role = \"gestor\" || @request.auth.role = \"tecnico\" || @request.auth.role = \"auditor\" || @request.auth.role = \"\" || (@request.auth.role = \"cliente_gestor\" && id = @request.auth.company) || (@request.auth.role = \"cliente_solicitante\" && id = @request.auth.company))",
+        "view": "@request.auth.id != \"\" && (@request.auth.role = \"admin\" || @request.auth.role = \"gestor\" || @request.auth.role = \"tecnico\" || @request.auth.role = \"auditor\" || @request.auth.role = \"\" || (@request.auth.role = \"cliente_gestor\" && id = @request.auth.company) || (@request.auth.role = \"cliente_solicitante\" && id = @request.auth.company))",
+        "create": "@request.auth.id != \"\" && (@request.auth.role = \"admin\" || @request.auth.role = \"gestor\")",
+        "update": "@request.auth.id != \"\" && (@request.auth.role = \"admin\" || @request.auth.role = \"gestor\")",
+        "delete": "@request.auth.id != \"\" && (@request.auth.role = \"admin\" || @request.auth.role = \"gestor\")"
       },
       "fields": [
         {
@@ -315,11 +315,11 @@
       "name": "company_units",
       "type": "base",
       "apiRules": {
-        "list": "@request.auth.id != ''",
-        "view": "@request.auth.id != ''",
-        "create": "@request.auth.id != ''",
-        "update": "@request.auth.id != ''",
-        "delete": "@request.auth.id != ''"
+        "list": "@request.auth.id != \"\" && (@request.auth.role = \"admin\" || @request.auth.role = \"gestor\" || @request.auth.role = \"tecnico\" || @request.auth.role = \"auditor\" || @request.auth.role = \"\" || (@request.auth.role = \"cliente_gestor\" && company = @request.auth.company) || (@request.auth.role = \"cliente_solicitante\" && company = @request.auth.company))",
+        "view": "@request.auth.id != \"\" && (@request.auth.role = \"admin\" || @request.auth.role = \"gestor\" || @request.auth.role = \"tecnico\" || @request.auth.role = \"auditor\" || @request.auth.role = \"\" || (@request.auth.role = \"cliente_gestor\" && company = @request.auth.company) || (@request.auth.role = \"cliente_solicitante\" && company = @request.auth.company))",
+        "create": "@request.auth.id != \"\" && (@request.auth.role = \"admin\" || @request.auth.role = \"gestor\")",
+        "update": "@request.auth.id != \"\" && (@request.auth.role = \"admin\" || @request.auth.role = \"gestor\")",
+        "delete": "@request.auth.id != \"\" && (@request.auth.role = \"admin\" || @request.auth.role = \"gestor\")"
       },
       "fields": [
         {
@@ -410,11 +410,11 @@
       "name": "company_departments",
       "type": "base",
       "apiRules": {
-        "list": "@request.auth.id != ''",
-        "view": "@request.auth.id != ''",
-        "create": "@request.auth.id != ''",
-        "update": "@request.auth.id != ''",
-        "delete": "@request.auth.id != ''"
+        "list": "@request.auth.id != \"\" && (@request.auth.role = \"admin\" || @request.auth.role = \"gestor\" || @request.auth.role = \"tecnico\" || @request.auth.role = \"auditor\" || @request.auth.role = \"\" || (@request.auth.role = \"cliente_gestor\" && company = @request.auth.company) || (@request.auth.role = \"cliente_solicitante\" && company = @request.auth.company))",
+        "view": "@request.auth.id != \"\" && (@request.auth.role = \"admin\" || @request.auth.role = \"gestor\" || @request.auth.role = \"tecnico\" || @request.auth.role = \"auditor\" || @request.auth.role = \"\" || (@request.auth.role = \"cliente_gestor\" && company = @request.auth.company) || (@request.auth.role = \"cliente_solicitante\" && company = @request.auth.company))",
+        "create": "@request.auth.id != \"\" && (@request.auth.role = \"admin\" || @request.auth.role = \"gestor\")",
+        "update": "@request.auth.id != \"\" && (@request.auth.role = \"admin\" || @request.auth.role = \"gestor\")",
+        "delete": "@request.auth.id != \"\" && (@request.auth.role = \"admin\" || @request.auth.role = \"gestor\")"
       },
       "fields": [
         {
@@ -2490,11 +2490,11 @@
       "name": "ci_types",
       "type": "base",
       "apiRules": {
-        "list": "@request.auth.id != ''",
-        "view": "@request.auth.id != ''",
-        "create": "@request.auth.id != ''",
-        "update": "@request.auth.id != ''",
-        "delete": "@request.auth.id != ''"
+        "list": "@request.auth.id != \"\" && (@request.auth.role = \"admin\" || @request.auth.role = \"gestor\" || @request.auth.role = \"tecnico\" || @request.auth.role = \"auditor\" || @request.auth.role = \"\" || @request.auth.role = \"cliente_gestor\" || @request.auth.role = \"cliente_solicitante\")",
+        "view": "@request.auth.id != \"\" && (@request.auth.role = \"admin\" || @request.auth.role = \"gestor\" || @request.auth.role = \"tecnico\" || @request.auth.role = \"auditor\" || @request.auth.role = \"\" || @request.auth.role = \"cliente_gestor\" || @request.auth.role = \"cliente_solicitante\")",
+        "create": "@request.auth.id != \"\" && (@request.auth.role = \"admin\" || @request.auth.role = \"gestor\")",
+        "update": "@request.auth.id != \"\" && (@request.auth.role = \"admin\" || @request.auth.role = \"gestor\")",
+        "delete": "@request.auth.id != \"\" && (@request.auth.role = \"admin\" || @request.auth.role = \"gestor\")"
       },
       "fields": [
         {
@@ -8599,11 +8599,11 @@
       "name": "configuration_items",
       "type": "base",
       "apiRules": {
-        "list": "@request.auth.id != ''",
-        "view": "@request.auth.id != ''",
-        "create": "@request.auth.id != '' && (@request.auth.role = 'admin' || @request.auth.role = 'gestor' || @request.auth.role = 'tecnico')",
-        "update": "@request.auth.id != '' && (@request.auth.role = 'admin' || @request.auth.role = 'gestor' || @request.auth.role = 'tecnico')",
-        "delete": "@request.auth.id != '' && (@request.auth.role = 'admin' || @request.auth.role = 'gestor' || @request.auth.role = 'tecnico')"
+        "list": "@request.auth.id != \"\" && (@request.auth.role = \"admin\" || @request.auth.role = \"gestor\" || @request.auth.role = \"tecnico\" || @request.auth.role = \"auditor\" || @request.auth.role = \"\" || (@request.auth.role = \"cliente_gestor\" && company = @request.auth.company))",
+        "view": "@request.auth.id != \"\" && (@request.auth.role = \"admin\" || @request.auth.role = \"gestor\" || @request.auth.role = \"tecnico\" || @request.auth.role = \"auditor\" || @request.auth.role = \"\" || (@request.auth.role = \"cliente_gestor\" && company = @request.auth.company))",
+        "create": "@request.auth.id != \"\" && (@request.auth.role = \"admin\" || @request.auth.role = \"gestor\" || @request.auth.role = \"tecnico\")",
+        "update": "@request.auth.id != \"\" && (@request.auth.role = \"admin\" || @request.auth.role = \"gestor\" || @request.auth.role = \"tecnico\")",
+        "delete": "@request.auth.id != \"\" && (@request.auth.role = \"admin\" || @request.auth.role = \"gestor\" || @request.auth.role = \"tecnico\")"
       },
       "fields": [
         {
