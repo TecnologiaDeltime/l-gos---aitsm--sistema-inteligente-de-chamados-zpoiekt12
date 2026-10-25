@@ -28,7 +28,7 @@ import {
 } from '@/services/approval-configs'
 import { getCategories, CategoryRecord } from '@/services/categories'
 import { getCompanies, CompanyRecord } from '@/services/companies'
-import { getClientContacts, ClientContactRecord } from '@/services/client-contacts'
+import { getAllClientContacts, ClientContactRecord } from '@/services/client-contacts'
 import { getOperators } from '@/services/operators'
 import { useToast } from '@/hooks/use-toast'
 import {
@@ -77,7 +77,7 @@ export function ApprovalConfigDialog({
     Promise.all([
       getCategories(),
       getCompanies('status = "Ativo"'),
-      getClientContacts(),
+      getAllClientContacts(),
       getOperators({}),
     ])
       .then(([cats, comps, conts, ops]) => {
