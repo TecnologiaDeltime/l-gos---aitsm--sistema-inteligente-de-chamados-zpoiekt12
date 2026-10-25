@@ -216,6 +216,7 @@ export type EmailAuditTestType =
   | 'teste-smtp'
   | 'retencao'
   | 'abertura_chamado'
+  | 'resolucao_chamado'
   | 'alerta_sla'
   | 'aprovacao_chamado'
 

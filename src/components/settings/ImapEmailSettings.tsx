@@ -2881,7 +2881,11 @@ export function ImapEmailSettings({
                                 ? 'secondary'
                                 : 'destructive'
                           }
-                          className="text-[10px] font-bold uppercase"
+                          className={`text-[10px] font-bold uppercase ${
+                            log.test_type === 'resolucao_chamado' && log.status === 'success'
+                              ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                              : ''
+                          }`}
                         >
                           {log.test_type === 'connection_test'
                             ? 'Teste Conexão IMAP'
@@ -2891,11 +2895,13 @@ export function ImapEmailSettings({
                                 ? 'Retenção da Caixa'
                                 : log.test_type === 'abertura_chamado'
                                   ? 'Abertura de Chamado'
-                                  : log.test_type === 'alerta_sla'
-                                    ? 'Alerta de SLA'
-                                    : log.test_type === 'aprovacao_chamado'
-                                      ? 'Aprovação de Chamado'
-                                      : 'Simulação Ponta a Ponta'}
+                                  : log.test_type === 'resolucao_chamado'
+                                    ? 'Resolução de Chamado'
+                                    : log.test_type === 'alerta_sla'
+                                      ? 'Alerta de SLA'
+                                      : log.test_type === 'aprovacao_chamado'
+                                        ? 'Aprovação de Chamado'
+                                        : 'Simulação Ponta a Ponta'}
                         </Badge>
                         <span className="font-semibold text-slate-800 dark:text-slate-200">
                           {log.summary_message || 'Execução de teste'}

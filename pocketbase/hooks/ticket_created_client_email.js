@@ -13,6 +13,44 @@ onRecordAfterCreateSuccess((e) => {
   var ticket = e.record
   if (!ticket) return e.next()
 
+  // Verifica configuração de notificação do cliente (global ou por empresa)
+  try {
+    var shouldNotify = true
+    var companyId = ticket.getString('company')
+    var settingsRec = null
+
+    if (companyId) {
+      try {
+        settingsRec = $app.findFirstRecordByFilter(
+          'client_notification_settings',
+          'company = "' + companyId + '"',
+        )
+      } catch (_) {}
+    }
+
+    if (!settingsRec) {
+      try {
+        settingsRec = $app.findFirstRecordByFilter(
+          'client_notification_settings',
+          'scope = "global"',
+        )
+      } catch (_) {}
+    }
+
+    if (settingsRec && settingsRec.getBool('notify_ticket_created') === false) {
+      $app
+        .logger()
+        .info(
+          'ticket_created_client_email: notificação de abertura desativada nas configurações (chamado #' +
+            ticket.getString('number') +
+            ')',
+        )
+      return e.next()
+    }
+  } catch (confErr) {
+    // Em caso de falha ao ler configurações, mantém o envio padrão
+  }
+
   try {
     var recipientEmail = (ticket.getString('requester_email') || '').trim()
     var requesterName = (ticket.getString('requester_name') || 'Cliente').trim()

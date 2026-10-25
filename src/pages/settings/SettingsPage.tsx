@@ -18,6 +18,7 @@ import {
 import { ImapEmailSettings } from '@/components/settings/ImapEmailSettings'
 import VaultPage from '@/pages/vault/VaultPage'
 import { SecuritySettingsTab } from '@/components/settings/SecuritySettingsTab'
+import { ClientNotificationSettingsTab } from '@/components/settings/ClientNotificationSettingsTab'
 import { ShieldCheck } from 'lucide-react'
 import {
   getVoiceAlertsEnabled,
@@ -54,30 +55,38 @@ export default function SettingsPage() {
   const initialTab =
     searchParams.get('tab') === 'email'
       ? 'email'
-      : searchParams.get('tab') === 'vault'
-        ? 'vault'
-        : searchParams.get('tab') === 'security'
-          ? 'security'
-          : 'general'
-  const [mainTab, setMainTab] = useState<'general' | 'email' | 'vault' | 'security'>(initialTab)
+      : searchParams.get('tab') === 'client_notif'
+        ? 'client_notif'
+        : searchParams.get('tab') === 'vault'
+          ? 'vault'
+          : searchParams.get('tab') === 'security'
+            ? 'security'
+            : 'general'
+  const [mainTab, setMainTab] = useState<
+    'general' | 'client_notif' | 'email' | 'vault' | 'security'
+  >(initialTab)
 
-  const handleTabChange = (tab: 'general' | 'email' | 'vault' | 'security') => {
+  const handleTabChange = (tab: 'general' | 'client_notif' | 'email' | 'vault' | 'security') => {
     setMainTab(tab)
     setSearchParams(
-      tab === 'email'
-        ? { tab: 'email' }
-        : tab === 'vault'
-          ? { tab: 'vault' }
-          : tab === 'security'
-            ? { tab: 'security' }
-            : {},
+      tab === 'client_notif'
+        ? { tab: 'client_notif' }
+        : tab === 'email'
+          ? { tab: 'email' }
+          : tab === 'vault'
+            ? { tab: 'vault' }
+            : tab === 'security'
+              ? { tab: 'security' }
+              : {},
     )
   }
 
   // Sincronizar se o parâmetro de URL mudar
   useEffect(() => {
     const tabFromUrl = searchParams.get('tab')
-    if (tabFromUrl === 'email' && mainTab !== 'email') {
+    if (tabFromUrl === 'client_notif' && mainTab !== 'client_notif') {
+      setMainTab('client_notif')
+    } else if (tabFromUrl === 'email' && mainTab !== 'email') {
       setMainTab('email')
     } else if (tabFromUrl === 'vault' && mainTab !== 'vault') {
       setMainTab('vault')
@@ -306,6 +315,21 @@ export default function SettingsPage() {
           <Button
             type="button"
             size="sm"
+            variant={mainTab === 'client_notif' ? 'default' : 'ghost'}
+            onClick={() => handleTabChange('client_notif')}
+            className={`h-8 text-xs font-semibold rounded-lg transition-all ${
+              mainTab === 'client_notif'
+                ? 'bg-sky-600 text-white shadow-sm'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100'
+            }`}
+          >
+            <Bell className="h-3.5 w-3.5 mr-1.5" />
+            Notificações do Cliente
+          </Button>
+
+          <Button
+            type="button"
+            size="sm"
             variant={mainTab === 'security' ? 'default' : 'ghost'}
             onClick={() => handleTabChange('security')}
             className={`h-8 text-xs font-semibold rounded-lg transition-all ${
@@ -349,6 +373,11 @@ export default function SettingsPage() {
           </Button>
         </div>
       </div>
+
+      {/* SEÇÃO NOTIFICAÇÕES DO CLIENTE */}
+      {mainTab === 'client_notif' && (
+        <ClientNotificationSettingsTab isAdminOrGestor={permissions.isGestor} />
+      )}
 
       {/* SEÇÃO SEGURANÇA & SESSÃO (Expiração, Força Bruta, 2FA) */}
       {mainTab === 'security' && <SecuritySettingsTab isAdmin={permissions.isAdmin} />}

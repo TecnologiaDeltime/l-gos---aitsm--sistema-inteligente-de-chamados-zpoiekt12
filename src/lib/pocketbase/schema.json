@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-25T00:51:04.841Z",
+  "generatedAt": "2026-10-25T01:06:44.351Z",
   "collections": [
     {
       "name": "users",
@@ -9704,6 +9704,7 @@
             "teste-smtp",
             "retencao",
             "abertura_chamado",
+            "resolucao_chamado",
             "alerta_sla",
             "aprovacao_chamado"
           ]
@@ -10340,6 +10341,69 @@
         }
       ],
       "indexes": ["CREATE UNIQUE INDEX idx_user_totp_user ON user_totp (user)"]
+    },
+    {
+      "name": "client_notification_settings",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != ''",
+        "view": "@request.auth.id != ''",
+        "create": "@request.auth.id != '' && (@request.auth.role = \"admin\" || @request.auth.role = \"gestor\")",
+        "update": "@request.auth.id != '' && (@request.auth.role = \"admin\" || @request.auth.role = \"gestor\")",
+        "delete": "@request.auth.id != '' && @request.auth.role = \"admin\""
+      },
+      "fields": [
+        {
+          "name": "company",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "companies"
+        },
+        {
+          "name": "notify_ticket_created",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "notify_ticket_resolved",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "notify_focal_points",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "scope",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["global", "company"]
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": [
+        "CREATE INDEX idx_client_notif_scope ON client_notification_settings (scope)",
+        "CREATE INDEX idx_client_notif_company ON client_notification_settings (company)"
+      ]
     }
   ]
 }
