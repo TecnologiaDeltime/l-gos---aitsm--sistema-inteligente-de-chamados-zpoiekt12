@@ -7,6 +7,8 @@ import {
   saveDesignSettings,
   applyDesignToDOM,
   SystemThemeVariant,
+  normalizeThemeVariant,
+  THEME_VARIANTS,
 } from '@/services/design-settings'
 
 type Theme = 'dark' | 'light'
@@ -44,12 +46,6 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
 
   // Aplicar tema claro/escuro e variáveis no DOM
   useEffect(() => {
-    const root = document.documentElement
-    if (theme === 'dark') {
-      root.classList.add('dark')
-    } else {
-      root.classList.remove('dark')
-    }
     localStorage.setItem('itsm-theme', theme)
     applyDesignToDOM(designSettings, theme === 'dark')
   }, [theme, designSettings])
@@ -73,7 +69,32 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [theme])
 
-  const toggleTheme = () => setThemeState((prev) => (prev === 'dark' ? 'light' : 'dark'))
+  const toggleTheme = () => {
+    const nextTheme = theme === 'dark' ? 'light' : 'dark'
+    setThemeState(nextTheme)
+    // Se o usuário alternar o modo claro/escuro no botão do header e estiver com amber_alert/amber_light,
+    // alinha perfeitamente com a variação correspondente
+    const norm = normalizeThemeVariant(designSettings.system_theme_variant)
+    if (nextTheme === 'light' && norm === 'amber_alert') {
+      const amberLight = THEME_VARIANTS.find((t) => t.id === 'amber_light')
+      if (amberLight) {
+        updateDesignSettings({
+          system_theme_variant: 'amber_light',
+          sidebar_bg_color: amberLight.sidebarBgHex,
+          sidebar_text_color: amberLight.sidebarTextHex,
+        }).catch(() => {})
+      }
+    } else if (nextTheme === 'dark' && norm === 'amber_light') {
+      const amberAlert = THEME_VARIANTS.find((t) => t.id === 'amber_alert')
+      if (amberAlert) {
+        updateDesignSettings({
+          system_theme_variant: 'amber_alert',
+          sidebar_bg_color: amberAlert.sidebarBgHex,
+          sidebar_text_color: amberAlert.sidebarTextHex,
+        }).catch(() => {})
+      }
+    }
+  }
   const setTheme = (t: Theme) => setThemeState(t)
 
   // Atualizar e persistir no banco de dados

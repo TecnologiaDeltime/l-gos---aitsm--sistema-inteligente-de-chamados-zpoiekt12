@@ -96,7 +96,7 @@ export function DesignSettingsTab({ isAdminOrGestor }: DesignSettingsTabProps) {
       sidebar_text_color: defaultDef.sidebarTextHex,
     })
     toast({
-      title: 'Tema restaurado para Teal Ops (Padrão)',
+      title: 'Tema restaurado para Amber Alert (Padrão)',
       description: 'Clique em "Salvar Tema do Sistema" para persistir globalmente.',
     })
   }
@@ -558,7 +558,7 @@ export function DesignSettingsTab({ isAdminOrGestor }: DesignSettingsTabProps) {
         </CardContent>
       </Card>
 
-      {/* SEÇÃO 2: OS TRÊS TEMAS DE CORES DO SISTEMA (DEFINIÇÃO DO DESIGN) */}
+      {/* SEÇÃO 2: TEMAS DE CORES DO SISTEMA (DEFINIÇÃO DO DESIGN) */}
       <Card className="itsm-card">
         <CardHeader className="border-b border-border/80 pb-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -568,8 +568,8 @@ export function DesignSettingsTab({ isAdminOrGestor }: DesignSettingsTabProps) {
                 Temas Visuais do Sistema
               </CardTitle>
               <CardDescription className="text-xs text-muted-foreground mt-1">
-                Selecione um dos 3 temas oficiais projetados para o Service Desk ITSM. Cada tema
-                harmoniza automaticamente a barra lateral, cards, textos, contraste e destaques
+                Selecione o tema oficial projetado para o Service Desk ITSM. Cada tema harmoniza
+                automaticamente o fundo do app, a barra lateral, cartões, contraste e destaques
                 operacionais.
               </CardDescription>
             </div>
@@ -579,15 +579,31 @@ export function DesignSettingsTab({ isAdminOrGestor }: DesignSettingsTabProps) {
                 variant="secondary"
                 className="bg-primary/10 text-primary border-primary/30 text-[10px] font-mono h-6 flex items-center gap-1.5"
               >
-                <ShieldCheck className="h-3 w-3" />3 Opções Oficiais
+                <ShieldCheck className="h-3 w-3" />
+                Amber Alert Padrão
               </Badge>
             </div>
           </div>
         </CardHeader>
 
         <CardContent className="space-y-6 p-6">
-          {/* OS 3 CARTÕES DE TEMA */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* AVISO DO NOVO TEMA PADRÃO E VARIAÇÕES */}
+          <div className="p-3.5 rounded-lg border border-amber-500/30 bg-amber-500/10 text-xs text-amber-200/90 flex items-start gap-2.5">
+            <Sparkles className="h-4 w-4 text-amber-400 shrink-0 mt-0.5" />
+            <div className="space-y-1">
+              <p className="font-semibold text-amber-300">
+                Novo padrão do sistema: Amber Alert (Escuro) & Amber Light (Claro)
+              </p>
+              <p className="text-[11px] leading-relaxed opacity-90">
+                No modo escuro do Amber Alert, o menu lateral possui fundo branco e tipografia em
+                âmbar escuro. No tema claro Amber Light, o fundo geral é branco com a barra lateral
+                no tom âmbar mais escuro e letras brancas.
+              </p>
+            </div>
+          </div>
+
+          {/* CARTÕES DE TEMA (AMBER ALERT ESCURO COM MENU BRANCO, AMBER LIGHT COM MENU ÂMBAR, CORPORATE BLUE, TEAL OPS) */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             {THEME_VARIANTS.map((variant) => {
               const isSelected = selectedVariant === variant.id
               return (
@@ -642,48 +658,99 @@ export function DesignSettingsTab({ isAdminOrGestor }: DesignSettingsTabProps) {
                       </div>
                     </div>
 
-                    {/* Mini mockup do tema */}
+                    {/* Mini mockup do tema com representação fiel do fundo e da barra lateral */}
                     <div
-                      className="p-3 rounded-lg border border-white/10 shadow-inner mt-2 space-y-2"
+                      className="p-2 rounded-lg border border-border shadow-inner mt-2 overflow-hidden flex gap-2 h-20"
                       style={{ background: variant.previewBg }}
                     >
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-1.5">
-                          <span
-                            className="h-2 w-2 rounded-full"
-                            style={{ backgroundColor: variant.primaryHex }}
-                          />
-                          <span className="text-[10px] font-mono text-white/90 font-bold truncate max-w-[150px]">
-                            {variant.subtitle}
-                          </span>
+                      {/* Mini Sidebar */}
+                      <div
+                        className="w-16 rounded border flex flex-col justify-between p-1.5 shrink-0 shadow-xs"
+                        style={{
+                          backgroundColor: variant.sidebarBgHex,
+                          borderColor: `${variant.sidebarTextHex}30`,
+                        }}
+                      >
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-1">
+                            <span
+                              className="h-1.5 w-1.5 rounded-full shrink-0"
+                              style={{ backgroundColor: variant.sidebarTextHex }}
+                            />
+                            <div
+                              className="h-1.5 w-7 rounded-sm"
+                              style={{ backgroundColor: variant.sidebarTextHex }}
+                            />
+                          </div>
+                          <div
+                            className="h-2 w-full rounded px-1 flex items-center"
+                            style={{ backgroundColor: `${variant.sidebarTextHex}25` }}
+                          >
+                            <span
+                              className="text-[7px] font-bold font-mono"
+                              style={{ color: variant.sidebarTextHex }}
+                            >
+                              ITSM
+                            </span>
+                          </div>
                         </div>
                         <span
-                          className="text-[9px] font-mono px-1.5 py-0.5 rounded font-bold"
-                          style={{
-                            backgroundColor: variant.primaryHex,
-                            color: variant.hslVariables.primaryForeground.includes('0 0% 100%')
-                              ? '#ffffff'
-                              : '#000000',
-                          }}
+                          className="text-[7px] font-mono font-medium truncate"
+                          style={{ color: variant.sidebarTextHex }}
                         >
-                          ITSM
+                          Menu
                         </span>
                       </div>
-                      <div className="h-1.5 rounded-full bg-white/10 overflow-hidden">
+
+                      {/* Mini Conteúdo */}
+                      <div className="flex-1 flex flex-col justify-between py-0.5 min-w-0">
+                        <div className="flex items-center justify-between gap-1">
+                          <span
+                            className="text-[9px] font-semibold truncate"
+                            style={{
+                              color: variant.mode === 'light' ? '#1f2937' : '#f3f4f6',
+                            }}
+                          >
+                            {variant.name.replace(' (Padrão)', '')}
+                          </span>
+                          <span
+                            className="h-1.5 w-1.5 rounded-full shrink-0"
+                            style={{ backgroundColor: variant.primaryHex }}
+                          />
+                        </div>
                         <div
-                          className="h-full rounded-full"
+                          className="p-1 rounded text-[7px] font-mono border"
                           style={{
-                            width: '72%',
-                            backgroundColor: variant.primaryHex,
+                            backgroundColor:
+                              variant.mode === 'light' ? '#ffffff' : 'rgba(255,255,255,0.06)',
+                            color: variant.mode === 'light' ? '#4b5563' : '#9ca3af',
+                            borderColor:
+                              variant.mode === 'light' ? '#e5e7eb' : 'rgba(255,255,255,0.1)',
                           }}
-                        />
+                        >
+                          Fundo: {variant.mode === 'light' ? 'Branco' : 'Escuro'}
+                        </div>
+                        <div
+                          className="h-1.5 rounded-full overflow-hidden"
+                          style={{
+                            backgroundColor:
+                              variant.mode === 'light'
+                                ? 'rgba(0,0,0,0.08)'
+                                : 'rgba(255,255,255,0.1)',
+                          }}
+                        >
+                          <div
+                            className="h-full rounded-full"
+                            style={{ width: '75%', backgroundColor: variant.primaryHex }}
+                          />
+                        </div>
                       </div>
                     </div>
                   </div>
 
-                  <div className="pt-4 mt-3 border-t border-border/50 flex items-center justify-between">
+                  <div className="pt-3 mt-3 border-t border-border/50 flex items-center justify-between">
                     <span className="text-[11px] text-muted-foreground font-mono">
-                      {variant.sidebarBgHex}
+                      Menu: {variant.sidebarBgHex}
                     </span>
                     <Button
                       type="button"
@@ -790,7 +857,7 @@ export function DesignSettingsTab({ isAdminOrGestor }: DesignSettingsTabProps) {
                 className="text-xs text-muted-foreground hover:text-foreground w-full sm:w-auto"
               >
                 <RotateCcw className="h-3.5 w-3.5 mr-1.5" />
-                Restaurar Padrão (Teal Ops)
+                Restaurar Padrão (Amber Alert)
               </Button>
 
               <div className="flex items-center gap-2 w-full sm:w-auto justify-end">

@@ -1,6 +1,6 @@
 import pb from '@/lib/pocketbase/client'
 
-export type SystemThemeVariant = 'teal_ops' | 'corporate_blue' | 'amber_alert'
+export type SystemThemeVariant = 'amber_alert' | 'amber_light' | 'corporate_blue' | 'teal_ops'
 
 export interface DesignSettings {
   id?: string
@@ -17,9 +17,9 @@ export interface DesignSettings {
 }
 
 export const DEFAULT_DESIGN_SETTINGS: DesignSettings = {
-  sidebar_bg_color: '#101E20',
-  sidebar_text_color: '#2DD4BF',
-  system_theme_variant: 'teal_ops',
+  sidebar_bg_color: '#FFFFFF',
+  sidebar_text_color: '#92400E',
+  system_theme_variant: 'amber_alert',
   scope: 'global',
   logo: '',
   report_logo: '',
@@ -30,6 +30,7 @@ export const DEFAULT_DESIGN_SETTINGS: DesignSettings = {
 export interface ThemeVariantDefinition {
   id: SystemThemeVariant
   name: string
+  mode: 'dark' | 'light'
   subtitle: string
   description: string
   primaryHex: string
@@ -68,55 +69,99 @@ export interface ThemeVariantDefinition {
 }
 
 /**
- * Os 3 únicos temas definidos pela consultoria de Design ITSM:
- * 1. Teal Ops (Padrão recomendado): Fundo grafite-petróleo #101E20, primária #2DD4BF (teal)
- * 2. Corporate Blue Pro: Fundo azul-marinho profundo #0F1B33, primária #0052CC (azul Atlassian)
- * 3. Amber Alert: Fundo grafite neutro #17181C, primária #F59E0B (âmbar operacional)
+ * Temas do sistema ITSM:
+ * 1. Amber Alert (Padrão escuro): Fundo grafite neutro #17181C, destaque âmbar #F59E0B e barra lateral BRANCA (#FFFFFF) com tipografia âmbar escuro (#92400E).
+ * 2. Amber Light (Variação clara): Fundo BRANCO (#FFFFFF) para o app com barra lateral Âmbar Escuro (#78350F) e tipografia branca (#FFFFFF).
+ * 3. Corporate Blue Pro: Fundo azul-marinho profundo #0F1B33, primária #0052CC (azul Atlassian).
+ * 4. Teal Ops: Fundo grafite-petróleo #101E20, primária #2DD4BF (teal).
  */
 export const THEME_VARIANTS: ThemeVariantDefinition[] = [
   {
-    id: 'teal_ops',
-    name: 'Teal Ops (Recomendado)',
-    subtitle: 'Grafite Petróleo & Teal Funcional',
+    id: 'amber_alert',
+    name: 'Amber Alert (Padrão)',
+    mode: 'dark',
+    subtitle: 'Escuro com Menu Branco & Âmbar Escuro',
     description:
-      'Conforto visual extremo para longas jornadas de operação ITSM. Tons frios e sóbrios, reservando vermelho e âmbar exclusivamente para riscos de SLA.',
-    primaryHex: '#2DD4BF',
-    accentHex: '#38BDF8',
-    sidebarBgHex: '#101E20',
-    sidebarTextHex: '#2DD4BF',
-    previewBg: 'linear-gradient(135deg, #101E20 0%, #13272A 55%, #183337 100%)',
-    chips: ['#2DD4BF', '#14B8A6', '#38BDF8', '#101E20'],
+      'Tema escuro padrão com fundo grafite neutro (#17181C), primária âmbar (#F59E0B) e barra lateral branca (#FFFFFF) com textos e ícones em tons âmbar escuros (#92400E).',
+    primaryHex: '#F59E0B',
+    accentHex: '#FB923C',
+    sidebarBgHex: '#FFFFFF',
+    sidebarTextHex: '#92400E',
+    previewBg: 'linear-gradient(135deg, #17181C 0%, #202227 55%, #292B32 100%)',
+    chips: ['#F59E0B', '#92400E', '#FFFFFF', '#17181C'],
     hslVariables: {
-      primary: '172 66% 50%', // #2DD4BF
-      primaryForeground: '186 33% 9%', // #101E20
-      accent: '199 89% 60%', // #38BDF8
+      primary: '38 92% 50%', // #F59E0B
+      primaryForeground: '24 80% 12%', // texto escuro sobre botão âmbar
+      accent: '27 96% 61%', // #FB923C
       accentForeground: '0 0% 100%',
-      ring: '172 66% 50%',
-      background: '186 33% 9.5%', // #101E20
-      foreground: '180 20% 96%', // #E8F7F6
-      card: '186 28% 13%', // #152629
-      cardForeground: '180 20% 96%',
-      popover: '186 30% 12%',
-      popoverForeground: '180 20% 96%',
-      border: '186 22% 20%', // #22373A
-      input: '186 22% 20%',
-      muted: '186 25% 15%',
-      mutedForeground: '180 14% 68%',
-      secondary: '186 24% 17%',
-      secondaryForeground: '180 20% 93%',
-      sidebarBackground: '186 33% 8.5%', // #0E1A1C
-      sidebarForeground: '172 66% 50%', // #2DD4BF
-      sidebarBorder: '186 24% 16%',
-      chart1: '172 66% 50%',
-      chart2: '199 89% 60%',
-      chart3: '160 84% 45%',
-      chart4: '38 92% 50%',
+      ring: '38 92% 50%',
+      background: '230 10% 10%', // #17181C
+      foreground: '40 20% 96%', // #F5F3EF
+      card: '230 9% 13.5%', // #1F2126
+      cardForeground: '40 20% 96%',
+      popover: '230 9% 12%',
+      popoverForeground: '40 20% 96%',
+      border: '230 8% 22%', // #31333A
+      input: '230 8% 22%',
+      muted: '230 9% 17%',
+      mutedForeground: '230 8% 68%',
+      secondary: '230 9% 19%',
+      secondaryForeground: '40 20% 93%',
+      sidebarBackground: '0 0% 100%', // #FFFFFF (Menu branco)
+      sidebarForeground: '25 79% 31%', // #92400E (Âmbar escuro)
+      sidebarBorder: '35 30% 90%', // Linha divisória sutil âmbar/cinza claro
+      chart1: '38 92% 50%',
+      chart2: '27 96% 61%',
+      chart3: '45 93% 58%',
+      chart4: '172 66% 50%',
       chart5: '0 84% 60%',
+    },
+  },
+  {
+    id: 'amber_light',
+    name: 'Amber Light',
+    mode: 'light',
+    subtitle: 'Fundo Branco & Menu Âmbar Escuro',
+    description:
+      'Tema claro com tela de fundo branca (#FFFFFF), cartões e textos em alto contraste e barra lateral no tom âmbar mais escuro (#78350F) com letras e ícones brancos (#FFFFFF).',
+    primaryHex: '#D97706',
+    accentHex: '#F59E0B',
+    sidebarBgHex: '#78350F',
+    sidebarTextHex: '#FFFFFF',
+    previewBg: 'linear-gradient(135deg, #FFFFFF 0%, #FFFBEB 55%, #FEF3C7 100%)',
+    chips: ['#78350F', '#D97706', '#F59E0B', '#FFFFFF'],
+    hslVariables: {
+      primary: '38 92% 44%', // #D97706 (ótimo contraste sobre fundo branco)
+      primaryForeground: '0 0% 100%',
+      accent: '38 92% 50%', // #F59E0B
+      accentForeground: '24 80% 12%',
+      ring: '38 92% 44%',
+      background: '0 0% 100%', // #FFFFFF (Fundo da tela branco)
+      foreground: '24 35% 13%', // #261D15 (Texto escuro altamente legível)
+      card: '38 50% 99%', // Quase branco com sutil calor
+      cardForeground: '24 35% 13%',
+      popover: '0 0% 100%',
+      popoverForeground: '24 35% 13%',
+      border: '36 30% 88%', // Borda clara contrastada
+      input: '36 30% 88%',
+      muted: '38 40% 94%', // Fundo sutilmente apagado
+      mutedForeground: '24 20% 42%',
+      secondary: '38 45% 95%',
+      secondaryForeground: '24 35% 16%',
+      sidebarBackground: '24 80% 26%', // #78350F (Âmbar mais escuro)
+      sidebarForeground: '0 0% 100%', // #FFFFFF (Letras brancas)
+      sidebarBorder: '24 75% 20%',
+      chart1: '38 92% 44%',
+      chart2: '27 96% 50%',
+      chart3: '160 84% 39%',
+      chart4: '199 89% 48%',
+      chart5: '0 84% 55%',
     },
   },
   {
     id: 'corporate_blue',
     name: 'Corporate Blue Pro',
+    mode: 'dark',
     subtitle: 'Azul-Marinho Profundo & Atlassian Blue',
     description:
       'Visual corporativo de alta autoridade e sobriedade enterprise. Fundo marinho profundo com destaques em azul royal e tipografia cristalina.',
@@ -155,66 +200,67 @@ export const THEME_VARIANTS: ThemeVariantDefinition[] = [
     },
   },
   {
-    id: 'amber_alert',
-    name: 'Amber Alert',
-    subtitle: 'Grafite Neutro & Âmbar Operacional',
+    id: 'teal_ops',
+    name: 'Teal Ops',
+    mode: 'dark',
+    subtitle: 'Grafite Petróleo & Teal Funcional',
     description:
-      'Visual industrial de alto contraste e linguagem funcional. Acentos em âmbar de advertência com vermelho estritamente reservado para SLA crítico.',
-    primaryHex: '#F59E0B',
-    accentHex: '#FB923C',
-    sidebarBgHex: '#17181C',
-    sidebarTextHex: '#F59E0B',
-    previewBg: 'linear-gradient(135deg, #17181C 0%, #202227 55%, #292B32 100%)',
-    chips: ['#F59E0B', '#D97706', '#FB923C', '#17181C'],
+      'Conforto visual para longas jornadas de operação ITSM. Tons frios e sóbrios, reservando vermelho e âmbar exclusivamente para riscos de SLA.',
+    primaryHex: '#2DD4BF',
+    accentHex: '#38BDF8',
+    sidebarBgHex: '#101E20',
+    sidebarTextHex: '#2DD4BF',
+    previewBg: 'linear-gradient(135deg, #101E20 0%, #13272A 55%, #183337 100%)',
+    chips: ['#2DD4BF', '#14B8A6', '#38BDF8', '#101E20'],
     hslVariables: {
-      primary: '38 92% 50%', // #F59E0B
-      primaryForeground: '225 15% 10%', // #17181C
-      accent: '27 96% 61%', // #FB923C
+      primary: '172 66% 50%', // #2DD4BF
+      primaryForeground: '186 33% 9%', // #101E20
+      accent: '199 89% 60%', // #38BDF8
       accentForeground: '0 0% 100%',
-      ring: '38 92% 50%',
-      background: '230 10% 10%', // #17181C
-      foreground: '40 20% 96%', // #F5F3EF
-      card: '230 9% 13.5%', // #1F2126
-      cardForeground: '40 20% 96%',
-      popover: '230 9% 12%',
-      popoverForeground: '40 20% 96%',
-      border: '230 8% 22%', // #31333A
-      input: '230 8% 22%',
-      muted: '230 9% 17%',
-      mutedForeground: '230 8% 68%',
-      secondary: '230 9% 19%',
-      secondaryForeground: '40 20% 93%',
-      sidebarBackground: '230 12% 9%', // #131417
-      sidebarForeground: '38 92% 50%', // #F59E0B
-      sidebarBorder: '230 9% 17%',
-      chart1: '38 92% 50%',
-      chart2: '27 96% 61%',
-      chart3: '45 93% 58%',
-      chart4: '172 66% 50%',
+      ring: '172 66% 50%',
+      background: '186 33% 9.5%', // #101E20
+      foreground: '180 20% 96%', // #E8F7F6
+      card: '186 28% 13%', // #152629
+      cardForeground: '180 20% 96%',
+      popover: '186 30% 12%',
+      popoverForeground: '180 20% 96%',
+      border: '186 22% 20%', // #22373A
+      input: '186 22% 20%',
+      muted: '186 25% 15%',
+      mutedForeground: '180 14% 68%',
+      secondary: '186 24% 17%',
+      secondaryForeground: '180 20% 93%',
+      sidebarBackground: '186 33% 8.5%', // #0E1A1C
+      sidebarForeground: '172 66% 50%', // #2DD4BF
+      sidebarBorder: '186 24% 16%',
+      chart1: '172 66% 50%',
+      chart2: '199 89% 60%',
+      chart3: '160 84% 45%',
+      chart4: '38 92% 50%',
       chart5: '0 84% 60%',
     },
   },
 ]
 
 /**
- * Valida e normaliza um tema qualquer (incluindo migração de temas legados)
- * para um dos 3 temas suportados, garantindo compatibilidade.
+ * Valida e normaliza um tema qualquer (incluindo migração de temas legados/teal_ops)
+ * para o novo padrão amber_alert, preservando Corporate Blue Pro e Teal Ops quando explicitamente selecionados.
  */
 export function normalizeThemeVariant(raw: any): SystemThemeVariant {
-  if (raw === 'teal_ops' || raw === 'corporate_blue' || raw === 'amber_alert') {
+  if (
+    raw === 'amber_alert' ||
+    raw === 'amber_light' ||
+    raw === 'corporate_blue' ||
+    raw === 'teal_ops'
+  ) {
     return raw
   }
-  // Mapeamento semântico de legados para os 3 novos:
-  if (raw === 'emerald_teal' || raw === 'cyber_cyan') {
-    return 'teal_ops'
-  }
+  // Mapeamento semântico de legados:
   if (raw === 'ice_blue' || raw === 'neon_purple') {
     return 'corporate_blue'
   }
-  if (raw === 'solar_amber' || raw === 'candy') {
-    return 'amber_alert'
-  }
-  return 'teal_ops'
+  // Demais legados ou não definidos viram o novo padrão amber_alert
+  return 'amber_alert'
 }
 
 const STORAGE_KEY = 'itsm-design-settings'
@@ -521,8 +567,13 @@ export function applyDesignToDOM(settings: DesignSettings, isDark: boolean = tru
   const normalized = normalizeThemeVariant(settings.system_theme_variant)
   const variant = THEME_VARIANTS.find((v) => v.id === normalized) || THEME_VARIANTS[0]
 
-  // Todos os 3 novos temas são dark tech de alta performance e contraste
-  root.classList.add('dark')
+  // Determina se o modo do variant é claro ou escuro
+  const isThemeVariantLight = variant.mode === 'light' || (!isDark && normalized === 'amber_alert')
+  if (isThemeVariantLight) {
+    root.classList.remove('dark')
+  } else {
+    root.classList.add('dark')
+  }
 
   // Aplicação de variáveis HSL do variant
   root.style.setProperty('--primary', variant.hslVariables.primary)

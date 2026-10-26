@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-26T02:31:26.867Z",
+  "generatedAt": "2026-10-26T02:48:14.595Z",
   "collections": [
     {
       "name": "users",
@@ -10433,7 +10433,7 @@
           "type": "select",
           "required": false,
           "system": false,
-          "selectValues": ["teal_ops", "corporate_blue", "amber_alert"]
+          "selectValues": ["amber_alert", "amber_light", "corporate_blue", "teal_ops"]
         },
         {
           "name": "scope",

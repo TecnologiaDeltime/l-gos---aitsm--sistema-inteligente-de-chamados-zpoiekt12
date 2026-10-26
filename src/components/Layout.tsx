@@ -11,6 +11,7 @@ import {
   Mail,
   Tags,
   BarChart3,
+  FileBarChart,
   BookOpen,
   Boxes,
   Server,
@@ -518,6 +519,40 @@ export default function Layout() {
   const navBeforeClient = navItems.slice(0, teamIdx).filter((i) => i.show)
   const navAfterClient = navItems.slice(teamIdx).filter((i) => i.show)
 
+  const renderSubItem = (sub: any, currentFull?: string) => {
+    const SubIcon = sub.icon
+    const subActive = currentFull
+      ? currentFull === sub.path ||
+        (location.pathname === sub.path && !location.search && !sub.path.includes('?'))
+      : location.pathname === sub.path
+    return (
+      <Link
+        key={sub.path}
+        to={sub.path}
+        onClick={() => setMobileOpen(false)}
+        style={
+          customSidebarText
+            ? {
+                color: customSidebarText,
+                backgroundColor: subActive ? `${customSidebarText}22` : undefined,
+              }
+            : undefined
+        }
+        className={`relative flex items-center gap-2.5 px-2.5 py-1.5 text-xs font-medium rounded-md transition-all duration-150 ${
+          subActive
+            ? 'bg-primary/20 text-primary font-semibold shadow-xs ring-1 ring-primary/30'
+            : 'hover:bg-sidebar-accent hover:text-sidebar-foreground'
+        }`}
+      >
+        <SubIcon
+          style={customSidebarText ? { color: customSidebarText } : undefined}
+          className={`h-3.5 w-3.5 shrink-0 ${subActive ? 'text-primary' : 'opacity-75'}`}
+        />
+        <span className="truncate">{sub.label}</span>
+      </Link>
+    )
+  }
+
   const renderNavItem = (item: any) => {
     const Icon = item.icon
     const active = location.pathname === item.path
@@ -531,18 +566,18 @@ export default function Layout() {
             ? {
                 color: customSidebarText,
                 borderColor: `${customSidebarText}40`,
-                backgroundColor: `${customSidebarText}15`,
+                backgroundColor: `${customSidebarText}18`,
               }
             : !active && customSidebarText
               ? {
-                  color: `${customSidebarText}cc`,
+                  color: customSidebarText,
                 }
               : undefined
         }
         className={`relative flex items-center gap-3 mx-2 my-0.5 px-3 py-2 text-[13px] font-medium rounded-lg transition-all duration-200 ${
           active
             ? 'bg-gradient-to-r from-primary/20 via-primary/10 to-transparent text-primary font-semibold shadow-xs shadow-primary/10 ring-1 ring-primary/30'
-            : 'text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground'
+            : 'hover:bg-sidebar-accent hover:text-sidebar-foreground'
         }`}
       >
         {active && (
@@ -559,14 +594,8 @@ export default function Layout() {
           />
         )}
         <Icon
-          style={
-            active && customSidebarText
-              ? { color: customSidebarText }
-              : !active && customSidebarText
-                ? { color: `${customSidebarText}aa` }
-                : undefined
-          }
-          className={`h-4 w-4 shrink-0 transition-colors ${active ? 'text-primary' : 'text-muted-foreground'}`}
+          style={customSidebarText ? { color: customSidebarText } : undefined}
+          className={`h-4 w-4 shrink-0 transition-colors ${active ? 'text-primary' : 'opacity-85'}`}
         />
         <span className="truncate">{item.label}</span>
       </Link>
@@ -667,27 +696,7 @@ export default function Layout() {
             </div>
             {dashboardMenuOpen && (
               <div className="ml-4 pl-2 my-1 border-l border-sidebar-border/70 space-y-0.5">
-                {dashboardSubmenuItems.map((sub) => {
-                  const SubIcon = sub.icon
-                  const subActive = location.pathname === sub.path
-                  return (
-                    <Link
-                      key={sub.path}
-                      to={sub.path}
-                      onClick={() => setMobileOpen(false)}
-                      className={`relative flex items-center gap-2.5 px-2.5 py-1.5 text-xs font-medium rounded-md transition-all duration-150 ${
-                        subActive
-                          ? 'bg-primary/20 text-primary font-semibold shadow-xs ring-1 ring-primary/30'
-                          : 'text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground'
-                      }`}
-                    >
-                      <SubIcon
-                        className={`h-3.5 w-3.5 shrink-0 ${subActive ? 'text-primary' : 'opacity-70'}`}
-                      />
-                      <span className="truncate">{sub.label}</span>
-                    </Link>
-                  )
-                })}
+                {dashboardSubmenuItems.map((sub) => renderSubItem(sub))}
               </div>
             )}
           </div>
@@ -742,30 +751,8 @@ export default function Layout() {
                 {chamadosSubmenuItems
                   .filter((i) => i.show)
                   .map((sub) => {
-                    const SubIcon = sub.icon
                     const currentFull = `${location.pathname}${location.search}`
-                    const subActive =
-                      currentFull === sub.path ||
-                      (location.pathname === sub.path &&
-                        !location.search &&
-                        !sub.path.includes('?'))
-                    return (
-                      <Link
-                        key={sub.path}
-                        to={sub.path}
-                        onClick={() => setMobileOpen(false)}
-                        className={`relative flex items-center gap-2.5 px-2.5 py-1.5 text-xs font-medium rounded-md transition-all duration-150 ${
-                          subActive
-                            ? 'bg-primary/20 text-primary font-semibold shadow-xs ring-1 ring-primary/30'
-                            : 'text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground'
-                        }`}
-                      >
-                        <SubIcon
-                          className={`h-3.5 w-3.5 shrink-0 ${subActive ? 'text-primary' : 'opacity-70'}`}
-                        />
-                        <span className="truncate">{sub.label}</span>
-                      </Link>
-                    )
+                    return renderSubItem(sub, currentFull)
                   })}
               </div>
             )}
@@ -818,29 +805,7 @@ export default function Layout() {
             </div>
             {clientMenuOpen && (
               <div className="ml-4 pl-2 my-1 border-l border-sidebar-border/70 space-y-0.5">
-                {clientSubmenuItems
-                  .filter((i) => i.show)
-                  .map((sub) => {
-                    const SubIcon = sub.icon
-                    const subActive = location.pathname === sub.path
-                    return (
-                      <Link
-                        key={sub.path}
-                        to={sub.path}
-                        onClick={() => setMobileOpen(false)}
-                        className={`relative flex items-center gap-2.5 px-2.5 py-1.5 text-xs font-medium rounded-md transition-all duration-150 ${
-                          subActive
-                            ? 'bg-primary/20 text-primary font-semibold shadow-xs ring-1 ring-primary/30'
-                            : 'text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground'
-                        }`}
-                      >
-                        <SubIcon
-                          className={`h-3.5 w-3.5 shrink-0 ${subActive ? 'text-primary' : 'opacity-70'}`}
-                        />
-                        <span className="truncate">{sub.label}</span>
-                      </Link>
-                    )
-                  })}
+                {clientSubmenuItems.filter((i) => i.show).map((sub) => renderSubItem(sub))}
               </div>
             )}
           </div>
@@ -890,29 +855,7 @@ export default function Layout() {
             </div>
             {cmdbMenuOpen && (
               <div className="ml-4 pl-2 my-1 border-l border-sidebar-border/70 space-y-0.5">
-                {cmdbSubmenuItems
-                  .filter((i) => i.show)
-                  .map((sub) => {
-                    const SubIcon = sub.icon
-                    const subActive = location.pathname === sub.path
-                    return (
-                      <Link
-                        key={sub.path}
-                        to={sub.path}
-                        onClick={() => setMobileOpen(false)}
-                        className={`relative flex items-center gap-2.5 px-2.5 py-1.5 text-xs font-medium rounded-md transition-all duration-150 ${
-                          subActive
-                            ? 'bg-primary/20 text-primary font-semibold shadow-xs ring-1 ring-primary/30'
-                            : 'text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground'
-                        }`}
-                      >
-                        <SubIcon
-                          className={`h-3.5 w-3.5 shrink-0 ${subActive ? 'text-primary' : 'opacity-70'}`}
-                        />
-                        <span className="truncate">{sub.label}</span>
-                      </Link>
-                    )
-                  })}
+                {cmdbSubmenuItems.filter((i) => i.show).map((sub) => renderSubItem(sub))}
               </div>
             )}
           </div>
@@ -964,29 +907,7 @@ export default function Layout() {
             </div>
             {changesMenuOpen && (
               <div className="ml-4 pl-2 my-1 border-l border-sidebar-border/70 space-y-0.5">
-                {changesSubmenuItems
-                  .filter((i) => i.show)
-                  .map((sub) => {
-                    const SubIcon = sub.icon
-                    const subActive = location.pathname === sub.path
-                    return (
-                      <Link
-                        key={sub.path}
-                        to={sub.path}
-                        onClick={() => setMobileOpen(false)}
-                        className={`relative flex items-center gap-2.5 px-2.5 py-1.5 text-xs font-medium rounded-md transition-all duration-150 ${
-                          subActive
-                            ? 'bg-primary/20 text-primary font-semibold shadow-xs ring-1 ring-primary/30'
-                            : 'text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground'
-                        }`}
-                      >
-                        <SubIcon
-                          className={`h-3.5 w-3.5 shrink-0 ${subActive ? 'text-primary' : 'opacity-70'}`}
-                        />
-                        <span className="truncate">{sub.label}</span>
-                      </Link>
-                    )
-                  })}
+                {changesSubmenuItems.filter((i) => i.show).map((sub) => renderSubItem(sub))}
               </div>
             )}
           </div>
@@ -1038,29 +959,7 @@ export default function Layout() {
             </div>
             {problemsMenuOpen && (
               <div className="ml-4 pl-2 my-1 border-l border-sidebar-border/70 space-y-0.5">
-                {problemsSubmenuItems
-                  .filter((i) => i.show)
-                  .map((sub) => {
-                    const SubIcon = sub.icon
-                    const subActive = location.pathname === sub.path
-                    return (
-                      <Link
-                        key={sub.path}
-                        to={sub.path}
-                        onClick={() => setMobileOpen(false)}
-                        className={`relative flex items-center gap-2.5 px-2.5 py-1.5 text-xs font-medium rounded-md transition-all duration-150 ${
-                          subActive
-                            ? 'bg-primary/20 text-primary font-semibold shadow-xs ring-1 ring-primary/30'
-                            : 'text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground'
-                        }`}
-                      >
-                        <SubIcon
-                          className={`h-3.5 w-3.5 shrink-0 ${subActive ? 'text-primary' : 'opacity-70'}`}
-                        />
-                        <span className="truncate">{sub.label}</span>
-                      </Link>
-                    )
-                  })}
+                {problemsSubmenuItems.filter((i) => i.show).map((sub) => renderSubItem(sub))}
               </div>
             )}
           </div>
@@ -1110,29 +1009,7 @@ export default function Layout() {
             </div>
             {visitsN2MenuOpen && (
               <div className="ml-4 pl-2 my-1 border-l border-sidebar-border/70 space-y-0.5">
-                {visitsN2SubmenuItems
-                  .filter((i) => i.show)
-                  .map((sub) => {
-                    const SubIcon = sub.icon
-                    const subActive = location.pathname === sub.path
-                    return (
-                      <Link
-                        key={sub.path}
-                        to={sub.path}
-                        onClick={() => setMobileOpen(false)}
-                        className={`relative flex items-center gap-2.5 px-2.5 py-1.5 text-xs font-medium rounded-md transition-all duration-150 ${
-                          subActive
-                            ? 'bg-primary/20 text-primary font-semibold shadow-xs ring-1 ring-primary/30'
-                            : 'text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground'
-                        }`}
-                      >
-                        <SubIcon
-                          className={`h-3.5 w-3.5 shrink-0 ${subActive ? 'text-primary' : 'opacity-70'}`}
-                        />
-                        <span className="truncate">{sub.label}</span>
-                      </Link>
-                    )
-                  })}
+                {visitsN2SubmenuItems.filter((i) => i.show).map((sub) => renderSubItem(sub))}
               </div>
             )}
           </div>
@@ -1164,7 +1041,7 @@ export default function Layout() {
                     : 'text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground'
                 }`}
               >
-                <BarChart3
+                <FileBarChart
                   className="h-4 w-4 shrink-0 text-primary"
                   style={customSidebarText ? { color: customSidebarText } : undefined}
                 />
@@ -1184,29 +1061,7 @@ export default function Layout() {
             </div>
             {relatoriosMenuOpen && (
               <div className="ml-4 pl-2 my-1 border-l border-sidebar-border/70 space-y-0.5">
-                {relatoriosSubmenuItems
-                  .filter((i) => i.show)
-                  .map((sub) => {
-                    const SubIcon = sub.icon
-                    const subActive = location.pathname === sub.path
-                    return (
-                      <Link
-                        key={sub.path}
-                        to={sub.path}
-                        onClick={() => setMobileOpen(false)}
-                        className={`relative flex items-center gap-2.5 px-2.5 py-1.5 text-xs font-medium rounded-md transition-all duration-150 ${
-                          subActive
-                            ? 'bg-primary/20 text-primary font-semibold shadow-xs ring-1 ring-primary/30'
-                            : 'text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground'
-                        }`}
-                      >
-                        <SubIcon
-                          className={`h-3.5 w-3.5 shrink-0 ${subActive ? 'text-primary' : 'opacity-70'}`}
-                        />
-                        <span className="truncate">{sub.label}</span>
-                      </Link>
-                    )
-                  })}
+                {relatoriosSubmenuItems.filter((i) => i.show).map((sub) => renderSubItem(sub))}
               </div>
             )}
           </div>
@@ -1259,29 +1114,7 @@ export default function Layout() {
             </div>
             {adminMenuOpen && (
               <div className="ml-4 pl-2 my-1 border-l border-sidebar-border/70 space-y-0.5">
-                {adminSubmenuItems
-                  .filter((i) => i.show)
-                  .map((sub) => {
-                    const SubIcon = sub.icon
-                    const subActive = location.pathname === sub.path
-                    return (
-                      <Link
-                        key={sub.path}
-                        to={sub.path}
-                        onClick={() => setMobileOpen(false)}
-                        className={`relative flex items-center gap-2.5 px-2.5 py-1.5 text-xs font-medium rounded-md transition-all duration-150 ${
-                          subActive
-                            ? 'bg-primary/20 text-primary font-semibold shadow-xs ring-1 ring-primary/30'
-                            : 'text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground'
-                        }`}
-                      >
-                        <SubIcon
-                          className={`h-3.5 w-3.5 shrink-0 ${subActive ? 'text-primary' : 'opacity-70'}`}
-                        />
-                        <span className="truncate">{sub.label}</span>
-                      </Link>
-                    )
-                  })}
+                {adminSubmenuItems.filter((i) => i.show).map((sub) => renderSubItem(sub))}
               </div>
             )}
           </div>
@@ -1334,29 +1167,7 @@ export default function Layout() {
             </div>
             {configuracoesMenuOpen && (
               <div className="ml-4 pl-2 my-1 border-l border-sidebar-border/70 space-y-0.5">
-                {configuracoesSubmenuItems
-                  .filter((i) => i.show)
-                  .map((sub) => {
-                    const SubIcon = sub.icon
-                    const subActive = location.pathname === sub.path
-                    return (
-                      <Link
-                        key={sub.path}
-                        to={sub.path}
-                        onClick={() => setMobileOpen(false)}
-                        className={`relative flex items-center gap-2.5 px-2.5 py-1.5 text-xs font-medium rounded-md transition-all duration-150 ${
-                          subActive
-                            ? 'bg-primary/20 text-primary font-semibold shadow-xs ring-1 ring-primary/30'
-                            : 'text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground'
-                        }`}
-                      >
-                        <SubIcon
-                          className={`h-3.5 w-3.5 shrink-0 ${subActive ? 'text-primary' : 'opacity-70'}`}
-                        />
-                        <span className="truncate">{sub.label}</span>
-                      </Link>
-                    )
-                  })}
+                {configuracoesSubmenuItems.filter((i) => i.show).map((sub) => renderSubItem(sub))}
               </div>
             )}
           </div>
