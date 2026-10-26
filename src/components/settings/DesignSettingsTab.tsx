@@ -809,13 +809,67 @@ export function DesignSettingsTab({ isAdminOrGestor }: DesignSettingsTabProps) {
                 <Eye className="h-3.5 w-3.5 text-primary" />
                 Demonstração da Barra Lateral no Tema: {activeThemeDef.name}
               </span>
-              <Badge
-                variant="outline"
-                className="text-[10px] border-primary/40 text-primary font-mono"
-              >
-                Harmonizado WCAG
-              </Badge>
+                    <div
+                      className="ml-auto hidden sm:flex items-center gap-1.5 text-[10px] font-mono px-2 py-1 rounded bg-black/30 border border-white/5"
+                      style={{ color: inactiveColor }}
+                    >
+                      <span
+                        className="h-1.5 w-1.5 rounded-full animate-pulse"
+                        style={{
+                          backgroundColor:
+                            activeThemeDef.id === 'amber_light'
+                              ? '#d97706'
+                              : activeThemeDef.primaryHex,
+                        }}
+                      />
+                      ONLINE
+                    </div>
+                  </>
+                )
+              })()}
             </div>
+          </div>
+=======
+
+              <div
+                className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium opacity-85 hover:opacity-100 transition-opacity"
+                style={{ color: activeThemeDef.sidebarTextHex }}
+              >
+                <Building2
+                  className="h-3.5 w-3.5"
+                  style={{ color: activeThemeDef.sidebarTextHex }}
+                />
+                <span>Clientes</span>
+              </div>
+
+              <div
+                className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium opacity-85 hover:opacity-100 transition-opacity"
+                style={{ color: activeThemeDef.sidebarTextHex }}
+              >
+                <Clock className="h-3.5 w-3.5" style={{ color: activeThemeDef.sidebarTextHex }} />
+                <span>SLA</span>
+              </div>
+
+              <div
+                className="ml-auto hidden sm:flex items-center gap-1.5 text-[10px] font-mono px-2 py-1 rounded bg-black/30 border border-white/5"
+                style={{ color: activeThemeDef.sidebarTextHex }}
+              >
+                <span
+                  className="h-1.5 w-1.5 rounded-full animate-pulse"
+                  style={{ backgroundColor: activeThemeDef.primaryHex }}
+                />
+                ONLINE
+              </div>
+            </div>
+          </div>
+=======
+                    <div
+                      className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium opacity-90 hover:opacity-100 transition-opacity"
+                      style={{ color: inactiveColor }}
+                    >
+                      <Clock className="h-3.5 w-3.5" style={{ color: inactiveColor }} />
+                      <span>SLA</span>
+                    </div>
 
                     <div
                       className="ml-auto hidden sm:flex items-center gap-1.5 text-[10px] font-mono px-2 py-1 rounded bg-black/30 border border-white/5"
@@ -836,6 +890,202 @@ export function DesignSettingsTab({ isAdminOrGestor }: DesignSettingsTabProps) {
                 )
               })()}
             </div>
+          </div>
+=======
+                    <div
+                      className="ml-auto hidden sm:flex items-center gap-1.5 text-[10px] font-mono px-2 py-1 rounded bg-black/30 border border-white/5"
+                      style={{ color: inactiveColor }}
+                    >
+                      <span
+                        className="h-1.5 w-1.5 rounded-full animate-pulse"
+                        style={{
+                          backgroundColor:
+                            activeThemeDef.id === 'amber_light'
+                              ? '#d97706'
+                              : activeThemeDef.primaryHex,
+                        }}
+                      />
+                      ONLINE
+                    </div>
+                  </>
+                )
+              })()}
+            </div>
+          </div>
+=======
+
+              <div
+                className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium opacity-85 hover:opacity-100 transition-opacity"
+                style={{ color: activeThemeDef.sidebarTextHex }}
+              >
+                <Building2
+                  className="h-3.5 w-3.5"
+                  style={{ color: activeThemeDef.sidebarTextHex }}
+                />
+                <span>Clientes</span>
+              </div>
+
+              <div
+                className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium opacity-85 hover:opacity-100 transition-opacity"
+                style={{ color: activeThemeDef.sidebarTextHex }}
+              >
+                <Clock className="h-3.5 w-3.5" style={{ color: activeThemeDef.sidebarTextHex }} />
+                <span>SLA</span>
+              </div>
+
+              <div
+                className="ml-auto hidden sm:flex items-center gap-1.5 text-[10px] font-mono px-2 py-1 rounded bg-black/30 border border-white/5"
+                style={{ color: activeThemeDef.sidebarTextHex }}
+              >
+                <span
+                  className="h-1.5 w-1.5 rounded-full animate-pulse"
+                  style={{ backgroundColor: activeThemeDef.primaryHex }}
+                />
+                ONLINE
+              </div>
+            </div>
+          </div>
+=======
+                    <div
+                      className="ml-auto hidden sm:flex items-center gap-1.5 text-[10px] font-mono px-2 py-1 rounded bg-black/30 border border-white/5"
+                      style={{ color: inactiveColor }}
+                    >
+                      <span
+                        className="h-1.5 w-1.5 rounded-full animate-pulse"
+                        style={{
+                          backgroundColor:
+                            activeThemeDef.id === 'amber_light'
+                              ? '#d97706'
+                              : activeThemeDef.primaryHex,
+                        }}
+                      />
+                      ONLINE
+                    </div>
+                  </>
+                )
+              })()}
+            </div>
+          </div>
+=======
+                    <div
+                      className="ml-auto hidden sm:flex items-center gap-1.5 text-[10px] font-mono px-2 py-1 rounded bg-black/30 border border-white/5"
+                      style={{ color: inactiveColor }}
+                    >
+                      <span
+                        className="h-1.5 w-1.5 rounded-full animate-pulse"
+                        style={{
+                          backgroundColor:
+                            activeThemeDef.id === 'amber_light'
+                              ? '#d97706'
+                              : activeThemeDef.primaryHex,
+                        }}
+                      />
+                      ONLINE
+                    </div>
+                  </>
+                )
+              })()}
+            </div>
+          </div>
+=======
+
+              <div
+                className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium opacity-85 hover:opacity-100 transition-opacity"
+                style={{ color: activeThemeDef.sidebarTextHex }}
+              >
+                <Building2
+                  className="h-3.5 w-3.5"
+                  style={{ color: activeThemeDef.sidebarTextHex }}
+                />
+                <span>Clientes</span>
+              </div>
+
+              <div
+                className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium opacity-85 hover:opacity-100 transition-opacity"
+                style={{ color: activeThemeDef.sidebarTextHex }}
+              >
+                <Clock className="h-3.5 w-3.5" style={{ color: activeThemeDef.sidebarTextHex }} />
+                <span>SLA</span>
+              </div>
+
+              <div
+                className="ml-auto hidden sm:flex items-center gap-1.5 text-[10px] font-mono px-2 py-1 rounded bg-black/30 border border-white/5"
+                style={{ color: activeThemeDef.sidebarTextHex }}
+              >
+                <span
+                  className="h-1.5 w-1.5 rounded-full animate-pulse"
+                  style={{ backgroundColor: activeThemeDef.primaryHex }}
+                />
+                ONLINE
+              </div>
+=======
+              <Badge
+                variant="outline"
+                className="text-[10px] border-primary/40 text-primary font-mono"
+              >
+                Harmonizado WCAG
+              </Badge>
+            </div>
+
+            {(() => {
+              const isAmberLight = activeThemeDef.id === 'amber_light'
+              const activeColor = isAmberLight ? '#d97706' : activeThemeDef.sidebarTextHex
+              const activeBg = isAmberLight ? 'rgba(217, 119, 6, 0.15)' : `${activeThemeDef.sidebarTextHex}18`
+              const inactiveColor = isAmberLight ? '#ffffff' : activeThemeDef.sidebarTextHex
+
+              return (
+                <div
+                  className="p-3 rounded-lg border border-border/80 flex flex-wrap items-center gap-2 transition-colors"
+                  style={{ backgroundColor: activeThemeDef.sidebarBgHex }}
+                >
+                  <div
+                    className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold shadow-xs"
+                    style={{
+                      backgroundColor: activeBg,
+                      color: activeColor,
+                    }}
+                  >
+                    <Ticket className="h-3.5 w-3.5" style={{ color: activeColor }} />
+                    <span>Chamados (Ativo)</span>
+                  </div>
+
+                  <div
+                    className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium opacity-85 hover:opacity-100 transition-opacity"
+                    style={{ color: inactiveColor }}
+                  >
+                    <Building2
+                      className="h-3.5 w-3.5"
+                      style={{ color: inactiveColor }}
+                    />
+                    <span>Clientes</span>
+                  </div>
+
+                  <div
+                    className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium opacity-85 hover:opacity-100 transition-opacity"
+                    style={{ color: inactiveColor }}
+                  >
+                    <Clock className="h-3.5 w-3.5" style={{ color: inactiveColor }} />
+                    <span>SLA</span>
+                  </div>
+
+                  <div
+                    className="ml-auto hidden sm:flex items-center gap-1.5 text-[10px] font-mono px-2 py-1 rounded bg-black/30 border border-white/5"
+                    style={{ color: inactiveColor }}
+                  >
+                    <span
+                      className="h-1.5 w-1.5 rounded-full animate-pulse"
+                      style={{
+                        backgroundColor:
+                          activeThemeDef.id === 'amber_light'
+                            ? '#d97706'
+                            : activeThemeDef.primaryHex,
+                      }}
+                    />
+                    ONLINE
+                  </div>
+                </div>
+              )
+            })()}
           </div>
 =======
                     <div
