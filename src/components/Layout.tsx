@@ -54,6 +54,7 @@ import {
 } from 'lucide-react'
 import { useAuth } from '@/hooks/use-auth'
 import { useTheme } from '@/hooks/use-theme'
+import { normalizeThemeVariant } from '@/services/design-settings'
 import { usePermissions } from '@/hooks/use-permissions'
 import { useIsMobile } from '@/hooks/use-mobile'
 import { useAlertMute } from '@/hooks/use-alert-mute'
