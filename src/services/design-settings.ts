@@ -71,7 +71,7 @@ export interface ThemeVariantDefinition {
 /**
  * Temas do sistema ITSM:
  * 1. Amber Alert (Padrão escuro): Fundo grafite neutro #17181C, destaque âmbar #F59E0B e barra lateral BRANCA (#FFFFFF) com tipografia âmbar escuro (#92400E).
- * 2. Amber Light (Variação clara): Fundo BRANCO (#FFFFFF) para o app com barra lateral Âmbar Escuro (#78350F) e tipografia branca (#FFFFFF).
+ * 2. Amber Light (Variação clara): Fundo BRANCO (#FFFFFF) para o app com barra lateral em Grafite Neutro (#17181C), letras dos menus principais brancas (#FFFFFF) e item selecionado/ativo em âmbar (#D97706).
  * 3. Corporate Blue Pro: Fundo azul-marinho profundo #0F1B33, primária #0052CC (azul Atlassian).
  * 4. Teal Ops: Fundo grafite-petróleo #101E20, primária #2DD4BF (teal).
  */
@@ -121,15 +121,15 @@ export const THEME_VARIANTS: ThemeVariantDefinition[] = [
     id: 'amber_light',
     name: 'Amber Light',
     mode: 'light',
-    subtitle: 'Fundo Branco & Menu Âmbar Escuro',
+    subtitle: 'Fundo Branco & Menu Grafite Neutro',
     description:
-      'Tema claro com tela de fundo branca (#FFFFFF), cartões e textos em alto contraste e barra lateral no tom âmbar mais escuro (#78350F) com letras e ícones brancos (#FFFFFF).',
+      'Tema claro com tela de fundo branca (#FFFFFF), cartões e textos em alto contraste e barra lateral em grafite neutro (#17181C) com letras brancas (#FFFFFF) e item ativo em âmbar (#D97706).',
     primaryHex: '#D97706',
     accentHex: '#F59E0B',
-    sidebarBgHex: '#78350F',
+    sidebarBgHex: '#17181C',
     sidebarTextHex: '#FFFFFF',
     previewBg: 'linear-gradient(135deg, #FFFFFF 0%, #FFFBEB 55%, #FEF3C7 100%)',
-    chips: ['#78350F', '#D97706', '#F59E0B', '#FFFFFF'],
+    chips: ['#17181C', '#D97706', '#F59E0B', '#FFFFFF'],
     hslVariables: {
       primary: '38 92% 44%', // #D97706 (ótimo contraste sobre fundo branco)
       primaryForeground: '0 0% 100%',
@@ -148,9 +148,9 @@ export const THEME_VARIANTS: ThemeVariantDefinition[] = [
       mutedForeground: '24 20% 42%',
       secondary: '38 45% 95%',
       secondaryForeground: '24 35% 16%',
-      sidebarBackground: '24 80% 26%', // #78350F (Âmbar mais escuro)
+      sidebarBackground: '230 10% 10%', // #17181C (Grafite neutro)
       sidebarForeground: '0 0% 100%', // #FFFFFF (Letras brancas)
-      sidebarBorder: '24 75% 20%',
+      sidebarBorder: '230 8% 22%', // #31333A
       chart1: '38 92% 44%',
       chart2: '27 96% 50%',
       chart3: '160 84% 39%',
@@ -278,12 +278,19 @@ export function getCachedDesignSettings(): DesignSettings {
       const matchedTheme =
         THEME_VARIANTS.find((t) => t.id === normalizedVariant) || THEME_VARIANTS[0]
 
+      let cachedSidebarBg = parsed.sidebar_bg_color || matchedTheme.sidebarBgHex
+      let cachedSidebarText = parsed.sidebar_text_color || matchedTheme.sidebarTextHex
+      if (normalizedVariant === 'amber_light' && cachedSidebarBg.toUpperCase() === '#78350F') {
+        cachedSidebarBg = matchedTheme.sidebarBgHex
+        cachedSidebarText = matchedTheme.sidebarTextHex
+      }
+
       return {
         ...DEFAULT_DESIGN_SETTINGS,
         ...parsed,
         system_theme_variant: normalizedVariant,
-        sidebar_bg_color: parsed.sidebar_bg_color || matchedTheme.sidebarBgHex,
-        sidebar_text_color: parsed.sidebar_text_color || matchedTheme.sidebarTextHex,
+        sidebar_bg_color: cachedSidebarBg,
+        sidebar_text_color: cachedSidebarText,
       }
     }
   } catch {
@@ -323,10 +330,18 @@ export async function getDesignSettings(): Promise<DesignSettings> {
       const matchedTheme =
         THEME_VARIANTS.find((t) => t.id === normalizedVariant) || THEME_VARIANTS[0]
 
+      // Se o tema for amber_light e o sidebar_bg_color gravado for o antigo #78350F, atualiza para o novo padrão #17181C
+      let effectiveSidebarBg = first.sidebar_bg_color || matchedTheme.sidebarBgHex
+      let effectiveSidebarText = first.sidebar_text_color || matchedTheme.sidebarTextHex
+      if (normalizedVariant === 'amber_light' && effectiveSidebarBg.toUpperCase() === '#78350F') {
+        effectiveSidebarBg = matchedTheme.sidebarBgHex
+        effectiveSidebarText = matchedTheme.sidebarTextHex
+      }
+
       const merged: DesignSettings = {
         id: first.id,
-        sidebar_bg_color: first.sidebar_bg_color || matchedTheme.sidebarBgHex,
-        sidebar_text_color: first.sidebar_text_color || matchedTheme.sidebarTextHex,
+        sidebar_bg_color: effectiveSidebarBg,
+        sidebar_text_color: effectiveSidebarText,
         system_theme_variant: normalizedVariant,
         scope: 'global',
         logo: first.logo || '',
@@ -555,17 +570,27 @@ export function applyDesignToDOM(settings: DesignSettings, isDark: boolean = tru
   if (typeof document === 'undefined') return
   const root = document.documentElement
 
-  // 1. Variáveis CSS da Barra Lateral
+  // 1. Variação do tema do sistema (Primária, Acento, Gráficos, Background, Foreground, etc.)
+  const normalized = normalizeThemeVariant(settings.system_theme_variant)
+  const variant = THEME_VARIANTS.find((v) => v.id === normalized) || THEME_VARIANTS[0]
+
+  // Atributo no elemento HTML para facilitar seletores CSS específicos de variante se necessário
+  root.setAttribute('data-theme-variant', variant.id)
+
+  // 2. Variáveis CSS da Barra Lateral
   if (settings.sidebar_bg_color) {
     root.style.setProperty('--custom-sidebar-bg', settings.sidebar_bg_color)
   }
   if (settings.sidebar_text_color) {
     root.style.setProperty('--custom-sidebar-text', settings.sidebar_text_color)
   }
-
-  // 2. Variação do tema do sistema (Primária, Acento, Gráficos, Background, Foreground, etc.)
-  const normalized = normalizeThemeVariant(settings.system_theme_variant)
-  const variant = THEME_VARIANTS.find((v) => v.id === normalized) || THEME_VARIANTS[0]
+  // Cor do item ativo na barra lateral (no tema amber_light o item ativo tem letras/ícones em #D97706)
+  root.style.setProperty(
+    '--sidebar-active-color',
+    variant.id === 'amber_light'
+      ? '#d97706'
+      : settings.sidebar_text_color || variant.sidebarTextHex,
+  )
 
   // Determina se o modo do variant é claro ou escuro
   const isThemeVariantLight = variant.mode === 'light' || (!isDark && normalized === 'amber_alert')

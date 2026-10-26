@@ -530,13 +530,22 @@ export default function Layout() {
         key={sub.path}
         to={sub.path}
         onClick={() => setMobileOpen(false)}
+        data-nav-active={subActive ? 'true' : undefined}
         style={
-          customSidebarText
+          subActive
             ? {
-                color: customSidebarText,
-                backgroundColor: subActive ? `${customSidebarText}22` : undefined,
+                color: activeItemColor,
+                backgroundColor: isAmberLight
+                  ? '#d977061f'
+                  : customSidebarText
+                    ? `${customSidebarText}22`
+                    : undefined,
               }
-            : undefined
+            : customSidebarText
+              ? {
+                  color: customSidebarText,
+                }
+              : undefined
         }
         className={`relative flex items-center gap-2.5 px-2.5 py-1.5 text-xs font-medium rounded-md transition-all duration-150 ${
           subActive
@@ -545,8 +554,8 @@ export default function Layout() {
         }`}
       >
         <SubIcon
-          style={customSidebarText ? { color: customSidebarText } : undefined}
-          className={`h-3.5 w-3.5 shrink-0 ${subActive ? 'text-primary' : 'opacity-75'}`}
+          style={{ color: subActive ? activeItemColor : customSidebarText || undefined }}
+          className={`h-3.5 w-3.5 shrink-0 ${subActive ? 'text-primary' : 'opacity-85'}`}
         />
         <span className="truncate">{sub.label}</span>
       </Link>
@@ -561,14 +570,23 @@ export default function Layout() {
         key={item.path}
         to={item.path}
         onClick={() => setMobileOpen(false)}
+        data-nav-active={active ? 'true' : undefined}
         style={
-          active && customSidebarText
+          active
             ? {
-                color: customSidebarText,
-                borderColor: `${customSidebarText}40`,
-                backgroundColor: `${customSidebarText}18`,
+                color: activeItemColor,
+                borderColor: isAmberLight
+                  ? '#d9770640'
+                  : customSidebarText
+                    ? `${customSidebarText}40`
+                    : undefined,
+                backgroundColor: isAmberLight
+                  ? '#d977061f'
+                  : customSidebarText
+                    ? `${customSidebarText}18`
+                    : undefined,
               }
-            : !active && customSidebarText
+            : customSidebarText
               ? {
                   color: customSidebarText,
                 }
@@ -583,18 +601,14 @@ export default function Layout() {
         {active && (
           <span
             className="absolute left-0 top-1.5 bottom-1.5 w-1 rounded-r-full bg-primary shadow-[0_0_8px_hsl(var(--primary)/0.8)]"
-            style={
-              customSidebarText
-                ? {
-                    backgroundColor: customSidebarText,
-                    boxShadow: `0 0 8px ${customSidebarText}`,
-                  }
-                : undefined
-            }
+            style={{
+              backgroundColor: activeItemColor,
+              boxShadow: `0 0 8px ${activeItemColor}`,
+            }}
           />
         )}
         <Icon
-          style={customSidebarText ? { color: customSidebarText } : undefined}
+          style={{ color: active ? activeItemColor : customSidebarText || undefined }}
           className={`h-4 w-4 shrink-0 transition-colors ${active ? 'text-primary' : 'opacity-85'}`}
         />
         <span className="truncate">{item.label}</span>
@@ -603,8 +617,12 @@ export default function Layout() {
   }
 
   // Cores dinâmicas definidas pelo usuário nas configurações de design
+  const currentVariant = normalizeThemeVariant(designSettings?.system_theme_variant)
+  const isAmberLight = currentVariant === 'amber_light'
   const customSidebarBg = designSettings?.sidebar_bg_color
   const customSidebarText = designSettings?.sidebar_text_color
+  // No tema amber_light, itens ativos têm cor âmbar #d97706; no amber_alert (menu branco), usa customSidebarText (#92400e)
+  const activeItemColor = isAmberLight ? '#d97706' : customSidebarText || '#d97706'
 
   const navContent = (
     <div
@@ -634,13 +652,15 @@ export default function Layout() {
               <span
                 className="h-2.5 w-2.5 rounded-full"
                 style={{
-                  backgroundColor: customSidebarText || 'hsl(var(--primary))',
-                  boxShadow: `0 0 8px ${customSidebarText || 'hsl(var(--primary))'}`,
+                  backgroundColor: isAmberLight
+                    ? '#d97706'
+                    : customSidebarText || 'hsl(var(--primary))',
+                  boxShadow: `0 0 8px ${isAmberLight ? '#d97706' : customSidebarText || 'hsl(var(--primary))'}`,
                 }}
               />
               <span
                 className="text-base font-bold tracking-tight truncate transition-colors group-hover:opacity-90"
-                style={{ color: customSidebarText || 'inherit' }}
+                style={{ color: isAmberLight ? '#ffffff' : customSidebarText || 'inherit' }}
               >
                 ITSM Desk
               </span>
@@ -656,19 +676,26 @@ export default function Layout() {
             <div className="flex items-center px-2">
               <button
                 onClick={() => setDashboardMenuOpen(!dashboardMenuOpen)}
-                style={
-                  customSidebarText
-                    ? {
-                        color: dashboardSubmenuItems.some((i) => location.pathname === i.path)
-                          ? customSidebarText
-                          : `${customSidebarText}cc`,
-                        backgroundColor: dashboardSubmenuItems.some(
-                          (i) => location.pathname === i.path,
-                        )
-                          ? `${customSidebarText}15`
-                          : undefined,
-                      }
+                data-nav-active={
+                  dashboardSubmenuItems.some((i) => location.pathname === i.path)
+                    ? 'true'
                     : undefined
+                }
+                style={
+                  dashboardSubmenuItems.some((i) => location.pathname === i.path)
+                    ? {
+                        color: activeItemColor,
+                        backgroundColor: isAmberLight
+                          ? '#d977061f'
+                          : customSidebarText
+                            ? `${customSidebarText}15`
+                            : undefined,
+                      }
+                    : customSidebarText
+                      ? {
+                          color: customSidebarText,
+                        }
+                      : undefined
                 }
                 className={`flex flex-1 items-center gap-3 px-3 py-2 text-[13px] font-medium rounded-lg transition-all duration-200 ${
                   dashboardSubmenuItems.some((i) => location.pathname === i.path)
@@ -678,18 +705,30 @@ export default function Layout() {
               >
                 <LayoutDashboard
                   className="h-4 w-4 shrink-0 text-primary"
-                  style={customSidebarText ? { color: customSidebarText } : undefined}
+                  style={{
+                    color: dashboardSubmenuItems.some((i) => location.pathname === i.path)
+                      ? activeItemColor
+                      : customSidebarText || undefined,
+                  }}
                 />
                 <span className="truncate">Dashboard</span>
                 {dashboardMenuOpen ? (
                   <ChevronDown
-                    className="ml-auto h-3.5 w-3.5 opacity-60"
-                    style={customSidebarText ? { color: customSidebarText } : undefined}
+                    className="ml-auto h-3.5 w-3.5 opacity-75"
+                    style={{
+                      color: dashboardSubmenuItems.some((i) => location.pathname === i.path)
+                        ? activeItemColor
+                        : customSidebarText || undefined,
+                    }}
                   />
                 ) : (
                   <ChevronRight
-                    className="ml-auto h-3.5 w-3.5 opacity-60"
-                    style={customSidebarText ? { color: customSidebarText } : undefined}
+                    className="ml-auto h-3.5 w-3.5 opacity-75"
+                    style={{
+                      color: dashboardSubmenuItems.some((i) => location.pathname === i.path)
+                        ? activeItemColor
+                        : customSidebarText || undefined,
+                    }}
                   />
                 )}
               </button>
@@ -706,21 +745,26 @@ export default function Layout() {
             <div className="flex items-center px-2">
               <button
                 onClick={() => setChamadosMenuOpen(!chamadosMenuOpen)}
-                style={
-                  customSidebarText
-                    ? {
-                        color: chamadosSubmenuItems.some(
-                          (i) => i.show && location.pathname === i.path,
-                        )
-                          ? customSidebarText
-                          : `${customSidebarText}cc`,
-                        backgroundColor: chamadosSubmenuItems.some(
-                          (i) => i.show && location.pathname === i.path,
-                        )
-                          ? `${customSidebarText}15`
-                          : undefined,
-                      }
+                data-nav-active={
+                  chamadosSubmenuItems.some((i) => i.show && location.pathname === i.path)
+                    ? 'true'
                     : undefined
+                }
+                style={
+                  chamadosSubmenuItems.some((i) => i.show && location.pathname === i.path)
+                    ? {
+                        color: activeItemColor,
+                        backgroundColor: isAmberLight
+                          ? '#d977061f'
+                          : customSidebarText
+                            ? `${customSidebarText}15`
+                            : undefined,
+                      }
+                    : customSidebarText
+                      ? {
+                          color: customSidebarText,
+                        }
+                      : undefined
                 }
                 className={`flex flex-1 items-center gap-3 px-3 py-2 text-[13px] font-medium rounded-lg transition-all duration-200 ${
                   chamadosSubmenuItems.some((i) => i.show && location.pathname === i.path)
@@ -730,18 +774,34 @@ export default function Layout() {
               >
                 <Ticket
                   className="h-4 w-4 shrink-0 text-primary"
-                  style={customSidebarText ? { color: customSidebarText } : undefined}
+                  style={{
+                    color: chamadosSubmenuItems.some((i) => i.show && location.pathname === i.path)
+                      ? activeItemColor
+                      : customSidebarText || undefined,
+                  }}
                 />
                 <span className="truncate">Tickets</span>
                 {chamadosMenuOpen ? (
                   <ChevronDown
-                    className="ml-auto h-3.5 w-3.5 opacity-60"
-                    style={customSidebarText ? { color: customSidebarText } : undefined}
+                    className="ml-auto h-3.5 w-3.5 opacity-75"
+                    style={{
+                      color: chamadosSubmenuItems.some(
+                        (i) => i.show && location.pathname === i.path,
+                      )
+                        ? activeItemColor
+                        : customSidebarText || undefined,
+                    }}
                   />
                 ) : (
                   <ChevronRight
-                    className="ml-auto h-3.5 w-3.5 opacity-60"
-                    style={customSidebarText ? { color: customSidebarText } : undefined}
+                    className="ml-auto h-3.5 w-3.5 opacity-75"
+                    style={{
+                      color: chamadosSubmenuItems.some(
+                        (i) => i.show && location.pathname === i.path,
+                      )
+                        ? activeItemColor
+                        : customSidebarText || undefined,
+                    }}
                   />
                 )}
               </button>
@@ -763,21 +823,26 @@ export default function Layout() {
             <div className="flex items-center px-2">
               <button
                 onClick={() => setClientMenuOpen(!clientMenuOpen)}
-                style={
-                  customSidebarText
-                    ? {
-                        color: clientSubmenuItems.some(
-                          (i) => i.show && location.pathname === i.path,
-                        )
-                          ? customSidebarText
-                          : `${customSidebarText}cc`,
-                        backgroundColor: clientSubmenuItems.some(
-                          (i) => i.show && location.pathname === i.path,
-                        )
-                          ? `${customSidebarText}15`
-                          : undefined,
-                      }
+                data-nav-active={
+                  clientSubmenuItems.some((i) => i.show && location.pathname === i.path)
+                    ? 'true'
                     : undefined
+                }
+                style={
+                  clientSubmenuItems.some((i) => i.show && location.pathname === i.path)
+                    ? {
+                        color: activeItemColor,
+                        backgroundColor: isAmberLight
+                          ? '#d977061f'
+                          : customSidebarText
+                            ? `${customSidebarText}15`
+                            : undefined,
+                      }
+                    : customSidebarText
+                      ? {
+                          color: customSidebarText,
+                        }
+                      : undefined
                 }
                 className={`flex flex-1 items-center gap-3 px-3 py-2 text-[13px] font-medium rounded-lg transition-all duration-200 ${
                   clientSubmenuItems.some((i) => i.show && location.pathname === i.path)
@@ -787,18 +852,30 @@ export default function Layout() {
               >
                 <Building2
                   className="h-4 w-4 shrink-0 text-primary"
-                  style={customSidebarText ? { color: customSidebarText } : undefined}
+                  style={{
+                    color: clientSubmenuItems.some((i) => i.show && location.pathname === i.path)
+                      ? activeItemColor
+                      : customSidebarText || undefined,
+                  }}
                 />
                 <span className="truncate">Cliente</span>
                 {clientMenuOpen ? (
                   <ChevronDown
-                    className="ml-auto h-3.5 w-3.5 opacity-60"
-                    style={customSidebarText ? { color: customSidebarText } : undefined}
+                    className="ml-auto h-3.5 w-3.5 opacity-75"
+                    style={{
+                      color: clientSubmenuItems.some((i) => i.show && location.pathname === i.path)
+                        ? activeItemColor
+                        : customSidebarText || undefined,
+                    }}
                   />
                 ) : (
                   <ChevronRight
-                    className="ml-auto h-3.5 w-3.5 opacity-60"
-                    style={customSidebarText ? { color: customSidebarText } : undefined}
+                    className="ml-auto h-3.5 w-3.5 opacity-75"
+                    style={{
+                      color: clientSubmenuItems.some((i) => i.show && location.pathname === i.path)
+                        ? activeItemColor
+                        : customSidebarText || undefined,
+                    }}
                   />
                 )}
               </button>
@@ -815,19 +892,26 @@ export default function Layout() {
             <div className="flex items-center px-2">
               <button
                 onClick={() => setCmdbMenuOpen(!cmdbMenuOpen)}
-                style={
-                  customSidebarText
-                    ? {
-                        color: cmdbSubmenuItems.some((i) => i.show && location.pathname === i.path)
-                          ? customSidebarText
-                          : `${customSidebarText}cc`,
-                        backgroundColor: cmdbSubmenuItems.some(
-                          (i) => i.show && location.pathname === i.path,
-                        )
-                          ? `${customSidebarText}15`
-                          : undefined,
-                      }
+                data-nav-active={
+                  cmdbSubmenuItems.some((i) => i.show && location.pathname === i.path)
+                    ? 'true'
                     : undefined
+                }
+                style={
+                  cmdbSubmenuItems.some((i) => i.show && location.pathname === i.path)
+                    ? {
+                        color: activeItemColor,
+                        backgroundColor: isAmberLight
+                          ? '#d977061f'
+                          : customSidebarText
+                            ? `${customSidebarText}15`
+                            : undefined,
+                      }
+                    : customSidebarText
+                      ? {
+                          color: customSidebarText,
+                        }
+                      : undefined
                 }
                 className={`flex flex-1 items-center gap-3 px-3 py-2 text-[13px] font-medium rounded-lg transition-all duration-200 ${
                   cmdbSubmenuItems.some((i) => i.show && location.pathname === i.path)
@@ -837,18 +921,30 @@ export default function Layout() {
               >
                 <Server
                   className="h-4 w-4 shrink-0 text-primary"
-                  style={customSidebarText ? { color: customSidebarText } : undefined}
+                  style={{
+                    color: cmdbSubmenuItems.some((i) => i.show && location.pathname === i.path)
+                      ? activeItemColor
+                      : customSidebarText || undefined,
+                  }}
                 />
                 <span className="truncate">CMDB</span>
                 {cmdbMenuOpen ? (
                   <ChevronDown
-                    className="ml-auto h-3.5 w-3.5 opacity-60"
-                    style={customSidebarText ? { color: customSidebarText } : undefined}
+                    className="ml-auto h-3.5 w-3.5 opacity-75"
+                    style={{
+                      color: cmdbSubmenuItems.some((i) => i.show && location.pathname === i.path)
+                        ? activeItemColor
+                        : customSidebarText || undefined,
+                    }}
                   />
                 ) : (
                   <ChevronRight
-                    className="ml-auto h-3.5 w-3.5 opacity-60"
-                    style={customSidebarText ? { color: customSidebarText } : undefined}
+                    className="ml-auto h-3.5 w-3.5 opacity-75"
+                    style={{
+                      color: cmdbSubmenuItems.some((i) => i.show && location.pathname === i.path)
+                        ? activeItemColor
+                        : customSidebarText || undefined,
+                    }}
                   />
                 )}
               </button>
@@ -865,21 +961,26 @@ export default function Layout() {
             <div className="flex items-center px-2">
               <button
                 onClick={() => setChangesMenuOpen(!changesMenuOpen)}
-                style={
-                  customSidebarText
-                    ? {
-                        color: changesSubmenuItems.some(
-                          (i) => i.show && location.pathname === i.path,
-                        )
-                          ? customSidebarText
-                          : `${customSidebarText}cc`,
-                        backgroundColor: changesSubmenuItems.some(
-                          (i) => i.show && location.pathname === i.path,
-                        )
-                          ? `${customSidebarText}15`
-                          : undefined,
-                      }
+                data-nav-active={
+                  changesSubmenuItems.some((i) => i.show && location.pathname === i.path)
+                    ? 'true'
                     : undefined
+                }
+                style={
+                  changesSubmenuItems.some((i) => i.show && location.pathname === i.path)
+                    ? {
+                        color: activeItemColor,
+                        backgroundColor: isAmberLight
+                          ? '#d977061f'
+                          : customSidebarText
+                            ? `${customSidebarText}15`
+                            : undefined,
+                      }
+                    : customSidebarText
+                      ? {
+                          color: customSidebarText,
+                        }
+                      : undefined
                 }
                 className={`flex flex-1 items-center gap-3 px-3 py-2 text-[13px] font-medium rounded-lg transition-all duration-200 ${
                   changesSubmenuItems.some((i) => i.show && location.pathname === i.path)
@@ -889,18 +990,30 @@ export default function Layout() {
               >
                 <GitBranch
                   className="h-4 w-4 shrink-0 text-primary"
-                  style={customSidebarText ? { color: customSidebarText } : undefined}
+                  style={{
+                    color: changesSubmenuItems.some((i) => i.show && location.pathname === i.path)
+                      ? activeItemColor
+                      : customSidebarText || undefined,
+                  }}
                 />
                 <span className="truncate">Gestão de Mudanças</span>
                 {changesMenuOpen ? (
                   <ChevronDown
-                    className="ml-auto h-3.5 w-3.5 opacity-60"
-                    style={customSidebarText ? { color: customSidebarText } : undefined}
+                    className="ml-auto h-3.5 w-3.5 opacity-75"
+                    style={{
+                      color: changesSubmenuItems.some((i) => i.show && location.pathname === i.path)
+                        ? activeItemColor
+                        : customSidebarText || undefined,
+                    }}
                   />
                 ) : (
                   <ChevronRight
-                    className="ml-auto h-3.5 w-3.5 opacity-60"
-                    style={customSidebarText ? { color: customSidebarText } : undefined}
+                    className="ml-auto h-3.5 w-3.5 opacity-75"
+                    style={{
+                      color: changesSubmenuItems.some((i) => i.show && location.pathname === i.path)
+                        ? activeItemColor
+                        : customSidebarText || undefined,
+                    }}
                   />
                 )}
               </button>
@@ -917,21 +1030,26 @@ export default function Layout() {
             <div className="flex items-center px-2">
               <button
                 onClick={() => setProblemsMenuOpen(!problemsMenuOpen)}
-                style={
-                  customSidebarText
-                    ? {
-                        color: problemsSubmenuItems.some(
-                          (i) => i.show && location.pathname === i.path,
-                        )
-                          ? customSidebarText
-                          : `${customSidebarText}cc`,
-                        backgroundColor: problemsSubmenuItems.some(
-                          (i) => i.show && location.pathname === i.path,
-                        )
-                          ? `${customSidebarText}15`
-                          : undefined,
-                      }
+                data-nav-active={
+                  problemsSubmenuItems.some((i) => i.show && location.pathname === i.path)
+                    ? 'true'
                     : undefined
+                }
+                style={
+                  problemsSubmenuItems.some((i) => i.show && location.pathname === i.path)
+                    ? {
+                        color: activeItemColor,
+                        backgroundColor: isAmberLight
+                          ? '#d977061f'
+                          : customSidebarText
+                            ? `${customSidebarText}15`
+                            : undefined,
+                      }
+                    : customSidebarText
+                      ? {
+                          color: customSidebarText,
+                        }
+                      : undefined
                 }
                 className={`flex flex-1 items-center gap-3 px-3 py-2 text-[13px] font-medium rounded-lg transition-all duration-200 ${
                   problemsSubmenuItems.some((i) => i.show && location.pathname === i.path)
@@ -941,18 +1059,34 @@ export default function Layout() {
               >
                 <Bug
                   className="h-4 w-4 shrink-0 text-primary"
-                  style={customSidebarText ? { color: customSidebarText } : undefined}
+                  style={{
+                    color: problemsSubmenuItems.some((i) => i.show && location.pathname === i.path)
+                      ? activeItemColor
+                      : customSidebarText || undefined,
+                  }}
                 />
                 <span className="truncate">Gestão de Problemas</span>
                 {problemsMenuOpen ? (
                   <ChevronDown
-                    className="ml-auto h-3.5 w-3.5 opacity-60"
-                    style={customSidebarText ? { color: customSidebarText } : undefined}
+                    className="ml-auto h-3.5 w-3.5 opacity-75"
+                    style={{
+                      color: problemsSubmenuItems.some(
+                        (i) => i.show && location.pathname === i.path,
+                      )
+                        ? activeItemColor
+                        : customSidebarText || undefined,
+                    }}
                   />
                 ) : (
                   <ChevronRight
-                    className="ml-auto h-3.5 w-3.5 opacity-60"
-                    style={customSidebarText ? { color: customSidebarText } : undefined}
+                    className="ml-auto h-3.5 w-3.5 opacity-75"
+                    style={{
+                      color: problemsSubmenuItems.some(
+                        (i) => i.show && location.pathname === i.path,
+                      )
+                        ? activeItemColor
+                        : customSidebarText || undefined,
+                    }}
                   />
                 )}
               </button>
@@ -969,19 +1103,26 @@ export default function Layout() {
             <div className="flex items-center px-2">
               <button
                 onClick={() => setVisitsN2MenuOpen(!visitsN2MenuOpen)}
-                style={
-                  customSidebarText
-                    ? {
-                        color: visitsN2SubmenuItems.some((i) => location.pathname === i.path)
-                          ? customSidebarText
-                          : `${customSidebarText}cc`,
-                        backgroundColor: visitsN2SubmenuItems.some(
-                          (i) => location.pathname === i.path,
-                        )
-                          ? `${customSidebarText}15`
-                          : undefined,
-                      }
+                data-nav-active={
+                  visitsN2SubmenuItems.some((i) => location.pathname === i.path)
+                    ? 'true'
                     : undefined
+                }
+                style={
+                  visitsN2SubmenuItems.some((i) => location.pathname === i.path)
+                    ? {
+                        color: activeItemColor,
+                        backgroundColor: isAmberLight
+                          ? '#d977061f'
+                          : customSidebarText
+                            ? `${customSidebarText}15`
+                            : undefined,
+                      }
+                    : customSidebarText
+                      ? {
+                          color: customSidebarText,
+                        }
+                      : undefined
                 }
                 className={`flex flex-1 items-center gap-3 px-3 py-2 text-[13px] font-medium rounded-lg transition-all duration-200 ${
                   visitsN2SubmenuItems.some((i) => location.pathname === i.path)
@@ -991,18 +1132,30 @@ export default function Layout() {
               >
                 <MapPin
                   className="h-4 w-4 shrink-0 text-primary"
-                  style={customSidebarText ? { color: customSidebarText } : undefined}
+                  style={{
+                    color: visitsN2SubmenuItems.some((i) => location.pathname === i.path)
+                      ? activeItemColor
+                      : customSidebarText || undefined,
+                  }}
                 />
                 <span className="truncate">Gestão de Visitas</span>
                 {visitsN2MenuOpen ? (
                   <ChevronDown
-                    className="ml-auto h-3.5 w-3.5 opacity-60"
-                    style={customSidebarText ? { color: customSidebarText } : undefined}
+                    className="ml-auto h-3.5 w-3.5 opacity-75"
+                    style={{
+                      color: visitsN2SubmenuItems.some((i) => location.pathname === i.path)
+                        ? activeItemColor
+                        : customSidebarText || undefined,
+                    }}
                   />
                 ) : (
                   <ChevronRight
-                    className="ml-auto h-3.5 w-3.5 opacity-60"
-                    style={customSidebarText ? { color: customSidebarText } : undefined}
+                    className="ml-auto h-3.5 w-3.5 opacity-75"
+                    style={{
+                      color: visitsN2SubmenuItems.some((i) => location.pathname === i.path)
+                        ? activeItemColor
+                        : customSidebarText || undefined,
+                    }}
                   />
                 )}
               </button>
@@ -1019,21 +1172,26 @@ export default function Layout() {
             <div className="flex items-center px-2">
               <button
                 onClick={() => setRelatoriosMenuOpen(!relatoriosMenuOpen)}
-                style={
-                  customSidebarText
-                    ? {
-                        color: relatoriosSubmenuItems.some(
-                          (i) => i.show && location.pathname === i.path,
-                        )
-                          ? customSidebarText
-                          : `${customSidebarText}cc`,
-                        backgroundColor: relatoriosSubmenuItems.some(
-                          (i) => i.show && location.pathname === i.path,
-                        )
-                          ? `${customSidebarText}15`
-                          : undefined,
-                      }
+                data-nav-active={
+                  relatoriosSubmenuItems.some((i) => i.show && location.pathname === i.path)
+                    ? 'true'
                     : undefined
+                }
+                style={
+                  relatoriosSubmenuItems.some((i) => i.show && location.pathname === i.path)
+                    ? {
+                        color: activeItemColor,
+                        backgroundColor: isAmberLight
+                          ? '#d977061f'
+                          : customSidebarText
+                            ? `${customSidebarText}15`
+                            : undefined,
+                      }
+                    : customSidebarText
+                      ? {
+                          color: customSidebarText,
+                        }
+                      : undefined
                 }
                 className={`flex flex-1 items-center gap-3 px-3 py-2 text-[13px] font-medium rounded-lg transition-all duration-200 ${
                   relatoriosSubmenuItems.some((i) => i.show && location.pathname === i.path)
@@ -1043,18 +1201,36 @@ export default function Layout() {
               >
                 <FileBarChart
                   className="h-4 w-4 shrink-0 text-primary"
-                  style={customSidebarText ? { color: customSidebarText } : undefined}
+                  style={{
+                    color: relatoriosSubmenuItems.some(
+                      (i) => i.show && location.pathname === i.path,
+                    )
+                      ? activeItemColor
+                      : customSidebarText || undefined,
+                  }}
                 />
                 <span className="truncate">Relatórios</span>
                 {relatoriosMenuOpen ? (
                   <ChevronDown
-                    className="ml-auto h-3.5 w-3.5 opacity-60"
-                    style={customSidebarText ? { color: customSidebarText } : undefined}
+                    className="ml-auto h-3.5 w-3.5 opacity-75"
+                    style={{
+                      color: relatoriosSubmenuItems.some(
+                        (i) => i.show && location.pathname === i.path,
+                      )
+                        ? activeItemColor
+                        : customSidebarText || undefined,
+                    }}
                   />
                 ) : (
                   <ChevronRight
-                    className="ml-auto h-3.5 w-3.5 opacity-60"
-                    style={customSidebarText ? { color: customSidebarText } : undefined}
+                    className="ml-auto h-3.5 w-3.5 opacity-75"
+                    style={{
+                      color: relatoriosSubmenuItems.some(
+                        (i) => i.show && location.pathname === i.path,
+                      )
+                        ? activeItemColor
+                        : customSidebarText || undefined,
+                    }}
                   />
                 )}
               </button>
@@ -1074,19 +1250,26 @@ export default function Layout() {
             <div className="flex items-center px-2">
               <button
                 onClick={() => setAdminMenuOpen(!adminMenuOpen)}
-                style={
-                  customSidebarText
-                    ? {
-                        color: adminSubmenuItems.some((i) => i.show && location.pathname === i.path)
-                          ? customSidebarText
-                          : `${customSidebarText}cc`,
-                        backgroundColor: adminSubmenuItems.some(
-                          (i) => i.show && location.pathname === i.path,
-                        )
-                          ? `${customSidebarText}15`
-                          : undefined,
-                      }
+                data-nav-active={
+                  adminSubmenuItems.some((i) => i.show && location.pathname === i.path)
+                    ? 'true'
                     : undefined
+                }
+                style={
+                  adminSubmenuItems.some((i) => i.show && location.pathname === i.path)
+                    ? {
+                        color: activeItemColor,
+                        backgroundColor: isAmberLight
+                          ? '#d977061f'
+                          : customSidebarText
+                            ? `${customSidebarText}15`
+                            : undefined,
+                      }
+                    : customSidebarText
+                      ? {
+                          color: customSidebarText,
+                        }
+                      : undefined
                 }
                 className={`flex flex-1 items-center gap-3 px-3 py-2 text-[13px] font-medium rounded-lg transition-all duration-200 ${
                   adminSubmenuItems.some((i) => i.show && location.pathname === i.path)
@@ -1096,18 +1279,30 @@ export default function Layout() {
               >
                 <Shield
                   className="h-4 w-4 shrink-0 text-primary"
-                  style={customSidebarText ? { color: customSidebarText } : undefined}
+                  style={{
+                    color: adminSubmenuItems.some((i) => i.show && location.pathname === i.path)
+                      ? activeItemColor
+                      : customSidebarText || undefined,
+                  }}
                 />
                 <span className="truncate">Administração</span>
                 {adminMenuOpen ? (
                   <ChevronDown
-                    className="ml-auto h-3.5 w-3.5 opacity-60"
-                    style={customSidebarText ? { color: customSidebarText } : undefined}
+                    className="ml-auto h-3.5 w-3.5 opacity-75"
+                    style={{
+                      color: adminSubmenuItems.some((i) => i.show && location.pathname === i.path)
+                        ? activeItemColor
+                        : customSidebarText || undefined,
+                    }}
                   />
                 ) : (
                   <ChevronRight
-                    className="ml-auto h-3.5 w-3.5 opacity-60"
-                    style={customSidebarText ? { color: customSidebarText } : undefined}
+                    className="ml-auto h-3.5 w-3.5 opacity-75"
+                    style={{
+                      color: adminSubmenuItems.some((i) => i.show && location.pathname === i.path)
+                        ? activeItemColor
+                        : customSidebarText || undefined,
+                    }}
                   />
                 )}
               </button>
@@ -1125,21 +1320,26 @@ export default function Layout() {
             <div className="flex items-center px-2">
               <button
                 onClick={() => setConfiguracoesMenuOpen(!configuracoesMenuOpen)}
-                style={
-                  customSidebarText
-                    ? {
-                        color: configuracoesSubmenuItems.some(
-                          (i) => i.show && location.pathname === i.path,
-                        )
-                          ? customSidebarText
-                          : `${customSidebarText}cc`,
-                        backgroundColor: configuracoesSubmenuItems.some(
-                          (i) => i.show && location.pathname === i.path,
-                        )
-                          ? `${customSidebarText}15`
-                          : undefined,
-                      }
+                data-nav-active={
+                  configuracoesSubmenuItems.some((i) => i.show && location.pathname === i.path)
+                    ? 'true'
                     : undefined
+                }
+                style={
+                  configuracoesSubmenuItems.some((i) => i.show && location.pathname === i.path)
+                    ? {
+                        color: activeItemColor,
+                        backgroundColor: isAmberLight
+                          ? '#d977061f'
+                          : customSidebarText
+                            ? `${customSidebarText}15`
+                            : undefined,
+                      }
+                    : customSidebarText
+                      ? {
+                          color: customSidebarText,
+                        }
+                      : undefined
                 }
                 className={`flex flex-1 items-center gap-3 px-3 py-2 text-[13px] font-medium rounded-lg transition-all duration-200 ${
                   configuracoesSubmenuItems.some((i) => i.show && location.pathname === i.path)
@@ -1149,18 +1349,36 @@ export default function Layout() {
               >
                 <Settings
                   className="h-4 w-4 shrink-0 text-primary"
-                  style={customSidebarText ? { color: customSidebarText } : undefined}
+                  style={{
+                    color: configuracoesSubmenuItems.some(
+                      (i) => i.show && location.pathname === i.path,
+                    )
+                      ? activeItemColor
+                      : customSidebarText || undefined,
+                  }}
                 />
                 <span className="truncate">Configurações</span>
                 {configuracoesMenuOpen ? (
                   <ChevronDown
-                    className="ml-auto h-3.5 w-3.5 opacity-60"
-                    style={customSidebarText ? { color: customSidebarText } : undefined}
+                    className="ml-auto h-3.5 w-3.5 opacity-75"
+                    style={{
+                      color: configuracoesSubmenuItems.some(
+                        (i) => i.show && location.pathname === i.path,
+                      )
+                        ? activeItemColor
+                        : customSidebarText || undefined,
+                    }}
                   />
                 ) : (
                   <ChevronRight
-                    className="ml-auto h-3.5 w-3.5 opacity-60"
-                    style={customSidebarText ? { color: customSidebarText } : undefined}
+                    className="ml-auto h-3.5 w-3.5 opacity-75"
+                    style={{
+                      color: configuracoesSubmenuItems.some(
+                        (i) => i.show && location.pathname === i.path,
+                      )
+                        ? activeItemColor
+                        : customSidebarText || undefined,
+                    }}
                   />
                 )}
               </button>
@@ -1182,19 +1400,21 @@ export default function Layout() {
       >
         <p
           className="text-[10px] font-mono opacity-70"
-          style={{ color: customSidebarText || undefined }}
+          style={{ color: isAmberLight ? '#ffffff' : customSidebarText || undefined }}
         >
           ITSM Desk
         </p>
         <span
           className="inline-flex items-center gap-1 text-[10px] font-mono"
-          style={{ color: customSidebarText || undefined }}
+          style={{ color: isAmberLight ? '#ffffff' : customSidebarText || undefined }}
         >
           <span
             className="h-1.5 w-1.5 rounded-full animate-pulse shadow-xs"
             style={{
-              backgroundColor: customSidebarText || 'hsl(var(--primary))',
-              boxShadow: `0 0 6px ${customSidebarText || 'hsl(var(--primary))'}`,
+              backgroundColor: isAmberLight
+                ? '#d97706'
+                : customSidebarText || 'hsl(var(--primary))',
+              boxShadow: `0 0 6px ${isAmberLight ? '#d97706' : customSidebarText || 'hsl(var(--primary))'}`,
             }}
           />
           ONLINE

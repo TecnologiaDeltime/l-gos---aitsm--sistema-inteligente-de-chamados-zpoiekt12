@@ -442,34 +442,53 @@
   }
 
   .sidebar-scroll::-webkit-scrollbar-thumb {
-    background-color: rgba(255, 255, 255, 0.08);
+    background-color: hsl(var(--sidebar-border, var(--border)));
     border-radius: 9999px;
   }
-
   /* Suporte à barra lateral customizada */
   aside,
-  [data-sidebar='true'] {
+  [data-sidebar='true'],
+  [data-slot='sidebar'] {
     background-color: var(--custom-sidebar-bg, hsl(var(--sidebar-background)));
     color: var(--custom-sidebar-text, hsl(var(--sidebar-foreground)));
   }
 
+  /* No tema amber_light (menu grafite neutro #17181C), garantir contraste nos hovers e bordas */
+  [data-theme-variant='amber_light'] aside,
+  [data-theme-variant='amber_light'] [data-sidebar='true'],
+  [data-theme-variant='amber_light'] [data-slot='sidebar'] {
+    --sidebar-accent: 230 10% 18%; /* Grafite ligeiramente mais claro para hover (#23252B) */
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 230 8% 22%;
+  }
+
   /* Garante que links e botões inativos dentro do menu lateral respeitem a cor definida */
-  aside a:not([class*='bg-primary']):not([class*='from-primary']),
-  aside button:not([class*='bg-primary']) {
+  aside a:not([data-nav-active='true']):not([class*='bg-primary']):not([class*='from-primary']),
+  aside button:not([data-nav-active='true']):not([class*='bg-primary']) {
     color: var(--custom-sidebar-text, hsl(var(--sidebar-foreground)));
     opacity: 0.95;
   }
 
-  aside a:not([class*='bg-primary']):not([class*='from-primary']):hover,
-  aside button:not([class*='bg-primary']):hover {
+  aside
+    a:not([data-nav-active='true']):not([class*='bg-primary']):not([class*='from-primary']):hover,
+  aside button:not([data-nav-active='true']):not([class*='bg-primary']):hover {
     opacity: 1;
     background-color: hsl(var(--sidebar-accent));
+    color: hsl(var(--sidebar-accent-foreground, 0 0% 100%));
   }
 
-  /* Garante que ícones da barra lateral usem o custom-sidebar-text */
-  aside a svg,
-  aside button svg {
+  /* Ícones inativos na barra lateral acompanham o texto */
+  aside a:not([data-nav-active='true']) svg,
+  aside button:not([data-nav-active='true']) svg {
     color: var(--custom-sidebar-text, inherit) !important;
+  }
+
+  /* Ícones e textos ativos na barra lateral usam a cor ativa configurada (--sidebar-active-color) */
+  aside a[data-nav-active='true'],
+  aside a[data-nav-active='true'] svg,
+  aside button[data-nav-active='true'],
+  aside button[data-nav-active='true'] svg {
+    color: var(--sidebar-active-color, hsl(var(--primary))) !important;
   }
   .sidebar-scroll::-webkit-scrollbar-thumb:hover {
     background-color: rgb(148 163 184 / 0.6);
