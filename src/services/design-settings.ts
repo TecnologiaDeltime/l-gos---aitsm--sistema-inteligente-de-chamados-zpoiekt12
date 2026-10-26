@@ -1,12 +1,6 @@
 import pb from '@/lib/pocketbase/client'
 
-export type SystemThemeVariant =
-  | 'cyber_cyan'
-  | 'neon_purple'
-  | 'emerald_teal'
-  | 'ice_blue'
-  | 'solar_amber'
-  | 'candy'
+export type SystemThemeVariant = 'teal_ops' | 'corporate_blue' | 'amber_alert'
 
 export interface DesignSettings {
   id?: string
@@ -23,116 +17,15 @@ export interface DesignSettings {
 }
 
 export const DEFAULT_DESIGN_SETTINGS: DesignSettings = {
-  sidebar_bg_color: '#070b14',
-  sidebar_text_color: '#22d3ee',
-  system_theme_variant: 'cyber_cyan',
+  sidebar_bg_color: '#101E20',
+  sidebar_text_color: '#2DD4BF',
+  system_theme_variant: 'teal_ops',
   scope: 'global',
   logo: '',
   report_logo: '',
   logo_url: '',
   report_logo_url: '',
 }
-
-export interface SidebarSwatch {
-  label: string
-  value: string
-  desc: string
-  tone: 'dark' | 'light'
-  defaultText: string
-}
-
-// Swatches predefinidos harmoniosos para a barra lateral (combinando opções escuras e claras)
-export const SIDEBAR_BG_SWATCHES: SidebarSwatch[] = [
-  // Swatches Escuros (Dark Tech)
-  {
-    label: 'Dark Tech Original',
-    value: '#070b14',
-    desc: 'Preto slate tecnológico profundo',
-    tone: 'dark',
-    defaultText: '#22d3ee',
-  },
-  {
-    label: 'Azul Marinho Tech',
-    value: '#0a1628',
-    desc: 'Marinho aeroespacial com tom azulado',
-    tone: 'dark',
-    defaultText: '#38bdf8',
-  },
-  {
-    label: 'Grafite Ônix',
-    value: '#121824',
-    desc: 'Cinza grafite escuro com alto contraste',
-    tone: 'dark',
-    defaultText: '#ffffff',
-  },
-  {
-    label: 'Violeta Escuro',
-    value: '#130d24',
-    desc: 'Roxo sideral escuro cyberpunk',
-    tone: 'dark',
-    defaultText: '#c084fc',
-  },
-  {
-    label: 'Verde Petróleo Escuro',
-    value: '#071b18',
-    desc: 'Teal esmeralda escuro profundo',
-    tone: 'dark',
-    defaultText: '#34d399',
-  },
-  {
-    label: 'Carvão Neutro',
-    value: '#18181b',
-    desc: 'Cinza carvão neutro zinc/slate',
-    tone: 'dark',
-    defaultText: '#e2e8f0',
-  },
-  // Swatches Claros (Light / Soft) - combinando harmoniosamente com o sistema
-  {
-    label: 'Azul Claro Sky',
-    value: '#E8F1FA',
-    desc: 'Azul céu suave e arejado',
-    tone: 'light',
-    defaultText: '#1e293b',
-  },
-  {
-    label: 'Cinza Perla',
-    value: '#F1F3F5',
-    desc: 'Neutro contemporâneo elegante',
-    tone: 'light',
-    defaultText: '#0f172a',
-  },
-  {
-    label: 'Lavanda Suave',
-    value: '#EDE9F7',
-    desc: 'Lavanda pastel refinada e calma',
-    tone: 'light',
-    defaultText: '#2e1065',
-  },
-  {
-    label: 'Verde Menta Claro',
-    value: '#E6F6F0',
-    desc: 'Menta bio-tech refrescante e limpa',
-    tone: 'light',
-    defaultText: '#064e3b',
-  },
-  {
-    label: 'Âmbar Claro / Bege',
-    value: '#F5EFE3',
-    desc: 'Bege quente sofisticado e acolhedor',
-    tone: 'light',
-    defaultText: '#451a03',
-  },
-]
-
-// Swatches predefinidos para letras e ícones da barra lateral
-export const SIDEBAR_TEXT_SWATCHES = [
-  { label: 'Ciano Neon', value: '#22d3ee', desc: 'Ciano elétrico padrão ServiceOne' },
-  { label: 'Branco Puro', value: '#ffffff', desc: 'Contraste máximo e leitura cristalina' },
-  { label: 'Cinza Prateado', value: '#e2e8f0', desc: 'Slate prateado suave e elegante' },
-  { label: 'Violeta Magenta', value: '#c084fc', desc: 'Roxo neon elétrico' },
-  { label: 'Esmeralda Neon', value: '#34d399', desc: 'Verde esmeralda vibrante' },
-  { label: 'Âmbar Elétrico', value: '#fbbf24', desc: 'Dourado tecnológico de alta visibilidade' },
-]
 
 export interface ThemeVariantDefinition {
   id: SystemThemeVariant
@@ -141,6 +34,8 @@ export interface ThemeVariantDefinition {
   description: string
   primaryHex: string
   accentHex: string
+  sidebarBgHex: string
+  sidebarTextHex: string
   previewBg: string
   chips: string[]
   hslVariables: {
@@ -172,233 +67,155 @@ export interface ThemeVariantDefinition {
   }
 }
 
+/**
+ * Os 3 únicos temas definidos pela consultoria de Design ITSM:
+ * 1. Teal Ops (Padrão recomendado): Fundo grafite-petróleo #101E20, primária #2DD4BF (teal)
+ * 2. Corporate Blue Pro: Fundo azul-marinho profundo #0F1B33, primária #0052CC (azul Atlassian)
+ * 3. Amber Alert: Fundo grafite neutro #17181C, primária #F59E0B (âmbar operacional)
+ */
 export const THEME_VARIANTS: ThemeVariantDefinition[] = [
   {
-    id: 'cyber_cyan',
-    name: 'Cyber Cyan (Padrão)',
-    subtitle: 'Azul Elétrico & Ciano Neon',
-    description: 'Visual dark tech original com destaque ciano e azul elétrico.',
-    primaryHex: '#06b6d4',
-    accentHex: '#8b5cf6',
-    previewBg: 'linear-gradient(135deg, #070b14 0%, #0e2439 50%, #161a33 100%)',
-    chips: ['#06b6d4', '#3b82f6', '#8b5cf6'],
+    id: 'teal_ops',
+    name: 'Teal Ops (Recomendado)',
+    subtitle: 'Grafite Petróleo & Teal Funcional',
+    description:
+      'Conforto visual extremo para longas jornadas de operação ITSM. Tons frios e sóbrios, reservando vermelho e âmbar exclusivamente para riscos de SLA.',
+    primaryHex: '#2DD4BF',
+    accentHex: '#38BDF8',
+    sidebarBgHex: '#101E20',
+    sidebarTextHex: '#2DD4BF',
+    previewBg: 'linear-gradient(135deg, #101E20 0%, #13272A 55%, #183337 100%)',
+    chips: ['#2DD4BF', '#14B8A6', '#38BDF8', '#101E20'],
     hslVariables: {
-      primary: '200 98% 50%',
-      primaryForeground: '225 50% 6%',
-      accent: '250 85% 65%',
+      primary: '172 66% 50%', // #2DD4BF
+      primaryForeground: '186 33% 9%', // #101E20
+      accent: '199 89% 60%', // #38BDF8
       accentForeground: '0 0% 100%',
-      ring: '200 98% 50%',
-      background: '228 35% 6%',
-      foreground: '214 32% 95%',
-      card: '226 30% 9.5%',
-      cardForeground: '214 32% 95%',
-      popover: '226 32% 11%',
-      popoverForeground: '214 32% 95%',
-      border: '226 24% 18%',
-      input: '226 24% 18%',
-      muted: '226 28% 12.5%',
-      mutedForeground: '217 19% 68%',
-      secondary: '226 26% 14%',
-      secondaryForeground: '214 32% 92%',
-      sidebarBackground: '228 38% 5%',
-      sidebarForeground: '214 32% 94%',
-      sidebarBorder: '226 24% 15%',
-      chart1: '200 98% 50%',
-      chart2: '152 80% 48%',
-      chart3: '260 90% 66%',
-      chart4: '38 96% 54%',
-      chart5: '340 85% 60%',
+      ring: '172 66% 50%',
+      background: '186 33% 9.5%', // #101E20
+      foreground: '180 20% 96%', // #E8F7F6
+      card: '186 28% 13%', // #152629
+      cardForeground: '180 20% 96%',
+      popover: '186 30% 12%',
+      popoverForeground: '180 20% 96%',
+      border: '186 22% 20%', // #22373A
+      input: '186 22% 20%',
+      muted: '186 25% 15%',
+      mutedForeground: '180 14% 68%',
+      secondary: '186 24% 17%',
+      secondaryForeground: '180 20% 93%',
+      sidebarBackground: '186 33% 8.5%', // #0E1A1C
+      sidebarForeground: '172 66% 50%', // #2DD4BF
+      sidebarBorder: '186 24% 16%',
+      chart1: '172 66% 50%',
+      chart2: '199 89% 60%',
+      chart3: '160 84% 45%',
+      chart4: '38 92% 50%',
+      chart5: '0 84% 60%',
     },
   },
   {
-    id: 'neon_purple',
-    name: 'Neon Purple & Magenta',
-    subtitle: 'Violeta Profundo & Magenta Elétrico',
-    description: 'Variação elegante com acentos em roxo neon, fúcsia e azul índigo.',
-    primaryHex: '#a855f7',
-    accentHex: '#ec4899',
-    previewBg: 'linear-gradient(135deg, #0d0a1a 0%, #201138 50%, #2d0f36 100%)',
-    chips: ['#a855f7', '#c084fc', '#ec4899'],
+    id: 'corporate_blue',
+    name: 'Corporate Blue Pro',
+    subtitle: 'Azul-Marinho Profundo & Atlassian Blue',
+    description:
+      'Visual corporativo de alta autoridade e sobriedade enterprise. Fundo marinho profundo com destaques em azul royal e tipografia cristalina.',
+    primaryHex: '#0052CC',
+    accentHex: '#2684FF',
+    sidebarBgHex: '#0F1B33',
+    sidebarTextHex: '#E2E8F0',
+    previewBg: 'linear-gradient(135deg, #0F1B33 0%, #152442 55%, #1C3159 100%)',
+    chips: ['#0052CC', '#2684FF', '#4C9AFF', '#0F1B33'],
     hslVariables: {
-      primary: '272 90% 65%',
-      primaryForeground: '270 50% 6%',
-      accent: '320 85% 60%',
+      primary: '216 100% 40%', // #0052CC
+      primaryForeground: '0 0% 100%',
+      accent: '214 100% 57%', // #2684FF
       accentForeground: '0 0% 100%',
-      ring: '272 90% 65%',
-      background: '265 40% 6%',
-      foreground: '270 30% 96%',
-      card: '265 32% 9.5%',
-      cardForeground: '270 30% 96%',
-      popover: '265 34% 11%',
-      popoverForeground: '270 30% 96%',
-      border: '265 25% 18%',
-      input: '265 25% 18%',
-      muted: '265 28% 13%',
-      mutedForeground: '265 18% 70%',
-      secondary: '265 26% 15%',
-      secondaryForeground: '270 30% 92%',
-      sidebarBackground: '265 45% 5%',
-      sidebarForeground: '270 30% 95%',
-      sidebarBorder: '265 25% 15%',
-      chart1: '272 90% 65%',
-      chart2: '320 85% 60%',
-      chart3: '220 90% 65%',
-      chart4: '45 95% 55%',
-      chart5: '160 85% 45%',
-    },
-  },
-  {
-    id: 'emerald_teal',
-    name: 'Emerald Teal Tech',
-    subtitle: 'Verde Esmeralda & Menta Futurista',
-    description: 'Variação equilibrada com tecnologia bio-verde, teal e acentos menta brilhante.',
-    primaryHex: '#10b981',
-    accentHex: '#06b6d4',
-    previewBg: 'linear-gradient(135deg, #061513 0%, #0d2823 50%, #0f303a 100%)',
-    chips: ['#10b981', '#34d399', '#06b6d4'],
-    hslVariables: {
-      primary: '160 84% 45%',
-      primaryForeground: '165 60% 5%',
-      accent: '190 95% 48%',
-      accentForeground: '0 0% 100%',
-      ring: '160 84% 45%',
-      background: '168 40% 5.5%',
-      foreground: '160 30% 95%',
-      card: '168 32% 9%',
-      cardForeground: '160 30% 95%',
-      popover: '168 34% 11%',
-      popoverForeground: '160 30% 95%',
-      border: '168 25% 17%',
-      input: '168 25% 17%',
-      muted: '168 26% 12.5%',
-      mutedForeground: '165 18% 68%',
-      secondary: '168 25% 14%',
-      secondaryForeground: '160 30% 92%',
-      sidebarBackground: '168 45% 4.5%',
-      sidebarForeground: '160 30% 94%',
-      sidebarBorder: '168 25% 14%',
-      chart1: '160 84% 45%',
-      chart2: '190 95% 48%',
-      chart3: '215 90% 60%',
-      chart4: '38 96% 54%',
+      ring: '216 100% 50%',
+      background: '220 54% 13%', // #0F1B33
+      foreground: '210 40% 96%', // #E8EDF5
+      card: '220 46% 16.5%', // #152442
+      cardForeground: '210 40% 96%',
+      popover: '220 48% 15%',
+      popoverForeground: '210 40% 96%',
+      border: '220 32% 24%', // #243555
+      input: '220 32% 24%',
+      muted: '220 38% 19%',
+      mutedForeground: '215 20% 70%',
+      secondary: '220 36% 21%',
+      secondaryForeground: '210 40% 94%',
+      sidebarBackground: '220 58% 11%', // #0B1426
+      sidebarForeground: '214 32% 95%',
+      sidebarBorder: '220 35% 19%',
+      chart1: '216 100% 50%',
+      chart2: '214 100% 60%',
+      chart3: '172 66% 50%',
+      chart4: '38 92% 50%',
       chart5: '280 80% 65%',
     },
   },
   {
-    id: 'ice_blue',
-    name: 'Ice Blue Light',
-    subtitle: 'Azul Glacial & Ciano Cristal',
+    id: 'amber_alert',
+    name: 'Amber Alert',
+    subtitle: 'Grafite Neutro & Âmbar Operacional',
     description:
-      'Variação gelada e luminosa com acentos azul-royal e ciano cristal para alta clareza visual.',
-    primaryHex: '#0284c7',
-    accentHex: '#0ea5e9',
-    previewBg: 'linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 50%, #bae6fd 100%)',
-    chips: ['#0284c7', '#0ea5e9', '#38bdf8'],
+      'Visual industrial de alto contraste e linguagem funcional. Acentos em âmbar de advertência com vermelho estritamente reservado para SLA crítico.',
+    primaryHex: '#F59E0B',
+    accentHex: '#FB923C',
+    sidebarBgHex: '#17181C',
+    sidebarTextHex: '#F59E0B',
+    previewBg: 'linear-gradient(135deg, #17181C 0%, #202227 55%, #292B32 100%)',
+    chips: ['#F59E0B', '#D97706', '#FB923C', '#17181C'],
     hslVariables: {
-      primary: '199 89% 48%',
-      primaryForeground: '0 0% 100%',
-      accent: '217 91% 60%',
-      accentForeground: '0 0% 100%',
-      ring: '199 89% 48%',
-      background: '204 45% 98%',
-      foreground: '215 28% 17%',
-      card: '0 0% 100%',
-      cardForeground: '215 28% 17%',
-      popover: '0 0% 100%',
-      popoverForeground: '215 28% 17%',
-      border: '205 30% 88%',
-      input: '205 30% 88%',
-      muted: '204 35% 94%',
-      mutedForeground: '215 16% 40%',
-      secondary: '204 40% 95%',
-      secondaryForeground: '215 28% 17%',
-      sidebarBackground: '204 35% 94%',
-      sidebarForeground: '215 28% 17%',
-      sidebarBorder: '205 30% 86%',
-      chart1: '199 89% 48%',
-      chart2: '217 91% 60%',
-      chart3: '172 75% 46%',
-      chart4: '262 83% 68%',
-      chart5: '38 92% 50%',
-    },
-  },
-  {
-    id: 'solar_amber',
-    name: 'Solar Amber',
-    subtitle: 'Âmbar Dourado & Laranja Quente',
-    description:
-      'Acentos âmbar, dourado e laranja energéticos sobre o fundo grafite escuro com alto contraste.',
-    primaryHex: '#f59e0b',
-    accentHex: '#f97316',
-    previewBg: 'linear-gradient(135deg, #1c1407 0%, #291b07 50%, #362208 100%)',
-    chips: ['#f59e0b', '#fbbf24', '#f97316'],
-    hslVariables: {
-      primary: '38 92% 50%',
-      primaryForeground: '30 50% 6%',
-      accent: '24 95% 53%',
+      primary: '38 92% 50%', // #F59E0B
+      primaryForeground: '225 15% 10%', // #17181C
+      accent: '27 96% 61%', // #FB923C
       accentForeground: '0 0% 100%',
       ring: '38 92% 50%',
-      background: '30 35% 6%',
-      foreground: '38 30% 95%',
-      card: '30 28% 9.5%',
-      cardForeground: '38 30% 95%',
-      popover: '30 30% 11%',
-      popoverForeground: '38 30% 95%',
-      border: '30 22% 18%',
-      input: '30 22% 18%',
-      muted: '30 25% 13%',
-      mutedForeground: '35 18% 68%',
-      secondary: '30 24% 15%',
-      secondaryForeground: '38 30% 92%',
-      sidebarBackground: '30 40% 5%',
-      sidebarForeground: '38 30% 94%',
-      sidebarBorder: '30 22% 15%',
+      background: '230 10% 10%', // #17181C
+      foreground: '40 20% 96%', // #F5F3EF
+      card: '230 9% 13.5%', // #1F2126
+      cardForeground: '40 20% 96%',
+      popover: '230 9% 12%',
+      popoverForeground: '40 20% 96%',
+      border: '230 8% 22%', // #31333A
+      input: '230 8% 22%',
+      muted: '230 9% 17%',
+      mutedForeground: '230 8% 68%',
+      secondary: '230 9% 19%',
+      secondaryForeground: '40 20% 93%',
+      sidebarBackground: '230 12% 9%', // #131417
+      sidebarForeground: '38 92% 50%', // #F59E0B
+      sidebarBorder: '230 9% 17%',
       chart1: '38 92% 50%',
-      chart2: '24 95% 53%',
+      chart2: '27 96% 61%',
       chart3: '45 93% 58%',
-      chart4: '142 71% 45%',
-      chart5: '280 80% 65%',
-    },
-  },
-  {
-    id: 'candy',
-    name: 'Candy Neon (Doce Vibrante)',
-    subtitle: 'Rosa Chiclete & Lilás Neon',
-    description:
-      'Acentos em rosa chiclete vibrante e lilás suave sobre fundo escuro grafite, com contraste otimizado.',
-    primaryHex: '#ec4899',
-    accentHex: '#c084fc',
-    previewBg: 'linear-gradient(135deg, #18111e 0%, #29122e 100%)',
-    chips: ['#ec4899', '#f472b6', '#c084fc', '#e879f9', '#fbcfe8'],
-    hslVariables: {
-      primary: '330 81% 60%',
-      primaryForeground: '330 50% 6%',
-      accent: '270 95% 75%',
-      accentForeground: '0 0% 100%',
-      ring: '330 81% 60%',
-      background: '320 35% 6.5%',
-      foreground: '330 30% 96%',
-      card: '320 28% 10%',
-      cardForeground: '330 30% 96%',
-      popover: '320 30% 11.5%',
-      popoverForeground: '330 30% 96%',
-      border: '320 22% 19%',
-      input: '320 22% 19%',
-      muted: '320 25% 13.5%',
-      mutedForeground: '325 18% 70%',
-      secondary: '320 24% 15.5%',
-      secondaryForeground: '330 30% 93%',
-      sidebarBackground: '320 40% 5.5%',
-      sidebarForeground: '330 30% 95%',
-      sidebarBorder: '320 22% 15.5%',
-      chart1: '330 81% 60%',
-      chart2: '270 95% 75%',
-      chart3: '315 90% 70%',
-      chart4: '290 85% 65%',
-      chart5: '340 82% 52%',
+      chart4: '172 66% 50%',
+      chart5: '0 84% 60%',
     },
   },
 ]
+
+/**
+ * Valida e normaliza um tema qualquer (incluindo migração de temas legados)
+ * para um dos 3 temas suportados, garantindo compatibilidade.
+ */
+export function normalizeThemeVariant(raw: any): SystemThemeVariant {
+  if (raw === 'teal_ops' || raw === 'corporate_blue' || raw === 'amber_alert') {
+    return raw
+  }
+  // Mapeamento semântico de legados para os 3 novos:
+  if (raw === 'emerald_teal' || raw === 'cyber_cyan') {
+    return 'teal_ops'
+  }
+  if (raw === 'ice_blue' || raw === 'neon_purple') {
+    return 'corporate_blue'
+  }
+  if (raw === 'solar_amber' || raw === 'candy') {
+    return 'amber_alert'
+  }
+  return 'teal_ops'
+}
 
 const STORAGE_KEY = 'itsm-design-settings'
 
@@ -411,9 +228,16 @@ export function getCachedDesignSettings(): DesignSettings {
     const raw = localStorage.getItem(STORAGE_KEY)
     if (raw) {
       const parsed = JSON.parse(raw)
+      const normalizedVariant = normalizeThemeVariant(parsed.system_theme_variant)
+      const matchedTheme =
+        THEME_VARIANTS.find((t) => t.id === normalizedVariant) || THEME_VARIANTS[0]
+
       return {
         ...DEFAULT_DESIGN_SETTINGS,
         ...parsed,
+        system_theme_variant: normalizedVariant,
+        sidebar_bg_color: parsed.sidebar_bg_color || matchedTheme.sidebarBgHex,
+        sidebar_text_color: parsed.sidebar_text_color || matchedTheme.sidebarTextHex,
       }
     }
   } catch {
@@ -449,12 +273,15 @@ export async function getDesignSettings(): Promise<DesignSettings> {
       const logoUrl = first.logo ? pb.files.getURL(first, first.logo) : ''
       const reportLogoUrl = first.report_logo ? pb.files.getURL(first, first.report_logo) : ''
 
+      const normalizedVariant = normalizeThemeVariant(first.system_theme_variant)
+      const matchedTheme =
+        THEME_VARIANTS.find((t) => t.id === normalizedVariant) || THEME_VARIANTS[0]
+
       const merged: DesignSettings = {
         id: first.id,
-        sidebar_bg_color: first.sidebar_bg_color || DEFAULT_DESIGN_SETTINGS.sidebar_bg_color,
-        sidebar_text_color: first.sidebar_text_color || DEFAULT_DESIGN_SETTINGS.sidebar_text_color,
-        system_theme_variant:
-          first.system_theme_variant || DEFAULT_DESIGN_SETTINGS.system_theme_variant,
+        sidebar_bg_color: first.sidebar_bg_color || matchedTheme.sidebarBgHex,
+        sidebar_text_color: first.sidebar_text_color || matchedTheme.sidebarTextHex,
+        system_theme_variant: normalizedVariant,
         scope: 'global',
         logo: first.logo || '',
         report_logo: first.report_logo || '',
@@ -510,11 +337,12 @@ export async function saveDesignSettings(
     ? pb.files.getURL(savedRecord, savedRecord.report_logo)
     : ''
 
+  const normalizedVariant = normalizeThemeVariant(savedRecord.system_theme_variant)
   const result: DesignSettings = {
     id: savedRecord.id,
     sidebar_bg_color: savedRecord.sidebar_bg_color,
     sidebar_text_color: savedRecord.sidebar_text_color,
-    system_theme_variant: savedRecord.system_theme_variant,
+    system_theme_variant: normalizedVariant,
     scope: 'global',
     logo: savedRecord.logo || '',
     report_logo: savedRecord.report_logo || '',
@@ -690,15 +518,11 @@ export function applyDesignToDOM(settings: DesignSettings, isDark: boolean = tru
   }
 
   // 2. Variação do tema do sistema (Primária, Acento, Gráficos, Background, Foreground, etc.)
-  const variant =
-    THEME_VARIANTS.find((v) => v.id === settings.system_theme_variant) || THEME_VARIANTS[0]
+  const normalized = normalizeThemeVariant(settings.system_theme_variant)
+  const variant = THEME_VARIANTS.find((v) => v.id === normalized) || THEME_VARIANTS[0]
 
-  // Se o tema for ice_blue (modo claro característico), remove a classe .dark se o usuário estiver usando ice_blue
-  // mas se o usuário estiver no modo dark padrão ou outro variant, segue a regra:
-  const isIceBlue = variant.id === 'ice_blue'
-  if (isIceBlue) {
-    root.classList.remove('dark')
-  }
+  // Todos os 3 novos temas são dark tech de alta performance e contraste
+  root.classList.add('dark')
 
   // Aplicação de variáveis HSL do variant
   root.style.setProperty('--primary', variant.hslVariables.primary)
