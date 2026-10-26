@@ -14,6 +14,10 @@ export interface DesignSettings {
   sidebar_text_color: string
   system_theme_variant: SystemThemeVariant
   scope?: 'global'
+  logo?: string
+  report_logo?: string
+  logo_url?: string
+  report_logo_url?: string
   created?: string
   updated?: string
 }
@@ -23,6 +27,10 @@ export const DEFAULT_DESIGN_SETTINGS: DesignSettings = {
   sidebar_text_color: '#22d3ee',
   system_theme_variant: 'cyber_cyan',
   scope: 'global',
+  logo: '',
+  report_logo: '',
+  logo_url: '',
+  report_logo_url: '',
 }
 
 export interface SidebarSwatch {
@@ -438,6 +446,9 @@ export async function getDesignSettings(): Promise<DesignSettings> {
     })
     if (records.length > 0) {
       const first = records[0]
+      const logoUrl = first.logo ? pb.files.getURL(first, first.logo) : ''
+      const reportLogoUrl = first.report_logo ? pb.files.getURL(first, first.report_logo) : ''
+
       const merged: DesignSettings = {
         id: first.id,
         sidebar_bg_color: first.sidebar_bg_color || DEFAULT_DESIGN_SETTINGS.sidebar_bg_color,
@@ -445,6 +456,10 @@ export async function getDesignSettings(): Promise<DesignSettings> {
         system_theme_variant:
           first.system_theme_variant || DEFAULT_DESIGN_SETTINGS.system_theme_variant,
         scope: 'global',
+        logo: first.logo || '',
+        report_logo: first.report_logo || '',
+        logo_url: logoUrl,
+        report_logo_url: reportLogoUrl,
         created: first.created,
         updated: first.updated,
       }
@@ -464,18 +479,24 @@ export async function saveDesignSettings(
   data: Partial<Omit<DesignSettings, 'id' | 'created' | 'updated'>>,
 ): Promise<DesignSettings> {
   const current = await getDesignSettings()
-  const payload = {
+  const payload: Record<string, any> = {
     sidebar_bg_color: data.sidebar_bg_color ?? current.sidebar_bg_color,
     sidebar_text_color: data.sidebar_text_color ?? current.sidebar_text_color,
     system_theme_variant: data.system_theme_variant ?? current.system_theme_variant,
     scope: 'global',
   }
 
+  if (data.logo !== undefined) {
+    payload.logo = data.logo
+  }
+  if (data.report_logo !== undefined) {
+    payload.report_logo = data.report_logo
+  }
+
   let savedRecord: any
   if (current.id) {
     savedRecord = await pb.collection('design_settings').update(current.id, payload)
   } else {
-    // Tenta encontrar caso tenha sido criado por outro
     try {
       const existing = await pb.collection('design_settings').getFirstListItem('scope = "global"')
       savedRecord = await pb.collection('design_settings').update(existing.id, payload)
@@ -484,17 +505,170 @@ export async function saveDesignSettings(
     }
   }
 
+  const logoUrl = savedRecord.logo ? pb.files.getURL(savedRecord, savedRecord.logo) : ''
+  const reportLogoUrl = savedRecord.report_logo
+    ? pb.files.getURL(savedRecord, savedRecord.report_logo)
+    : ''
+
   const result: DesignSettings = {
     id: savedRecord.id,
     sidebar_bg_color: savedRecord.sidebar_bg_color,
     sidebar_text_color: savedRecord.sidebar_text_color,
     system_theme_variant: savedRecord.system_theme_variant,
     scope: 'global',
+    logo: savedRecord.logo || '',
+    report_logo: savedRecord.report_logo || '',
+    logo_url: logoUrl,
+    report_logo_url: reportLogoUrl,
     created: savedRecord.created,
     updated: savedRecord.updated,
   }
   setCachedDesignSettings(result)
   return result
+}
+
+/**
+ * Validação de tamanho e formato de arquivo de logotipo
+ */
+export const LOGO_MAX_BYTES = 2 * 1024 * 1024 // 2MB
+export const LOGO_ALLOWED_TYPES = [
+  'image/png',
+  'image/jpeg',
+  'image/jpg',
+  'image/svg+xml',
+  'image/webp',
+]
+
+export function validateLogoFile(file: File): { valid: boolean; error?: string } {
+  if (!file) {
+    return { valid: false, error: 'Nenhum arquivo selecionado.' }
+  }
+  if (file.size > LOGO_MAX_BYTES) {
+    return {
+      valid: false,
+      error: `O arquivo excede o limite máximo permitido de 2MB (${(file.size / (1024 * 1024)).toFixed(2)}MB). Escolha uma imagem menor.`,
+    }
+  }
+  const type = file.type?.toLowerCase() || ''
+  const isAllowedExt = /\.(png|jpe?g|svg|webp)$/i.test(file.name)
+  if (!LOGO_ALLOWED_TYPES.includes(type) && !isAllowedExt) {
+    return {
+      valid: false,
+      error: 'Formato inválido. Por favor envie uma imagem nos formatos aceitos: PNG, JPG ou SVG.',
+    }
+  }
+  return { valid: true }
+}
+
+/**
+ * Envia um arquivo de logotipo (geral do sistema ou de relatórios) usando FormData
+ */
+export async function uploadLogo(
+  file: File,
+  type: 'logo' | 'report_logo',
+): Promise<DesignSettings> {
+  const validation = validateLogoFile(file)
+  if (!validation.valid) {
+    throw new Error(validation.error)
+  }
+
+  const current = await getDesignSettings()
+  const formData = new FormData()
+  formData.append(type, file)
+
+  let savedRecord: any
+  if (current.id) {
+    savedRecord = await pb.collection('design_settings').update(current.id, formData)
+  } else {
+    try {
+      const existing = await pb.collection('design_settings').getFirstListItem('scope = "global"')
+      savedRecord = await pb.collection('design_settings').update(existing.id, formData)
+    } catch (_) {
+      formData.append('scope', 'global')
+      savedRecord = await pb.collection('design_settings').create(formData)
+    }
+  }
+
+  const logoUrl = savedRecord.logo ? pb.files.getURL(savedRecord, savedRecord.logo) : ''
+  const reportLogoUrl = savedRecord.report_logo
+    ? pb.files.getURL(savedRecord, savedRecord.report_logo)
+    : ''
+
+  const result: DesignSettings = {
+    id: savedRecord.id,
+    sidebar_bg_color: savedRecord.sidebar_bg_color,
+    sidebar_text_color: savedRecord.sidebar_text_color,
+    system_theme_variant: savedRecord.system_theme_variant,
+    scope: 'global',
+    logo: savedRecord.logo || '',
+    report_logo: savedRecord.report_logo || '',
+    logo_url: logoUrl,
+    report_logo_url: reportLogoUrl,
+    created: savedRecord.created,
+    updated: savedRecord.updated,
+  }
+  setCachedDesignSettings(result)
+  return result
+}
+
+/**
+ * Remove um logotipo (geral ou de relatórios) passando null/string vazia
+ */
+export async function removeLogo(type: 'logo' | 'report_logo'): Promise<DesignSettings> {
+  const current = await getDesignSettings()
+  if (!current.id) {
+    const updated = { ...current, [type]: '', [`${type}_url`]: '' }
+    setCachedDesignSettings(updated)
+    return updated
+  }
+
+  const savedRecord = await pb.collection('design_settings').update(current.id, {
+    [type]: null,
+  })
+
+  const logoUrl = savedRecord.logo ? pb.files.getURL(savedRecord, savedRecord.logo) : ''
+  const reportLogoUrl = savedRecord.report_logo
+    ? pb.files.getURL(savedRecord, savedRecord.report_logo)
+    : ''
+
+  const result: DesignSettings = {
+    id: savedRecord.id,
+    sidebar_bg_color: savedRecord.sidebar_bg_color,
+    sidebar_text_color: savedRecord.sidebar_text_color,
+    system_theme_variant: savedRecord.system_theme_variant,
+    scope: 'global',
+    logo: savedRecord.logo || '',
+    report_logo: savedRecord.report_logo || '',
+    logo_url: logoUrl,
+    report_logo_url: reportLogoUrl,
+    created: savedRecord.created,
+    updated: savedRecord.updated,
+  }
+  setCachedDesignSettings(result)
+  return result
+}
+
+/**
+ * Copia o logotipo principal para o logotipo de relatórios/documentos
+ */
+export async function useSystemLogoForReports(): Promise<DesignSettings> {
+  const current = await getDesignSettings()
+  if (!current.id || !current.logo) {
+    throw new Error('Não há logotipo do sistema configurado para replicar.')
+  }
+
+  // Baixa o blob do logo do sistema e envia como report_logo
+  const logoUrl =
+    current.logo_url ||
+    pb.files.getURL({ id: current.id, collectionName: 'design_settings' } as any, current.logo)
+  const response = await fetch(logoUrl)
+  if (!response.ok) {
+    throw new Error('Falha ao obter o logotipo do sistema.')
+  }
+  const blob = await response.blob()
+  const ext = current.logo.split('.').pop() || 'png'
+  const file = new File([blob], `report_logo.${ext}`, { type: blob.type })
+  return uploadLogo(file, 'report_logo')
 }
 
 /**

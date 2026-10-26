@@ -45,6 +45,7 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useToast } from '@/hooks/use-toast'
+import { useTheme } from '@/hooks/use-theme'
 import { getCompanies, type CompanyRecord } from '@/services/companies'
 import { formatHours } from '@/lib/duration'
 import {
@@ -125,6 +126,7 @@ function formatCountLabel(value: any): string {
 }
 export default function MonthlyClientReportPage() {
   const { toast } = useToast()
+  const { designSettings } = useTheme()
   const [searchParams, setSearchParams] = useSearchParams()
 
   const initialCompany = searchParams.get('company') || ''
@@ -632,9 +634,18 @@ export default function MonthlyClientReportPage() {
           {/* CAPA DO RELATÓRIO (Normas ABNT NBR 10719 / 14724)            */}
           {/* ============================================================== */}
           <div className="abnt-cover bg-white dark:bg-slate-900 border rounded-xl p-8 shadow-xs print:border-none print:shadow-none print:rounded-none">
-            <div className="abnt-cover-header">
+            <div className="abnt-cover-header flex flex-col items-center">
+              {designSettings?.report_logo_url || designSettings?.logo_url ? (
+                <div className="mb-4 max-h-20 flex items-center justify-center">
+                  <img
+                    src={designSettings.report_logo_url || designSettings.logo_url}
+                    alt="Logotipo de Documentos"
+                    className="max-h-16 w-auto max-w-[280px] object-contain"
+                  />
+                </div>
+              ) : null}
               <p className="font-bold text-slate-700 dark:text-slate-300">
-                DELTIME SOLUÇÕES EM TECNOLOGIA — ITSM SERVICEONE
+                ITSM DESK — GOVERNANÇA E OPERAÇÃO TÉCNICA
               </p>
               <p className="text-xs font-normal text-slate-500 mt-1">
                 GESTÃO DA OPERAÇÃO TÉCNICA E GOVERNANÇA DE TI

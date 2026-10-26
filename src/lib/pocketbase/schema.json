@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-25T03:06:50.112Z",
+  "generatedAt": "2026-10-26T01:53:47.162Z",
   "collections": [
     {
       "name": "users",
@@ -10462,6 +10462,18 @@
           "required": false,
           "system": false,
           "autodateTriggers": ["onCreate", "onUpdate"]
+        },
+        {
+          "name": "logo",
+          "type": "file",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "report_logo",
+          "type": "file",
+          "required": false,
+          "system": false
         }
       ],
       "indexes": ["CREATE INDEX idx_design_settings_scope ON design_settings (scope)"]

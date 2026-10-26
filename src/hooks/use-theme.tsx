@@ -19,6 +19,7 @@ interface ThemeContextType {
   updateDesignSettings: (newSettings: Partial<DesignSettings>) => Promise<DesignSettings>
   applyDesignPreview: (previewSettings: Partial<DesignSettings>) => void
   resetDesignPreview: () => void
+  refreshDesignSettings: () => Promise<void>
   isDesignLoading: boolean
 }
 
@@ -108,6 +109,16 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
     applyDesignToDOM(designSettings, theme === 'dark')
   }, [designSettings, theme])
 
+  const refreshDesignSettings = useCallback(async () => {
+    try {
+      const fresh = await getDesignSettings()
+      setDesignSettings(fresh)
+      applyDesignToDOM(fresh, theme === 'dark')
+    } catch (err) {
+      console.warn('Falha ao recarregar configurações de design:', err)
+    }
+  }, [theme])
+
   return (
     <ThemeContext.Provider
       value={{
@@ -118,6 +129,7 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
         updateDesignSettings,
         applyDesignPreview,
         resetDesignPreview,
+        refreshDesignSettings,
         isDesignLoading,
       }}
     >

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import pb from '@/lib/pocketbase/client'
 import { useAuth } from '@/hooks/use-auth'
 import { securityService, TwoFactorSetupResponse } from '@/services/security'
+import { getDesignSettings } from '@/services/design-settings'
 import { QrCodeDisplay } from '@/components/QrCodeDisplay'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -42,6 +43,7 @@ export default function Login() {
   const [copiedSecret, setCopiedSecret] = useState(false)
   const [copiedCodes, setCopiedCodes] = useState(false)
   const [setupCode, setSetupCode] = useState('')
+  const [logoUrl, setLogoUrl] = useState<string>('')
 
   // Armazenamento temporário das credenciais validadas para completar a sessão após 2FA
   const [tempAuth, setTempAuth] = useState<{ token: string; record: any } | null>(null)
@@ -61,13 +63,21 @@ export default function Login() {
     }
   }, [isAuthenticated, navigate, step])
 
-  // Checar se há mensagem de sessão expirada
+  // Checar se há mensagem de sessão expirada e carregar logotipo dinâmico
   useEffect(() => {
     const expiredMsg = sessionStorage.getItem('itsm_session_expired_message')
     if (expiredMsg) {
       setInfoMessage(expiredMsg)
       sessionStorage.removeItem('itsm_session_expired_message')
     }
+
+    getDesignSettings()
+      .then((settings) => {
+        if (settings?.logo_url) {
+          setLogoUrl(settings.logo_url)
+        }
+      })
+      .catch(() => {})
   }, [])
 
   // Passo 1: Validação de E-mail e Senha
@@ -223,7 +233,7 @@ export default function Login() {
           <div className="flex items-center gap-2">
             <span className="h-2 w-2 rounded-full bg-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.9)] animate-pulse" />
             <span className="text-[11px] font-mono font-semibold tracking-wider text-muted-foreground uppercase">
-              ServiceOne ITSM
+              ITSM Desk
             </span>
           </div>
           <span className="text-[10px] font-mono px-2 py-0.5 rounded-full border border-primary/30 bg-primary/10 text-primary">
@@ -231,14 +241,24 @@ export default function Login() {
           </span>
         </div>
 
-        {/* CABEÇALHO */}
+        {/* CABEÇALHO COM LOGOTIPO DINÂMICO OU ÍCONE NEUTRO */}
         <CardHeader className="space-y-1.5 text-center pt-2">
           <div className="flex justify-center mb-2">
-            <div className="p-3.5 bg-gradient-to-br from-primary/20 via-primary/10 to-transparent border border-primary/30 rounded-2xl text-primary tech-glow-subtle">
-              {step === 'credentials' && <KeyRound className="h-7 w-7 text-cyan-400" />}
-              {step === 'totp' && <Smartphone className="h-7 w-7 text-cyan-400" />}
-              {step === 'totp_setup' && <ShieldCheck className="h-7 w-7 text-cyan-400" />}
-            </div>
+            {logoUrl ? (
+              <div className="py-2 px-3 rounded-xl bg-background/50 border border-border/50 max-w-[220px]">
+                <img
+                  src={logoUrl}
+                  alt="Logotipo da Empresa"
+                  className="max-h-12 w-auto object-contain mx-auto drop-shadow-sm"
+                />
+              </div>
+            ) : (
+              <div className="p-3.5 bg-gradient-to-br from-primary/20 via-primary/10 to-transparent border border-primary/30 rounded-2xl text-primary tech-glow-subtle">
+                {step === 'credentials' && <KeyRound className="h-7 w-7 text-cyan-400" />}
+                {step === 'totp' && <Smartphone className="h-7 w-7 text-cyan-400" />}
+                {step === 'totp_setup' && <ShieldCheck className="h-7 w-7 text-cyan-400" />}
+              </div>
+            )}
           </div>
 
           <CardTitle className="text-2xl font-bold tracking-tight text-foreground">

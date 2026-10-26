@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react'
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom'
-import serviceOneLogo from '@/assets/chatgpt-image-16-de-ago.de-2026-194645-c96c2.png'
 import {
   LayoutDashboard,
   Ticket,
@@ -592,14 +591,32 @@ export default function Layout() {
           backgroundColor: customSidebarBg ? `${customSidebarBg}ee` : undefined,
         }}
       >
-        <Link to="/" className="flex items-center gap-2.5 group">
-          <div className="relative">
-            <img
-              src={serviceOneLogo}
-              alt="ServiceOne Logo"
-              className="h-9 w-auto max-w-[170px] object-contain drop-shadow-[0_0_8px_hsl(var(--primary)/0.25)] transition-transform duration-300 group-hover:scale-105"
-            />
-          </div>
+        <Link to="/" className="flex items-center gap-2.5 group w-full overflow-hidden">
+          {designSettings?.logo_url ? (
+            <div className="relative flex items-center max-h-11">
+              <img
+                src={designSettings.logo_url}
+                alt="Logotipo"
+                className="h-9 w-auto max-w-[190px] object-contain drop-shadow-[0_0_8px_hsl(var(--primary)/0.25)] transition-transform duration-300 group-hover:scale-105"
+              />
+            </div>
+          ) : (
+            <div className="flex items-center gap-2 py-1">
+              <span
+                className="h-2.5 w-2.5 rounded-full"
+                style={{
+                  backgroundColor: customSidebarText || 'hsl(var(--primary))',
+                  boxShadow: `0 0 8px ${customSidebarText || 'hsl(var(--primary))'}`,
+                }}
+              />
+              <span
+                className="text-base font-bold tracking-tight truncate transition-colors group-hover:opacity-90"
+                style={{ color: customSidebarText || 'inherit' }}
+              >
+                ITSM Desk
+              </span>
+            </div>
+          )}
         </Link>
       </div>
 
@@ -1356,7 +1373,7 @@ export default function Layout() {
           className="text-[10px] font-mono opacity-70"
           style={{ color: customSidebarText || undefined }}
         >
-          ServiceOne ITSM
+          ITSM Desk
         </p>
         <span
           className="inline-flex items-center gap-1 text-[10px] font-mono"
@@ -1401,7 +1418,14 @@ export default function Layout() {
                 </SheetContent>
               </Sheet>
             )}
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2.5">
+              {designSettings?.logo_url ? (
+                <img
+                  src={designSettings.logo_url}
+                  alt="Logotipo"
+                  className="h-7 w-auto max-w-[120px] object-contain hidden md:block mr-1 opacity-90 hover:opacity-100 transition-opacity"
+                />
+              ) : null}
               <span className="hidden sm:inline-block h-2 w-2 rounded-full bg-primary shadow-[0_0_8px_hsl(var(--primary)/0.8)]" />
               <h1 className="text-base sm:text-lg font-semibold tracking-tight text-foreground">
                 {[

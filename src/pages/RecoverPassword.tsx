@@ -1,10 +1,10 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { Mail, ArrowLeft, Loader2, CheckCircle, AlertCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { securityService } from '@/services/security'
-import serviceOneLogo from '@/assets/chatgpt-image-16-de-ago.de-2026-194645-c96c2.png'
+import { getDesignSettings } from '@/services/design-settings'
 
 export default function RecoverPassword() {
   const [sent, setSent] = useState(false)
@@ -12,6 +12,17 @@ export default function RecoverPassword() {
   const [loading, setLoading] = useState(false)
   const [feedbackMessage, setFeedbackMessage] = useState('')
   const [isWarning, setIsWarning] = useState(false)
+  const [logoUrl, setLogoUrl] = useState<string>('')
+
+  useEffect(() => {
+    getDesignSettings()
+      .then((settings) => {
+        if (settings?.logo_url) {
+          setLogoUrl(settings.logo_url)
+        }
+      })
+      .catch(() => {})
+  }, [])
 
   const handleRecover = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -40,11 +51,15 @@ export default function RecoverPassword() {
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-900 via-blue-950 to-purple-950 p-4">
       <div className="w-full max-w-md space-y-6 rounded-2xl bg-white p-8 shadow-2xl dark:bg-slate-900">
         <div className="flex flex-col items-center justify-center text-center space-y-2">
-          <img
-            src={serviceOneLogo}
-            alt="ServiceOne"
-            className="h-12 w-auto max-w-[240px] object-contain mb-1"
-          />
+          {logoUrl ? (
+            <img
+              src={logoUrl}
+              alt="Logotipo da Empresa"
+              className="h-12 w-auto max-w-[240px] object-contain mb-1"
+            />
+          ) : (
+            <span className="text-xl font-bold tracking-tight text-foreground">ITSM Desk</span>
+          )}
           <h1 className="text-xl font-bold">Recuperar Senha</h1>
         </div>
 
