@@ -24,9 +24,11 @@ import { DrillDownDialog } from '@/components/dashboard/DrillDownDialog'
 import { useDashboardData } from '@/hooks/use-dashboard-data'
 import { computeKpis } from '@/lib/dashboard-metrics'
 import { exportToCsv } from '@/lib/export-utils'
+import { useTheme } from '@/hooks/use-theme'
 import type { TicketRecord } from '@/services/tickets'
 
 export default function ExecutiveDashboard() {
+  const { designSettings } = useTheme()
   const { data, options, filters, loading, lastUpdate, updateFilter, clearFilters } =
     useDashboardData()
   const [drillDown, setDrillDown] = useState<{
@@ -124,19 +126,30 @@ export default function ExecutiveDashboard() {
 
   return (
     <div className="space-y-5">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div>
-          <h2 className="text-xl font-bold text-foreground">Dashboard Gerencial</h2>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            Última atualização:{' '}
-            {lastUpdate.toLocaleString('pt-BR', {
-              day: '2-digit',
-              month: '2-digit',
-              year: 'numeric',
-              hour: '2-digit',
-              minute: '2-digit',
-            })}
-          </p>
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          {designSettings?.report_logo_url || designSettings?.logo_url ? (
+            <div className="flex items-center max-h-12 max-w-[180px] p-1.5 rounded-lg bg-card/60 border border-border/60">
+              <img
+                src={designSettings.report_logo_url || designSettings.logo_url}
+                alt="Logotipo de Documentos"
+                className="max-h-9 w-auto object-contain"
+              />
+            </div>
+          ) : null}
+          <div>
+            <h2 className="text-xl font-bold text-foreground">Dashboard Gerencial</h2>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Última atualização:{' '}
+              {lastUpdate.toLocaleString('pt-BR', {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+              })}
+            </p>
+          </div>
         </div>
         <div className="flex gap-2">
           <Button size="sm" variant="outline" onClick={handleExportCsv}>

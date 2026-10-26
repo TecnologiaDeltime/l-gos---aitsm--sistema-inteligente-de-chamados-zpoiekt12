@@ -25,6 +25,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { exportToCsv } from '@/lib/export-utils'
+import { useTheme } from '@/hooks/use-theme'
 
 interface FeatureItem {
   id: string
@@ -394,6 +395,7 @@ const FEATURE_CATEGORIES: FeatureCategory[] = [
 ]
 
 export default function ImplementedFeaturesReport() {
+  const { designSettings } = useTheme()
   const [search, setSearch] = useState('')
   const [selectedCategory, setSelectedCategory] = useState<string>('all')
 
@@ -472,22 +474,33 @@ export default function ImplementedFeaturesReport() {
       {/* CABEÇALHO DO RELATÓRIO */}
       <div className="bg-card border border-border rounded-xl p-6 shadow-sm print:border-b-2 print:border-primary print:shadow-none print:rounded-none print:p-4">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="space-y-1">
-            <div className="flex items-center gap-2">
-              <span className="px-2.5 py-0.5 rounded-full bg-primary/10 text-primary text-xs font-semibold uppercase tracking-wider flex items-center gap-1.5">
-                <Sparkles className="w-3.5 h-3.5" />
-                Relatório Oficial de Entregas
-              </span>
-              <span className="text-xs text-muted-foreground hidden print:inline-block">
-                • Emitido em {currentDate}
-              </span>
+          <div className="flex items-start gap-4">
+            {designSettings?.report_logo_url || designSettings?.logo_url ? (
+              <div className="max-h-16 max-w-[200px] flex items-center shrink-0 p-1 bg-white rounded-md border border-slate-200">
+                <img
+                  src={designSettings.report_logo_url || designSettings.logo_url}
+                  alt="Logotipo de Documentos"
+                  className="max-h-14 w-auto object-contain"
+                />
+              </div>
+            ) : null}
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <span className="px-2.5 py-0.5 rounded-full bg-primary/10 text-primary text-xs font-semibold uppercase tracking-wider flex items-center gap-1.5">
+                  <Sparkles className="w-3.5 h-3.5" />
+                  Relatório Oficial de Entregas
+                </span>
+                <span className="text-xs text-muted-foreground hidden print:inline-block">
+                  • Emitido em {currentDate}
+                </span>
+              </div>
+              <h1 className="text-2xl md:text-3xl font-extrabold text-foreground tracking-tight">
+                Sistema ITSM de Chamados
+              </h1>
+              <p className="text-sm md:text-base text-muted-foreground font-medium">
+                Relatório Geral de Funcionalidades Implantadas e Módulos Ativos
+              </p>
             </div>
-            <h1 className="text-2xl md:text-3xl font-extrabold text-foreground tracking-tight">
-              Sistema ITSM de Chamados
-            </h1>
-            <p className="text-sm md:text-base text-muted-foreground font-medium">
-              Relatório Geral de Funcionalidades Implantadas e Módulos Ativos
-            </p>
           </div>
 
           {/* Ações (escondidas na impressão) */}

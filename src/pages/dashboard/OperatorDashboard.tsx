@@ -21,6 +21,7 @@ import {
   RefreshCw,
 } from 'lucide-react'
 import { formatMinutes } from '@/lib/duration'
+import { useTheme } from '@/hooks/use-theme'
 
 type PeriodOption = '7' | '30' | '60' | '90'
 
@@ -39,6 +40,7 @@ function TrendIcon({ dir }: { dir: 'up' | 'down' | 'neutral' }) {
 
 export default function OperatorDashboard() {
   const { user } = useAuth()
+  const { designSettings } = useTheme()
   const [tickets, setTickets] = useState<TicketRecord[]>([])
   const [interactions, setInteractions] = useState<TicketInteractionRecord[]>([])
   const [period, setPeriod] = useState<PeriodOption>('30')
@@ -177,14 +179,25 @@ export default function OperatorDashboard() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h2 className="text-xl font-bold tracking-tight text-foreground">
-            Meu Painel de Performance
-          </h2>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            Indicadores individuais de produtividade e cumprimento de SLA
-          </p>
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          {designSettings?.report_logo_url || designSettings?.logo_url ? (
+            <div className="flex items-center max-h-12 max-w-[180px] p-1.5 rounded-lg bg-card/60 border border-border/60">
+              <img
+                src={designSettings.report_logo_url || designSettings.logo_url}
+                alt="Logotipo de Documentos"
+                className="max-h-9 w-auto object-contain"
+              />
+            </div>
+          ) : null}
+          <div>
+            <h2 className="text-xl font-bold tracking-tight text-foreground">
+              Meu Painel de Performance
+            </h2>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Indicadores individuais de produtividade e cumprimento de SLA
+            </p>
+          </div>
         </div>
         <Select value={period} onValueChange={(v) => setPeriod(v as PeriodOption)}>
           <SelectTrigger className="w-44 h-9 text-xs bg-secondary/50 border-border">

@@ -651,7 +651,7 @@ export async function removeLogo(type: 'logo' | 'report_logo'): Promise<DesignSe
 /**
  * Copia o logotipo principal para o logotipo de relatórios/documentos
  */
-export async function useSystemLogoForReports(): Promise<DesignSettings> {
+export async function copySystemLogoToReports(): Promise<DesignSettings> {
   const current = await getDesignSettings()
   if (!current.id || !current.logo) {
     throw new Error('Não há logotipo do sistema configurado para replicar.')
@@ -670,6 +670,9 @@ export async function useSystemLogoForReports(): Promise<DesignSettings> {
   const file = new File([blob], `report_logo.${ext}`, { type: blob.type })
   return uploadLogo(file, 'report_logo')
 }
+
+// Alias de retrocompatibilidade
+export const useSystemLogoForReports = copySystemLogoToReports
 
 /**
  * Aplica as propriedades CSS no elemento raiz (:root / document.documentElement)

@@ -17,9 +17,12 @@ function fmtArray(value: any): string {
   return String(value)
 }
 
-export function exportContractPdf(contract: ContractRecord, userName: string) {
+export function exportContractPdf(contract: ContractRecord, userName: string, logoUrl?: string) {
   const company = contract.expand?.company
   const now = new Date().toLocaleString('pt-BR')
+  const logoHeader = logoUrl
+    ? `<div style="margin-bottom:16px;text-align:left"><img src="${logoUrl}" alt="Logotipo da Empresa" style="max-height:48px;max-width:240px;object-fit:contain" /></div>`
+    : ''
   const html = `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="utf-8">
 <title>Contrato ${contract.number}</title>
 <style>body{font-family:Arial,sans-serif;margin:40px;color:#1e293b}
@@ -30,6 +33,7 @@ td{padding:4px 8px;font-size:12px;vertical-align:top}
 td:first-child{font-weight:bold;width:35%;color:#64748b}
 .footer{margin-top:40px;padding-top:12px;border-top:1px solid #e2e8f0;font-size:10px;color:#94a3b8}
 @media print{body{margin:20px}}</style></head><body>
+${logoHeader}
 <h1>Contrato de Serviços - ${fmt(contract.number)}</h1>
 <h2>1. Dados do Contrato</h2><table>
 <tr><td>Empresa (Razão Social)</td><td>${fmt(company?.legal_name)}</td></tr>

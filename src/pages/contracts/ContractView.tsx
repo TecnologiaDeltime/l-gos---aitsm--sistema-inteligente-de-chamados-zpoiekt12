@@ -14,6 +14,7 @@ import { exportContractPdf } from '@/lib/pdf-export'
 import { formatHours, formatMinutes, formatSeconds } from '@/lib/duration'
 import { PeriodFilter, usePeriodFilter } from '@/components/contracts/PeriodFilter'
 import { useAuth } from '@/hooks/use-auth'
+import { useTheme } from '@/hooks/use-theme'
 import { useRealtime } from '@/hooks/use-realtime'
 import pb from '@/lib/pocketbase/client'
 
@@ -21,6 +22,7 @@ export default function ContractView() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const { user } = useAuth()
+  const { designSettings } = useTheme()
   const [periodFilter, setPeriodFilter] = usePeriodFilter()
   const [contract, setContract] = useState<ContractRecord | null>(null)
   const [tickets, setTickets] = useState<any[]>([])
@@ -156,7 +158,13 @@ export default function ContractView() {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => exportContractPdf(contract, user?.name || 'Sistema')}
+            onClick={() =>
+              exportContractPdf(
+                contract,
+                user?.name || 'Sistema',
+                designSettings?.report_logo_url || designSettings?.logo_url,
+              )
+            }
           >
             <FileDown className="mr-1.5 h-4 w-4" /> Exportar PDF
           </Button>

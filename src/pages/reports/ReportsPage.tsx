@@ -23,6 +23,7 @@ import {
 import { Skeleton } from '@/components/ui/skeleton'
 import { Badge } from '@/components/ui/badge'
 import { useToast } from '@/hooks/use-toast'
+import { useTheme } from '@/hooks/use-theme'
 import { getErrorMessage } from '@/lib/pocketbase/errors'
 import { getCompanies, type CompanyRecord } from '@/services/companies'
 import { exportToCsv } from '@/lib/export-utils'
@@ -89,6 +90,7 @@ const OTHER_REPORTS = [
 
 export default function ReportsPage() {
   const { toast } = useToast()
+  const { designSettings } = useTheme()
 
   const [startDate, setStartDate] = useState(formatDate(new Date(Date.now() - 30 * 86400000)))
   const [endDate, setEndDate] = useState(formatDate(new Date()))
@@ -188,15 +190,26 @@ export default function ReportsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between flex-wrap gap-2 pb-1 border-b border-border/80">
-        <div>
-          <h2 className="text-xl font-bold tracking-tight text-foreground flex items-center gap-2">
-            <BarChart3 className="h-5 w-5 text-primary drop-shadow-[0_0_8px_hsl(var(--primary)/0.6)]" />{' '}
-            Relatórios Gerenciais
-          </h2>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            Apurações consolidadas de apontamento, SLA, atendimento e contratos
-          </p>
+      <div className="flex items-center justify-between flex-wrap gap-4 pb-1 border-b border-border/80">
+        <div className="flex items-center gap-3">
+          {designSettings?.report_logo_url || designSettings?.logo_url ? (
+            <div className="flex items-center max-h-12 max-w-[180px] p-1.5 rounded-lg bg-card/60 border border-border/60">
+              <img
+                src={designSettings.report_logo_url || designSettings.logo_url}
+                alt="Logotipo de Documentos"
+                className="max-h-9 w-auto object-contain"
+              />
+            </div>
+          ) : null}
+          <div>
+            <h2 className="text-xl font-bold tracking-tight text-foreground flex items-center gap-2">
+              <BarChart3 className="h-5 w-5 text-primary drop-shadow-[0_0_8px_hsl(var(--primary)/0.6)]" />{' '}
+              Relatórios Gerenciais
+            </h2>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Apurações consolidadas de apontamento, SLA, atendimento e contratos
+            </p>
+          </div>
         </div>
       </div>
 

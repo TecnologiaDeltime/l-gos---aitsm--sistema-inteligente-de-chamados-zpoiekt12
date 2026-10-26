@@ -22,10 +22,12 @@ import { Crown } from 'lucide-react'
 import { exportToCsv } from '@/lib/export-utils'
 import { formatHours } from '@/lib/duration'
 import { Button } from '@/components/ui/button'
+import { useTheme } from '@/hooks/use-theme'
 
 type MetricKey = 'sla' | 'attended' | 'resolved' | 'hours' | 'reopens' | 'resolution'
 
 export default function ManagerDashboard() {
+  const { designSettings } = useTheme()
   const [tickets, setTickets] = useState<TicketRecord[]>([])
   const [users, setUsers] = useState<UserItem[]>([])
   const [allInteractions, setAllInteractions] = useState<any[]>([])
@@ -122,12 +124,25 @@ export default function ManagerDashboard() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h2 className="text-xl font-bold tracking-tight text-foreground">Dashboard Gerencial</h2>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            Métricas de equipe, SLA e desempenho operacional
-          </p>
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          {designSettings?.report_logo_url || designSettings?.logo_url ? (
+            <div className="flex items-center max-h-12 max-w-[180px] p-1.5 rounded-lg bg-card/60 border border-border/60">
+              <img
+                src={designSettings.report_logo_url || designSettings.logo_url}
+                alt="Logotipo de Documentos"
+                className="max-h-9 w-auto object-contain"
+              />
+            </div>
+          ) : null}
+          <div>
+            <h2 className="text-xl font-bold tracking-tight text-foreground">
+              Dashboard Gerencial
+            </h2>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Métricas de equipe, SLA e desempenho operacional
+            </p>
+          </div>
         </div>
         <div className="flex items-center gap-2">
           <Select value={period} onValueChange={setPeriod}>

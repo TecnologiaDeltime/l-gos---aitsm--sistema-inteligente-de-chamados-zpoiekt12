@@ -14,7 +14,7 @@ import {
   DEFAULT_DESIGN_SETTINGS,
   uploadLogo,
   removeLogo,
-  useSystemLogoForReports,
+  copySystemLogoToReports,
   validateLogoFile,
 } from '@/services/design-settings'
 import {
@@ -288,7 +288,7 @@ export function DesignSettingsTab({ isAdminOrGestor }: DesignSettingsTabProps) {
   const handleUseSystemLogoForReports = async () => {
     setCopyingLogo(true)
     try {
-      const updated = await useSystemLogoForReports()
+      const updated = await copySystemLogoToReports()
       await refreshDesignSettings()
       setReportLogoPreview(updated.report_logo_url || '')
       toast({
