@@ -68,16 +68,16 @@ import { PrintChartContainer } from '@/components/reports/PrintChartContainer'
 import { MonthlyReportScheduleDialog } from '@/components/reports/MonthlyReportScheduleDialog'
 
 const CHART_COLORS = [
+  '#f59e0b', // amber-500
+  '#d97706', // amber-600
   '#2563eb', // blue-600
   '#16a34a', // green-600
-  '#d97706', // amber-600
-  '#9333ea', // purple-600
-  '#0891b2', // cyan-600
   '#dc2626', // red-600
-  '#4f46e5', // indigo-600
-  '#059669', // emerald-600
   '#ea580c', // orange-600
+  '#059669', // emerald-600
   '#64748b', // slate-500
+  '#b45309', // amber-700
+  '#334155', // slate-700
 ]
 
 const MONTH_NAMES_FULL = [

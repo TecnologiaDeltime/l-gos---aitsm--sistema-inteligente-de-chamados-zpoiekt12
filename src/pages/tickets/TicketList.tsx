@@ -643,10 +643,10 @@ export default function TicketList() {
                               {t.number}
                             </span>
                             {t.parent_ticket_id && (
-                              <GitBranch className="h-3 w-3 text-cyan-400 shrink-0" />
+                              <GitBranch className="h-3 w-3 text-primary shrink-0" />
                             )}
                             {associatedIds.has(t.id) && (
-                              <Link2 className="h-3 w-3 text-cyan-400 shrink-0" />
+                              <Link2 className="h-3 w-3 text-primary shrink-0" />
                             )}
                           </div>
                           <PriorityBadge priority={t.priority} />

@@ -11,14 +11,14 @@ const STATUS_CONFIG: Record<string, { dot: string; className: string }> = {
       'bg-primary/10 text-primary border-primary/30 dark:bg-primary/15 dark:text-primary dark:border-primary/40 shadow-xs shadow-primary/10',
   },
   'Em Triagem': {
-    dot: 'bg-purple-400 shadow-[0_0_6px_rgba(192,132,252,0.8)]',
+    dot: 'bg-amber-400 shadow-[0_0_6px_rgba(251,191,36,0.8)]',
     className:
-      'bg-purple-500/10 text-purple-700 border-purple-300 dark:bg-purple-500/15 dark:text-purple-300 dark:border-purple-500/40',
+      'bg-amber-500/10 text-amber-700 border-amber-300 dark:bg-amber-500/15 dark:text-amber-300 dark:border-amber-500/40',
   },
   'Aguardando Atribuição': {
-    dot: 'bg-indigo-400 shadow-[0_0_6px_rgba(129,140,248,0.8)]',
+    dot: 'bg-amber-400 shadow-[0_0_6px_rgba(251,191,36,0.8)]',
     className:
-      'bg-indigo-500/10 text-indigo-700 border-indigo-300 dark:bg-indigo-500/15 dark:text-indigo-300 dark:border-indigo-500/40',
+      'bg-amber-500/10 text-amber-700 border-amber-300 dark:bg-amber-500/15 dark:text-amber-300 dark:border-amber-500/40',
   },
   Atribuído: {
     dot: 'bg-blue-400 shadow-[0_0_6px_rgba(96,165,250,0.8)]',

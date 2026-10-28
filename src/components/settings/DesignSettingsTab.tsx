@@ -6,25 +6,13 @@ import { Label } from '@/components/ui/label'
 import { useToast } from '@/hooks/use-toast'
 import { useTheme } from '@/hooks/use-theme'
 import {
-  THEME_VARIANTS,
-  SystemThemeVariant,
-  DEFAULT_DESIGN_SETTINGS,
-  normalizeThemeVariant,
   uploadLogo,
   removeLogo,
   copySystemLogoToReports,
   validateLogoFile,
+  OFFICIAL_THEME,
 } from '@/services/design-settings'
 import {
-  Palette,
-  RotateCcw,
-  Save,
-  Sparkles,
-  Eye,
-  CheckCircle2,
-  Ticket,
-  Clock,
-  Building2,
   Loader2,
   Upload,
   Trash2,
@@ -33,6 +21,7 @@ import {
   ImageIcon,
   FileText,
   ShieldCheck,
+  CheckCircle2,
 } from 'lucide-react'
 
 interface DesignSettingsTabProps {
@@ -41,16 +30,7 @@ interface DesignSettingsTabProps {
 
 export function DesignSettingsTab({ isAdminOrGestor }: DesignSettingsTabProps) {
   const { toast } = useToast()
-  const { designSettings, updateDesignSettings, applyDesignPreview, refreshDesignSettings } =
-    useTheme()
-
-  const currentNormalized = normalizeThemeVariant(
-    designSettings.system_theme_variant || DEFAULT_DESIGN_SETTINGS.system_theme_variant,
-  )
-
-  // Estados locais para seleção de tema e preview imediato
-  const [selectedVariant, setSelectedVariant] = useState<SystemThemeVariant>(currentNormalized)
-  const [saving, setSaving] = useState(false)
+  const { designSettings, refreshDesignSettings } = useTheme()
 
   // Estados para gerenciamento de logotipos
   const [systemLogoPreview, setSystemLogoPreview] = useState<string>(designSettings.logo_url || '')
@@ -66,63 +46,9 @@ export function DesignSettingsTab({ isAdminOrGestor }: DesignSettingsTabProps) {
 
   // Sincronizar quando as configurações do banco chegarem
   useEffect(() => {
-    const norm = normalizeThemeVariant(
-      designSettings.system_theme_variant || DEFAULT_DESIGN_SETTINGS.system_theme_variant,
-    )
-    setSelectedVariant(norm)
     setSystemLogoPreview(designSettings.logo_url || '')
     setReportLogoPreview(designSettings.report_logo_url || '')
   }, [designSettings])
-
-  const activeThemeDef = THEME_VARIANTS.find((t) => t.id === selectedVariant) || THEME_VARIANTS[0]
-
-  const handleSelectTheme = (variantId: SystemThemeVariant) => {
-    setSelectedVariant(variantId)
-    const themeDef = THEME_VARIANTS.find((t) => t.id === variantId) || THEME_VARIANTS[0]
-    applyDesignPreview({
-      system_theme_variant: variantId,
-      sidebar_bg_color: themeDef.sidebarBgHex,
-      sidebar_text_color: themeDef.sidebarTextHex,
-    })
-  }
-
-  const handleResetToDefault = () => {
-    const defaultVar = DEFAULT_DESIGN_SETTINGS.system_theme_variant
-    const defaultDef = THEME_VARIANTS.find((t) => t.id === defaultVar) || THEME_VARIANTS[0]
-    setSelectedVariant(defaultVar)
-    applyDesignPreview({
-      system_theme_variant: defaultVar,
-      sidebar_bg_color: defaultDef.sidebarBgHex,
-      sidebar_text_color: defaultDef.sidebarTextHex,
-    })
-    toast({
-      title: 'Tema restaurado para Amber Alert (Padrão)',
-      description: 'Clique em "Salvar Tema do Sistema" para persistir globalmente.',
-    })
-  }
-
-  const handleSaveTheme = async () => {
-    setSaving(true)
-    try {
-      const targetTheme = THEME_VARIANTS.find((t) => t.id === selectedVariant) || THEME_VARIANTS[0]
-      await updateDesignSettings({
-        system_theme_variant: selectedVariant,
-        sidebar_bg_color: targetTheme.sidebarBgHex,
-        sidebar_text_color: targetTheme.sidebarTextHex,
-      })
-      toast({
-        title: 'Tema do sistema atualizado com sucesso!',
-        description: `O tema "${targetTheme.name}" foi salvo globalmente para todos os operadores e administradores.`,
-      })
-    } catch {
-      toast({
-        title: 'Erro ao salvar tema de design',
-        variant: 'destructive',
-      })
-    } finally {
-      setSaving(false)
-    }
-  }
 
   // Handlers de Upload / Remoção de Logotipo
   const handleSystemLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -140,7 +66,6 @@ export function DesignSettingsTab({ isAdminOrGestor }: DesignSettingsTabProps) {
       return
     }
 
-    // Preview local imediato enquanto sobe
     const objectUrl = URL.createObjectURL(file)
     setSystemLogoPreview(objectUrl)
 
@@ -281,8 +206,6 @@ export function DesignSettingsTab({ isAdminOrGestor }: DesignSettingsTabProps) {
       setCopyingLogo(false)
     }
   }
-
-  const hasChanges = selectedVariant !== currentNormalized
 
   return (
     <div className="space-y-6 max-w-4xl">
@@ -429,7 +352,7 @@ export function DesignSettingsTab({ isAdminOrGestor }: DesignSettingsTabProps) {
                   {reportLogoPreview ? (
                     <Badge
                       variant="secondary"
-                      className="bg-sky-500/10 text-sky-400 border-sky-500/20 text-[10px]"
+                      className="bg-emerald-500/10 text-emerald-400 border-emerald-500/20 text-[10px]"
                     >
                       Personalizado
                     </Badge>
@@ -558,357 +481,72 @@ export function DesignSettingsTab({ isAdminOrGestor }: DesignSettingsTabProps) {
         </CardContent>
       </Card>
 
-      {/* SEÇÃO 2: TEMAS DE CORES DO SISTEMA (DEFINIÇÃO DO DESIGN) */}
+      {/* SEÇÃO 2: TEMA ÚNICO OFICIAL DO SISTEMA */}
       <Card className="itsm-card">
         <CardHeader className="border-b border-border/80 pb-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
               <CardTitle className="text-base font-semibold text-foreground flex items-center gap-2">
-                <Palette className="h-5 w-5 text-primary" />
-                Temas Visuais do Sistema
+                <ShieldCheck className="h-5 w-5 text-primary" />
+                Padrão de Design & Experiência (UX Oficial)
               </CardTitle>
               <CardDescription className="text-xs text-muted-foreground mt-1">
-                Selecione o tema oficial projetado para o Service Desk ITSM. Cada tema harmoniza
-                automaticamente o fundo do app, a barra lateral, cartões, contraste e destaques
-                operacionais.
+                O sistema é configurado no tema oficial único {OFFICIAL_THEME.name}, garantindo
+                consistência visual em todas as telas, alto contraste e conformidade WCAG AA.
               </CardDescription>
             </div>
 
-            <div className="flex items-center gap-2 self-start sm:self-auto">
-              <Badge
-                variant="secondary"
-                className="bg-primary/10 text-primary border-primary/30 text-[10px] font-mono h-6 flex items-center gap-1.5"
-              >
-                <ShieldCheck className="h-3 w-3" />
-                Amber Alert Padrão
-              </Badge>
-            </div>
+            <Badge
+              variant="secondary"
+              className="bg-primary/15 text-primary border-primary/30 text-xs font-semibold px-2.5 py-1"
+            >
+              <CheckCircle2 className="h-3.5 w-3.5 mr-1" />
+              Tema Ativo: {OFFICIAL_THEME.name}
+            </Badge>
           </div>
         </CardHeader>
 
-        <CardContent className="space-y-6 p-6">
-          {/* AVISO DO NOVO TEMA PADRÃO E VARIAÇÕES */}
-          <div className="p-3.5 rounded-lg border border-amber-500/30 bg-amber-500/10 text-xs text-amber-200/90 flex items-start gap-2.5">
-            <Sparkles className="h-4 w-4 text-amber-400 shrink-0 mt-0.5" />
-            <div className="space-y-1">
-              <p className="font-semibold text-amber-300">
-                Novo padrão do sistema: Amber Alert (Escuro) & Amber Light (Claro)
-              </p>
-              <p className="text-[11px] leading-relaxed opacity-90">
-                No modo escuro do Amber Alert, o menu lateral possui fundo branco e tipografia em
-                âmbar escuro. No tema claro Amber Light, o fundo geral é branco com a barra lateral
-                no tom grafite neutro (#17181C) e letras brancas, com o item ativo em âmbar
-                (#D97706).
-              </p>
-            </div>
-          </div>
-
-          {/* CARTÕES DE TEMA (AMBER ALERT ESCURO COM MENU BRANCO, AMBER LIGHT COM MENU GRAFITE, CORPORATE BLUE, TEAL OPS) */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {THEME_VARIANTS.map((variant) => {
-              const isSelected = selectedVariant === variant.id
-              return (
-                <div
-                  key={variant.id}
-                  onClick={() => isAdminOrGestor && handleSelectTheme(variant.id)}
-                  className={`relative p-4 rounded-xl border text-left cursor-pointer transition-all duration-300 flex flex-col justify-between overflow-hidden group ${
-                    isSelected
-                      ? 'border-primary ring-2 ring-primary/40 bg-card shadow-lg shadow-primary/10'
-                      : 'border-border/80 hover:border-border hover:bg-secondary/30'
-                  }`}
-                >
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <span
-                          className="h-3.5 w-3.5 rounded-full shadow-xs border border-white/20 shrink-0"
-                          style={{ backgroundColor: variant.primaryHex }}
-                        />
-                        <p className="text-sm font-bold text-foreground group-hover:text-primary transition-colors">
-                          {variant.name}
-                        </p>
-                      </div>
-                      {isSelected ? (
-                        <Badge className="bg-primary text-primary-foreground text-[10px] h-5 font-semibold">
-                          Ativo
-                        </Badge>
-                      ) : (
-                        <span className="text-[10px] font-mono text-muted-foreground">
-                          {variant.primaryHex}
-                        </span>
-                      )}
-                    </div>
-
-                    <p className="text-xs text-muted-foreground leading-relaxed">
-                      {variant.description}
-                    </p>
-
-                    <div className="space-y-1.5 pt-1">
-                      <span className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider">
-                        Paleta funcional:
-                      </span>
-                      <div className="flex items-center gap-1.5">
-                        {variant.chips.map((chip, idx) => (
-                          <div
-                            key={idx}
-                            className="h-5 w-6 rounded border border-white/20 shadow-xs flex items-center justify-center text-[9px] font-mono text-white/70"
-                            style={{ backgroundColor: chip }}
-                            title={chip}
-                          />
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Mini mockup do tema com representação fiel do fundo e da barra lateral */}
-                    <div
-                      className="p-2 rounded-lg border border-border shadow-inner mt-2 overflow-hidden flex gap-2 h-20"
-                      style={{ background: variant.previewBg }}
-                    >
-                      {/* Mini Sidebar */}
-                      <div
-                        className="w-16 rounded border flex flex-col justify-between p-1.5 shrink-0 shadow-xs"
-                        style={{
-                          backgroundColor: variant.sidebarBgHex,
-                          borderColor: `${variant.sidebarTextHex}30`,
-                        }}
-                      >
-                        <div className="space-y-1">
-                          <div className="flex items-center gap-1">
-                            <span
-                              className="h-1.5 w-1.5 rounded-full shrink-0"
-                              style={{
-                                backgroundColor:
-                                  variant.id === 'amber_light' ? '#d97706' : variant.sidebarTextHex,
-                              }}
-                            />
-                            <div
-                              className="h-1.5 w-7 rounded-sm"
-                              style={{ backgroundColor: variant.sidebarTextHex }}
-                            />
-                          </div>
-                          <div
-                            className="h-2 w-full rounded px-1 flex items-center"
-                            style={{
-                              backgroundColor:
-                                variant.id === 'amber_light'
-                                  ? '#d9770628'
-                                  : `${variant.sidebarTextHex}25`,
-                            }}
-                          >
-                            <span
-                              className="text-[7px] font-bold font-mono"
-                              style={{
-                                color:
-                                  variant.id === 'amber_light' ? '#d97706' : variant.sidebarTextHex,
-                              }}
-                            >
-                              ITSM
-                            </span>
-                          </div>
-                        </div>
-                        <span
-                          className="text-[7px] font-mono font-medium truncate"
-                          style={{
-                            color:
-                              variant.id === 'amber_light' ? '#ffffff' : variant.sidebarTextHex,
-                          }}
-                        >
-                          Menu
-                        </span>
-                      </div>
-
-                      {/* Mini Conteúdo */}
-                      <div className="flex-1 flex flex-col justify-between py-0.5 min-w-0">
-                        <div className="flex items-center justify-between gap-1">
-                          <span
-                            className="text-[9px] font-semibold truncate"
-                            style={{
-                              color: variant.mode === 'light' ? '#1f2937' : '#f3f4f6',
-                            }}
-                          >
-                            {variant.name.replace(' (Padrão)', '')}
-                          </span>
-                          <span
-                            className="h-1.5 w-1.5 rounded-full shrink-0"
-                            style={{ backgroundColor: variant.primaryHex }}
-                          />
-                        </div>
-                        <div
-                          className="p-1 rounded text-[7px] font-mono border"
-                          style={{
-                            backgroundColor:
-                              variant.mode === 'light' ? '#ffffff' : 'rgba(255,255,255,0.06)',
-                            color: variant.mode === 'light' ? '#4b5563' : '#9ca3af',
-                            borderColor:
-                              variant.mode === 'light' ? '#e5e7eb' : 'rgba(255,255,255,0.1)',
-                          }}
-                        >
-                          Fundo: {variant.mode === 'light' ? 'Branco' : 'Escuro'}
-                        </div>
-                        <div
-                          className="h-1.5 rounded-full overflow-hidden"
-                          style={{
-                            backgroundColor:
-                              variant.mode === 'light'
-                                ? 'rgba(0,0,0,0.08)'
-                                : 'rgba(255,255,255,0.1)',
-                          }}
-                        >
-                          <div
-                            className="h-full rounded-full"
-                            style={{ width: '75%', backgroundColor: variant.primaryHex }}
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="pt-3 mt-3 border-t border-border/50 flex items-center justify-between">
-                    <span className="text-[11px] text-muted-foreground font-mono">
-                      Menu: {variant.sidebarBgHex}
-                    </span>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant={isSelected ? 'default' : 'outline'}
-                      disabled={!isAdminOrGestor}
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        handleSelectTheme(variant.id)
-                      }}
-                      className={`h-7 text-xs font-semibold ${
-                        isSelected
-                          ? 'bg-primary text-primary-foreground shadow-xs'
-                          : 'hover:border-primary/50 text-muted-foreground hover:text-foreground'
-                      }`}
-                    >
-                      {isSelected ? (
-                        <>
-                          <CheckCircle2 className="h-3.5 w-3.5 mr-1" />
-                          Selecionado
-                        </>
-                      ) : (
-                        'Selecionar'
-                      )}
-                    </Button>
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-
-          {/* PREVIEW EM TEMPO REAL DO TEMA SELECIONADO */}
-          <div className="p-4 rounded-xl bg-secondary/30 border border-border/80 space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
-                <Eye className="h-3.5 w-3.5 text-primary" />
-                Demonstração da Barra Lateral no Tema: {activeThemeDef.name}
+        <CardContent className="space-y-4 p-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="p-3.5 rounded-lg border border-border/80 bg-secondary/20 space-y-1.5">
+              <span className="text-[11px] font-mono text-muted-foreground uppercase tracking-wider">
+                Fundo do Sistema
               </span>
-              <Badge
-                variant="outline"
-                className="text-[10px] border-primary/40 text-primary font-mono"
-              >
-                Harmonizado WCAG
-              </Badge>
-            </div>
-
-            {(() => {
-              const isAmberLight = activeThemeDef.id === 'amber_light'
-              const activeColor = isAmberLight ? '#d97706' : activeThemeDef.sidebarTextHex
-              const activeBg = isAmberLight
-                ? 'rgba(217, 119, 6, 0.15)'
-                : `${activeThemeDef.sidebarTextHex}18`
-              const inactiveColor = isAmberLight ? '#ffffff' : activeThemeDef.sidebarTextHex
-
-              return (
-                <div
-                  className="p-3 rounded-lg border border-border/80 flex flex-wrap items-center gap-2 transition-colors"
-                  style={{ backgroundColor: activeThemeDef.sidebarBgHex }}
-                >
-                  <div
-                    className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold shadow-xs"
-                    style={{
-                      backgroundColor: activeBg,
-                      color: activeColor,
-                    }}
-                  >
-                    <Ticket className="h-3.5 w-3.5" style={{ color: activeColor }} />
-                    <span>Chamados (Ativo)</span>
-                  </div>
-
-                  <div
-                    className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium opacity-85 hover:opacity-100 transition-opacity"
-                    style={{ color: inactiveColor }}
-                  >
-                    <Building2 className="h-3.5 w-3.5" style={{ color: inactiveColor }} />
-                    <span>Clientes</span>
-                  </div>
-
-                  <div
-                    className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium opacity-85 hover:opacity-100 transition-opacity"
-                    style={{ color: inactiveColor }}
-                  >
-                    <Clock className="h-3.5 w-3.5" style={{ color: inactiveColor }} />
-                    <span>SLA</span>
-                  </div>
-
-                  <div
-                    className="ml-auto hidden sm:flex items-center gap-1.5 text-[10px] font-mono px-2 py-1 rounded bg-black/30 border border-white/5"
-                    style={{ color: inactiveColor }}
-                  >
-                    <span
-                      className="h-1.5 w-1.5 rounded-full animate-pulse"
-                      style={{
-                        backgroundColor:
-                          activeThemeDef.id === 'amber_light'
-                            ? '#d97706'
-                            : activeThemeDef.primaryHex,
-                      }}
-                    />
-                    ONLINE
-                  </div>
-                </div>
-              )
-            })()}
-          </div>
-
-          {/* BOTÕES DE AÇÃO: SALVAR TEMA E RESTAURAR */}
-          {isAdminOrGestor && (
-            <div className="pt-4 border-t border-border/80 flex flex-col sm:flex-row items-center justify-between gap-3">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={handleResetToDefault}
-                disabled={saving}
-                className="text-xs text-muted-foreground hover:text-foreground w-full sm:w-auto"
-              >
-                <RotateCcw className="h-3.5 w-3.5 mr-1.5" />
-                Restaurar Padrão (Amber Alert)
-              </Button>
-
-              <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
-                {hasChanges && (
-                  <span className="text-xs text-amber-400 font-mono hidden sm:inline">
-                    * Tema modificado (não salvo)
-                  </span>
-                )}
-                <Button
-                  type="button"
-                  onClick={handleSaveTheme}
-                  disabled={saving || !hasChanges}
-                  className="bg-primary text-primary-foreground font-semibold shadow-md shadow-primary/20 hover:brightness-110 w-full sm:w-auto text-xs h-9"
-                >
-                  {saving ? (
-                    <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
-                  ) : (
-                    <Save className="h-4 w-4 mr-1.5" />
-                  )}
-                  {saving ? 'Gravando...' : 'Salvar Tema do Sistema'}
-                </Button>
+              <p className="text-sm font-semibold text-foreground">Grafite Escuro Neutro</p>
+              <div className="flex items-center gap-2 text-xs text-muted-foreground font-mono">
+                <span className="h-3.5 w-3.5 rounded-full bg-[#17181C] border border-white/20" />
+                #17181C
               </div>
             </div>
-          )}
+
+            <div className="p-3.5 rounded-lg border border-border/80 bg-secondary/20 space-y-1.5">
+              <span className="text-[11px] font-mono text-muted-foreground uppercase tracking-wider">
+                Barra Lateral
+              </span>
+              <p className="text-sm font-semibold text-foreground">Branca com Tipografia Âmbar</p>
+              <div className="flex items-center gap-2 text-xs text-muted-foreground font-mono">
+                <span className="h-3.5 w-3.5 rounded-full bg-[#FFFFFF] border border-slate-300" />
+                #FFFFFF / #92400E
+              </div>
+            </div>
+
+            <div className="p-3.5 rounded-lg border border-border/80 bg-secondary/20 space-y-1.5">
+              <span className="text-[11px] font-mono text-muted-foreground uppercase tracking-wider">
+                Ação Primária & Destaque
+              </span>
+              <p className="text-sm font-semibold text-foreground">Âmbar Oficial ITSM</p>
+              <div className="flex items-center gap-2 text-xs text-muted-foreground font-mono">
+                <span className="h-3.5 w-3.5 rounded-full bg-[#F59E0B]" />
+                #F59E0B / #D97706
+              </div>
+            </div>
+          </div>
+
+          <div className="p-3 rounded-lg border border-border/60 bg-secondary/10 text-xs text-muted-foreground leading-relaxed">
+            As cores funcionais do sistema seguem uma hierarquia estrita de significado: vermelho
+            para incidentes críticos e estouro de SLA, laranja para riscos e atenção, verde para
+            resoluções concluídas e azul para novos chamados em aberto.
+          </div>
         </CardContent>
       </Card>
     </div>

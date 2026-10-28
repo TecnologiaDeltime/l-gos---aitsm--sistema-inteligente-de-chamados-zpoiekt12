@@ -35,8 +35,6 @@ import {
   Workflow,
   ListTree,
   Clock,
-  Sun,
-  Moon,
   Hourglass,
   ChevronDown,
   ChevronRight,
@@ -82,7 +80,7 @@ import { RefreshIndicator } from '@/components/RefreshIndicator'
 
 export default function Layout() {
   const { user, signOut } = useAuth()
-  const { theme, toggleTheme, designSettings } = useTheme()
+  const { designSettings } = useTheme()
   const permissions = usePermissions()
   const navigate = useNavigate()
   const location = useLocation()
@@ -536,17 +534,11 @@ export default function Layout() {
           subActive
             ? {
                 color: activeItemColor,
-                backgroundColor: isAmberLight
-                  ? '#d977061f'
-                  : customSidebarText
-                    ? `${customSidebarText}22`
-                    : undefined,
+                backgroundColor: 'rgba(217, 119, 6, 0.14)',
               }
-            : customSidebarText
-              ? {
-                  color: customSidebarText,
-                }
-              : undefined
+            : {
+                color: customSidebarText,
+              }
         }
         className={`relative flex items-center gap-2.5 px-2.5 py-1.5 text-xs font-medium rounded-md transition-all duration-150 ${
           subActive
@@ -576,22 +568,12 @@ export default function Layout() {
           active
             ? {
                 color: activeItemColor,
-                borderColor: isAmberLight
-                  ? '#d9770640'
-                  : customSidebarText
-                    ? `${customSidebarText}40`
-                    : undefined,
-                backgroundColor: isAmberLight
-                  ? '#d977061f'
-                  : customSidebarText
-                    ? `${customSidebarText}18`
-                    : undefined,
+                borderColor: 'rgba(217, 119, 6, 0.35)',
+                backgroundColor: 'rgba(217, 119, 6, 0.14)',
               }
-            : customSidebarText
-              ? {
-                  color: customSidebarText,
-                }
-              : undefined
+            : {
+                color: customSidebarText,
+              }
         }
         className={`relative flex items-center gap-3 mx-2 my-0.5 px-3 py-2 text-[13px] font-medium rounded-lg transition-all duration-200 ${
           active
@@ -617,13 +599,10 @@ export default function Layout() {
     )
   }
 
-  // Cores dinâmicas definidas pelo usuário nas configurações de design
-  const currentVariant = normalizeThemeVariant(designSettings?.system_theme_variant)
-  const isAmberLight = currentVariant === 'amber_light'
-  const customSidebarBg = designSettings?.sidebar_bg_color
-  const customSidebarText = designSettings?.sidebar_text_color
-  // No tema amber_light, itens ativos têm cor âmbar #d97706; no amber_alert (menu branco), usa customSidebarText (#92400e)
-  const activeItemColor = isAmberLight ? '#d97706' : customSidebarText || '#d97706'
+  // Tema oficial Amber Alert: barra lateral branca (#FFFFFF), textos/ícones #92400E, item ativo #d97706
+  const customSidebarBg = designSettings?.sidebar_bg_color || '#FFFFFF'
+  const customSidebarText = designSettings?.sidebar_text_color || '#92400E'
+  const activeItemColor = '#d97706'
 
   const navContent = (
     <div
@@ -653,15 +632,13 @@ export default function Layout() {
               <span
                 className="h-2.5 w-2.5 rounded-full"
                 style={{
-                  backgroundColor: isAmberLight
-                    ? '#d97706'
-                    : customSidebarText || 'hsl(var(--primary))',
-                  boxShadow: `0 0 8px ${isAmberLight ? '#d97706' : customSidebarText || 'hsl(var(--primary))'}`,
+                  backgroundColor: '#d97706',
+                  boxShadow: '0 0 8px rgba(217, 119, 6, 0.6)',
                 }}
               />
               <span
                 className="text-base font-bold tracking-tight truncate transition-colors group-hover:opacity-90"
-                style={{ color: isAmberLight ? '#ffffff' : customSidebarText || 'inherit' }}
+                style={{ color: customSidebarText }}
               >
                 ITSM Desk
               </span>
@@ -686,17 +663,11 @@ export default function Layout() {
                   dashboardSubmenuItems.some((i) => location.pathname === i.path)
                     ? {
                         color: activeItemColor,
-                        backgroundColor: isAmberLight
-                          ? '#d977061f'
-                          : customSidebarText
-                            ? `${customSidebarText}15`
-                            : undefined,
+                        backgroundColor: 'rgba(217, 119, 6, 0.14)',
                       }
-                    : customSidebarText
-                      ? {
-                          color: customSidebarText,
-                        }
-                      : undefined
+                    : {
+                        color: customSidebarText,
+                      }
                 }
                 className={`flex flex-1 items-center gap-3 px-3 py-2 text-[13px] font-medium rounded-lg transition-all duration-200 ${
                   dashboardSubmenuItems.some((i) => location.pathname === i.path)
@@ -755,17 +726,11 @@ export default function Layout() {
                   chamadosSubmenuItems.some((i) => i.show && location.pathname === i.path)
                     ? {
                         color: activeItemColor,
-                        backgroundColor: isAmberLight
-                          ? '#d977061f'
-                          : customSidebarText
-                            ? `${customSidebarText}15`
-                            : undefined,
+                        backgroundColor: 'rgba(217, 119, 6, 0.14)',
                       }
-                    : customSidebarText
-                      ? {
-                          color: customSidebarText,
-                        }
-                      : undefined
+                    : {
+                        color: customSidebarText,
+                      }
                 }
                 className={`flex flex-1 items-center gap-3 px-3 py-2 text-[13px] font-medium rounded-lg transition-all duration-200 ${
                   chamadosSubmenuItems.some((i) => i.show && location.pathname === i.path)
@@ -833,17 +798,11 @@ export default function Layout() {
                   clientSubmenuItems.some((i) => i.show && location.pathname === i.path)
                     ? {
                         color: activeItemColor,
-                        backgroundColor: isAmberLight
-                          ? '#d977061f'
-                          : customSidebarText
-                            ? `${customSidebarText}15`
-                            : undefined,
+                        backgroundColor: 'rgba(217, 119, 6, 0.14)',
                       }
-                    : customSidebarText
-                      ? {
-                          color: customSidebarText,
-                        }
-                      : undefined
+                    : {
+                        color: customSidebarText,
+                      }
                 }
                 className={`flex flex-1 items-center gap-3 px-3 py-2 text-[13px] font-medium rounded-lg transition-all duration-200 ${
                   clientSubmenuItems.some((i) => i.show && location.pathname === i.path)
@@ -902,17 +861,11 @@ export default function Layout() {
                   cmdbSubmenuItems.some((i) => i.show && location.pathname === i.path)
                     ? {
                         color: activeItemColor,
-                        backgroundColor: isAmberLight
-                          ? '#d977061f'
-                          : customSidebarText
-                            ? `${customSidebarText}15`
-                            : undefined,
+                        backgroundColor: 'rgba(217, 119, 6, 0.14)',
                       }
-                    : customSidebarText
-                      ? {
-                          color: customSidebarText,
-                        }
-                      : undefined
+                    : {
+                        color: customSidebarText,
+                      }
                 }
                 className={`flex flex-1 items-center gap-3 px-3 py-2 text-[13px] font-medium rounded-lg transition-all duration-200 ${
                   cmdbSubmenuItems.some((i) => i.show && location.pathname === i.path)
@@ -971,17 +924,11 @@ export default function Layout() {
                   changesSubmenuItems.some((i) => i.show && location.pathname === i.path)
                     ? {
                         color: activeItemColor,
-                        backgroundColor: isAmberLight
-                          ? '#d977061f'
-                          : customSidebarText
-                            ? `${customSidebarText}15`
-                            : undefined,
+                        backgroundColor: 'rgba(217, 119, 6, 0.14)',
                       }
-                    : customSidebarText
-                      ? {
-                          color: customSidebarText,
-                        }
-                      : undefined
+                    : {
+                        color: customSidebarText,
+                      }
                 }
                 className={`flex flex-1 items-center gap-3 px-3 py-2 text-[13px] font-medium rounded-lg transition-all duration-200 ${
                   changesSubmenuItems.some((i) => i.show && location.pathname === i.path)
@@ -1040,17 +987,11 @@ export default function Layout() {
                   problemsSubmenuItems.some((i) => i.show && location.pathname === i.path)
                     ? {
                         color: activeItemColor,
-                        backgroundColor: isAmberLight
-                          ? '#d977061f'
-                          : customSidebarText
-                            ? `${customSidebarText}15`
-                            : undefined,
+                        backgroundColor: 'rgba(217, 119, 6, 0.14)',
                       }
-                    : customSidebarText
-                      ? {
-                          color: customSidebarText,
-                        }
-                      : undefined
+                    : {
+                        color: customSidebarText,
+                      }
                 }
                 className={`flex flex-1 items-center gap-3 px-3 py-2 text-[13px] font-medium rounded-lg transition-all duration-200 ${
                   problemsSubmenuItems.some((i) => i.show && location.pathname === i.path)
@@ -1113,17 +1054,11 @@ export default function Layout() {
                   visitsN2SubmenuItems.some((i) => location.pathname === i.path)
                     ? {
                         color: activeItemColor,
-                        backgroundColor: isAmberLight
-                          ? '#d977061f'
-                          : customSidebarText
-                            ? `${customSidebarText}15`
-                            : undefined,
+                        backgroundColor: 'rgba(217, 119, 6, 0.14)',
                       }
-                    : customSidebarText
-                      ? {
-                          color: customSidebarText,
-                        }
-                      : undefined
+                    : {
+                        color: customSidebarText,
+                      }
                 }
                 className={`flex flex-1 items-center gap-3 px-3 py-2 text-[13px] font-medium rounded-lg transition-all duration-200 ${
                   visitsN2SubmenuItems.some((i) => location.pathname === i.path)
@@ -1182,17 +1117,11 @@ export default function Layout() {
                   relatoriosSubmenuItems.some((i) => i.show && location.pathname === i.path)
                     ? {
                         color: activeItemColor,
-                        backgroundColor: isAmberLight
-                          ? '#d977061f'
-                          : customSidebarText
-                            ? `${customSidebarText}15`
-                            : undefined,
+                        backgroundColor: 'rgba(217, 119, 6, 0.14)',
                       }
-                    : customSidebarText
-                      ? {
-                          color: customSidebarText,
-                        }
-                      : undefined
+                    : {
+                        color: customSidebarText,
+                      }
                 }
                 className={`flex flex-1 items-center gap-3 px-3 py-2 text-[13px] font-medium rounded-lg transition-all duration-200 ${
                   relatoriosSubmenuItems.some((i) => i.show && location.pathname === i.path)
@@ -1260,17 +1189,11 @@ export default function Layout() {
                   adminSubmenuItems.some((i) => i.show && location.pathname === i.path)
                     ? {
                         color: activeItemColor,
-                        backgroundColor: isAmberLight
-                          ? '#d977061f'
-                          : customSidebarText
-                            ? `${customSidebarText}15`
-                            : undefined,
+                        backgroundColor: 'rgba(217, 119, 6, 0.14)',
                       }
-                    : customSidebarText
-                      ? {
-                          color: customSidebarText,
-                        }
-                      : undefined
+                    : {
+                        color: customSidebarText,
+                      }
                 }
                 className={`flex flex-1 items-center gap-3 px-3 py-2 text-[13px] font-medium rounded-lg transition-all duration-200 ${
                   adminSubmenuItems.some((i) => i.show && location.pathname === i.path)
@@ -1330,17 +1253,11 @@ export default function Layout() {
                   configuracoesSubmenuItems.some((i) => i.show && location.pathname === i.path)
                     ? {
                         color: activeItemColor,
-                        backgroundColor: isAmberLight
-                          ? '#d977061f'
-                          : customSidebarText
-                            ? `${customSidebarText}15`
-                            : undefined,
+                        backgroundColor: 'rgba(217, 119, 6, 0.14)',
                       }
-                    : customSidebarText
-                      ? {
-                          color: customSidebarText,
-                        }
-                      : undefined
+                    : {
+                        color: customSidebarText,
+                      }
                 }
                 className={`flex flex-1 items-center gap-3 px-3 py-2 text-[13px] font-medium rounded-lg transition-all duration-200 ${
                   configuracoesSubmenuItems.some((i) => i.show && location.pathname === i.path)
@@ -1399,23 +1316,18 @@ export default function Layout() {
           backgroundColor: customSidebarBg ? `${customSidebarBg}cc` : undefined,
         }}
       >
-        <p
-          className="text-[10px] font-mono opacity-70"
-          style={{ color: isAmberLight ? '#ffffff' : customSidebarText || undefined }}
-        >
+        <p className="text-[10px] font-mono opacity-70" style={{ color: customSidebarText }}>
           ITSM Desk
         </p>
         <span
           className="inline-flex items-center gap-1 text-[10px] font-mono"
-          style={{ color: isAmberLight ? '#ffffff' : customSidebarText || undefined }}
+          style={{ color: customSidebarText }}
         >
           <span
             className="h-1.5 w-1.5 rounded-full animate-pulse shadow-xs"
             style={{
-              backgroundColor: isAmberLight
-                ? '#d97706'
-                : customSidebarText || 'hsl(var(--primary))',
-              boxShadow: `0 0 6px ${isAmberLight ? '#d97706' : customSidebarText || 'hsl(var(--primary))'}`,
+              backgroundColor: '#d97706',
+              boxShadow: '0 0 6px rgba(217, 119, 6, 0.7)',
             }}
           />
           ONLINE
@@ -1492,20 +1404,6 @@ export default function Layout() {
           </div>
 
           <div className="flex items-center gap-3">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={toggleTheme}
-              title={theme === 'dark' ? 'Mudar para tema claro' : 'Mudar para tema escuro'}
-              className="transition-all duration-300 hover:scale-105 hover:bg-secondary/70"
-            >
-              {theme === 'dark' ? (
-                <Sun className="h-4 w-4 text-primary drop-shadow-[0_0_6px_hsl(var(--primary)/0.7)]" />
-              ) : (
-                <Moon className="h-4 w-4 text-primary" />
-              )}
-            </Button>
-
             {/* Timer de atualização automática com opções e botão manual ao lado do sino de notificações */}
             <RefreshIndicator />
 

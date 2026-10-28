@@ -10,20 +10,16 @@ import { getTickets } from '@/services/tickets'
 import { CiStatusBadge } from '@/components/CiStatusBadge'
 
 const COLORS = [
-  '#3b82f6',
-  '#10b981',
   '#f59e0b',
+  '#d97706',
+  '#10b981',
+  '#3b82f6',
   '#ef4444',
-  '#8b5cf6',
-  '#ec4899',
-  '#06b6d4',
-  '#84cc16',
   '#f97316',
-  '#6366f1',
-  '#14b8a6',
-  '#a855f7',
   '#eab308',
-  '#0ea5e9',
+  '#84cc16',
+  '#64748b',
+  '#475569',
 ]
 
 const ASSET_DEVICE_TYPES = ['Desktop', 'Notebook', 'Tablet', 'Celular']

@@ -228,15 +228,15 @@ export default function ExecutiveDashboard() {
           label="Horas Contratadas"
           value={kpis.contractedDisplay}
           icon={Hourglass}
-          color="text-indigo-400"
-          bg="bg-indigo-500/10 border border-indigo-500/20"
+          color="text-slate-300"
+          bg="bg-secondary/40 border border-border"
         />
         <ExecutiveKpiCard
           label="Horas Consumidas"
           value={kpis.consumedDisplay}
           icon={Timer}
-          color="text-purple-400"
-          bg="bg-purple-500/10 border border-purple-500/20"
+          color="text-primary"
+          bg="bg-primary/10 border border-primary/20"
         />
         <ExecutiveKpiCard
           label="Saldo de Horas"

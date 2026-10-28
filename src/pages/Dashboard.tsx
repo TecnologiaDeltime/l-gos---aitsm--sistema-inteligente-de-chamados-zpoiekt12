@@ -182,8 +182,8 @@ export default function Dashboard() {
       label: 'Backlog Total',
       value: openTickets.length,
       icon: Layers,
-      color: 'text-purple-600 dark:text-purple-400',
-      bg: 'bg-purple-500/10',
+      color: 'text-primary',
+      bg: 'bg-primary/10',
       filterKey: 'backlog',
     },
   ]

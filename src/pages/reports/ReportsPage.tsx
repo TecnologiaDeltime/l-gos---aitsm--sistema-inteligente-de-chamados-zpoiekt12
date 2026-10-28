@@ -294,7 +294,7 @@ export default function ReportsPage() {
           <div className="grid gap-3 sm:grid-cols-3">
             <div className="rounded-xl border border-border/80 bg-secondary/30 p-3.5">
               <p className="text-xs text-muted-foreground">Total de Horas</p>
-              <p className="text-2xl font-bold font-mono text-cyan-400 mt-1">
+              <p className="text-2xl font-bold font-mono text-primary mt-1">
                 {formatMinutes(totalMinutes)}
               </p>
             </div>

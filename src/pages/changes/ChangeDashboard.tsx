@@ -9,14 +9,14 @@ import { ChangeStatusBadge } from '@/components/ChangeStatusBadge'
 import { useRealtime } from '@/hooks/use-realtime'
 
 const COLORS = [
-  '#3b82f6',
-  '#10b981',
   '#f59e0b',
+  '#d97706',
+  '#10b981',
+  '#3b82f6',
   '#ef4444',
-  '#8b5cf6',
-  '#ec4899',
-  '#06b6d4',
-  '#84cc16',
+  '#f97316',
+  '#eab308',
+  '#64748b',
 ]
 
 export default function ChangeDashboard() {

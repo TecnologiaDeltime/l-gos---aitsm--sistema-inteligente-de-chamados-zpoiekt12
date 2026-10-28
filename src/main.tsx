@@ -1,16 +1,18 @@
-/* Main entry point for the application - renders the root React component */
-import { createRoot } from 'react-dom/client'
+import React from 'react'
+import ReactDOM from 'react-dom/client'
 import App from './App.tsx'
 import './main.css'
-import { getCachedDesignSettings, applyDesignToDOM } from './services/design-settings'
+import { applyDesignToDOM, getCachedDesignSettings } from './services/design-settings.ts'
 
-// Aplicação imediata no boot a partir do cache local para evitar flicker
+// Aplica imediatamente as variáveis e classes do tema Amber Alert oficial escuro antes da montagem
 try {
-  const cached = getCachedDesignSettings()
-  applyDesignToDOM(cached)
+  applyDesignToDOM(getCachedDesignSettings())
 } catch {
-  // Ignora falhas no boot
+  /* intentionally ignored */
 }
 
-// @skip-protected: Do not remove. Required for React rendering.
-createRoot(document.getElementById('root')!).render(<App />)
+ReactDOM.createRoot(document.getElementById('root')!).render(
+  <React.StrictMode>
+    <App />
+  </React.StrictMode>,
+)

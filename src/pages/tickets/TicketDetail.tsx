@@ -634,37 +634,37 @@ export default function TicketDetail({
           {ticket.parent_ticket_id && (
             <Link
               to={`/tickets/${ticket.parent_ticket_id}`}
-              className="flex items-center gap-2 rounded-lg border border-cyan-500/30 bg-cyan-500/10 px-3.5 py-2 text-sm font-medium text-cyan-300 hover:bg-cyan-500/20 transition-all shadow-xs"
+              className="flex items-center gap-2 rounded-lg border border-primary/30 bg-primary/10 px-3.5 py-2 text-sm font-medium text-primary hover:bg-primary/20 transition-all shadow-xs"
               title="Ir para o ticket pai"
             >
-              <ArrowUpRight className="h-4 w-4 shrink-0 text-cyan-400" />
+              <ArrowUpRight className="h-4 w-4 shrink-0 text-primary" />
               <span className="shrink-0 font-mono">
                 Ticket Filho de{' '}
-                <strong className="font-bold text-cyan-300">
+                <strong className="font-bold text-primary">
                   #{ticket.expand?.parent_ticket_id?.number || ticket.parent_ticket_id}
                 </strong>
               </span>
               {ticket.expand?.parent_ticket_id?.title && (
-                <span className="truncate text-cyan-300/80">
+                <span className="truncate text-muted-foreground">
                   — {ticket.expand.parent_ticket_id.title}
                 </span>
               )}
             </Link>
           )}
 
-          {/* Banner de Sugestões de Triagem da IA com visual Cyber Tech */}
+          {/* Banner de Sugestões de Triagem da IA */}
           {ticket.triage_suggestions && (
-            <div className="rounded-xl border border-indigo-500/30 bg-gradient-to-r from-indigo-500/15 via-purple-500/10 to-transparent p-4 space-y-3 shadow-sm">
+            <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 space-y-3 shadow-sm">
               <div className="flex items-center justify-between gap-2">
                 <div className="flex items-center gap-2 text-foreground">
-                  <Sparkles className="h-4 w-4 text-cyan-400 animate-pulse" />
-                  <span className="font-semibold text-xs uppercase tracking-wider text-cyan-300 font-mono">
+                  <Sparkles className="h-4 w-4 text-primary animate-pulse" />
+                  <span className="font-semibold text-xs uppercase tracking-wider text-primary font-mono">
                     Sugestões de Triagem Inteligente (IA)
                   </span>
                   {ticket.triage_suggestions.confidence && (
                     <Badge
                       variant="outline"
-                      className="bg-indigo-500/20 text-indigo-300 text-[10px] border-indigo-500/40 font-mono"
+                      className="bg-amber-500/20 text-amber-300 text-[10px] border-amber-500/40 font-mono"
                     >
                       Confiança: {Math.round(ticket.triage_suggestions.confidence * 100)}%
                     </Badge>
@@ -674,7 +674,7 @@ export default function TicketDetail({
                   size="sm"
                   onClick={handleApplyTriage}
                   disabled={applyingTriage}
-                  className="h-7 text-xs bg-indigo-600 hover:bg-indigo-500 text-white shadow-xs font-semibold"
+                  className="h-7 text-xs bg-primary hover:bg-primary/90 text-primary-foreground shadow-xs font-semibold"
                 >
                   <CheckCheck className="mr-1 h-3.5 w-3.5" />
                   {applyingTriage ? 'Aplicando...' : 'Aplicar Sugestão'}
@@ -683,7 +683,7 @@ export default function TicketDetail({
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
                 {ticket.triage_suggestions.type && (
-                  <div className="bg-card/80 p-2.5 rounded-lg border border-indigo-500/20">
+                  <div className="bg-card/80 p-2.5 rounded-lg border border-border/70">
                     <span className="text-muted-foreground block text-[10px] uppercase font-mono">
                       Tipo Sugerido
                     </span>
@@ -694,7 +694,7 @@ export default function TicketDetail({
                 )}
                 {(ticket.triage_suggestions.category_name ||
                   ticket.triage_suggestions.category) && (
-                  <div className="bg-card/80 p-2.5 rounded-lg border border-indigo-500/20">
+                  <div className="bg-card/80 p-2.5 rounded-lg border border-border/70">
                     <span className="text-muted-foreground block text-[10px] uppercase font-mono">
                       Categoria Sugerida
                     </span>
@@ -705,7 +705,7 @@ export default function TicketDetail({
                   </div>
                 )}
                 {ticket.triage_suggestions.service && (
-                  <div className="bg-card/80 p-2.5 rounded-lg border border-indigo-500/20">
+                  <div className="bg-card/80 p-2.5 rounded-lg border border-border/70">
                     <span className="text-muted-foreground block text-[10px] uppercase font-mono">
                       Serviço / Atividade
                     </span>

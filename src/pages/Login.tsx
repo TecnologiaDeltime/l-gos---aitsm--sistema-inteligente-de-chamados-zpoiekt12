@@ -222,16 +222,14 @@ export default function Login() {
 
   return (
     <div className="relative flex min-h-screen items-center justify-center bg-background px-4 py-8 overflow-hidden">
-      {/* Background futurista com gradientes e luz ambiente */}
-      <div className="absolute inset-0 tech-grid-pattern opacity-60 pointer-events-none" />
-      <div className="absolute -top-40 -left-40 w-96 h-96 bg-cyan-500/10 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute -bottom-40 -right-40 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl pointer-events-none" />
+      {/* Background ambiente sutil com foco âmbar */}
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_var(--tw-gradient-stops))] from-amber-500/10 via-transparent to-transparent opacity-80 pointer-events-none" />
 
-      <Card className="relative w-full max-w-md shadow-2xl border border-border/80 bg-card/90 backdrop-blur-xl tech-border-glow">
+      <Card className="relative w-full max-w-md shadow-2xl border border-border/80 bg-card/95 backdrop-blur-xl">
         {/* Badge do sistema e status */}
         <div className="flex items-center justify-between px-6 pt-5 pb-1">
           <div className="flex items-center gap-2">
-            <span className="h-2 w-2 rounded-full bg-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.9)] animate-pulse" />
+            <span className="h-2 w-2 rounded-full bg-primary shadow-[0_0_8px_rgba(245,158,11,0.8)] animate-pulse" />
             <span className="text-[11px] font-mono font-semibold tracking-wider text-muted-foreground uppercase">
               ITSM Desk
             </span>
@@ -253,10 +251,10 @@ export default function Login() {
                 />
               </div>
             ) : (
-              <div className="p-3.5 bg-gradient-to-br from-primary/20 via-primary/10 to-transparent border border-primary/30 rounded-2xl text-primary tech-glow-subtle">
-                {step === 'credentials' && <KeyRound className="h-7 w-7 text-cyan-400" />}
-                {step === 'totp' && <Smartphone className="h-7 w-7 text-cyan-400" />}
-                {step === 'totp_setup' && <ShieldCheck className="h-7 w-7 text-cyan-400" />}
+              <div className="p-3.5 bg-gradient-to-br from-primary/20 via-primary/10 to-transparent border border-primary/30 rounded-2xl text-primary">
+                {step === 'credentials' && <KeyRound className="h-7 w-7 text-primary" />}
+                {step === 'totp' && <Smartphone className="h-7 w-7 text-primary" />}
+                {step === 'totp_setup' && <ShieldCheck className="h-7 w-7 text-primary" />}
               </div>
             )}
           </div>

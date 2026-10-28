@@ -6,12 +6,9 @@ import {
   getDesignSettings,
   saveDesignSettings,
   applyDesignToDOM,
-  SystemThemeVariant,
-  normalizeThemeVariant,
-  THEME_VARIANTS,
 } from '@/services/design-settings'
 
-type Theme = 'dark' | 'light'
+type Theme = 'dark'
 
 interface ThemeContextType {
   theme: Theme
@@ -34,21 +31,16 @@ export const useTheme = () => {
 }
 
 export const ThemeProvider = ({ children }: { children: ReactNode }) => {
-  const [theme, setThemeState] = useState<Theme>(() => {
-    if (typeof window === 'undefined') return 'dark'
-    const stored = localStorage.getItem('itsm-theme')
-    if (stored === 'light' || stored === 'dark') return stored
-    return 'dark'
-  })
+  const theme: Theme = 'dark'
 
   const [designSettings, setDesignSettings] = useState<DesignSettings>(getCachedDesignSettings)
   const [isDesignLoading, setIsDesignLoading] = useState<boolean>(true)
 
-  // Aplicar tema claro/escuro e variáveis no DOM
+  // Aplicar tema escuro Amber Alert e variáveis imediatamente
   useEffect(() => {
-    localStorage.setItem('itsm-theme', theme)
-    applyDesignToDOM(designSettings, theme === 'dark')
-  }, [theme, designSettings])
+    localStorage.setItem('itsm-theme', 'dark')
+    applyDesignToDOM(designSettings)
+  }, [designSettings])
 
   // Buscar configurações persistidas no PocketBase ao inicializar
   useEffect(() => {
@@ -57,7 +49,7 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
       .then((settings) => {
         if (mounted) {
           setDesignSettings(settings)
-          applyDesignToDOM(settings, theme === 'dark')
+          applyDesignToDOM(settings)
         }
       })
       .catch(() => {})
@@ -67,78 +59,63 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
     return () => {
       mounted = false
     }
-  }, [theme])
+  }, [])
 
-  const toggleTheme = () => {
-    const nextTheme = theme === 'dark' ? 'light' : 'dark'
-    setThemeState(nextTheme)
-    // Se o usuário alternar o modo claro/escuro no botão do header e estiver com amber_alert/amber_light,
-    // alinha perfeitamente com a variação correspondente
-    const norm = normalizeThemeVariant(designSettings.system_theme_variant)
-    if (nextTheme === 'light' && norm === 'amber_alert') {
-      const amberLight = THEME_VARIANTS.find((t) => t.id === 'amber_light')
-      if (amberLight) {
-        updateDesignSettings({
-          system_theme_variant: 'amber_light',
-          sidebar_bg_color: amberLight.sidebarBgHex,
-          sidebar_text_color: amberLight.sidebarTextHex,
-        }).catch(() => {})
-      }
-    } else if (nextTheme === 'dark' && norm === 'amber_light') {
-      const amberAlert = THEME_VARIANTS.find((t) => t.id === 'amber_alert')
-      if (amberAlert) {
-        updateDesignSettings({
-          system_theme_variant: 'amber_alert',
-          sidebar_bg_color: amberAlert.sidebarBgHex,
-          sidebar_text_color: amberAlert.sidebarTextHex,
-        }).catch(() => {})
-      }
-    }
-  }
-  const setTheme = (t: Theme) => setThemeState(t)
+  // O sistema utiliza exclusivamente o tema Amber Alert oficial escuro com menu branco.
+  // toggleTheme mantido como no-op para compatibilidade de API de chamadas existentes.
+  const toggleTheme = useCallback(() => {
+    applyDesignToDOM(designSettings)
+  }, [designSettings])
 
-  // Atualizar e persistir no banco de dados
+  const setTheme = useCallback(
+    (_t: Theme) => {
+      applyDesignToDOM(designSettings)
+    },
+    [designSettings],
+  )
+
+  // Atualizar e persistir configurações no banco de dados (ex: logotipos)
   const updateDesignSettings = useCallback(
     async (newSettings: Partial<DesignSettings>): Promise<DesignSettings> => {
       const merged = { ...designSettings, ...newSettings }
       setDesignSettings(merged)
-      applyDesignToDOM(merged, theme === 'dark')
+      applyDesignToDOM(merged)
       try {
         const saved = await saveDesignSettings(newSettings)
         setDesignSettings(saved)
-        applyDesignToDOM(saved, theme === 'dark')
+        applyDesignToDOM(saved)
         return saved
       } catch (err) {
         console.error('Falha ao persistir configurações de design:', err)
         throw err
       }
     },
-    [designSettings, theme],
+    [designSettings],
   )
 
-  // Aplicar preview em tempo real (sem salvar ainda no banco)
+  // Aplicar preview em tempo real (ex: logos)
   const applyDesignPreview = useCallback(
     (preview: Partial<DesignSettings>) => {
       const merged = { ...designSettings, ...preview }
-      applyDesignToDOM(merged, theme === 'dark')
+      applyDesignToDOM(merged)
     },
-    [designSettings, theme],
+    [designSettings],
   )
 
   // Cancelar preview e restaurar configurações ativas
   const resetDesignPreview = useCallback(() => {
-    applyDesignToDOM(designSettings, theme === 'dark')
-  }, [designSettings, theme])
+    applyDesignToDOM(designSettings)
+  }, [designSettings])
 
   const refreshDesignSettings = useCallback(async () => {
     try {
       const fresh = await getDesignSettings()
       setDesignSettings(fresh)
-      applyDesignToDOM(fresh, theme === 'dark')
+      applyDesignToDOM(fresh)
     } catch (err) {
       console.warn('Falha ao recarregar configurações de design:', err)
     }
-  }, [theme])
+  }, [])
 
   return (
     <ThemeContext.Provider

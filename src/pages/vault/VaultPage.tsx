@@ -154,7 +154,7 @@ export default function VaultPage({ embeddedTab = false }: VaultPageProps) {
         return (
           <Badge
             variant="outline"
-            className="bg-cyan-500/10 text-cyan-400 border-cyan-500/30 text-[10px] font-semibold"
+            className="bg-sky-500/10 text-sky-400 border-sky-500/30 text-[10px] font-semibold"
           >
             Teste
           </Badge>
@@ -163,7 +163,7 @@ export default function VaultPage({ embeddedTab = false }: VaultPageProps) {
         return (
           <Badge
             variant="outline"
-            className="bg-purple-500/10 text-purple-400 border-purple-500/30 text-[10px] font-semibold"
+            className="bg-amber-500/10 text-amber-300 border-amber-500/30 text-[10px] font-semibold"
           >
             Dev
           </Badge>
@@ -249,7 +249,7 @@ export default function VaultPage({ embeddedTab = false }: VaultPageProps) {
                   : 'text-muted-foreground hover:text-foreground'
               }`}
             >
-              <Clock className="h-3.5 w-3.5 mr-1.5 text-cyan-400" />
+              <Clock className="h-3.5 w-3.5 mr-1.5 text-primary" />
               Auditoria & Acessos
             </Button>
           </div>
