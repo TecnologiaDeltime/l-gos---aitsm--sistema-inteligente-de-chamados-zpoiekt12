@@ -46,18 +46,18 @@
 
     --radius: 0.5rem;
 
-    /* Barra lateral oficial: fundo BRANCO #FFFFFF, texto âmbar escuro #92400E, item ativo âmbar #D97706 */
-    --custom-sidebar-bg: #ffffff;
-    --custom-sidebar-text: #92400e;
+    /* Barra lateral oficial: fundo GRAFITE ESCURO #17181C, texto âmbar suave #FCD34D, item ativo âmbar #D97706 */
+    --custom-sidebar-bg: #17181c;
+    --custom-sidebar-text: #fcd34d;
     --sidebar-active-color: #d97706;
 
-    --sidebar-background: 0 0% 100%; /* #FFFFFF */
-    --sidebar-foreground: 25 79% 31%; /* #92400E */
+    --sidebar-background: 230 10% 10%; /* #17181C */
+    --sidebar-foreground: 45 93% 65%; /* #FCD34D */
     --sidebar-primary: 38 92% 50%;
     --sidebar-primary-foreground: 24 80% 12%;
-    --sidebar-accent: 35 40% 95%; /* Hover sutil na barra branca */
-    --sidebar-accent-foreground: 25 79% 25%;
-    --sidebar-border: 35 30% 90%;
+    --sidebar-accent: 230 9% 16%; /* Hover sutil na barra grafite */
+    --sidebar-accent-foreground: 45 93% 65%;
+    --sidebar-border: 230 8% 20%;
     --sidebar-ring: 38 92% 50%;
 
     /* Gráficos semânticos */
@@ -106,14 +106,14 @@
     --input: 230 8% 22%;
     --ring: 38 92% 50%;
 
-    /* Barra lateral oficial (mantém fundo branco e letras âmbar escuro no tema oficial) */
-    --sidebar-background: 0 0% 100%;
-    --sidebar-foreground: 25 79% 31%;
+    /* Barra lateral oficial (fundo grafite escuro #17181C e letras âmbar suave #FCD34D) */
+    --sidebar-background: 230 10% 10%;
+    --sidebar-foreground: 45 93% 65%;
     --sidebar-primary: 38 92% 50%;
     --sidebar-primary-foreground: 24 80% 12%;
-    --sidebar-accent: 35 40% 95%;
-    --sidebar-accent-foreground: 25 79% 25%;
-    --sidebar-border: 35 30% 90%;
+    --sidebar-accent: 230 9% 16%;
+    --sidebar-accent-foreground: 45 93% 65%;
+    --sidebar-border: 230 8% 20%;
     --sidebar-ring: 38 92% 50%;
 
     --chart-1: 38 92% 50%;
@@ -154,36 +154,36 @@
 
 /* Barra lateral oficial */
 .custom-sidebar {
-  background-color: var(--custom-sidebar-bg, #ffffff) !important;
-  color: var(--custom-sidebar-text, #92400e) !important;
-  border-right: 1px solid rgba(146, 64, 14, 0.12) !important;
+  background-color: var(--custom-sidebar-bg, #17181c) !important;
+  color: var(--custom-sidebar-text, #fcd34d) !important;
+  border-right: 1px solid rgba(255, 255, 255, 0.08) !important;
 }
 
 .custom-sidebar [data-sidebar='header'],
 .custom-sidebar [data-sidebar='footer'] {
-  background-color: var(--custom-sidebar-bg, #ffffff) !important;
-  color: var(--custom-sidebar-text, #92400e) !important;
+  background-color: var(--custom-sidebar-bg, #17181c) !important;
+  color: var(--custom-sidebar-text, #fcd34d) !important;
 }
 
 .custom-sidebar [data-sidebar='menu-button'] {
-  color: var(--custom-sidebar-text, #92400e) !important;
+  color: var(--custom-sidebar-text, #fcd34d) !important;
   transition: all 0.15s ease-in-out;
 }
 
 .custom-sidebar [data-sidebar='menu-button']:hover {
-  background-color: rgba(245, 158, 11, 0.1) !important;
-  color: #78350f !important;
+  background-color: rgba(245, 158, 11, 0.12) !important;
+  color: #fbbf24 !important;
 }
 
 .custom-sidebar [data-sidebar='menu-button'][data-active='true'],
 .custom-sidebar [data-sidebar='menu-button'].active {
-  background-color: rgba(217, 119, 6, 0.14) !important;
-  color: #92400e !important;
+  background-color: rgba(217, 119, 6, 0.22) !important;
+  color: #fbbf24 !important;
   font-weight: 600 !important;
 }
 
 .custom-sidebar-icon {
-  color: var(--custom-sidebar-text, #92400e) !important;
+  color: var(--custom-sidebar-text, #fcd34d) !important;
 }
 
 /* Indicador de item ativo na sidebar */

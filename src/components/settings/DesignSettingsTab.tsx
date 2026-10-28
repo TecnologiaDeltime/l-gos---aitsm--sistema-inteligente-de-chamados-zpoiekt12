@@ -523,10 +523,10 @@ export function DesignSettingsTab({ isAdminOrGestor }: DesignSettingsTabProps) {
               <span className="text-[11px] font-mono text-muted-foreground uppercase tracking-wider">
                 Barra Lateral
               </span>
-              <p className="text-sm font-semibold text-foreground">Branca com Tipografia Âmbar</p>
+              <p className="text-sm font-semibold text-foreground">Grafite com Tipografia Âmbar</p>
               <div className="flex items-center gap-2 text-xs text-muted-foreground font-mono">
-                <span className="h-3.5 w-3.5 rounded-full bg-[#FFFFFF] border border-slate-300" />
-                #FFFFFF / #92400E
+                <span className="h-3.5 w-3.5 rounded-full bg-[#17181C] border border-amber-500/30" />
+                #17181C / #FCD34D
               </div>
             </div>
 
@@ -538,6 +538,63 @@ export function DesignSettingsTab({ isAdminOrGestor }: DesignSettingsTabProps) {
               <div className="flex items-center gap-2 text-xs text-muted-foreground font-mono">
                 <span className="h-3.5 w-3.5 rounded-full bg-[#F59E0B]" />
                 #F59E0B / #D97706
+              </div>
+            </div>
+          </div>
+
+          {/* Mini-mockup / Demonstração ao vivo da barra lateral grafite */}
+          <div className="space-y-2 pt-2 border-t border-border/60">
+            <span className="text-[11px] font-mono text-muted-foreground uppercase tracking-wider">
+              Demonstração ao Vivo da Barra Lateral
+            </span>
+            <div className="rounded-xl border border-border/80 bg-[#17181C] p-4 text-foreground shadow-inner max-w-sm">
+              {/* Topo do mockup */}
+              <div className="flex items-center gap-2 pb-3 mb-3 border-b border-white/10">
+                <span className="h-2.5 w-2.5 rounded-full bg-[#D97706] shadow-[0_0_8px_rgba(217,119,6,0.6)]" />
+                <span className="text-sm font-bold tracking-tight text-[#FCD34D]">ITSM Desk</span>
+                <Badge
+                  variant="outline"
+                  className="ml-auto text-[9px] border-amber-500/30 text-[#FCD34D] py-0 px-1.5"
+                >
+                  Grafite #17181C
+                </Badge>
+              </div>
+
+              {/* Itens do menu demonstrativo */}
+              <div className="space-y-1 text-xs">
+                {/* Item ativo */}
+                <div className="flex items-center justify-between px-2.5 py-1.5 rounded-md bg-[#D97706]/15 text-[#D97706] font-semibold border-l-2 border-[#D97706]">
+                  <span className="flex items-center gap-2">
+                    <CheckCircle2 className="h-3.5 w-3.5 text-[#D97706]" />
+                    Dashboard Executivo
+                  </span>
+                  <span className="text-[10px] font-mono text-[#D97706] bg-[#D97706]/20 px-1 rounded">
+                    Ativo
+                  </span>
+                </div>
+
+                {/* Itens comuns */}
+                <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-md text-[#FCD34D] opacity-90 hover:bg-white/5 transition-colors">
+                  <span className="h-1.5 w-1.5 rounded-full bg-[#FCD34D]/60" />
+                  <span>Fila de Chamados</span>
+                </div>
+                <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-md text-[#FCD34D] opacity-90 hover:bg-white/5 transition-colors">
+                  <span className="h-1.5 w-1.5 rounded-full bg-[#FCD34D]/60" />
+                  <span>CMDB & Ativos</span>
+                </div>
+                <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-md text-[#FCD34D] opacity-90 hover:bg-white/5 transition-colors">
+                  <span className="h-1.5 w-1.5 rounded-full bg-[#FCD34D]/60" />
+                  <span>Gestão de Mudanças</span>
+                </div>
+              </div>
+
+              {/* Rodapé do mockup */}
+              <div className="mt-4 pt-3 border-t border-white/10 flex items-center justify-between text-[10px] font-mono text-[#FCD34D]/70">
+                <span>ITSM Desk</span>
+                <span className="inline-flex items-center gap-1.5 text-[#FCD34D]">
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_6px_rgba(16,185,129,0.8)]" />
+                  ONLINE
+                </span>
               </div>
             </div>
           </div>

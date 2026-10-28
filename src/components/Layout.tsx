@@ -599,9 +599,9 @@ export default function Layout() {
     )
   }
 
-  // Tema oficial Amber Alert: barra lateral branca (#FFFFFF), textos/ícones #92400E, item ativo #d97706
-  const customSidebarBg = designSettings?.sidebar_bg_color || '#FFFFFF'
-  const customSidebarText = designSettings?.sidebar_text_color || '#92400E'
+  // Tema oficial Amber Alert: barra lateral grafite escuro (#17181C), textos/ícones #FCD34D, item ativo #d97706
+  const customSidebarBg = designSettings?.sidebar_bg_color || '#17181C'
+  const customSidebarText = designSettings?.sidebar_text_color || '#FCD34D'
   const activeItemColor = '#d97706'
 
   const navContent = (
@@ -1316,18 +1316,21 @@ export default function Layout() {
           backgroundColor: customSidebarBg ? `${customSidebarBg}cc` : undefined,
         }}
       >
-        <p className="text-[10px] font-mono opacity-70" style={{ color: customSidebarText }}>
+        <p
+          className="text-[10px] font-mono font-medium opacity-80"
+          style={{ color: customSidebarText }}
+        >
           ITSM Desk
         </p>
         <span
-          className="inline-flex items-center gap-1 text-[10px] font-mono"
-          style={{ color: customSidebarText }}
+          className="inline-flex items-center gap-1.5 text-[10px] font-mono font-medium"
+          style={{ color: '#FCD34D' }}
         >
           <span
-            className="h-1.5 w-1.5 rounded-full animate-pulse shadow-xs"
+            className="h-2 w-2 rounded-full animate-pulse"
             style={{
-              backgroundColor: '#d97706',
-              boxShadow: '0 0 6px rgba(217, 119, 6, 0.7)',
+              backgroundColor: '#10B981',
+              boxShadow: '0 0 8px rgba(16, 185, 129, 0.8)',
             }}
           />
           ONLINE

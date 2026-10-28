@@ -20,13 +20,13 @@ export const OFFICIAL_THEME = {
   id: 'amber_alert' as const,
   name: 'Amber Alert',
   mode: 'dark' as const,
-  subtitle: 'Fundo Grafite Neutro & Barra Lateral Branca',
+  subtitle: 'Fundo Grafite Neutro & Barra Lateral Grafite #17181C',
   description:
-    'Tema oficial único do sistema: fundo grafite escuro (#17181C), barra lateral branca (#FFFFFF) com tipografia e ícones em âmbar escuro (#92400E), item ativo em destaque âmbar (#D97706) e ação primária âmbar (#F59E0B).',
+    'Tema oficial único do sistema: fundo e barra lateral em grafite escuro (#17181C), com tipografia e ícones em âmbar suave (#FCD34D / #F5F3EF), item ativo em destaque âmbar (#D97706) e ação primária âmbar (#F59E0B).',
   primaryHex: '#F59E0B',
   accentHex: '#D97706',
-  sidebarBgHex: '#FFFFFF',
-  sidebarTextHex: '#92400E',
+  sidebarBgHex: '#17181C',
+  sidebarTextHex: '#FCD34D',
   sidebarActiveHex: '#D97706',
   hslVariables: {
     primary: '38 92% 50%', // #F59E0B
@@ -46,9 +46,9 @@ export const OFFICIAL_THEME = {
     mutedForeground: '230 8% 68%',
     secondary: '230 9% 19%',
     secondaryForeground: '40 20% 93%',
-    sidebarBackground: '0 0% 100%', // #FFFFFF (Barra branca)
-    sidebarForeground: '25 79% 31%', // #92400E (Âmbar escuro)
-    sidebarBorder: '35 30% 90%', // Borda sutil clara
+    sidebarBackground: '230 10% 10%', // #17181C (Barra grafite escuro)
+    sidebarForeground: '45 93% 65%', // #FCD34D (Âmbar suave legível sobre grafite)
+    sidebarBorder: '230 8% 20%', // Borda sutil grafite escuro
     chart1: '38 92% 50%',
     chart2: '27 96% 50%',
     chart3: '45 93% 58%',
@@ -58,8 +58,8 @@ export const OFFICIAL_THEME = {
 }
 
 export const DEFAULT_DESIGN_SETTINGS: DesignSettings = {
-  sidebar_bg_color: '#FFFFFF',
-  sidebar_text_color: '#92400E',
+  sidebar_bg_color: '#17181C',
+  sidebar_text_color: '#FCD34D',
   system_theme_variant: 'amber_alert',
   scope: 'global',
   logo: '',
@@ -98,7 +98,7 @@ export const THEME_VARIANTS: ThemeVariantDefinition[] = [
     sidebarBgHex: OFFICIAL_THEME.sidebarBgHex,
     sidebarTextHex: OFFICIAL_THEME.sidebarTextHex,
     previewBg: 'linear-gradient(135deg, #17181C 0%, #202227 55%, #292B32 100%)',
-    chips: ['#F59E0B', '#92400E', '#D97706', '#FFFFFF', '#17181C'],
+    chips: ['#F59E0B', '#FCD34D', '#D97706', '#17181C', '#23252B'],
     hslVariables: OFFICIAL_THEME.hslVariables,
   },
 ]
@@ -127,8 +127,8 @@ export function getCachedDesignSettings(): DesignSettings {
         ...DEFAULT_DESIGN_SETTINGS,
         ...parsed,
         system_theme_variant: 'amber_alert',
-        sidebar_bg_color: '#FFFFFF',
-        sidebar_text_color: '#92400E',
+        sidebar_bg_color: '#17181C',
+        sidebar_text_color: '#FCD34D',
       }
     }
   } catch {
@@ -167,8 +167,8 @@ export async function getDesignSettings(): Promise<DesignSettings> {
 
       const merged: DesignSettings = {
         id: first.id,
-        sidebar_bg_color: '#FFFFFF',
-        sidebar_text_color: '#92400E',
+        sidebar_bg_color: '#17181C',
+        sidebar_text_color: '#FCD34D',
         system_theme_variant: 'amber_alert',
         scope: 'global',
         logo: first.logo || '',
@@ -196,8 +196,8 @@ export async function saveDesignSettings(
 ): Promise<DesignSettings> {
   const current = await getDesignSettings()
   const payload: Record<string, any> = {
-    sidebar_bg_color: '#FFFFFF',
-    sidebar_text_color: '#92400E',
+    sidebar_bg_color: '#17181C',
+    sidebar_text_color: '#FCD34D',
     system_theme_variant: 'amber_alert',
     scope: 'global',
   }
@@ -228,8 +228,8 @@ export async function saveDesignSettings(
 
   const result: DesignSettings = {
     id: savedRecord.id,
-    sidebar_bg_color: '#FFFFFF',
-    sidebar_text_color: '#92400E',
+    sidebar_bg_color: '#17181C',
+    sidebar_text_color: '#FCD34D',
     system_theme_variant: 'amber_alert',
     scope: 'global',
     logo: savedRecord.logo || '',
@@ -292,8 +292,8 @@ export async function uploadLogo(
   const formData = new FormData()
   formData.append(type, file)
   formData.append('system_theme_variant', 'amber_alert')
-  formData.append('sidebar_bg_color', '#FFFFFF')
-  formData.append('sidebar_text_color', '#92400E')
+  formData.append('sidebar_bg_color', '#17181C')
+  formData.append('sidebar_text_color', '#FCD34D')
 
   let savedRecord: any
   if (current.id) {
@@ -315,8 +315,8 @@ export async function uploadLogo(
 
   const result: DesignSettings = {
     id: savedRecord.id,
-    sidebar_bg_color: '#FFFFFF',
-    sidebar_text_color: '#92400E',
+    sidebar_bg_color: '#17181C',
+    sidebar_text_color: '#FCD34D',
     system_theme_variant: 'amber_alert',
     scope: 'global',
     logo: savedRecord.logo || '',
@@ -352,8 +352,8 @@ export async function removeLogo(type: 'logo' | 'report_logo'): Promise<DesignSe
 
   const result: DesignSettings = {
     id: savedRecord.id,
-    sidebar_bg_color: '#FFFFFF',
-    sidebar_text_color: '#92400E',
+    sidebar_bg_color: '#17181C',
+    sidebar_text_color: '#FCD34D',
     system_theme_variant: 'amber_alert',
     scope: 'global',
     logo: savedRecord.logo || '',
@@ -404,9 +404,9 @@ export function applyDesignToDOM(_settings?: DesignSettings, _isDark?: boolean):
   root.setAttribute('data-theme-variant', 'amber_alert')
   root.classList.add('dark')
 
-  // Barra lateral BRANCA com letras âmbar escuro #92400E e item ativo #D97706
-  root.style.setProperty('--custom-sidebar-bg', '#FFFFFF')
-  root.style.setProperty('--custom-sidebar-text', '#92400E')
+  // Barra lateral GRAFITE ESCURO #17181C com letras âmbar suave #FCD34D e item ativo #D97706
+  root.style.setProperty('--custom-sidebar-bg', '#17181C')
+  root.style.setProperty('--custom-sidebar-text', '#FCD34D')
   root.style.setProperty('--sidebar-active-color', '#D97706')
 
   // Variáveis HSL semânticas
@@ -436,8 +436,8 @@ export function applyDesignToDOM(_settings?: DesignSettings, _isDark?: boolean):
   root.style.setProperty('--sidebar-primary', v.hslVariables.primary)
   root.style.setProperty('--sidebar-primary-foreground', v.hslVariables.primaryForeground)
   root.style.setProperty('--sidebar-ring', v.hslVariables.ring)
-  root.style.setProperty('--sidebar-accent', '35 40% 95%') // Fundo sutil para hover na barra branca (#F8F4EE)
-  root.style.setProperty('--sidebar-accent-foreground', '25 79% 25%')
+  root.style.setProperty('--sidebar-accent', '230 9% 16%') // Fundo sutil para hover na barra grafite escuro (#202227)
+  root.style.setProperty('--sidebar-accent-foreground', '45 93% 65%')
 
   // Gráficos
   root.style.setProperty('--chart-1', v.hslVariables.chart1)
