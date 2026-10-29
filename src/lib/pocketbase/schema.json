@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-29T03:33:11.426Z",
+  "generatedAt": "2026-10-29T04:01:37.766Z",
   "collections": [
     {
       "name": "users",
@@ -1522,6 +1522,31 @@
         {
           "name": "email_html",
           "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "operator_cycle_start",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "operator_cycle_user",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "operator_worked_seconds",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "accompaniment_seconds",
+          "type": "number",
           "required": false,
           "system": false
         }

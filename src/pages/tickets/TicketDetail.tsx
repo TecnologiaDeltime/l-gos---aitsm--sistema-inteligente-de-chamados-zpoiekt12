@@ -72,6 +72,8 @@ import {
   startService,
   pauseTicketSla,
   resumeTicketSla,
+  startOperatorWorkCycle,
+  stopOperatorWorkCycle,
   getSlaPauses,
   getTicketHistory,
   TicketRecord,
@@ -101,8 +103,18 @@ import { SlaDetailBlock } from '@/components/SlaDetailBlock'
 import { computeSlaResponseStatus, computeSlaSolutionStatus } from '@/lib/sla-status'
 import { VisitDialog } from '@/components/VisitDialog'
 import { SlaPauseDialog, STATUS_BY_REASON } from '@/components/SlaPauseDialog'
+import { AccompanimentDialog } from '@/components/AccompanimentDialog'
 import { formatMinutes, formatHours } from '@/lib/duration'
-import { Inbox, Sparkles, Check, CheckCheck, BookOpen, ExternalLink } from 'lucide-react'
+import {
+  Inbox,
+  Sparkles,
+  Check,
+  CheckCheck,
+  BookOpen,
+  ExternalLink,
+  Play,
+  Pause,
+} from 'lucide-react'
 import { getKnowledgeArticles, KnowledgeArticle } from '@/services/knowledge'
 import { ArticleDetailDialog } from '@/components/knowledge/ArticleDetailDialog'
 import { trackTicketView, getTicketViews, TicketViewRecord } from '@/services/ticket-views'
@@ -160,6 +172,9 @@ export default function TicketDetail({
   const [showHourReview, setShowHourReview] = useState(false)
   const [showNoRecordsConfirm, setShowNoRecordsConfirm] = useState(false)
   const [showSlaPause, setShowSlaPause] = useState(false)
+  const [showAccompaniment, setShowAccompaniment] = useState(false)
+  const [cycleSeconds, setCycleSeconds] = useState(0)
+  const [cycleActionLoading, setCycleActionLoading] = useState(false)
   const [commentTemplates, setCommentTemplates] = useState<TicketTemplateRecord[]>([])
   const [selectedCommentTemplate, setSelectedCommentTemplate] =
     useState<TicketTemplateRecord | null>(null)
@@ -332,6 +347,45 @@ export default function TicketDetail({
     return () => clearInterval(interval)
   }, [timerRunning, timerStart])
 
+  // Cronômetro em tempo real do ciclo de trabalho do operador (operator_cycle_start)
+  const isCycleActive = Boolean(
+    ticket?.operator_cycle_start &&
+    ticket.status !== 'Resolvido' &&
+    ticket.status !== 'Encerrado' &&
+    ticket.status !== 'Cancelado' &&
+    !ticket.sla_paused,
+  )
+
+  useEffect(() => {
+    if (!isCycleActive || !ticket?.operator_cycle_start) {
+      setCycleSeconds(0)
+      return
+    }
+    const startMs = new Date(ticket.operator_cycle_start).getTime()
+    const updateCycle = () => {
+      const diffSec = Math.max(0, Math.floor((Date.now() - startMs) / 1000))
+      setCycleSeconds(diffSec)
+    }
+    updateCycle()
+    const interval = setInterval(updateCycle, 1000)
+    return () => clearInterval(interval)
+  }, [isCycleActive, ticket?.operator_cycle_start])
+
+  const formatSecondsToClock = (totalSec: number) => {
+    const h = Math.floor(totalSec / 3600)
+    const m = Math.floor((totalSec % 3600) / 60)
+    const s = totalSec % 60
+    return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
+  }
+
+  // Divisão solicitada: Total de Horas Trabalhadas (mecânica de ciclos + acompanhamentos) e Horas de Acompanhamento
+  const accumulatedWorkedSeconds = ticket?.operator_worked_seconds || 0
+  const liveWorkedSeconds = accumulatedWorkedSeconds + (isCycleActive ? cycleSeconds : 0)
+  const totalWorkedDisplay = formatSecondsToClock(liveWorkedSeconds)
+
+  const accompanimentSeconds = ticket?.accompaniment_seconds || 0
+  const accompanimentDisplay = formatSecondsToClock(accompanimentSeconds)
+
   const totalMinutes = interactions.reduce((sum, i) => sum + (i.duration_minutes || 0), 0)
   const totalHoursDisplay = formatMinutes(totalMinutes)
 
@@ -502,6 +556,49 @@ export default function TicketDetail({
         description: getErrorMessage(err),
         variant: 'destructive',
       })
+    }
+  }
+
+  // Ações de Iniciar (Play) e Pausar SLA (Pause) no canto direito minimalista acima de Solicitante
+  const handlePlayOperatorCycle = async () => {
+    if (!id) return
+    setCycleActionLoading(true)
+    try {
+      const res = await startOperatorWorkCycle(id)
+      loadData()
+      toast({
+        title: 'Ciclo de atendimento iniciado!',
+        description: 'Contando cada segundo para Horas Trabalhadas.',
+      })
+    } catch (err) {
+      toast({
+        title: 'Erro ao iniciar ciclo de trabalho',
+        description: getErrorMessage(err),
+        variant: 'destructive',
+      })
+    } finally {
+      setCycleActionLoading(false)
+    }
+  }
+
+  const handleStopOperatorCycle = async () => {
+    if (!id) return
+    setCycleActionLoading(true)
+    try {
+      await stopOperatorWorkCycle(id)
+      loadData()
+      toast({
+        title: 'Ciclo de atendimento encerrado',
+        description: 'Tempo acumulado com sucesso em Horas Trabalhadas.',
+      })
+    } catch (err) {
+      toast({
+        title: 'Erro ao pausar ciclo',
+        description: getErrorMessage(err),
+        variant: 'destructive',
+      })
+    } finally {
+      setCycleActionLoading(false)
     }
   }
 

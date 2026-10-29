@@ -38,6 +38,10 @@ export interface TicketRecord {
   sla_source?: string
   work_hours?: number
   billable_hours?: number
+  operator_cycle_start?: string
+  operator_cycle_user?: string
+  operator_worked_seconds?: number
+  accompaniment_seconds?: number
   solution?: string
   parent_ticket_id?: string
   association_group_id?: string
@@ -184,6 +188,49 @@ export const pauseTicketSla = (id: string, reason: string, justification: string
 
 export const resumeTicketSla = (id: string) =>
   pb.send(`/backend/v1/tickets/${id}/resume-sla`, { method: 'POST' })
+
+export const startOperatorWorkCycle = (id: string) =>
+  pb.send<{
+    success: boolean
+    operator_cycle_start: string
+    operator_cycle_user: string
+    operator_worked_seconds: number
+    work_hours: number
+    status?: string
+    message?: string
+  }>(`/backend/v1/tickets/${id}/start-work-cycle`, { method: 'POST' })
+
+export const stopOperatorWorkCycle = (id: string) =>
+  pb.send<{
+    success: boolean
+    elapsed_seconds?: number
+    operator_worked_seconds: number
+    work_hours: number
+    message?: string
+  }>(`/backend/v1/tickets/${id}/stop-work-cycle`, { method: 'POST' })
+
+export const addAccompanimentHours = (
+  id: string,
+  data: {
+    content: string
+    duration_minutes?: number
+    duration_seconds?: number
+    hour_type?: string
+    billing_status?: string
+    is_internal?: boolean
+  },
+) =>
+  pb.send<{
+    success: boolean
+    accompaniment_seconds: number
+    operator_worked_seconds: number
+    work_hours: number
+    interaction_id: string
+  }>(`/backend/v1/tickets/${id}/accompaniment`, {
+    method: 'POST',
+    body: JSON.stringify(data),
+    headers: { 'Content-Type': 'application/json' },
+  })
 
 export interface TicketInteractionRecord {
   id: string

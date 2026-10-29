@@ -7,6 +7,63 @@ onRecordAfterUpdateSuccess((e) => {
   var newStatus = record.getString('status')
   if (oldStatus === newStatus) return e.next()
 
+  // Se o chamado foi resolvido (ou encerrado), encerra ciclo de trabalho do operador se ainda houver
+  if (newStatus === 'Resolvido' || newStatus === 'Encerrado') {
+    var cycleStartStr = record.getString('operator_cycle_start')
+    if (cycleStartStr) {
+      try {
+        var nowIso = new Date().toISOString()
+        var cycleStartTime = new Date(cycleStartStr).getTime()
+        var nowTime = new Date(nowIso).getTime()
+        if (!isNaN(cycleStartTime) && nowTime >= cycleStartTime) {
+          var elapsedSec = Math.max(1, Math.round((nowTime - cycleStartTime) / 1000))
+          var currentWorkedSec = record.getInt('operator_worked_seconds') || 0
+          var newWorkedSec = currentWorkedSec + elapsedSec
+          record.set('operator_worked_seconds', newWorkedSec)
+          record.set('work_hours', Number((newWorkedSec / 3600).toFixed(4)))
+
+          var ch = Math.floor(elapsedSec / 3600)
+          var cm = Math.floor((elapsedSec % 3600) / 60)
+          var cs = elapsedSec % 60
+          var cycleTimeFormatted =
+            String(ch).padStart(2, '0') +
+            ':' +
+            String(cm).padStart(2, '0') +
+            ':' +
+            String(cs).padStart(2, '0')
+
+          var cycleUser = record.getString('operator_cycle_user') || (e.auth ? e.auth.id : '')
+          try {
+            var interCol = $app.findCollectionByNameOrId('ticket_interactions')
+            var interRec = new Record(interCol)
+            interRec.set('ticket', record.id)
+            interRec.set('author', cycleUser)
+            interRec.set('type', 'Interno')
+            interRec.set(
+              'content',
+              'Ciclo de atendimento encerrado pela resolução do chamado (' +
+                cycleTimeFormatted +
+                ' - ' +
+                elapsedSec +
+                's). Tempo salvo em Horas Trabalhadas.',
+            )
+            interRec.set('origin', 'Cronômetro')
+            interRec.set('duration_minutes', Math.round((elapsedSec / 60) * 100) / 100)
+            interRec.set('hour_type', 'Contratada')
+            interRec.set('billing_status', 'Faturável')
+            $app.save(interRec)
+          } catch (iErr) {
+            $app.logger().error('on_ticket_resolve: cycle interaction error', 'error', iErr.message)
+          }
+        }
+      } catch (cErr) {
+        $app.logger().error('on_ticket_resolve: cycle calculation error', 'error', cErr.message)
+      }
+      record.set('operator_cycle_start', '')
+      record.set('operator_cycle_user', '')
+    }
+  }
+
   // Se passou para Resolvido e ainda não tem sla_solution_at, carimba o timestamp e encerra SLA
   if (newStatus === 'Resolvido' && !record.getString('sla_solution_at')) {
     try {

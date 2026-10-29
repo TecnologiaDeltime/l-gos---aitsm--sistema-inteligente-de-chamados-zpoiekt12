@@ -22,6 +22,61 @@ routerAdd(
       const delegator = $app.findRecordById('users', delegatorId)
       const delegatorName = delegator.getString('name')
 
+      // Se houver ciclo de trabalho do operador aberto, encerra e acumula em operator_worked_seconds
+      const cycleStartStr = ticket.getString('operator_cycle_start')
+      if (cycleStartStr) {
+        try {
+          const nowIso = new Date().toISOString()
+          const cycleStartTime = new Date(cycleStartStr).getTime()
+          const nowTime = new Date(nowIso).getTime()
+          if (!isNaN(cycleStartTime) && nowTime >= cycleStartTime) {
+            const elapsedSec = Math.max(1, Math.round((nowTime - cycleStartTime) / 1000))
+            const currentWorkedSec = ticket.getInt('operator_worked_seconds') || 0
+            const newWorkedSec = currentWorkedSec + elapsedSec
+            ticket.set('operator_worked_seconds', newWorkedSec)
+            ticket.set('work_hours', Number((newWorkedSec / 3600).toFixed(4)))
+
+            const ch = Math.floor(elapsedSec / 3600)
+            const cm = Math.floor((elapsedSec % 3600) / 60)
+            const cs = elapsedSec % 60
+            const cycleTimeFormatted =
+              String(ch).padStart(2, '0') +
+              ':' +
+              String(cm).padStart(2, '0') +
+              ':' +
+              String(cs).padStart(2, '0')
+
+            const cycleUser = ticket.getString('operator_cycle_user') || delegatorId
+            try {
+              const interCol = $app.findCollectionByNameOrId('ticket_interactions')
+              const interRec = new Record(interCol)
+              interRec.set('ticket', ticketId)
+              interRec.set('author', cycleUser)
+              interRec.set('type', 'Interno')
+              interRec.set(
+                'content',
+                'Ciclo de atendimento encerrado por delegação (' +
+                  cycleTimeFormatted +
+                  ' - ' +
+                  elapsedSec +
+                  's). Tempo salvo em Horas Trabalhadas.',
+              )
+              interRec.set('origin', 'Cronômetro')
+              interRec.set('duration_minutes', Math.round((elapsedSec / 60) * 100) / 100)
+              interRec.set('hour_type', 'Contratada')
+              interRec.set('billing_status', 'Faturável')
+              $app.save(interRec)
+            } catch (iErr) {
+              $app.logger().error('delegate: cycle interaction error', 'error', iErr.message)
+            }
+          }
+        } catch (cErr) {
+          $app.logger().error('delegate: cycle calculation error', 'error', cErr.message)
+        }
+        ticket.set('operator_cycle_start', '')
+        ticket.set('operator_cycle_user', '')
+      }
+
       if (type === 'technician') {
         let oldAssignedName = 'Não atribuído'
         const oldAssignedId = ticket.getString('assigned_to')
