@@ -603,12 +603,12 @@ export default function Layout() {
 
   // Harmonia da barra lateral por modo:
   // Escuro: barra grafite #17181C, texto âmbar #FCD34D, ativo #d97706
-  // Claro: barra marrom café #3D2314, texto branco #FFFFFF, ativo #f59e0b
+  // Claro: barra grafite #17181C, texto branco #FFFFFF, ativo #d97706
   const isLightMode = theme === 'light'
-  const customSidebarBg = designSettings?.sidebar_bg_color || (isLightMode ? '#3D2314' : '#17181C')
+  const customSidebarBg = designSettings?.sidebar_bg_color || '#17181C'
   const customSidebarText =
     designSettings?.sidebar_text_color || (isLightMode ? '#FFFFFF' : '#FCD34D')
-  const activeItemColor = isLightMode ? '#F59E0B' : '#d97706'
+  const activeItemColor = '#D97706'
 
   const navContent = (
     <div
@@ -1330,7 +1330,7 @@ export default function Layout() {
         </p>
         <span
           className="inline-flex items-center gap-1.5 text-[10px] font-mono font-medium"
-          style={{ color: '#FCD34D' }}
+          style={{ color: customSidebarText }}
         >
           <span
             className="h-2 w-2 rounded-full animate-pulse"

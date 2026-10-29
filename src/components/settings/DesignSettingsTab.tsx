@@ -651,7 +651,7 @@ export function DesignSettingsTab({ isAdminOrGestor }: DesignSettingsTabProps) {
                     <p className="text-xs text-muted-foreground leading-relaxed">
                       Fundo acolhedor off-white (#FAF8F5), cartões brancos com bordas suaves,
                       tipografia em marrom profundo de alto contraste (WCAG AA), barra lateral
-                      marrom nobre (#3D2314) com letras brancas e ações em marrom/âmbar quente
+                      grafite escuro (#17181C) com letras brancas e ações em marrom/âmbar quente
                       (#B45309).
                     </p>
 
@@ -668,8 +668,8 @@ export function DesignSettingsTab({ isAdminOrGestor }: DesignSettingsTabProps) {
                           className="h-5 w-5 rounded-full bg-[#FFFFFF] border border-slate-300"
                         />
                         <span
-                          title="Barra Lateral Marrom #3D2314"
-                          className="h-5 w-5 rounded-full bg-[#3D2314]"
+                          title="Barra Lateral Grafite #17181C"
+                          className="h-5 w-5 rounded-full bg-[#17181C] border border-white/20"
                         />
                         <span
                           title="Texto Marrom Profundo #2E1A0E"
@@ -710,7 +710,7 @@ export function DesignSettingsTab({ isAdminOrGestor }: DesignSettingsTabProps) {
               </span>
               <Badge variant="outline" className="text-[10px] font-mono">
                 {theme === 'light'
-                  ? 'Fundo #3D2314 • Texto #FFFFFF'
+                  ? 'Fundo #17181C • Texto #FFFFFF'
                   : 'Fundo #17181C • Texto #FCD34D'}
               </Badge>
             </div>
@@ -718,7 +718,7 @@ export function DesignSettingsTab({ isAdminOrGestor }: DesignSettingsTabProps) {
             <div
               className="rounded-xl border border-border/80 p-4 shadow-inner max-w-sm transition-colors duration-200"
               style={{
-                backgroundColor: theme === 'light' ? '#3D2314' : '#17181C',
+                backgroundColor: '#17181C',
                 color: theme === 'light' ? '#FFFFFF' : '#FCD34D',
               }}
             >
@@ -726,18 +726,14 @@ export function DesignSettingsTab({ isAdminOrGestor }: DesignSettingsTabProps) {
               <div
                 className="flex items-center gap-2 pb-3 mb-3 border-b"
                 style={{
-                  borderColor:
-                    theme === 'light' ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.1)',
+                  borderColor: 'rgba(255,255,255,0.12)',
                 }}
               >
                 <span
                   className="h-2.5 w-2.5 rounded-full shadow-xs"
                   style={{
-                    backgroundColor: theme === 'light' ? '#F59E0B' : '#D97706',
-                    boxShadow:
-                      theme === 'light'
-                        ? '0 0 8px rgba(245,158,11,0.7)'
-                        : '0 0 8px rgba(217,119,6,0.6)',
+                    backgroundColor: '#D97706',
+                    boxShadow: '0 0 8px rgba(217,119,6,0.6)',
                   }}
                 />
                 <span
@@ -749,12 +745,11 @@ export function DesignSettingsTab({ isAdminOrGestor }: DesignSettingsTabProps) {
                 <span
                   className="ml-auto text-[9px] font-mono px-1.5 py-0.5 rounded border"
                   style={{
-                    borderColor:
-                      theme === 'light' ? 'rgba(255,255,255,0.25)' : 'rgba(245,158,11,0.3)',
+                    borderColor: 'rgba(255,255,255,0.2)',
                     color: theme === 'light' ? '#FFFFFF' : '#FCD34D',
                   }}
                 >
-                  {theme === 'light' ? 'Marrom #3D2314' : 'Grafite #17181C'}
+                  {theme === 'light' ? 'Grafite #17181C (Letras Brancas)' : 'Grafite #17181C'}
                 </span>
               </div>
 
@@ -764,24 +759,19 @@ export function DesignSettingsTab({ isAdminOrGestor }: DesignSettingsTabProps) {
                 <div
                   className="flex items-center justify-between px-2.5 py-1.5 rounded-md font-semibold border-l-2"
                   style={{
-                    backgroundColor:
-                      theme === 'light' ? 'rgba(245,158,11,0.22)' : 'rgba(217,119,6,0.18)',
-                    color: theme === 'light' ? '#FBBF24' : '#D97706',
-                    borderColor: theme === 'light' ? '#F59E0B' : '#D97706',
+                    backgroundColor: 'rgba(217,119,6,0.18)',
+                    color: '#D97706',
+                    borderColor: '#D97706',
                   }}
                 >
                   <span className="flex items-center gap-2">
-                    <CheckCircle2
-                      className="h-3.5 w-3.5"
-                      style={{ color: theme === 'light' ? '#FBBF24' : '#D97706' }}
-                    />
+                    <CheckCircle2 className="h-3.5 w-3.5" style={{ color: '#D97706' }} />
                     Dashboard Gerencial
                   </span>
                   <span
                     className="text-[10px] font-mono px-1 rounded"
                     style={{
-                      backgroundColor:
-                        theme === 'light' ? 'rgba(245,158,11,0.3)' : 'rgba(217,119,6,0.25)',
+                      backgroundColor: 'rgba(217,119,6,0.25)',
                       color: theme === 'light' ? '#FFFFFF' : '#D97706',
                     }}
                   >

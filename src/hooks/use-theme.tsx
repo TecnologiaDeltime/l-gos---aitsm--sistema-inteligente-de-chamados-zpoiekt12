@@ -69,7 +69,7 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
     const nextSettings: DesignSettings = {
       ...designSettings,
       system_theme_variant: nextVariant,
-      sidebar_bg_color: isLight ? '#3D2314' : '#17181C',
+      sidebar_bg_color: '#17181C',
       sidebar_text_color: isLight ? '#FFFFFF' : '#FCD34D',
     }
     setDesignSettings(nextSettings)
@@ -91,7 +91,7 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
       const nextSettings: DesignSettings = {
         ...designSettings,
         system_theme_variant: targetVariant,
-        sidebar_bg_color: isLight ? '#3D2314' : '#17181C',
+        sidebar_bg_color: '#17181C',
         sidebar_text_color: isLight ? '#FFFFFF' : '#FCD34D',
       }
       setDesignSettings(nextSettings)

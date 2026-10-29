@@ -168,18 +168,18 @@
     --input: 35 15% 86%;
     --ring: 25 88% 36%;
 
-    /* Barra lateral no Modo Claro: Marrom café nobre #3D2314 com letras brancas e item ativo âmbar */
-    --custom-sidebar-bg: #3d2314;
+    /* Barra lateral no Modo Claro: Grafite escuro #17181C com letras/ícones brancos #FFFFFF e item ativo âmbar #D97706 */
+    --custom-sidebar-bg: #17181c;
     --custom-sidebar-text: #ffffff;
-    --sidebar-active-color: #f59e0b;
+    --sidebar-active-color: #d97706;
 
-    --sidebar-background: 24 50% 16%; /* #3D2314 */
+    --sidebar-background: 230 10% 10%; /* #17181C */
     --sidebar-foreground: 0 0% 100%;
-    --sidebar-primary: 25 88% 36%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 24 45% 22%; /* Hover suave na barra marrom */
+    --sidebar-primary: 38 92% 50%;
+    --sidebar-primary-foreground: 24 80% 12%;
+    --sidebar-accent: 230 9% 16%; /* Hover suave na barra grafite */
     --sidebar-accent-foreground: 0 0% 100%;
-    --sidebar-border: 24 35% 24%;
+    --sidebar-border: 230 8% 20%;
     --sidebar-ring: 38 92% 50%;
 
     --chart-1: 25 88% 36%; /* Marrom âmbar */

@@ -61,14 +61,14 @@ export const LIGHT_THEME = {
   id: 'amber_light' as const,
   name: 'Modo Claro',
   mode: 'light' as const,
-  subtitle: 'Fundo Branco/Off-white & Marrom Quente',
+  subtitle: 'Fundo Branco/Off-white & Barra Grafite Escuro',
   description:
-    'Design claro sofisticado explorando marrom e branco: fundo acolhedor (#FAF8F5), cartões brancos com bordas suaves, tipografia marrom escuro de alto contraste (WCAG AA), barra lateral marrom nobre (#3D2314) com letras brancas e ações em marrom/âmbar quente (#B45309 / #F59E0B).',
+    'Design claro sofisticado explorando marrom e branco com barra lateral grafite escuro (#17181C): fundo acolhedor (#FAF8F5), cartões brancos com bordas suaves, tipografia marrom escuro de alto contraste (WCAG AA), barra lateral em grafite escuro com letras e ícones brancos (#FFFFFF), item ativo em âmbar (#D97706) e ações em marrom/âmbar quente (#B45309 / #F59E0B).',
   primaryHex: '#B45309',
   accentHex: '#9A3412',
-  sidebarBgHex: '#3D2314',
+  sidebarBgHex: '#17181C',
   sidebarTextHex: '#FFFFFF',
-  sidebarActiveHex: '#F59E0B',
+  sidebarActiveHex: '#D97706',
   hslVariables: {
     primary: '25 88% 36%', // #B45309 Marrom quente
     primaryForeground: '0 0% 100%',
@@ -87,9 +87,9 @@ export const LIGHT_THEME = {
     mutedForeground: '24 20% 40%', // #6E5B4F Marrom grafite
     secondary: '35 25% 92%',
     secondaryForeground: '24 50% 14%',
-    sidebarBackground: '24 50% 16%', // #3D2314 Marrom escuro nobre
-    sidebarForeground: '0 0% 100%', // Branco
-    sidebarBorder: '24 35% 24%',
+    sidebarBackground: '230 10% 10%', // #17181C Grafite escuro idêntico ao modo escuro
+    sidebarForeground: '0 0% 100%', // Branco puro para letras e ícones
+    sidebarBorder: '230 8% 20%', // Borda sutil grafite escuro
     chart1: '25 88% 36%',
     chart2: '28 92% 44%',
     chart3: '38 92% 50%',
@@ -153,7 +153,7 @@ export const THEME_VARIANTS: ThemeVariantDefinition[] = [
     sidebarBgHex: LIGHT_THEME.sidebarBgHex,
     sidebarTextHex: LIGHT_THEME.sidebarTextHex,
     previewBg: 'linear-gradient(135deg, #FAF8F5 0%, #F5EFEB 50%, #EDE4DC 100%)',
-    chips: ['#B45309', '#3D2314', '#F59E0B', '#FAF8F5', '#2E1A0E'],
+    chips: ['#B45309', '#17181C', '#D97706', '#FAF8F5', '#2E1A0E'],
     hslVariables: LIGHT_THEME.hslVariables,
   },
 ]
@@ -551,7 +551,7 @@ export function applyDesignToDOM(settings?: DesignSettings, explicitDark?: boole
   root.style.setProperty('--sidebar-ring', v.hslVariables.ring)
 
   if (isLight) {
-    root.style.setProperty('--sidebar-accent', '24 45% 22%')
+    root.style.setProperty('--sidebar-accent', '230 9% 16%')
     root.style.setProperty('--sidebar-accent-foreground', '0 0% 100%')
   } else {
     root.style.setProperty('--sidebar-accent', '230 9% 16%')
