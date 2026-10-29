@@ -566,9 +566,19 @@ export default function TicketDetail({
     try {
       const res = await startOperatorWorkCycle(id)
       loadData()
+      const respTimeSec = res.sla_response_time_seconds || 0
+      let respMsg = 'Contando cada segundo para Horas Trabalhadas.'
+      if (respTimeSec > 0) {
+        const rH = Math.floor(respTimeSec / 3600)
+        const rM = Math.floor((respTimeSec % 3600) / 60)
+        const rS = respTimeSec % 60
+        const formattedResp = `${rH > 0 ? `${rH}h ` : ''}${rM > 0 || rH > 0 ? `${rM}min ` : ''}${rS}s`
+        const statusText = res.response_met ? 'Cumprido (Dentro do Prazo)' : 'Violado (Estourado)'
+        respMsg = `Tempo de resposta apurado: ${formattedResp} — SLA Resposta ${statusText}.`
+      }
       toast({
-        title: 'Ciclo de atendimento iniciado!',
-        description: 'Contando cada segundo para Horas Trabalhadas.',
+        title: '▶ Atendimento e SLA Resposta iniciados!',
+        description: respMsg,
       })
     } catch (err) {
       toast({
@@ -1796,6 +1806,7 @@ export default function TicketDetail({
             startedAt={ticket.sla_response_start}
             createdAt={ticket.created}
             totalPauseMinutes={0}
+            responseTimeSeconds={ticket.sla_response_time_seconds}
           />
           <SlaDetailBlock
             type="solution"
@@ -1838,6 +1849,17 @@ export default function TicketDetail({
               </span>
               <span className="font-mono text-muted-foreground">{totalHoursDisplay}</span>
             </div>
+            {ticket.sla_response_time_seconds !== undefined &&
+              ticket.sla_response_time_seconds > 0 && (
+                <div className="flex items-center justify-between text-muted-foreground">
+                  <span className="flex items-center gap-2">
+                    <PlayCircle className="h-4 w-4 text-emerald-500" /> Tempo de Resposta:
+                  </span>
+                  <span className="font-mono font-medium text-foreground">
+                    {formatSecondsToClock(ticket.sla_response_time_seconds)}
+                  </span>
+                </div>
+              )}
             {ticket.sla_response_start && (
               <div className="flex items-center gap-2 text-muted-foreground">
                 <PlayCircle className="h-4 w-4 text-muted-foreground" /> Início Atend.:{' '}

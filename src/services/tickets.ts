@@ -42,6 +42,7 @@ export interface TicketRecord {
   operator_cycle_user?: string
   operator_worked_seconds?: number
   accompaniment_seconds?: number
+  sla_response_time_seconds?: number
   solution?: string
   parent_ticket_id?: string
   association_group_id?: string
@@ -198,6 +199,12 @@ export const startOperatorWorkCycle = (id: string) =>
     work_hours: number
     status?: string
     message?: string
+    sla_response_at?: string
+    sla_response_start?: string
+    sla_response_deadline?: string
+    sla_response_time_seconds?: number
+    sla_status?: string
+    response_met?: boolean
   }>(`/backend/v1/tickets/${id}/start-work-cycle`, { method: 'POST' })
 
 export const stopOperatorWorkCycle = (id: string) =>

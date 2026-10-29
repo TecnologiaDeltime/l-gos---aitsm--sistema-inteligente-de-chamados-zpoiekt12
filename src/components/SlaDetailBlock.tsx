@@ -9,6 +9,7 @@ interface SlaDetailBlockProps {
   startedAt?: string
   createdAt?: string
   totalPauseMinutes?: number
+  responseTimeSeconds?: number
 }
 
 const STATUS_CONFIG: Record<
@@ -67,6 +68,7 @@ export function SlaDetailBlock({
   startedAt,
   createdAt,
   totalPauseMinutes = 0,
+  responseTimeSeconds,
 }: SlaDetailBlockProps) {
   const config = STATUS_CONFIG[status] || STATUS_CONFIG['Não definido']
   const { Icon } = config
@@ -89,7 +91,16 @@ export function SlaDetailBlock({
 
   // Cálculo do tempo decorrido
   let elapsedText = ''
-  if (createdAt) {
+  if (type === 'response' && responseTimeSeconds !== undefined && responseTimeSeconds > 0) {
+    const rH = Math.floor(responseTimeSeconds / 3600)
+    const rM = Math.floor((responseTimeSeconds % 3600) / 60)
+    const rS = responseTimeSeconds % 60
+    const parts: string[] = []
+    if (rH > 0) parts.push(`${rH}h`)
+    if (rM > 0 || rH > 0) parts.push(`${rM}min`)
+    parts.push(`${rS}s`)
+    elapsedText = `Tempo de Resposta: ${parts.join(' ')}`
+  } else if (createdAt) {
     const startMs = new Date(createdAt).getTime()
     const endMs = completedAt ? new Date(completedAt).getTime() : Date.now()
     const grossMinutes = Math.max(0, Math.floor((endMs - startMs) / 60000))

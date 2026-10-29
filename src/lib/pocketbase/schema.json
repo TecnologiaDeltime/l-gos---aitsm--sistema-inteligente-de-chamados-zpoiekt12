@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-29T04:06:47.116Z",
+  "generatedAt": "2026-10-29T04:29:48.905Z",
   "collections": [
     {
       "name": "users",
@@ -1546,6 +1546,12 @@
         },
         {
           "name": "accompaniment_seconds",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "sla_response_time_seconds",
           "type": "number",
           "required": false,
           "system": false

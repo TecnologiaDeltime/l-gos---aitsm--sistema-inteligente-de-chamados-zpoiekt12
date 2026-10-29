@@ -14,9 +14,79 @@ routerAdd(
     }
 
     var now = new Date().toISOString()
+    var isFirstResponse = !ticket.getString('sla_response_at')
+    var responseElapsedSec = 0
+    var responseMet = true
+    var slaResponseDeadlineStr = ticket.getString('sla_response_deadline')
+
     ticket.set('sla_response_start', now)
-    if (!ticket.getString('sla_response_at')) {
+    if (isFirstResponse) {
       ticket.set('sla_response_at', now)
+
+      var createdStr = ticket.getString('created')
+      var createdTime = createdStr ? new Date(createdStr).getTime() : new Date(now).getTime()
+      var nowTime = new Date(now).getTime()
+      if (!isNaN(createdTime) && nowTime >= createdTime) {
+        responseElapsedSec = Math.max(0, Math.round((nowTime - createdTime) / 1000))
+      }
+      ticket.set('sla_response_time_seconds', responseElapsedSec)
+
+      if (!slaResponseDeadlineStr) {
+        var targetRespMin = 0
+        var subCatId = ticket.getString('subcategory')
+        var catId = ticket.getString('category')
+        var companyId = ticket.getString('company')
+        var contractId = ticket.getString('contract')
+
+        if (subCatId) {
+          try {
+            var subCatRec = $app.findRecordById('tkt_categories', subCatId)
+            var sResp = subCatRec.getInt('sla_response_minutes') || 0
+            if (sResp > 0) targetRespMin = sResp
+          } catch (_) {}
+        }
+        if (!targetRespMin && catId) {
+          try {
+            var catRec = $app.findRecordById('tkt_categories', catId)
+            var cResp = catRec.getInt('sla_response_minutes') || 0
+            if (cResp > 0) targetRespMin = cResp
+          } catch (_) {}
+        }
+        if (!targetRespMin && companyId) {
+          try {
+            var compRec = $app.findRecordById('companies', companyId)
+            var compResp = compRec.getInt('sla_response_minutes') || 0
+            if (compResp > 0) targetRespMin = compResp
+          } catch (_) {}
+        }
+        if (!targetRespMin && contractId) {
+          try {
+            var cntrRec = $app.findRecordById('contracts', contractId)
+            var cntrResp = cntrRec.getInt('sla_response_time') || 0
+            if (cntrResp > 0) targetRespMin = cntrResp
+          } catch (_) {}
+        }
+        if (!targetRespMin) {
+          targetRespMin = 30
+        }
+
+        var calculatedDeadline = new Date(createdTime + targetRespMin * 60000).toISOString()
+        ticket.set('sla_response_deadline', calculatedDeadline)
+        slaResponseDeadlineStr = calculatedDeadline
+      }
+
+      if (slaResponseDeadlineStr) {
+        var deadlineMs = new Date(slaResponseDeadlineStr).getTime()
+        if (!isNaN(deadlineMs)) {
+          responseMet = nowTime <= deadlineMs
+        }
+      }
+
+      if (!responseMet) {
+        ticket.set('sla_status', 'Violado')
+      } else if (!ticket.getString('sla_status') || ticket.getString('sla_status') === 'Pausado') {
+        ticket.set('sla_status', 'Dentro do Prazo')
+      }
     }
 
     var currentStatus = ticket.getString('status')
@@ -32,15 +102,30 @@ routerAdd(
 
     $app.save(ticket)
 
+    var respH = Math.floor(responseElapsedSec / 3600)
+    var respM = Math.floor((responseElapsedSec % 3600) / 60)
+    var respS = responseElapsedSec % 60
+    var formattedRespTime =
+      (respH > 0 ? respH + 'h ' : '') + (respM > 0 || respH > 0 ? respM + 'min ' : '') + respS + 's'
+
     try {
       var historyCol = $app.findCollectionByNameOrId('ticket_history')
       var hist = new Record(historyCol)
       hist.set('ticket', id)
       hist.set('user', userId)
-      hist.set('action', 'Iniciar Atendimento')
+      hist.set('action', 'Iniciar Atendimento e SLA Resposta')
       hist.set('field', 'sla_response_start')
       hist.set('old_value', '')
-      hist.set('new_value', 'Atendimento iniciado — SLA Resposta congelado em ' + now)
+      hist.set(
+        'new_value',
+        'Atendimento iniciado em ' +
+          now +
+          '. Tempo de Resposta apurado: ' +
+          formattedRespTime +
+          ' (' +
+          (responseMet ? 'SLA Resposta Cumprido' : 'SLA Resposta Violado') +
+          ')',
+      )
       $app.save(hist)
     } catch (hErr) {
       $app.logger().error('ticket_start_service: history logging failed', 'error', hErr.message)
@@ -334,11 +419,100 @@ routerAdd(
     ticket.set('operator_cycle_start', now)
     ticket.set('operator_cycle_user', userId)
 
-    // Se o atendimento geral ainda não tinha sido iniciado, carimba também
-    if (!ticket.getString('sla_response_start')) {
+    // Ligação do Play ao SLA Resposta:
+    // 1. O play calcula o tempo de resposta entre a chegada do chamado (created) e o momento do Play
+    // 2. Marca o chamado como respondido (sla_response_at) e dá início ao ciclo do operador
+    // 3. Apura o prazo da atividade / SLA Resposta cadastrado na atividade (se ainda não calculado ou para garantir o prazo configurado)
+    // 4. Determina se o SLA Resposta foi cumprido ("Dentro do Prazo") ou violado ("Violado")
+    var isFirstResponse = !ticket.getString('sla_response_at')
+    var responseElapsedSec = 0
+    var responseMet = true
+    var slaResponseDeadlineStr = ticket.getString('sla_response_deadline')
+
+    if (isFirstResponse) {
       ticket.set('sla_response_start', now)
-      if (!ticket.getString('sla_response_at')) {
-        ticket.set('sla_response_at', now)
+      ticket.set('sla_response_at', now)
+
+      var createdStr = ticket.getString('created')
+      var createdTime = createdStr ? new Date(createdStr).getTime() : new Date(now).getTime()
+      var nowTime = new Date(now).getTime()
+      if (!isNaN(createdTime) && nowTime >= createdTime) {
+        responseElapsedSec = Math.max(0, Math.round((nowTime - createdTime) / 1000))
+      }
+      ticket.set('sla_response_time_seconds', responseElapsedSec)
+
+      // Se ainda não houver prazo de resposta configurado (sla_response_deadline), apura a partir da atividade/empresa/contrato
+      if (!slaResponseDeadlineStr) {
+        var targetRespMin = 0
+        var subCatId = ticket.getString('subcategory')
+        var catId = ticket.getString('category')
+        var companyId = ticket.getString('company')
+        var contractId = ticket.getString('contract')
+
+        if (subCatId) {
+          try {
+            var subCatRec = $app.findRecordById('tkt_categories', subCatId)
+            var sResp = subCatRec.getInt('sla_response_minutes') || 0
+            if (sResp > 0) targetRespMin = sResp
+          } catch (_) {}
+        }
+        if (!targetRespMin && catId) {
+          try {
+            var catRec = $app.findRecordById('tkt_categories', catId)
+            var cResp = catRec.getInt('sla_response_minutes') || 0
+            if (cResp > 0) targetRespMin = cResp
+          } catch (_) {}
+        }
+        if (!targetRespMin && companyId) {
+          try {
+            var compRec = $app.findRecordById('companies', companyId)
+            var compResp = compRec.getInt('sla_response_minutes') || 0
+            if (compResp > 0) targetRespMin = compResp
+          } catch (_) {}
+        }
+        if (!targetRespMin && contractId) {
+          try {
+            var cntrRec = $app.findRecordById('contracts', contractId)
+            var cntrResp = cntrRec.getInt('sla_response_time') || 0
+            if (cntrResp > 0) targetRespMin = cntrResp
+          } catch (_) {}
+        }
+        if (!targetRespMin) {
+          targetRespMin = 30
+        }
+
+        var calculatedDeadline = new Date(createdTime + targetRespMin * 60000).toISOString()
+        ticket.set('sla_response_deadline', calculatedDeadline)
+        slaResponseDeadlineStr = calculatedDeadline
+      }
+
+      // Cumprimento do SLA Resposta:
+      // Se Play foi dado até o deadline -> cumprido (Dentro do Prazo); se depois -> violado
+      if (slaResponseDeadlineStr) {
+        var deadlineMs = new Date(slaResponseDeadlineStr).getTime()
+        if (!isNaN(deadlineMs)) {
+          responseMet = nowTime <= deadlineMs
+        }
+      }
+
+      // Se violado, reflete também no sla_status geral caso o ticket não esteja já resolvido
+      if (!responseMet) {
+        ticket.set('sla_status', 'Violado')
+      } else if (!ticket.getString('sla_status') || ticket.getString('sla_status') === 'Pausado') {
+        ticket.set('sla_status', 'Dentro do Prazo')
+      }
+    } else {
+      // Já havia resposta registrada previamente
+      responseElapsedSec = ticket.getInt('sla_response_time_seconds') || 0
+      if (!ticket.getString('sla_response_start')) {
+        ticket.set('sla_response_start', now)
+      }
+      if (slaResponseDeadlineStr) {
+        var dMs = new Date(slaResponseDeadlineStr).getTime()
+        var respAtMs = new Date(ticket.getString('sla_response_at')).getTime()
+        if (!isNaN(dMs) && !isNaN(respAtMs)) {
+          responseMet = respAtMs <= dMs
+        }
       }
     }
 
@@ -349,18 +523,58 @@ routerAdd(
 
     $app.save(ticket)
 
-    // Log de auditoria
+    // Formatação do tempo de resposta para exibição em log
+    var respH = Math.floor(responseElapsedSec / 3600)
+    var respM = Math.floor((responseElapsedSec % 3600) / 60)
+    var respS = responseElapsedSec % 60
+    var formattedRespTime =
+      (respH > 0 ? respH + 'h ' : '') + (respM > 0 || respH > 0 ? respM + 'min ' : '') + respS + 's'
+
+    // Log de auditoria em ticket_history
     try {
       var histCol = $app.findCollectionByNameOrId('ticket_history')
       var hist = new Record(histCol)
       hist.set('ticket', id)
       hist.set('user', userId)
-      hist.set('action', 'Início de Ciclo de Atendimento')
-      hist.set('field', 'operator_cycle_start')
-      hist.set('old_value', '')
-      hist.set('new_value', 'Ciclo iniciado em ' + now)
+      hist.set('action', 'Play - Início de Atendimento e SLA Resposta')
+      hist.set('field', 'sla_response_at')
+      hist.set('old_value', isFirstResponse ? '' : 'Já respondido')
+      hist.set(
+        'new_value',
+        'Ciclo iniciado. Tempo de Resposta apurado: ' +
+          formattedRespTime +
+          ' (' +
+          (responseMet ? 'SLA Resposta Cumprido' : 'SLA Resposta Violado') +
+          ')',
+      )
       $app.save(hist)
     } catch (_) {}
+
+    // Registrar interação caso seja o primeiro Play com resposta registrada
+    if (isFirstResponse) {
+      try {
+        var interCol = $app.findCollectionByNameOrId('ticket_interactions')
+        var interRec = new Record(interCol)
+        interRec.set('ticket', id)
+        interRec.set('author', userId)
+        interRec.set('type', 'Interno')
+        interRec.set(
+          'content',
+          '▶ Play acionado pelo operador. Tempo de resposta apurado desde a chegada: ' +
+            formattedRespTime +
+            '. Status do SLA Resposta: ' +
+            (responseMet ? 'Dentro do Prazo (Cumprido)' : 'Violado (Estourado)') +
+            '. Ciclo de atendimento em andamento.',
+        )
+        interRec.set('origin', 'Cronômetro')
+        interRec.set('duration_minutes', 0)
+        interRec.set('hour_type', 'Contratada')
+        interRec.set('billing_status', 'Faturável')
+        $app.save(interRec)
+      } catch (iErr) {
+        $app.logger().error('start-work-cycle: response interaction error', 'error', iErr.message)
+      }
+    }
 
     return e.json(200, {
       success: true,
@@ -369,6 +583,12 @@ routerAdd(
       operator_worked_seconds: ticket.getInt('operator_worked_seconds') || 0,
       work_hours: ticket.getFloat('work_hours') || 0,
       status: ticket.getString('status'),
+      sla_response_at: ticket.getString('sla_response_at'),
+      sla_response_start: ticket.getString('sla_response_start'),
+      sla_response_deadline: ticket.getString('sla_response_deadline'),
+      sla_response_time_seconds: ticket.getInt('sla_response_time_seconds') || 0,
+      sla_status: ticket.getString('sla_status'),
+      response_met: responseMet,
     })
   },
   $apis.requireAuth(),
