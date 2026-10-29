@@ -104,7 +104,7 @@ import { computeSlaResponseStatus, computeSlaSolutionStatus } from '@/lib/sla-st
 import { VisitDialog } from '@/components/VisitDialog'
 import { SlaPauseDialog, STATUS_BY_REASON } from '@/components/SlaPauseDialog'
 import { AccompanimentDialog } from '@/components/AccompanimentDialog'
-import { formatMinutes, formatHours } from '@/lib/duration'
+import { formatMinutes } from '@/lib/duration'
 import {
   Inbox,
   Sparkles,
@@ -1600,7 +1600,162 @@ export default function TicketDetail({
         </Tabs>
       </div>
       <div className="space-y-4">
+        {/* Painel Minimalista de Ciclo de Atendimento / Horas Trabalhadas acima do Solicitante */}
+        <div className="rounded-xl border border-border/80 bg-card p-3 shadow-xs space-y-2">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground font-mono">
+                Ciclo de Trabalho
+              </span>
+              {isCycleActive ? (
+                <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
+                  <span className="relative flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+                  </span>
+                  Em Curso
+                </span>
+              ) : ticket.sla_paused ? (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30">
+                  SLA Pausado
+                </span>
+              ) : (
+                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-muted text-muted-foreground">
+                  Inativo
+                </span>
+              )}
+            </div>
+
+            {/* Botões Play (Verde) e Pause (Amarelo) minimalistas no canto direito */}
+            <div className="flex items-center gap-1 shrink-0">
+              {/* Botão Play (Verde) - Iniciar atendimento / ciclo de trabalho */}
+              <button
+                type="button"
+                onClick={handlePlayOperatorCycle}
+                disabled={
+                  cycleActionLoading ||
+                  isCycleActive ||
+                  ticket.status === 'Resolvido' ||
+                  ticket.status === 'Encerrado' ||
+                  ticket.status === 'Cancelado'
+                }
+                title={
+                  isCycleActive ? 'Ciclo de atendimento em andamento' : 'Iniciar atendimento (▶)'
+                }
+                className={`h-7 px-2.5 rounded-md inline-flex items-center gap-1 text-xs font-semibold transition-all shadow-xs ${
+                  isCycleActive
+                    ? 'bg-emerald-600/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/40 cursor-default'
+                    : 'bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white disabled:opacity-40 disabled:cursor-not-allowed'
+                }`}
+              >
+                {cycleActionLoading && !isCycleActive ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <Play className="h-3.5 w-3.5 fill-current" />
+                )}
+                <span className="hidden sm:inline">Play</span>
+              </button>
+
+              {/* Botão Pause (Amarelo) - Pausar SLA (aparece ao lado do play) */}
+              <button
+                type="button"
+                onClick={() => {
+                  if (ticket.sla_paused) {
+                    handleResumeSla()
+                  } else {
+                    setShowSlaPause(true)
+                  }
+                }}
+                disabled={
+                  cycleActionLoading ||
+                  ticket.status === 'Resolvido' ||
+                  ticket.status === 'Encerrado' ||
+                  ticket.status === 'Cancelado'
+                }
+                title={ticket.sla_paused ? 'SLA Pausado — clique para retomar' : 'Pausar SLA (⏸)'}
+                className={`h-7 px-2.5 rounded-md inline-flex items-center gap-1 text-xs font-semibold transition-all shadow-xs ${
+                  ticket.sla_paused
+                    ? 'bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/40'
+                    : 'bg-amber-500 hover:bg-amber-600 active:scale-95 text-slate-950 font-bold disabled:opacity-40 disabled:cursor-not-allowed'
+                }`}
+              >
+                <Pause className="h-3.5 w-3.5 fill-current" />
+                <span className="hidden sm:inline">{ticket.sla_paused ? 'Pausado' : 'Pause'}</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Cronômetro em tempo real do ciclo de trabalho (HH:MM:SS) persistido no banco */}
+          <div className="flex items-center justify-between rounded-lg bg-muted/50 border border-border/60 px-3 py-1.5 text-xs">
+            <span className="text-muted-foreground flex items-center gap-1.5">
+              <Clock className="h-3.5 w-3.5 text-muted-foreground" />
+              Tempo do Ciclo:
+            </span>
+            <span
+              className={`font-mono text-sm font-bold tabular-nums ${
+                isCycleActive ? 'text-emerald-600 dark:text-emerald-400' : 'text-muted-foreground'
+              }`}
+            >
+              {formatSecondsToClock(cycleSeconds)}
+            </span>
+          </div>
+        </div>
+
         <RequesterInfo ticket={ticket} onUpdated={loadData} />
+
+        {/* Card de Horas Dividido: Total de Horas Trabalhadas e Horas de Acompanhamento */}
+        <div className="itsm-card p-4 space-y-3.5 border border-border/80 bg-card shadow-sm">
+          <div className="flex items-center justify-between border-b border-border pb-2">
+            <h3 className="font-semibold text-sm text-foreground flex items-center gap-1.5">
+              <Clock className="h-4 w-4 text-primary" />
+              Apuração de Horas
+            </h3>
+            {(perms.isTecnico || perms.isAdmin || perms.isGestor) && (
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={() => setShowAccompaniment(true)}
+                className="h-7 text-xs px-2.5 border-amber-500/40 text-amber-700 dark:text-amber-300 hover:bg-amber-500/10"
+                title="Registrar horas gastas em acompanhamento técnico"
+              >
+                + Acompanhamento
+              </Button>
+            )}
+          </div>
+
+          <div className="grid grid-cols-2 gap-2.5">
+            {/* Total de Horas Trabalhadas */}
+            <div className="p-3 rounded-lg border border-border/80 bg-muted/40 space-y-1">
+              <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground block leading-tight">
+                Total de Horas Trabalhadas
+              </span>
+              <div className="text-base font-bold font-mono text-foreground tabular-nums flex items-baseline gap-1">
+                <span>{totalWorkedDisplay}</span>
+                {isCycleActive && (
+                  <span className="text-[10px] text-emerald-600 font-sans font-normal animate-pulse">
+                    (ativo)
+                  </span>
+                )}
+              </div>
+              <p className="text-[10px] text-muted-foreground leading-tight">
+                Ciclos + acompanhamentos
+              </p>
+            </div>
+
+            {/* Horas de Acompanhamento */}
+            <div className="p-3 rounded-lg border border-amber-500/30 bg-amber-500/5 space-y-1">
+              <span className="text-[10px] font-semibold uppercase tracking-wider text-amber-700 dark:text-amber-300 block leading-tight">
+                Horas de Acompanhamento
+              </span>
+              <div className="text-base font-bold font-mono text-amber-600 dark:text-amber-400 tabular-nums">
+                {accompanimentDisplay}
+              </div>
+              <p className="text-[10px] text-muted-foreground leading-tight">Logs registrados</p>
+            </div>
+          </div>
+        </div>
+
         <div className="itsm-card p-4 space-y-4">
           <h3 className="font-semibold text-sm text-foreground border-b border-border pb-2">
             Controle de SLA
@@ -1663,12 +1818,25 @@ export default function TicketDetail({
               <User className="h-4 w-4 text-muted-foreground" /> Operador:{' '}
               {ticket.expand?.assigned_to?.name || 'Não atribuído'}
             </div>
-            <div className="flex items-center gap-2 text-muted-foreground">
-              <Clock className="h-4 w-4 text-muted-foreground" /> Horas:{' '}
-              {formatHours(ticket.work_hours)}
+            <div className="flex items-center justify-between text-muted-foreground">
+              <span className="flex items-center gap-2">
+                <Clock className="h-4 w-4 text-muted-foreground" /> Horas Trabalhadas:
+              </span>
+              <span className="font-mono font-medium text-foreground">{totalWorkedDisplay}</span>
             </div>
-            <div className="flex items-center gap-2 text-muted-foreground">
-              <Timer className="h-4 w-4 text-muted-foreground" /> Total: {totalHoursDisplay}
+            <div className="flex items-center justify-between text-muted-foreground">
+              <span className="flex items-center gap-2">
+                <Timer className="h-4 w-4 text-amber-500" /> Acompanhamento:
+              </span>
+              <span className="font-mono font-medium text-amber-600 dark:text-amber-400">
+                {accompanimentDisplay}
+              </span>
+            </div>
+            <div className="flex items-center justify-between text-muted-foreground">
+              <span className="flex items-center gap-2">
+                <FileText className="h-4 w-4 text-muted-foreground" /> Interações (Lançamentos):
+              </span>
+              <span className="font-mono text-muted-foreground">{totalHoursDisplay}</span>
             </div>
             {ticket.sla_response_start && (
               <div className="flex items-center gap-2 text-muted-foreground">
@@ -1959,6 +2127,14 @@ export default function TicketDetail({
         participants={participants}
         loading={loadingParticipants}
         ticketNumber={ticket.number}
+      />
+
+      {/* Modal de Registro de Horas de Acompanhamento */}
+      <AccompanimentDialog
+        ticketId={ticket.id}
+        open={showAccompaniment}
+        onOpenChange={setShowAccompaniment}
+        onSaved={loadData}
       />
     </div>
   )
