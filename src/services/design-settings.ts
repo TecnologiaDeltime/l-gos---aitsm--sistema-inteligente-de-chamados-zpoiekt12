@@ -1,6 +1,6 @@
 import pb from '@/lib/pocketbase/client'
 
-export type SystemThemeVariant = 'amber_alert'
+export type SystemThemeVariant = 'amber_alert' | 'amber_light'
 
 export interface DesignSettings {
   id?: string
@@ -18,11 +18,11 @@ export interface DesignSettings {
 
 export const OFFICIAL_THEME = {
   id: 'amber_alert' as const,
-  name: 'Amber Alert',
+  name: 'Modo Escuro (Amber Alert)',
   mode: 'dark' as const,
   subtitle: 'Fundo Grafite Neutro & Barra Lateral Grafite #17181C',
   description:
-    'Tema oficial único do sistema: fundo e barra lateral em grafite escuro (#17181C), com tipografia e ícones em âmbar suave (#FCD34D / #F5F3EF), item ativo em destaque âmbar (#D97706) e ação primária âmbar (#F59E0B).',
+    'Design escuro oficial do sistema: fundo e barra lateral em grafite escuro (#17181C), com tipografia e ícones em âmbar suave (#FCD34D / #F5F3EF), item ativo em destaque âmbar (#D97706) e ação primária âmbar (#F59E0B).',
   primaryHex: '#F59E0B',
   accentHex: '#D97706',
   sidebarBgHex: '#17181C',
@@ -57,6 +57,47 @@ export const OFFICIAL_THEME = {
   },
 }
 
+export const LIGHT_THEME = {
+  id: 'amber_light' as const,
+  name: 'Modo Claro',
+  mode: 'light' as const,
+  subtitle: 'Fundo Branco/Off-white & Marrom Quente',
+  description:
+    'Design claro sofisticado explorando marrom e branco: fundo acolhedor (#FAF8F5), cartões brancos com bordas suaves, tipografia marrom escuro de alto contraste (WCAG AA), barra lateral marrom nobre (#3D2314) com letras brancas e ações em marrom/âmbar quente (#B45309 / #F59E0B).',
+  primaryHex: '#B45309',
+  accentHex: '#9A3412',
+  sidebarBgHex: '#3D2314',
+  sidebarTextHex: '#FFFFFF',
+  sidebarActiveHex: '#F59E0B',
+  hslVariables: {
+    primary: '25 88% 36%', // #B45309 Marrom quente
+    primaryForeground: '0 0% 100%',
+    accent: '25 88% 32%',
+    accentForeground: '0 0% 100%',
+    ring: '25 88% 36%',
+    background: '35 25% 98%', // #FAF8F5 Off-white suave
+    foreground: '24 50% 12%', // #2E1A0E Marrom escuro legível
+    card: '0 0% 100%', // #FFFFFF
+    cardForeground: '24 50% 12%',
+    popover: '0 0% 100%',
+    popoverForeground: '24 50% 12%',
+    border: '35 15% 86%', // #DFDBD4
+    input: '35 15% 86%',
+    muted: '35 20% 93%',
+    mutedForeground: '24 20% 40%', // #6E5B4F Marrom grafite
+    secondary: '35 25% 92%',
+    secondaryForeground: '24 50% 14%',
+    sidebarBackground: '24 50% 16%', // #3D2314 Marrom escuro nobre
+    sidebarForeground: '0 0% 100%', // Branco
+    sidebarBorder: '24 35% 24%',
+    chart1: '25 88% 36%',
+    chart2: '28 92% 44%',
+    chart3: '38 92% 50%',
+    chart4: '142 72% 32%',
+    chart5: '0 78% 44%',
+  },
+}
+
 export const DEFAULT_DESIGN_SETTINGS: DesignSettings = {
   sidebar_bg_color: '#17181C',
   sidebar_text_color: '#FCD34D',
@@ -71,7 +112,7 @@ export const DEFAULT_DESIGN_SETTINGS: DesignSettings = {
 export interface ThemeVariantDefinition {
   id: SystemThemeVariant
   name: string
-  mode: 'dark'
+  mode: 'dark' | 'light'
   subtitle: string
   description: string
   primaryHex: string
@@ -84,12 +125,12 @@ export interface ThemeVariantDefinition {
 }
 
 /**
- * Tema único oficial do sistema ITSM.
+ * Temas do sistema ITSM: Modo Escuro (Amber Alert) e Modo Claro (Marrom & Branco).
  */
 export const THEME_VARIANTS: ThemeVariantDefinition[] = [
   {
     id: 'amber_alert',
-    name: 'Amber Alert (Oficial)',
+    name: 'Modo Escuro (Amber Alert)',
     mode: 'dark',
     subtitle: OFFICIAL_THEME.subtitle,
     description: OFFICIAL_THEME.description,
@@ -101,14 +142,28 @@ export const THEME_VARIANTS: ThemeVariantDefinition[] = [
     chips: ['#F59E0B', '#FCD34D', '#D97706', '#17181C', '#23252B'],
     hslVariables: OFFICIAL_THEME.hslVariables,
   },
+  {
+    id: 'amber_light',
+    name: 'Modo Claro (Marrom & Branco)',
+    mode: 'light',
+    subtitle: LIGHT_THEME.subtitle,
+    description: LIGHT_THEME.description,
+    primaryHex: LIGHT_THEME.primaryHex,
+    accentHex: LIGHT_THEME.accentHex,
+    sidebarBgHex: LIGHT_THEME.sidebarBgHex,
+    sidebarTextHex: LIGHT_THEME.sidebarTextHex,
+    previewBg: 'linear-gradient(135deg, #FAF8F5 0%, #F5EFEB 50%, #EDE4DC 100%)',
+    chips: ['#B45309', '#3D2314', '#F59E0B', '#FAF8F5', '#2E1A0E'],
+    hslVariables: LIGHT_THEME.hslVariables,
+  },
 ]
 
 /**
- * Valida e normaliza qualquer tema para o único tema oficial Amber Alert.
- * Qualquer registro salvo anteriormente (amber_light, corporate_blue, teal_ops, etc.)
- * é automaticamente normalizado para 'amber_alert'.
+ * Valida e normaliza o identificador do tema para 'amber_alert' (escuro) ou 'amber_light' (claro).
+ * O padrão é sempre 'amber_alert' (escuro).
  */
-export function normalizeThemeVariant(_raw?: any): SystemThemeVariant {
+export function normalizeThemeVariant(raw?: any): SystemThemeVariant {
+  if (raw === 'amber_light') return 'amber_light'
   return 'amber_alert'
 }
 
@@ -123,12 +178,18 @@ export function getCachedDesignSettings(): DesignSettings {
     const raw = localStorage.getItem(STORAGE_KEY)
     if (raw) {
       const parsed = JSON.parse(raw)
+      const variant = normalizeThemeVariant(parsed.system_theme_variant)
+      const isLight = variant === 'amber_light'
       return {
         ...DEFAULT_DESIGN_SETTINGS,
         ...parsed,
-        system_theme_variant: 'amber_alert',
-        sidebar_bg_color: '#17181C',
-        sidebar_text_color: '#FCD34D',
+        system_theme_variant: variant,
+        sidebar_bg_color: isLight
+          ? parsed.sidebar_bg_color || LIGHT_THEME.sidebarBgHex
+          : OFFICIAL_THEME.sidebarBgHex,
+        sidebar_text_color: isLight
+          ? parsed.sidebar_text_color || LIGHT_THEME.sidebarTextHex
+          : OFFICIAL_THEME.sidebarTextHex,
       }
     }
   } catch {
@@ -164,12 +225,18 @@ export async function getDesignSettings(): Promise<DesignSettings> {
       const first = records[0]
       const logoUrl = first.logo ? pb.files.getURL(first, first.logo) : ''
       const reportLogoUrl = first.report_logo ? pb.files.getURL(first, first.report_logo) : ''
+      const variant = normalizeThemeVariant(first.system_theme_variant)
+      const isLight = variant === 'amber_light'
 
       const merged: DesignSettings = {
         id: first.id,
-        sidebar_bg_color: '#17181C',
-        sidebar_text_color: '#FCD34D',
-        system_theme_variant: 'amber_alert',
+        sidebar_bg_color: isLight
+          ? first.sidebar_bg_color || LIGHT_THEME.sidebarBgHex
+          : OFFICIAL_THEME.sidebarBgHex,
+        sidebar_text_color: isLight
+          ? first.sidebar_text_color || LIGHT_THEME.sidebarTextHex
+          : OFFICIAL_THEME.sidebarTextHex,
+        system_theme_variant: variant,
         scope: 'global',
         logo: first.logo || '',
         report_logo: first.report_logo || '',
@@ -189,16 +256,30 @@ export async function getDesignSettings(): Promise<DesignSettings> {
 
 /**
  * Salva configurações de design no banco e atualiza cache.
- * Fixa o tema em amber_alert e a barra lateral no padrão oficial.
+ * Permite alternar entre amber_alert (escuro) e amber_light (claro), ajustando
+ * a barra lateral para suas cores oficiais harmônicas.
  */
 export async function saveDesignSettings(
   data: Partial<Omit<DesignSettings, 'id' | 'created' | 'updated'>>,
 ): Promise<DesignSettings> {
   const current = await getDesignSettings()
+  const nextVariant = normalizeThemeVariant(
+    data.system_theme_variant ?? current.system_theme_variant,
+  )
+  const isLight = nextVariant === 'amber_light'
+
+  const nextSidebarBg = isLight
+    ? data.sidebar_bg_color || LIGHT_THEME.sidebarBgHex
+    : OFFICIAL_THEME.sidebarBgHex
+
+  const nextSidebarText = isLight
+    ? data.sidebar_text_color || LIGHT_THEME.sidebarTextHex
+    : OFFICIAL_THEME.sidebarTextHex
+
   const payload: Record<string, any> = {
-    sidebar_bg_color: '#17181C',
-    sidebar_text_color: '#FCD34D',
-    system_theme_variant: 'amber_alert',
+    sidebar_bg_color: nextSidebarBg,
+    sidebar_text_color: nextSidebarText,
+    system_theme_variant: nextVariant,
     scope: 'global',
   }
 
@@ -228,9 +309,9 @@ export async function saveDesignSettings(
 
   const result: DesignSettings = {
     id: savedRecord.id,
-    sidebar_bg_color: '#17181C',
-    sidebar_text_color: '#FCD34D',
-    system_theme_variant: 'amber_alert',
+    sidebar_bg_color: nextSidebarBg,
+    sidebar_text_color: nextSidebarText,
+    system_theme_variant: nextVariant,
     scope: 'global',
     logo: savedRecord.logo || '',
     report_logo: savedRecord.report_logo || '',
@@ -289,11 +370,20 @@ export async function uploadLogo(
   }
 
   const current = await getDesignSettings()
+  const isLight = current.system_theme_variant === 'amber_light'
   const formData = new FormData()
   formData.append(type, file)
-  formData.append('system_theme_variant', 'amber_alert')
-  formData.append('sidebar_bg_color', '#17181C')
-  formData.append('sidebar_text_color', '#FCD34D')
+  formData.append('system_theme_variant', current.system_theme_variant)
+  formData.append(
+    'sidebar_bg_color',
+    isLight ? current.sidebar_bg_color || LIGHT_THEME.sidebarBgHex : OFFICIAL_THEME.sidebarBgHex,
+  )
+  formData.append(
+    'sidebar_text_color',
+    isLight
+      ? current.sidebar_text_color || LIGHT_THEME.sidebarTextHex
+      : OFFICIAL_THEME.sidebarTextHex,
+  )
 
   let savedRecord: any
   if (current.id) {
@@ -315,9 +405,9 @@ export async function uploadLogo(
 
   const result: DesignSettings = {
     id: savedRecord.id,
-    sidebar_bg_color: '#17181C',
-    sidebar_text_color: '#FCD34D',
-    system_theme_variant: 'amber_alert',
+    sidebar_bg_color: savedRecord.sidebar_bg_color || current.sidebar_bg_color,
+    sidebar_text_color: savedRecord.sidebar_text_color || current.sidebar_text_color,
+    system_theme_variant: normalizeThemeVariant(savedRecord.system_theme_variant),
     scope: 'global',
     logo: savedRecord.logo || '',
     report_logo: savedRecord.report_logo || '',
@@ -352,9 +442,9 @@ export async function removeLogo(type: 'logo' | 'report_logo'): Promise<DesignSe
 
   const result: DesignSettings = {
     id: savedRecord.id,
-    sidebar_bg_color: '#17181C',
-    sidebar_text_color: '#FCD34D',
-    system_theme_variant: 'amber_alert',
+    sidebar_bg_color: savedRecord.sidebar_bg_color || current.sidebar_bg_color,
+    sidebar_text_color: savedRecord.sidebar_text_color || current.sidebar_text_color,
+    system_theme_variant: normalizeThemeVariant(savedRecord.system_theme_variant),
     scope: 'global',
     logo: savedRecord.logo || '',
     report_logo: savedRecord.report_logo || '',
@@ -395,19 +485,42 @@ export const useSystemLogoForReports = copySystemLogoToReports
 /**
  * Aplica o tema único Amber Alert escuro e a barra lateral branca no DOM.
  */
-export function applyDesignToDOM(_settings?: DesignSettings, _isDark?: boolean): void {
+export function applyDesignToDOM(settings?: DesignSettings, explicitDark?: boolean): void {
   if (typeof document === 'undefined') return
   const root = document.documentElement
-  const v = OFFICIAL_THEME
 
-  // Força sempre o tema Amber Alert no DOM
-  root.setAttribute('data-theme-variant', 'amber_alert')
-  root.classList.add('dark')
+  // Determinar variante ativa
+  const effectiveSettings = settings || getCachedDesignSettings()
+  let variant = normalizeThemeVariant(effectiveSettings.system_theme_variant)
+  if (explicitDark !== undefined) {
+    variant = explicitDark ? 'amber_alert' : 'amber_light'
+  }
 
-  // Barra lateral GRAFITE ESCURO #17181C com letras âmbar suave #FCD34D e item ativo #D97706
-  root.style.setProperty('--custom-sidebar-bg', '#17181C')
-  root.style.setProperty('--custom-sidebar-text', '#FCD34D')
-  root.style.setProperty('--sidebar-active-color', '#D97706')
+  const isLight = variant === 'amber_light'
+  const v = isLight ? LIGHT_THEME : OFFICIAL_THEME
+
+  // Configura classes no html
+  root.setAttribute('data-theme-variant', variant)
+  if (isLight) {
+    root.classList.remove('dark')
+    root.classList.add('light')
+  } else {
+    root.classList.remove('light')
+    root.classList.add('dark')
+  }
+
+  // Barra lateral
+  const sidebarBg = isLight
+    ? effectiveSettings.sidebar_bg_color || LIGHT_THEME.sidebarBgHex
+    : OFFICIAL_THEME.sidebarBgHex
+  const sidebarText = isLight
+    ? effectiveSettings.sidebar_text_color || LIGHT_THEME.sidebarTextHex
+    : OFFICIAL_THEME.sidebarTextHex
+  const sidebarActive = isLight ? LIGHT_THEME.sidebarActiveHex : OFFICIAL_THEME.sidebarActiveHex
+
+  root.style.setProperty('--custom-sidebar-bg', sidebarBg)
+  root.style.setProperty('--custom-sidebar-text', sidebarText)
+  root.style.setProperty('--sidebar-active-color', sidebarActive)
 
   // Variáveis HSL semânticas
   root.style.setProperty('--primary', v.hslVariables.primary)
@@ -436,8 +549,14 @@ export function applyDesignToDOM(_settings?: DesignSettings, _isDark?: boolean):
   root.style.setProperty('--sidebar-primary', v.hslVariables.primary)
   root.style.setProperty('--sidebar-primary-foreground', v.hslVariables.primaryForeground)
   root.style.setProperty('--sidebar-ring', v.hslVariables.ring)
-  root.style.setProperty('--sidebar-accent', '230 9% 16%') // Fundo sutil para hover na barra grafite escuro (#202227)
-  root.style.setProperty('--sidebar-accent-foreground', '45 93% 65%')
+
+  if (isLight) {
+    root.style.setProperty('--sidebar-accent', '24 45% 22%')
+    root.style.setProperty('--sidebar-accent-foreground', '0 0% 100%')
+  } else {
+    root.style.setProperty('--sidebar-accent', '230 9% 16%')
+    root.style.setProperty('--sidebar-accent-foreground', '45 93% 65%')
+  }
 
   // Gráficos
   root.style.setProperty('--chart-1', v.hslVariables.chart1)

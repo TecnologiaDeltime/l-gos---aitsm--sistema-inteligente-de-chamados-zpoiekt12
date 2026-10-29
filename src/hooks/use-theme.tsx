@@ -8,7 +8,7 @@ import {
   applyDesignToDOM,
 } from '@/services/design-settings'
 
-type Theme = 'dark'
+export type Theme = 'dark' | 'light'
 
 interface ThemeContextType {
   theme: Theme
@@ -16,7 +16,7 @@ interface ThemeContextType {
   setTheme: (theme: Theme) => void
   designSettings: DesignSettings
   updateDesignSettings: (newSettings: Partial<DesignSettings>) => Promise<DesignSettings>
-  applyDesignPreview: (previewSettings: Partial<DesignSettings>) => void
+  applyDesignPreview: (previewSettings: Partial<DesignSettings>, previewTheme?: Theme) => void
   resetDesignPreview: () => void
   refreshDesignSettings: () => Promise<void>
   isDesignLoading: boolean
@@ -31,16 +31,16 @@ export const useTheme = () => {
 }
 
 export const ThemeProvider = ({ children }: { children: ReactNode }) => {
-  const theme: Theme = 'dark'
-
   const [designSettings, setDesignSettings] = useState<DesignSettings>(getCachedDesignSettings)
   const [isDesignLoading, setIsDesignLoading] = useState<boolean>(true)
 
-  // Aplicar tema escuro Amber Alert e variáveis imediatamente
+  const theme: Theme = designSettings.system_theme_variant === 'amber_light' ? 'light' : 'dark'
+
+  // Aplicar tema e variáveis sempre que as configurações mudarem
   useEffect(() => {
-    localStorage.setItem('itsm-theme', 'dark')
+    localStorage.setItem('itsm-theme', theme)
     applyDesignToDOM(designSettings)
-  }, [designSettings])
+  }, [designSettings, theme])
 
   // Buscar configurações persistidas no PocketBase ao inicializar
   useEffect(() => {
@@ -61,15 +61,48 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [])
 
-  // O sistema utiliza exclusivamente o tema Amber Alert oficial escuro com menu branco.
-  // toggleTheme mantido como no-op para compatibilidade de API de chamadas existentes.
+  // Alterna entre Modo Escuro (Amber Alert) e Modo Claro (Marrom & Branco)
   const toggleTheme = useCallback(() => {
-    applyDesignToDOM(designSettings)
+    const nextVariant =
+      designSettings.system_theme_variant === 'amber_light' ? 'amber_alert' : 'amber_light'
+    const isLight = nextVariant === 'amber_light'
+    const nextSettings: DesignSettings = {
+      ...designSettings,
+      system_theme_variant: nextVariant,
+      sidebar_bg_color: isLight ? '#3D2314' : '#17181C',
+      sidebar_text_color: isLight ? '#FFFFFF' : '#FCD34D',
+    }
+    setDesignSettings(nextSettings)
+    applyDesignToDOM(nextSettings)
+    saveDesignSettings({
+      system_theme_variant: nextVariant,
+      sidebar_bg_color: nextSettings.sidebar_bg_color,
+      sidebar_text_color: nextSettings.sidebar_text_color,
+    }).catch((err) => {
+      console.warn('Falha ao salvar alternância de tema no backend:', err)
+    })
   }, [designSettings])
 
   const setTheme = useCallback(
-    (_t: Theme) => {
-      applyDesignToDOM(designSettings)
+    (newTheme: Theme) => {
+      const targetVariant = newTheme === 'light' ? 'amber_light' : 'amber_alert'
+      if (designSettings.system_theme_variant === targetVariant) return
+      const isLight = targetVariant === 'amber_light'
+      const nextSettings: DesignSettings = {
+        ...designSettings,
+        system_theme_variant: targetVariant,
+        sidebar_bg_color: isLight ? '#3D2314' : '#17181C',
+        sidebar_text_color: isLight ? '#FFFFFF' : '#FCD34D',
+      }
+      setDesignSettings(nextSettings)
+      applyDesignToDOM(nextSettings)
+      saveDesignSettings({
+        system_theme_variant: targetVariant,
+        sidebar_bg_color: nextSettings.sidebar_bg_color,
+        sidebar_text_color: nextSettings.sidebar_text_color,
+      }).catch((err) => {
+        console.warn('Falha ao salvar tema no backend:', err)
+      })
     },
     [designSettings],
   )
@@ -93,11 +126,11 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
     [designSettings],
   )
 
-  // Aplicar preview em tempo real (ex: logos)
+  // Aplicar preview em tempo real (ex: logos ou temas)
   const applyDesignPreview = useCallback(
-    (preview: Partial<DesignSettings>) => {
+    (preview: Partial<DesignSettings>, previewTheme?: Theme) => {
       const merged = { ...designSettings, ...preview }
-      applyDesignToDOM(merged)
+      applyDesignToDOM(merged, previewTheme ? previewTheme === 'dark' : undefined)
     },
     [designSettings],
   )

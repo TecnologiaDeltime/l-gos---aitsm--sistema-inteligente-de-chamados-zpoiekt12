@@ -49,6 +49,8 @@ import {
   VolumeX,
   Lock,
   Palette,
+  Sun,
+  Moon,
 } from 'lucide-react'
 import { useAuth } from '@/hooks/use-auth'
 import { useTheme } from '@/hooks/use-theme'
@@ -80,7 +82,7 @@ import { RefreshIndicator } from '@/components/RefreshIndicator'
 
 export default function Layout() {
   const { user, signOut } = useAuth()
-  const { designSettings } = useTheme()
+  const { theme, toggleTheme, designSettings } = useTheme()
   const permissions = usePermissions()
   const navigate = useNavigate()
   const location = useLocation()
@@ -599,10 +601,14 @@ export default function Layout() {
     )
   }
 
-  // Tema oficial Amber Alert: barra lateral grafite escuro (#17181C), textos/ícones #FCD34D, item ativo #d97706
-  const customSidebarBg = designSettings?.sidebar_bg_color || '#17181C'
-  const customSidebarText = designSettings?.sidebar_text_color || '#FCD34D'
-  const activeItemColor = '#d97706'
+  // Harmonia da barra lateral por modo:
+  // Escuro: barra grafite #17181C, texto âmbar #FCD34D, ativo #d97706
+  // Claro: barra marrom café #3D2314, texto branco #FFFFFF, ativo #f59e0b
+  const isLightMode = theme === 'light'
+  const customSidebarBg = designSettings?.sidebar_bg_color || (isLightMode ? '#3D2314' : '#17181C')
+  const customSidebarText =
+    designSettings?.sidebar_text_color || (isLightMode ? '#FFFFFF' : '#FCD34D')
+  const activeItemColor = isLightMode ? '#F59E0B' : '#d97706'
 
   const navContent = (
     <div
@@ -1407,6 +1413,36 @@ export default function Layout() {
           </div>
 
           <div className="flex items-center gap-3">
+            {/* Alternador de Modo Claro / Escuro */}
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={toggleTheme}
+                  className="relative transition-colors duration-200 text-muted-foreground hover:text-foreground hover:bg-secondary"
+                  aria-label={
+                    theme === 'dark'
+                      ? 'Alternar para Modo Claro (Marrom e Branco)'
+                      : 'Alternar para Modo Escuro (Amber Alert)'
+                  }
+                >
+                  {theme === 'dark' ? (
+                    <Sun className="h-5 w-5 text-amber-400 hover:text-amber-300 transition-transform duration-300 hover:rotate-45" />
+                  ) : (
+                    <Moon className="h-5 w-5 text-amber-700 hover:text-amber-900 transition-transform duration-300 hover:-rotate-12" />
+                  )}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom">
+                <p className="text-xs">
+                  {theme === 'dark'
+                    ? 'Ativar Modo Claro (Marrom & Branco)'
+                    : 'Ativar Modo Escuro (Amber Alert)'}
+                </p>
+              </TooltipContent>
+            </Tooltip>
+
             {/* Timer de atualização automática com opções e botão manual ao lado do sino de notificações */}
             <RefreshIndicator />
 

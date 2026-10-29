@@ -4,7 +4,7 @@
 
 @layer base {
   :root {
-    /* Sistema ITSM — Tema Único Oficial: Amber Alert escuro com barra lateral branca */
+    /* Sistema ITSM — Modo Escuro Padrão Oficial: Amber Alert escuro */
     --background: 230 10% 10%; /* #17181C Grafite escuro */
     --foreground: 40 20% 96%; /* #F5F3EF Texto principal claro */
 
@@ -46,7 +46,7 @@
 
     --radius: 0.5rem;
 
-    /* Barra lateral oficial: fundo GRAFITE ESCURO #17181C, texto âmbar suave #FCD34D, item ativo âmbar #D97706 */
+    /* Barra lateral oficial escuro: fundo GRAFITE ESCURO #17181C, texto âmbar suave #FCD34D, item ativo âmbar #D97706 */
     --custom-sidebar-bg: #17181c;
     --custom-sidebar-text: #fcd34d;
     --sidebar-active-color: #d97706;
@@ -107,6 +107,10 @@
     --ring: 38 92% 50%;
 
     /* Barra lateral oficial (fundo grafite escuro #17181C e letras âmbar suave #FCD34D) */
+    --custom-sidebar-bg: #17181c;
+    --custom-sidebar-text: #fcd34d;
+    --sidebar-active-color: #d97706;
+
     --sidebar-background: 230 10% 10%;
     --sidebar-foreground: 45 93% 65%;
     --sidebar-primary: 38 92% 50%;
@@ -122,6 +126,68 @@
     --chart-4: 142 71% 45%;
     --chart-5: 0 72% 51%;
   }
+
+  .light {
+    /* Modo Claro — Marrom e Branco com alto contraste (WCAG AA) */
+    --background: 35 25% 98%; /* #FAF8F5 Off-white suave e acolhedor */
+    --foreground: 24 50% 12%; /* #2E1A0E Marrom escuro profundo legível */
+
+    --card: 0 0% 100%; /* #FFFFFF Cartões brancos nítidos */
+    --card-foreground: 24 50% 12%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 24 50% 12%;
+
+    /* Cor de ação: Âmbar/Marrom quente de alto contraste #92400E / #B45309 */
+    --primary: 25 88% 36%; /* #B45309 Marrom quente / âmbar escuro */
+    --primary-foreground: 0 0% 100%; /* Branco sobre botão de ação marrom */
+
+    --secondary: 35 25% 92%; /* #EDE8DF */
+    --secondary-foreground: 24 50% 14%;
+
+    --muted: 35 20% 93%; /* #ECE8E1 */
+    --muted-foreground: 24 20% 40%; /* #6E5B4F Marrom grafite legível */
+
+    --accent: 25 88% 32%; /* #9A3412 Marrom ênfase */
+    --accent-foreground: 0 0% 100%;
+
+    /* Cores funcionais com saturação equilibrada para fundo claro */
+    --destructive: 0 78% 44%; /* Vermelho vivo com contraste em branco */
+    --destructive-foreground: 0 0% 100%;
+
+    --warning: 28 92% 44%; /* Laranja escuro / atenção */
+    --warning-foreground: 0 0% 100%;
+
+    --success: 142 72% 32%; /* Verde escuro acessível */
+    --success-foreground: 0 0% 100%;
+
+    --info: 217 88% 46%; /* Azul acessível */
+    --info-foreground: 0 0% 100%;
+
+    --border: 35 15% 86%; /* #DFDBD4 Borda suave neutra/marrom */
+    --input: 35 15% 86%;
+    --ring: 25 88% 36%;
+
+    /* Barra lateral no Modo Claro: Marrom café nobre #3D2314 com letras brancas e item ativo âmbar */
+    --custom-sidebar-bg: #3d2314;
+    --custom-sidebar-text: #ffffff;
+    --sidebar-active-color: #f59e0b;
+
+    --sidebar-background: 24 50% 16%; /* #3D2314 */
+    --sidebar-foreground: 0 0% 100%;
+    --sidebar-primary: 25 88% 36%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 24 45% 22%; /* Hover suave na barra marrom */
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 24 35% 24%;
+    --sidebar-ring: 38 92% 50%;
+
+    --chart-1: 25 88% 36%; /* Marrom âmbar */
+    --chart-2: 28 92% 44%; /* Laranja */
+    --chart-3: 38 92% 50%; /* Dourado */
+    --chart-4: 142 72% 32%; /* Verde */
+    --chart-5: 0 78% 44%; /* Vermelho */
+  }
 }
 
 @layer base {
@@ -131,8 +197,6 @@
   body {
     @apply bg-background text-foreground antialiased;
     font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
-    background-color: #17181c;
-    color: #f5f3ef;
   }
 }
 
@@ -145,18 +209,18 @@
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.15);
+  background: rgba(140, 140, 140, 0.25);
   border-radius: 9999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(245, 158, 11, 0.35);
+  background: rgba(217, 119, 6, 0.45);
 }
 
-/* Barra lateral oficial */
+/* Barra lateral oficial adaptável por variáveis */
 .custom-sidebar {
   background-color: var(--custom-sidebar-bg, #17181c) !important;
   color: var(--custom-sidebar-text, #fcd34d) !important;
-  border-right: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-right: 1px solid var(--sidebar-border, rgba(255, 255, 255, 0.08)) !important;
 }
 
 .custom-sidebar [data-sidebar='header'],
@@ -171,14 +235,14 @@
 }
 
 .custom-sidebar [data-sidebar='menu-button']:hover {
-  background-color: rgba(245, 158, 11, 0.12) !important;
-  color: #fbbf24 !important;
+  background-color: var(--sidebar-accent, rgba(245, 158, 11, 0.12)) !important;
+  color: var(--sidebar-accent-foreground, #fbbf24) !important;
 }
 
 .custom-sidebar [data-sidebar='menu-button'][data-active='true'],
 .custom-sidebar [data-sidebar='menu-button'].active {
   background-color: rgba(217, 119, 6, 0.22) !important;
-  color: #fbbf24 !important;
+  color: var(--sidebar-active-color, #fbbf24) !important;
   font-weight: 600 !important;
 }
 

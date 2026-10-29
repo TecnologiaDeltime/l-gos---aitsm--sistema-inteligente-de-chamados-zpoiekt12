@@ -11,6 +11,9 @@ import {
   copySystemLogoToReports,
   validateLogoFile,
   OFFICIAL_THEME,
+  LIGHT_THEME,
+  THEME_VARIANTS,
+  SystemThemeVariant,
 } from '@/services/design-settings'
 import {
   Loader2,
@@ -20,8 +23,10 @@ import {
   FileImage,
   ImageIcon,
   FileText,
-  ShieldCheck,
+  Palette,
   CheckCircle2,
+  Moon,
+  Sun,
 } from 'lucide-react'
 
 interface DesignSettingsTabProps {
@@ -30,7 +35,9 @@ interface DesignSettingsTabProps {
 
 export function DesignSettingsTab({ isAdminOrGestor }: DesignSettingsTabProps) {
   const { toast } = useToast()
-  const { designSettings, refreshDesignSettings } = useTheme()
+  const { theme, setTheme, updateDesignSettings, designSettings, refreshDesignSettings } =
+    useTheme()
+  const [savingTheme, setSavingTheme] = useState(false)
 
   // Estados para gerenciamento de logotipos
   const [systemLogoPreview, setSystemLogoPreview] = useState<string>(designSettings.logo_url || '')
@@ -481,117 +488,363 @@ export function DesignSettingsTab({ isAdminOrGestor }: DesignSettingsTabProps) {
         </CardContent>
       </Card>
 
-      {/* SEÇÃO 2: TEMA ÚNICO OFICIAL DO SISTEMA */}
+      {/* SEÇÃO 2: SELEÇÃO DE TEMA DO SISTEMA (MODO ESCURO / MODO CLARO) */}
       <Card className="itsm-card">
         <CardHeader className="border-b border-border/80 pb-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
               <CardTitle className="text-base font-semibold text-foreground flex items-center gap-2">
-                <ShieldCheck className="h-5 w-5 text-primary" />
-                Padrão de Design & Experiência (UX Oficial)
+                <Palette className="h-5 w-5 text-primary" />
+                Modo de Exibição & Tema Visual
               </CardTitle>
               <CardDescription className="text-xs text-muted-foreground mt-1">
-                O sistema é configurado no tema oficial único {OFFICIAL_THEME.name}, garantindo
-                consistência visual em todas as telas, alto contraste e conformidade WCAG AA.
+                Escolha o modo de exibição oficial do sistema: o consagrado{' '}
+                <strong>Modo Escuro (Amber Alert)</strong> ou o elegante{' '}
+                <strong>Modo Claro (Marrom & Branco)</strong>. A escolha é aplicada imediatamente e
+                sincronizada com todos os usuários do ITSM.
               </CardDescription>
             </div>
 
             <Badge
               variant="secondary"
-              className="bg-primary/15 text-primary border-primary/30 text-xs font-semibold px-2.5 py-1"
+              className="bg-primary/15 text-primary border-primary/30 text-xs font-semibold px-2.5 py-1 self-start sm:self-auto"
             >
               <CheckCircle2 className="h-3.5 w-3.5 mr-1" />
-              Tema Ativo: {OFFICIAL_THEME.name}
+              Ativo: {theme === 'light' ? LIGHT_THEME.name : OFFICIAL_THEME.name}
             </Badge>
           </div>
         </CardHeader>
 
-        <CardContent className="space-y-4 p-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="p-3.5 rounded-lg border border-border/80 bg-secondary/20 space-y-1.5">
-              <span className="text-[11px] font-mono text-muted-foreground uppercase tracking-wider">
-                Fundo do Sistema
-              </span>
-              <p className="text-sm font-semibold text-foreground">Grafite Escuro Neutro</p>
-              <div className="flex items-center gap-2 text-xs text-muted-foreground font-mono">
-                <span className="h-3.5 w-3.5 rounded-full bg-[#17181C] border border-white/20" />
-                #17181C
-              </div>
-            </div>
+        <CardContent className="space-y-6 p-6">
+          {/* Cartões dos dois modos */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            {/* 2.1 MODO ESCURO (AMBER ALERT) */}
+            {(() => {
+              const isSelected =
+                (designSettings.system_theme_variant || 'amber_alert') === 'amber_alert'
+              return (
+                <div
+                  onClick={() => {
+                    if (!isAdminOrGestor || savingTheme) return
+                    setTheme('dark')
+                  }}
+                  className={`relative p-5 rounded-xl border-2 transition-all cursor-pointer flex flex-col justify-between space-y-4 ${
+                    isSelected
+                      ? 'border-primary bg-primary/5 shadow-md shadow-black/20 ring-1 ring-primary/40'
+                      : 'border-border/80 bg-secondary/20 hover:border-border hover:bg-secondary/35'
+                  }`}
+                >
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="h-8 w-8 rounded-lg bg-[#17181C] border border-amber-500/30 flex items-center justify-center">
+                          <Moon className="h-4 w-4 text-amber-400" />
+                        </div>
+                        <div>
+                          <h4 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                            Modo Escuro (Amber Alert)
+                          </h4>
+                          <span className="text-[11px] text-muted-foreground">
+                            Padrão oficial escuro
+                          </span>
+                        </div>
+                      </div>
+                      {isSelected ? (
+                        <Badge className="bg-primary text-primary-foreground text-[10px] font-semibold">
+                          Em uso
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="text-[10px] text-muted-foreground">
+                          Clique para ativar
+                        </Badge>
+                      )}
+                    </div>
 
-            <div className="p-3.5 rounded-lg border border-border/80 bg-secondary/20 space-y-1.5">
-              <span className="text-[11px] font-mono text-muted-foreground uppercase tracking-wider">
-                Barra Lateral
-              </span>
-              <p className="text-sm font-semibold text-foreground">Grafite com Tipografia Âmbar</p>
-              <div className="flex items-center gap-2 text-xs text-muted-foreground font-mono">
-                <span className="h-3.5 w-3.5 rounded-full bg-[#17181C] border border-amber-500/30" />
-                #17181C / #FCD34D
-              </div>
-            </div>
+                    <p className="text-xs text-muted-foreground leading-relaxed">
+                      Fundo grafite neutro (#17181C), barra lateral grafite com tipografia em âmbar
+                      suave (#FCD34D), ação âmbar (#F59E0B) e item ativo em âmbar vívido (#D97706).
+                    </p>
 
-            <div className="p-3.5 rounded-lg border border-border/80 bg-secondary/20 space-y-1.5">
-              <span className="text-[11px] font-mono text-muted-foreground uppercase tracking-wider">
-                Ação Primária & Destaque
-              </span>
-              <p className="text-sm font-semibold text-foreground">Âmbar Oficial ITSM</p>
-              <div className="flex items-center gap-2 text-xs text-muted-foreground font-mono">
-                <span className="h-3.5 w-3.5 rounded-full bg-[#F59E0B]" />
-                #F59E0B / #D97706
-              </div>
-            </div>
+                    {/* Paleta / Chips de cores */}
+                    <div className="flex items-center gap-2 pt-1">
+                      <span className="text-[10px] font-mono text-muted-foreground">Amostras:</span>
+                      <div className="flex items-center gap-1.5">
+                        <span
+                          title="Fundo Grafite #17181C"
+                          className="h-5 w-5 rounded-full bg-[#17181C] border border-white/20"
+                        />
+                        <span
+                          title="Card #1F2126"
+                          className="h-5 w-5 rounded-full bg-[#1F2126] border border-white/20"
+                        />
+                        <span
+                          title="Tipografia Âmbar #FCD34D"
+                          className="h-5 w-5 rounded-full bg-[#FCD34D]"
+                        />
+                        <span
+                          title="Ação Primária #F59E0B"
+                          className="h-5 w-5 rounded-full bg-[#F59E0B]"
+                        />
+                        <span title="Ativo #D97706" className="h-5 w-5 rounded-full bg-[#D97706]" />
+                      </div>
+                    </div>
+                  </div>
+
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={isSelected ? 'default' : 'outline'}
+                    disabled={!isAdminOrGestor || savingTheme}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setTheme('dark')
+                    }}
+                    className="w-full text-xs h-8"
+                  >
+                    {isSelected ? 'Modo Escuro Ativo' : 'Ativar Modo Escuro'}
+                  </Button>
+                </div>
+              )
+            })()}
+
+            {/* 2.2 MODO CLARO (MARROM & BRANCO) */}
+            {(() => {
+              const isSelected = designSettings.system_theme_variant === 'amber_light'
+              return (
+                <div
+                  onClick={() => {
+                    if (!isAdminOrGestor || savingTheme) return
+                    setTheme('light')
+                  }}
+                  className={`relative p-5 rounded-xl border-2 transition-all cursor-pointer flex flex-col justify-between space-y-4 ${
+                    isSelected
+                      ? 'border-primary bg-primary/5 shadow-md shadow-black/10 ring-1 ring-primary/40'
+                      : 'border-border/80 bg-secondary/20 hover:border-border hover:bg-secondary/35'
+                  }`}
+                >
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="h-8 w-8 rounded-lg bg-[#FAF8F5] border border-amber-800/20 flex items-center justify-center">
+                          <Sun className="h-4 w-4 text-amber-700" />
+                        </div>
+                        <div>
+                          <h4 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                            Modo Claro (Marrom & Branco)
+                          </h4>
+                          <span className="text-[11px] text-muted-foreground">
+                            UX suave de alto contraste
+                          </span>
+                        </div>
+                      </div>
+                      {isSelected ? (
+                        <Badge className="bg-primary text-primary-foreground text-[10px] font-semibold">
+                          Em uso
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="text-[10px] text-muted-foreground">
+                          Clique para ativar
+                        </Badge>
+                      )}
+                    </div>
+
+                    <p className="text-xs text-muted-foreground leading-relaxed">
+                      Fundo acolhedor off-white (#FAF8F5), cartões brancos com bordas suaves,
+                      tipografia em marrom profundo de alto contraste (WCAG AA), barra lateral
+                      marrom nobre (#3D2314) com letras brancas e ações em marrom/âmbar quente
+                      (#B45309).
+                    </p>
+
+                    {/* Paleta / Chips de cores */}
+                    <div className="flex items-center gap-2 pt-1">
+                      <span className="text-[10px] font-mono text-muted-foreground">Amostras:</span>
+                      <div className="flex items-center gap-1.5">
+                        <span
+                          title="Fundo Off-white #FAF8F5"
+                          className="h-5 w-5 rounded-full bg-[#FAF8F5] border border-slate-300"
+                        />
+                        <span
+                          title="Card Branco #FFFFFF"
+                          className="h-5 w-5 rounded-full bg-[#FFFFFF] border border-slate-300"
+                        />
+                        <span
+                          title="Barra Lateral Marrom #3D2314"
+                          className="h-5 w-5 rounded-full bg-[#3D2314]"
+                        />
+                        <span
+                          title="Texto Marrom Profundo #2E1A0E"
+                          className="h-5 w-5 rounded-full bg-[#2E1A0E]"
+                        />
+                        <span
+                          title="Ação Marrom Âmbar #B45309"
+                          className="h-5 w-5 rounded-full bg-[#B45309]"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={isSelected ? 'default' : 'outline'}
+                    disabled={!isAdminOrGestor || savingTheme}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setTheme('light')
+                    }}
+                    className="w-full text-xs h-8"
+                  >
+                    {isSelected ? 'Modo Claro Ativo' : 'Ativar Modo Claro'}
+                  </Button>
+                </div>
+              )
+            })()}
           </div>
 
-          {/* Mini-mockup / Demonstração ao vivo da barra lateral grafite */}
+          {/* Mini-mockup / Demonstração ao vivo da barra lateral adaptada */}
           <div className="space-y-2 pt-2 border-t border-border/60">
-            <span className="text-[11px] font-mono text-muted-foreground uppercase tracking-wider">
-              Demonstração ao Vivo da Barra Lateral
-            </span>
-            <div className="rounded-xl border border-border/80 bg-[#17181C] p-4 text-foreground shadow-inner max-w-sm">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-mono text-muted-foreground uppercase tracking-wider">
+                Demonstração ao Vivo da Barra Lateral (
+                {theme === 'light' ? 'Modo Claro' : 'Modo Escuro'})
+              </span>
+              <Badge variant="outline" className="text-[10px] font-mono">
+                {theme === 'light'
+                  ? 'Fundo #3D2314 • Texto #FFFFFF'
+                  : 'Fundo #17181C • Texto #FCD34D'}
+              </Badge>
+            </div>
+
+            <div
+              className="rounded-xl border border-border/80 p-4 shadow-inner max-w-sm transition-colors duration-200"
+              style={{
+                backgroundColor: theme === 'light' ? '#3D2314' : '#17181C',
+                color: theme === 'light' ? '#FFFFFF' : '#FCD34D',
+              }}
+            >
               {/* Topo do mockup */}
-              <div className="flex items-center gap-2 pb-3 mb-3 border-b border-white/10">
-                <span className="h-2.5 w-2.5 rounded-full bg-[#D97706] shadow-[0_0_8px_rgba(217,119,6,0.6)]" />
-                <span className="text-sm font-bold tracking-tight text-[#FCD34D]">ITSM Desk</span>
-                <Badge
-                  variant="outline"
-                  className="ml-auto text-[9px] border-amber-500/30 text-[#FCD34D] py-0 px-1.5"
+              <div
+                className="flex items-center gap-2 pb-3 mb-3 border-b"
+                style={{
+                  borderColor:
+                    theme === 'light' ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.1)',
+                }}
+              >
+                <span
+                  className="h-2.5 w-2.5 rounded-full shadow-xs"
+                  style={{
+                    backgroundColor: theme === 'light' ? '#F59E0B' : '#D97706',
+                    boxShadow:
+                      theme === 'light'
+                        ? '0 0 8px rgba(245,158,11,0.7)'
+                        : '0 0 8px rgba(217,119,6,0.6)',
+                  }}
+                />
+                <span
+                  className="text-sm font-bold tracking-tight"
+                  style={{ color: theme === 'light' ? '#FFFFFF' : '#FCD34D' }}
                 >
-                  Grafite #17181C
-                </Badge>
+                  ITSM Desk
+                </span>
+                <span
+                  className="ml-auto text-[9px] font-mono px-1.5 py-0.5 rounded border"
+                  style={{
+                    borderColor:
+                      theme === 'light' ? 'rgba(255,255,255,0.25)' : 'rgba(245,158,11,0.3)',
+                    color: theme === 'light' ? '#FFFFFF' : '#FCD34D',
+                  }}
+                >
+                  {theme === 'light' ? 'Marrom #3D2314' : 'Grafite #17181C'}
+                </span>
               </div>
 
               {/* Itens do menu demonstrativo */}
               <div className="space-y-1 text-xs">
                 {/* Item ativo */}
-                <div className="flex items-center justify-between px-2.5 py-1.5 rounded-md bg-[#D97706]/15 text-[#D97706] font-semibold border-l-2 border-[#D97706]">
+                <div
+                  className="flex items-center justify-between px-2.5 py-1.5 rounded-md font-semibold border-l-2"
+                  style={{
+                    backgroundColor:
+                      theme === 'light' ? 'rgba(245,158,11,0.22)' : 'rgba(217,119,6,0.18)',
+                    color: theme === 'light' ? '#FBBF24' : '#D97706',
+                    borderColor: theme === 'light' ? '#F59E0B' : '#D97706',
+                  }}
+                >
                   <span className="flex items-center gap-2">
-                    <CheckCircle2 className="h-3.5 w-3.5 text-[#D97706]" />
-                    Dashboard Executivo
+                    <CheckCircle2
+                      className="h-3.5 w-3.5"
+                      style={{ color: theme === 'light' ? '#FBBF24' : '#D97706' }}
+                    />
+                    Dashboard Gerencial
                   </span>
-                  <span className="text-[10px] font-mono text-[#D97706] bg-[#D97706]/20 px-1 rounded">
+                  <span
+                    className="text-[10px] font-mono px-1 rounded"
+                    style={{
+                      backgroundColor:
+                        theme === 'light' ? 'rgba(245,158,11,0.3)' : 'rgba(217,119,6,0.25)',
+                      color: theme === 'light' ? '#FFFFFF' : '#D97706',
+                    }}
+                  >
                     Ativo
                   </span>
                 </div>
 
                 {/* Itens comuns */}
-                <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-md text-[#FCD34D] opacity-90 hover:bg-white/5 transition-colors">
-                  <span className="h-1.5 w-1.5 rounded-full bg-[#FCD34D]/60" />
+                <div
+                  className="flex items-center gap-2 px-2.5 py-1.5 rounded-md opacity-90 transition-colors"
+                  style={{ color: theme === 'light' ? '#FFFFFF' : '#FCD34D' }}
+                >
+                  <span
+                    className="h-1.5 w-1.5 rounded-full"
+                    style={{
+                      backgroundColor:
+                        theme === 'light' ? 'rgba(255,255,255,0.7)' : 'rgba(252,211,77,0.7)',
+                    }}
+                  />
                   <span>Fila de Chamados</span>
                 </div>
-                <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-md text-[#FCD34D] opacity-90 hover:bg-white/5 transition-colors">
-                  <span className="h-1.5 w-1.5 rounded-full bg-[#FCD34D]/60" />
+                <div
+                  className="flex items-center gap-2 px-2.5 py-1.5 rounded-md opacity-90 transition-colors"
+                  style={{ color: theme === 'light' ? '#FFFFFF' : '#FCD34D' }}
+                >
+                  <span
+                    className="h-1.5 w-1.5 rounded-full"
+                    style={{
+                      backgroundColor:
+                        theme === 'light' ? 'rgba(255,255,255,0.7)' : 'rgba(252,211,77,0.7)',
+                    }}
+                  />
                   <span>CMDB & Ativos</span>
                 </div>
-                <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-md text-[#FCD34D] opacity-90 hover:bg-white/5 transition-colors">
-                  <span className="h-1.5 w-1.5 rounded-full bg-[#FCD34D]/60" />
+                <div
+                  className="flex items-center gap-2 px-2.5 py-1.5 rounded-md opacity-90 transition-colors"
+                  style={{ color: theme === 'light' ? '#FFFFFF' : '#FCD34D' }}
+                >
+                  <span
+                    className="h-1.5 w-1.5 rounded-full"
+                    style={{
+                      backgroundColor:
+                        theme === 'light' ? 'rgba(255,255,255,0.7)' : 'rgba(252,211,77,0.7)',
+                    }}
+                  />
                   <span>Gestão de Mudanças</span>
                 </div>
               </div>
 
               {/* Rodapé do mockup */}
-              <div className="mt-4 pt-3 border-t border-white/10 flex items-center justify-between text-[10px] font-mono text-[#FCD34D]/70">
+              <div
+                className="mt-4 pt-3 border-t flex items-center justify-between text-[10px] font-mono"
+                style={{
+                  borderColor:
+                    theme === 'light' ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.1)',
+                  color: theme === 'light' ? 'rgba(255,255,255,0.75)' : 'rgba(252,211,77,0.7)',
+                }}
+              >
                 <span>ITSM Desk</span>
-                <span className="inline-flex items-center gap-1.5 text-[#FCD34D]">
+                <span
+                  className="inline-flex items-center gap-1.5"
+                  style={{ color: theme === 'light' ? '#FFFFFF' : '#FCD34D' }}
+                >
                   <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_6px_rgba(16,185,129,0.8)]" />
                   ONLINE
                 </span>
@@ -599,10 +852,15 @@ export function DesignSettingsTab({ isAdminOrGestor }: DesignSettingsTabProps) {
             </div>
           </div>
 
-          <div className="p-3 rounded-lg border border-border/60 bg-secondary/10 text-xs text-muted-foreground leading-relaxed">
-            As cores funcionais do sistema seguem uma hierarquia estrita de significado: vermelho
-            para incidentes críticos e estouro de SLA, laranja para riscos e atenção, verde para
-            resoluções concluídas e azul para novos chamados em aberto.
+          <div className="p-3.5 rounded-lg border border-border/70 bg-secondary/15 text-xs text-muted-foreground leading-relaxed">
+            <strong>Preservação Semântica e Acessibilidade:</strong> Em ambos os modos (Claro e
+            Escuro), o significado das cores é estritamente preservado:{' '}
+            <span className="text-red-500 font-semibold">Vermelho</span> para incidentes críticos e
+            SLA estourado, <span className="text-amber-500 font-semibold">Laranja</span> para
+            atenção/risco,{' '}
+            <span className="text-emerald-600 dark:text-emerald-400 font-semibold">Verde</span> para
+            resoluções concluídas e <span className="text-blue-500 font-semibold">Azul</span> para
+            tickets em aberto.
           </div>
         </CardContent>
       </Card>
