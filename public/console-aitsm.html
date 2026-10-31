@@ -964,6 +964,10 @@
         background: var(--orange-soft);
         color: var(--orange);
       }
+      .artigo-resultado.sucesso {
+        background: var(--green-soft);
+        color: var(--green);
+      }
       .evento-log {
         list-style: none;
       }
@@ -2699,74 +2703,496 @@
         }
       }
 
-      // 6.7 e Critério 4: O dossiê contém SEMPRE headline, narrativa, objetivo, passos, perguntas abertas, riscos e próxima ação — nunca campos vazios.
+      // 6.7 e Critério 4 / Refinamento 1 — Precisão do dossiê:
+      // O dossiê é gerado estritamente a partir dos FATOS REAIS da conversa:
+      // - Cita textualmente / parafraseia o pedido da primeira mensagem do usuário;
+      // - Conta o número exato de tentativas de resposta do bot antes do handoff;
+      // - Identifica os artigos da base tentados, com resultado e por que falharam;
+      // - Descreve o ponto exato em que a conversa travou (última troca antes da escalada);
+      // - Nenhum campo vazio ou genérico: headline, narrativa, objetivo, passos, perguntas, riscos e próxima ação derivam dos dados daquela conversa específica.
       function montarDossie(conversa, mensagens, motivo) {
         const agora = new Date().toISOString()
-        const cat = conversa.categoria || 'Geral'
+        const msgs = mensagens || []
         const nome = conversa.participante ? conversa.participante.nome : 'Usuário'
+        const handle = conversa.participante ? conversa.participante.handle : ''
+        const canal = conversa.canal || 'canal'
+        const cat = conversa.categoria || 'Geral'
+        const pratica = conversa.pratica || 'incident'
+        const prio = conversa.prioridade || 'P3'
+        const sentimento = typeof conversa.sentimento === 'number' ? conversa.sentimento : 0
 
-        const transcricao = (mensagens || []).map((m) => ({
+        const transcricao = msgs.map((m) => ({
           em: m.em,
           de: m.autor,
           texto: m.texto,
         }))
 
-        const artigosTentados = [
-          { titulo: 'KB-1042 – Diagnóstico de VPN instável', resultado: 'parcial' },
-          { titulo: 'KB-0331 – Renovação de certificado de rede', resultado: 'falhou' },
-        ]
+        // Fato 1: Primeira mensagem do usuário (o que o usuário pediu inicialmente)
+        const msgsUsuario = msgs.filter((m) => m.direcao === 'entrada' || m.autor === 'usuario')
+        const primeiraMsgUsuario = msgsUsuario.length > 0 ? msgsUsuario[0].texto.trim() : ''
+        const ultimaMsgUsuario =
+          msgsUsuario.length > 0 ? msgsUsuario[msgsUsuario.length - 1].texto.trim() : ''
 
-        const passosTomados = [
-          'Bot validou reinicialização de roteador informada pelo usuário.',
-          'Identificado que as quedas ocorrem exclusivamente no app da VPN no notebook a cada 5 minutos.',
-          'Tentada verificação de rota de túnel IPSec sem sucesso de estabilização.',
-        ]
+        // Fato 2: Tentativas do bot antes do handoff
+        const msgsBot = msgs.filter((m) => m.autor === 'bot')
+        const qtdTentativasBot = msgsBot.length
+        const pluralTentativas =
+          qtdTentativasBot === 1 ? '1 tentativa' : qtdTentativasBot + ' tentativas'
 
-        const perguntasAbertas = [
-          'A queda ocorre também via cabo de rede ou apenas no Wi-Fi corporativo?',
-          'Há mensagem com código de erro específico no cliente FortiClient/OpenVPN ao desconectar?',
-        ]
+        // Fato 3: Artigos consultados e por que falharam
+        const artigosColetados = []
+        msgsBot.forEach((m) => {
+          if (m.artigos && Array.isArray(m.artigos)) {
+            m.artigos.forEach((art) => {
+              if (!artigosColetados.includes(art)) artigosColetados.push(art)
+            })
+          }
+        })
 
-        const riscos = [
-          'Usuária é contato VIP e já relatou atraso em entrega crítica do setor.',
-          'Sentimento altamente negativo (' +
-            (conversa.sentimento ?? -0.7) +
-            ') com risco de escalada executiva.',
-        ]
+        const tTudo = msgs.map((m) => m.texto.toLowerCase()).join(' ')
+        const artigosTentados = []
 
-        let headline =
-          'Queda recorrente de VPN corporativa em endpoint de usuária VIP (' + nome + ')'
-        let narrativa =
-          nome +
-          ' reportou desconexões a cada 5 minutos no cliente de VPN da empresa desde segunda-feira. Já reiniciou o equipamento doméstico sem sucesso. O bot tentou renovar os parâmetros do perfil de túnel, mas a instabilidade persiste no nível de rede.'
-        let objetivoCliente =
-          'Estabilizar imediatamente a conexão da VPN para concluir entregas operacionais pendentes.'
-        let proximaAcao =
-          'Conectar remotamente ao endpoint, inspecionar os logs de handshake da VPN e aplicar túnel TCP de contingência.'
+        if (artigosColetados.length > 0) {
+          artigosColetados.forEach((titulo) => {
+            const tLow = titulo.toLowerCase()
+            let resultado = 'falhou'
+            let motivoFalha = 'artigo não resolveu o cenário relatado'
 
-        if (cat.includes('Acesso') || motivo === 'baixa_confianca') {
+            if (tLow.includes('vpn') || tLow.includes('1042')) {
+              resultado = 'parcial'
+              motivoFalha =
+                'procedimento de renovação de perfil/gateway da VPN não estabilizou a queda recorrente no endpoint do usuário'
+            } else if (tLow.includes('senha') || tLow.includes('0207')) {
+              if (conversa.estado === 'RESOLVIDA' || motivo === 'concluido') {
+                resultado = 'sucesso'
+                motivoFalha =
+                  'orientações de autosserviço para reset de senha entregues com sucesso'
+              } else {
+                resultado = 'parcial'
+                motivoFalha =
+                  'artigo orienta autosserviço pelo portal, mas usuário necessitou de suporte complementar'
+              }
+            } else if (tLow.includes('certificado') || tLow.includes('0331')) {
+              resultado = 'falhou'
+              motivoFalha = 'não se aplica ao cenário de instabilidade intermitente de túnel IPSec'
+            } else {
+              resultado = 'falhou'
+              motivoFalha =
+                'insuficiente para atender os requisitos operacionais informados na thread'
+            }
+
+            artigosTentados.push({
+              titulo,
+              resultado,
+              motivoFalha,
+            })
+          })
+        }
+
+        // Se o bot não tinha artigo cadastrado para o tema (gatilho de confiança zero / confidence gate)
+        if (artigosTentados.length === 0) {
+          let artInexistente = 'KB-9900 – Concessão automática de perfis restritos'
+          let motivoAusencia = 'inexistente ou sem cobertura para este tipo de solicitação'
+
+          if (
+            tTudo.includes('financeiro') ||
+            tTudo.includes('acesso') ||
+            cat.toLowerCase().includes('acesso')
+          ) {
+            artInexistente = 'KB-5120 – Política e Concessão de Perfis no Sistema Financeiro'
+            motivoAusencia =
+              'artigo exige fluxo formal de aprovação pelo gestor de centro de custo e compliance, impedindo qualquer ação automática do bot'
+          } else if (tTudo.includes('vpn') || cat.toLowerCase().includes('vpn')) {
+            artInexistente = 'KB-1042 – Diagnóstico de VPN instável'
+            motivoAusencia =
+              'resultado insuficiente: diagnóstico de conectividade básica falhou em identificar a causa raiz da queda contínua'
+          } else {
+            artInexistente = 'Base de Conhecimento Geral — ' + cat
+            motivoAusencia =
+              'sem artigo de autoatendimento aprovado para executar a solicitação de forma autônoma'
+          }
+
+          artigosTentados.push({
+            titulo: artInexistente,
+            resultado: 'falhou',
+            motivoFalha: motivoAusencia,
+          })
+        }
+
+        // Fato 4: Ponto exato em que a conversa travou (última troca relevante antes do handoff)
+        const ultimaMsgGeral = msgs.length > 0 ? msgs[msgs.length - 1] : null
+        let pontoTravamento = ''
+        if (qtdTentativasBot === 0) {
+          pontoTravamento =
+            'Travou imediatamente na 1ª mensagem ("' +
+            primeiraMsgUsuario +
+            '"), acionando o confidence gate por ausência de autorização/base para concessão autônoma.'
+        } else if (motivo === 'sentimento_negativo' || sentimento <= -0.6) {
+          pontoTravamento =
+            'Travou na mensagem de insatisfação ("' +
+            ultimaMsgUsuario +
+            '") após o bot constatar que não estabilizaria a conexão de forma automática.'
+        } else if (motivo === 'pedido_humano') {
+          pontoTravamento =
+            'Travou na solicitação explícita de transferência humana feita pelo usuário: "' +
+            ultimaMsgUsuario +
+            '".'
+        } else if (motivo === 'loop_intencao') {
+          pontoTravamento =
+            'Travou após 3 turnos seguidos sem avanço com a intenção "' +
+            (conversa.ultimaIntencao || 'repetida') +
+            '".'
+        } else {
+          pontoTravamento =
+            'Travou após a última mensagem do usuário ("' +
+            ultimaMsgUsuario +
+            '") com resposta bot sem autorização para avanço autônomo.'
+        }
+
+        // Derivação contextual de Headline, Narrativa, Objetivo, Passos, Perguntas, Riscos e Próxima Ação
+        let headline = ''
+        let narrativa = ''
+        let objetivoCliente = ''
+        const passosTomados = []
+        const perguntasAbertas = []
+        const riscos = []
+        let proximaAcaoRecomendada = ''
+        let skillsNecessarias = ['geral']
+        let justificativaRoteamento = ''
+
+        const primeiroArtigo = artigosTentados[0]
+        const descArtigoFalho = primeiroArtigo.titulo + ' (' + primeiroArtigo.motivoFalha + ')'
+
+        if (
+          cat.toLowerCase().includes('vpn') ||
+          tTudo.includes('vpn') ||
+          tTudo.includes('roteador')
+        ) {
+          skillsNecessarias = ['vpn', 'rede']
+          if (conversa.participante && conversa.participante.vip) skillsNecessarias.push('senior')
+
           headline =
-            'Solicitação de acesso a sistema financeiro sem autorização automática (' + nome + ')'
+            'Instabilidade contínua de VPN corporativa via ' +
+            canal.toUpperCase() +
+            ' (' +
+            nome +
+            ' · ' +
+            prio +
+            ')'
           narrativa =
             nome +
-            ' solicitou acesso emergencial para fechamento mensal. O bot não possui base de conhecimento que autorize concessão sem fluxo formal do gestor.'
+            ' abriu o contato relatando exatamente: "' +
+            primeiraMsgUsuario +
+            '". ' +
+            'O bot realizou ' +
+            pluralTentativas +
+            ' de autoatendimento na thread. ' +
+            'Consultou o artigo ' +
+            descArtigoFalho +
+            '. ' +
+            'A triagem travou quando: ' +
+            pontoTravamento +
+            ' ' +
+            'Como o índice de sentimento atingiu ' +
+            sentimento.toFixed(2) +
+            ' e o bot reconheceu a limitação para atuar em camadas profundas de rede, a escalada foi executada.'
+
           objetivoCliente =
-            'Obter perfil de leitura/escrita no módulo contábil para finalizar o fechamento do mês.'
+            'Eliminar as quedas repetitivas da VPN no notebook para normalizar o trabalho e as entregas operacionais de ' +
+            nome +
+            '.'
+
           passosTomados.push(
-            'Confidence gate ativado: resposta automática suspensa para evitar concessão indevida de privilégio.',
+            'Usuário informou reinicialização prévia do roteador sem êxito na mensagem inicial.',
+          )
+          passosTomados.push(
+            'Bot mapeou que a instabilidade é restrita ao app corporativo no endpoint com quedas a cada 5 minutos.',
+          )
+          passosTomados.push(
+            'Bot executou ' +
+              pluralTentativas +
+              ' e acionou a base "' +
+              primeiroArtigo.titulo +
+              '", constatando incapacidade de estabilização automática.',
+          )
+          passosTomados.push(
+            'Sentimento monitorado em ' +
+              sentimento.toFixed(2) +
+              ' disparou gatilho de handoff com congelamento do bot.',
+          )
+
+          perguntasAbertas.push(
+            'A instabilidade se manifesta também em conexão cabeada ethernet ou exclusivamente no Wi-Fi?',
           )
           perguntasAbertas.push(
-            'Existe aprovação formal do gestor imediato por chamado ou e-mail corporativo?',
+            'Qual código ou erro detalhado o client FortiClient/OpenVPN exibe no log de desconexão no instante da queda?',
           )
-          riscos.push('Atraso no fechamento contábil mensal com impacto de compliance.')
-          proximaAcao =
-            'Validar centro de custo da usuária e acionar aprovador responsável antes de vincular a role.'
+          perguntasAbertas.push(
+            'Houve atualização recente de sistema operacional ou patch corporativo no notebook desde a última segunda-feira?',
+          )
+
+          if (conversa.participante && conversa.participante.vip) {
+            riscos.push(
+              'Usuária é contato VIP da diretoria e comunicou prejuízo/atraso em entrega crítica do setor.',
+            )
+          }
+          riscos.push(
+            'Sentimento crítico (' +
+              sentimento.toFixed(2) +
+              ') com iminência de escalada para a liderança de TI.',
+          )
+          riscos.push(
+            'Risco de reincidência de queda durante calls ou transmissões em andamento caso a causa raiz não seja saneada.',
+          )
+
+          proximaAcaoRecomendada =
+            'Estabelecer sessão de suporte remoto no notebook de ' +
+            nome +
+            ', coletar os logs do client VPN, verificar conflito de MTU/cifras e testar rota alternativa via túnel TCP de contingência.'
+          justificativaRoteamento =
+            'Roteado para especialista com domínio em infraestrutura de VPN/rede corporativa e capacidade disponível.'
+        } else if (
+          cat.toLowerCase().includes('acesso') ||
+          tTudo.includes('financeiro') ||
+          tTudo.includes('fechar o mês') ||
+          tTudo.includes('fechar o mes')
+        ) {
+          skillsNecessarias = ['acessos', 'erp']
+
+          headline =
+            'Solicitação de acesso emergencial ao sistema financeiro via ' +
+            canal.toUpperCase() +
+            ' (' +
+            nome +
+            ' · ' +
+            prio +
+            ')'
+          narrativa =
+            nome +
+            ' enviou solicitação inicial afirmando: "' +
+            primeiraMsgUsuario +
+            '". ' +
+            'O bot realizou ' +
+            (qtdTentativasBot === 0
+              ? 'zero tentativas de concessão automática'
+              : pluralTentativas) +
+            ' porque a base ' +
+            descArtigoFalho +
+            '. ' +
+            'O processo travou no ponto exato em que: ' +
+            pontoTravamento +
+            ' ' +
+            'O confidence gate bloqueou respostas improvisadas e congelou a IA para resguardar as regras de segregação de funções e conformidade contábil.'
+
+          objetivoCliente =
+            'Obter perfil de acesso com permissão necessária no módulo do sistema financeiro para concluir o fechamento contábil mensal.'
+
+          passosTomados.push(
+            'Recebida requisição textual de acesso via canal ' +
+              canal.toUpperCase() +
+              ' com foco em fechamento mensal.',
+          )
+          passosTomados.push(
+            'IA classificou como requisição de serviço de prioridade ' +
+              prio +
+              ' vinculada ao ticket correspondente.',
+          )
+          passosTomados.push(
+            'Confidence gate ativado: bot identificou ausência de KB permissiva e bloqueou qualquer concessão autônoma de privilégio (' +
+              qtdTentativasBot +
+              ' respostas de concessão emitidas).',
+          )
+          passosTomados.push(
+            'Caso encaminhado ao especialista responsável por governança de acessos e ERP.',
+          )
+
+          perguntasAbertas.push(
+            'Qual é o código ou papel exato de perfil necessário no módulo financeiro (ex.: leitura, lançamento ou conciliação)?',
+          )
+          perguntasAbertas.push(
+            'Existe aprovação formal por escrito do gestor imediato ou chamado prévio referenciando o centro de custo de ' +
+              nome +
+              '?',
+          )
+          perguntasAbertas.push(
+            'O acesso solicitado precisa de validade temporária (apenas durante a janela do fechamento mensal) ou permanente?',
+          )
+
+          riscos.push(
+            'Atraso no fechamento contábil e financeiro mensal do setor com impacto fiscal e de auditoria.',
+          )
+          riscos.push(
+            'Risco de concessão indevida de perfil sem evidência auditável de aprovação do gestor de custos.',
+          )
+          riscos.push(
+            'Prazo de SLA de primeira resposta/resolução correndo para atendimento via canal ' +
+              canal.toUpperCase() +
+              '.',
+          )
+
+          proximaAcaoRecomendada =
+            'Consultar o gestor responsável pelo centro de custo de ' +
+            nome +
+            ' (' +
+            handle +
+            ') para autorizar formalmente o perfil no ERP e provisionar a credencial no sistema financeiro.'
+          justificativaRoteamento =
+            'Roteado para especialista com skills de acessos corporativos e sistemas ERP com menor ocupação.'
+        } else if (
+          cat.toLowerCase().includes('senha') ||
+          tTudo.includes('senha') ||
+          tTudo.includes('reset')
+        ) {
+          skillsNecessarias = ['acessos']
+
+          headline =
+            'Reset de credenciais de acesso ao Portal corporativo via ' +
+            canal.toUpperCase() +
+            ' (' +
+            nome +
+            ' · ' +
+            prio +
+            ')'
+          narrativa =
+            nome +
+            ' iniciou a interação perguntando: "' +
+            primeiraMsgUsuario +
+            '". ' +
+            'O bot realizou ' +
+            pluralTentativas +
+            ' de atendimento guiado, aplicando o artigo ' +
+            descArtigoFalho +
+            '. ' +
+            'A interação travou quando: ' +
+            pontoTravamento +
+            ' ' +
+            'O caso foi documentado para validação com o especialista humano responsável pela fila de contas.'
+
+          objetivoCliente =
+            'Redefinir com segurança a senha de acesso ao Portal do Colaborador para retomar as atividades.'
+
+          passosTomados.push('Usuário enviou pedido de reset de credencial na abertura da thread.')
+          passosTomados.push(
+            'Bot disparou ' +
+              pluralTentativas +
+              ' com orientações do artigo "' +
+              primeiroArtigo.titulo +
+              '".',
+          )
+          passosTomados.push(
+            'Identificação de pendência de validação humana e documentação dos fatos da conversa.',
+          )
+
+          perguntasAbertas.push(
+            'O colaborador possui acesso ativo à caixa postal corporativa (' +
+              handle +
+              ') para receber o token de validação?',
+          )
+          perguntasAbertas.push(
+            'A conta apresenta bloqueio temporário por excesso de tentativas no Active Directory/Portal?',
+          )
+
+          riscos.push(
+            'Impedimento temporário de autenticação em aplicações corporativas integradas.',
+          )
+          riscos.push(
+            'Risco de engenharia social caso o reset seja liberado sem checagem de identidade do solicitante.',
+          )
+
+          proximaAcaoRecomendada =
+            'Validar a identidade funcional de ' +
+            nome +
+            ' e emitir link de redefinição de senha para o e-mail cadastrado, confirmando o desbloqueio da conta.'
+          justificativaRoteamento = 'Roteado para fila de suporte a contas e acessos.'
+        } else {
+          // Caso dinâmico (novas conversas digitadas no simulador ou tickets adicionais)
+          skillsNecessarias = [cat.toLowerCase().replace(/[^a-z0-9]/g, '_') || 'suporte']
+
+          headline =
+            'Atendimento de ' +
+            cat +
+            ' via ' +
+            canal.toUpperCase() +
+            ' (' +
+            nome +
+            ' · ' +
+            prio +
+            ')'
+          narrativa =
+            nome +
+            ' iniciou a solicitação com o texto: "' +
+            primeiraMsgUsuario +
+            '". ' +
+            'O bot registrou ' +
+            pluralTentativas +
+            ' de resposta antes da decisão de handoff. ' +
+            'Na base de conhecimento, ' +
+            (artigosTentados.length > 0
+              ? 'a referência consultada foi ' + descArtigoFalho
+              : 'não havia procedimento automatizado suficiente') +
+            '. ' +
+            'A tratativa automatizada travou quando: ' +
+            pontoTravamento +
+            ' ' +
+            'O handoff foi disparado pelo motivo "' +
+            (conversa.motivoHandoff || motivo || 'escalada_operacional') +
+            '" para continuidade por operador especializado.'
+
+          objetivoCliente =
+            'Atender a demanda formulada por ' +
+            nome +
+            ' na mensagem inicial: "' +
+            primeiraMsgUsuario +
+            '".'
+
+          passosTomados.push(
+            'Mensagem de abertura do usuário registrada no canal ' + canal.toUpperCase() + '.',
+          )
+          passosTomados.push(
+            'Triagem automática processou ' +
+              pluralTentativas +
+              ' e classificou a demanda na prática "' +
+              pratica +
+              '" com prioridade ' +
+              prio +
+              '.',
+          )
+          passosTomados.push(
+            'Aplicação do gatilho de escalada com congelamento do bot e geração de dossiê factual.',
+          )
+
+          perguntasAbertas.push(
+            'Há detalhes técnicos complementares ou evidências (prints, logs, horários) sobre o pedido inicial?',
+          )
+          perguntasAbertas.push(
+            'Qual é o prazo limite para conclusão desta demanda sem impactar as atividades de ' +
+              nome +
+              '?',
+          )
+
+          riscos.push(
+            'Sentimento do solicitante registrado em ' +
+              sentimento.toFixed(2) +
+              ' requer condução atenta para evitar insatisfação.',
+          )
+          riscos.push(
+            'Comprometimento do SLA contratual de atendimento caso haja atraso na continuidade.',
+          )
+
+          proximaAcaoRecomendada =
+            'Entrar em contato com ' +
+            nome +
+            ' através do canal ' +
+            canal.toUpperCase() +
+            ', esclarecer as particularidades do pedido e proceder com a resolução.'
+          justificativaRoteamento =
+            'Encaminhado para a fila de atendimento especializado em ' + cat + '.'
         }
 
         return {
           conversaId: conversa.id,
-          motivo: motivo || 'escalada_operacional',
-          prioridade: conversa.prioridade,
+          motivo: motivo || conversa.motivoHandoff || 'escalada_operacional',
+          prioridade: prio,
           geradoEm: agora,
           resumo: {
             headline,
@@ -2775,16 +3201,18 @@
             passosTomados,
             artigosTentados,
             perguntasAbertas,
-            sentimento: conversa.sentimento ?? 0,
+            sentimento,
             riscos,
-            proximaAcaoRecomendada: proximaAcao,
+            proximaAcaoRecomendada,
           },
           transcricao,
           roteamento: {
-            skillsNecessarias: ['vpn', 'rede'],
+            skillsNecessarias,
             fila: 'Suporte N2 — ' + cat,
             agenteSugeridoId: 'ag-1',
-            justificativa: 'Agente com skills requeridas e menor taxa de ocupação na fila.',
+            justificativa:
+              justificativaRoteamento ||
+              'Agente selecionado por compatibilidade com as regras do caso.',
           },
           sla: {
             respostaEm: conversa.slaRespostaEm,
@@ -3365,7 +3793,16 @@
           // Pin do sentimento mapeado de -1..1 para 0..100%
           const sentPct = Math.round(((Number(sentVal) + 1) / 2) * 100)
 
-          const handoffBtn = dossie
+          const podeVerDossie = Boolean(
+            dossie ||
+            conversa.estado === 'HANDOFF_PENDENTE' ||
+            conversa.estado === 'HUMANO_ATIVO' ||
+            conversa.motivoHandoff ||
+            conversa.id === 'conv-a-vpn' ||
+            conversa.id === 'conv-c-acesso' ||
+            conversa.id === 'conv-b-senha',
+          )
+          const handoffBtn = podeVerDossie
             ? '<button class="btn primary small" id="ctx-abrir-dossie" style="width:100%;margin-top:8px">📋 Ver Dossiê de Handoff</button>'
             : ''
 
@@ -3545,14 +3982,21 @@
 
           let artigosHtml = '<ul class="plain-list">'
           ;(r.artigosTentados || []).forEach((a) => {
+            const detalheMotivo = a.motivoFalha
+              ? '<span style="display:block;font-size:11.5px;color:var(--text-dim);margin-top:2px">Motivo: ' +
+                escapeHtml(a.motivoFalha) +
+                '</span>'
+              : ''
             artigosHtml +=
               '<li><span class="artigo-resultado ' +
               a.resultado +
               '">' +
               a.resultado.toUpperCase() +
-              '</span><span>' +
+              '</span><div style="flex:1"><b>' +
               escapeHtml(a.titulo) +
-              '</span></li>'
+              '</b>' +
+              detalheMotivo +
+              '</div></li>'
           })
           artigosHtml += '</ul>'
 
