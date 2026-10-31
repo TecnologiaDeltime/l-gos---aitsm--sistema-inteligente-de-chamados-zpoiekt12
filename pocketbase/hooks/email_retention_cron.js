@@ -53,6 +53,12 @@
     }
   }
 
+  try {
+    if (typeof globalThis !== 'undefined') {
+      globalThis.safeDecryptSecret = safeDecryptSecret
+    }
+  } catch (_) {}
+
   // =========================================================================
   // CLIENTE MICROSOFT GRAPH API EMBUTIDO
   // =========================================================================
