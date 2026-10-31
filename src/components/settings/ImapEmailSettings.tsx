@@ -296,8 +296,21 @@ export function ImapEmailSettings({
       }
       loadAuditHistory()
     } catch (err: any) {
-      const errMsg =
-        err.data?.error || err.message || 'Falha ao conectar e validar o servidor SMTP.'
+      // Priorizar mensagens claras e específicas em vez de mensagens genéricas
+      let errMsg =
+        err?.data?.error ||
+        err?.data?.message ||
+        (typeof err?.message === 'string' ? err.message : '') ||
+        'Falha ao conectar e validar o servidor SMTP.'
+
+      if (
+        errMsg.toLowerCase().includes('something went wrong while processing your request') ||
+        errMsg.toLowerCase().includes('something went wrong')
+      ) {
+        errMsg =
+          'Falha de autenticação ou conexão no servidor SMTP. Verifique se o Host, Porta, Usuário e Senha estão corretos e se o protocolo SMTP Autenticado está liberado na caixa postal.'
+      }
+
       toast({
         title: 'Erro na validação SMTP',
         description: errMsg,
@@ -305,6 +318,22 @@ export function ImapEmailSettings({
       })
       if (err.data && err.data.steps) {
         setSmtpTestResponse(err.data)
+      } else {
+        setSmtpTestResponse({
+          success: false,
+          status: 'failed',
+          message: 'Falha na validação SMTP: ' + errMsg,
+          error: errMsg,
+          steps: [
+            {
+              id: 'smtp_error_feedback',
+              name: 'Comunicação com o Servidor SMTP',
+              status: 'failed',
+              message: errMsg,
+              duration_ms: 0,
+            },
+          ],
+        })
       }
       loadAuditHistory()
     } finally {
@@ -354,7 +383,20 @@ export function ImapEmailSettings({
       }
       loadAuditHistory()
     } catch (err: any) {
-      const errorMsg = err.data?.error || err.message || 'Erro desconhecido ao enviar e-mail.'
+      let errorMsg =
+        err?.data?.error ||
+        err?.data?.message ||
+        (typeof err?.message === 'string' ? err.message : '') ||
+        'Erro desconhecido ao enviar e-mail.'
+
+      if (
+        errorMsg.toLowerCase().includes('something went wrong while processing your request') ||
+        errorMsg.toLowerCase().includes('something went wrong')
+      ) {
+        errorMsg =
+          'Falha de autenticação ou conexão no servidor SMTP ao despachar mensagem. Verifique se as credenciais da caixa de saída estão corretas.'
+      }
+
       setTestSendResult({
         success: false,
         message: 'Falha no envio do e-mail de teste.',

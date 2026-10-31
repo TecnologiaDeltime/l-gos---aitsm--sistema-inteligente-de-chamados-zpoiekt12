@@ -240,7 +240,14 @@
         })
         sendSuccess = true
       } else {
-        var msg = new MailerMessage()
+        var msg =
+          typeof globalThis.createSystemMailMessage === 'function'
+            ? globalThis.createSystemMailMessage()
+            : typeof MailerMessage !== 'undefined'
+              ? new MailerMessage()
+              : typeof MailMessage !== 'undefined'
+                ? new MailMessage()
+                : {}
         msg.from = { address: senderAccount, name: senderName }
         msg.to = [{ address: targetEmail }]
         msg.subject = opts.subject

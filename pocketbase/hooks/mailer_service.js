@@ -134,13 +134,41 @@
     return fallback
   }
 
+  // Helper universal para instanciar mensagem de e-mail no PocketBase JSVM (Goja)
+  function createMailMessageInstance(initObj) {
+    if (typeof MailerMessage !== 'undefined') {
+      try {
+        return initObj ? new MailerMessage(initObj) : new MailerMessage()
+      } catch (_) {}
+    }
+    if (typeof MailMessage !== 'undefined') {
+      try {
+        return initObj ? new MailMessage(initObj) : new MailMessage()
+      } catch (_) {}
+    }
+    var g = typeof globalThis !== 'undefined' ? globalThis : {}
+    if (typeof g.MailerMessage !== 'undefined') {
+      try {
+        return initObj ? new g.MailerMessage(initObj) : new g.MailerMessage()
+      } catch (_) {}
+    }
+    if (typeof g.MailMessage !== 'undefined') {
+      try {
+        return initObj ? new g.MailMessage(initObj) : new g.MailMessage()
+      } catch (_) {}
+    }
+    // Fallback: se nenhuma classe nativa existir, retorna objeto estruturado padrão
+    return initObj || {}
+  }
+  globalThis.createSystemMailMessage = createMailMessageInstance
+
   // Envia e-mail aplicando as credenciais da caixa dedicada sobre o cliente SMTP
   // Options: { from, to, subject, text, html, attachments, replyTo }
   globalThis.sendSystemEmail = function (opts) {
     if (!opts) throw new Error('Parâmetros de e-mail ausentes.')
     var mailerConfig = globalThis.resolveSystemMailerConfig()
 
-    var message = new MailerMessage()
+    var message = createMailMessageInstance()
 
     // Remetente
     var senderEmail = mailerConfig.senderEmail || 'noreply@serviceone.com.br'

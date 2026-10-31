@@ -1622,6 +1622,8 @@
       if (typeof c.requestInfo === 'function') {
         var info = c.requestInfo()
         rawBody = (info && info.body) || {}
+      } else if (c && c.request && typeof c.request.body === 'object') {
+        rawBody = c.request.body || {}
       }
     } catch (_) {
       rawBody = {}
@@ -1902,7 +1904,16 @@
     var destination = targetEmail || user || 'atendimento.helpdesk@deltime.com.br'
 
     try {
-      testMessage = new MailerMessage()
+      if (typeof globalThis.createSystemMailMessage === 'function') {
+        testMessage = globalThis.createSystemMailMessage()
+      } else if (typeof MailerMessage !== 'undefined') {
+        testMessage = new MailerMessage()
+      } else if (typeof MailMessage !== 'undefined') {
+        testMessage = new MailMessage()
+      } else {
+        testMessage = {}
+      }
+
       testMessage.from = { address: user, name: senderName || 'Atendimento HelpDesk' }
       testMessage.to = [{ address: destination }]
       testMessage.subject =
@@ -1957,13 +1968,14 @@
         '<p style="font-size: 11px; color: #94a3b8; margin-bottom: 0;">Mensagem automática gerada pelo módulo de configurações ITSM.</p>' +
         '</div>'
 
-      if (replyTo && testMessage.headers) {
+      if (replyTo) {
+        if (!testMessage.headers) testMessage.headers = {}
         testMessage.headers['Reply-To'] = replyTo
       }
 
       steps[2].status = 'success'
       steps[2].message =
-        'Objeto MailerMessage montado com sucesso (Remetente: "' +
+        'Objeto de mensagem SMTP montado com sucesso (Remetente: "' +
         (senderName || user) +
         '" <' +
         user +
@@ -1975,7 +1987,7 @@
       steps[2].duration_ms = Date.now() - t3Start
     } catch (msgErr) {
       steps[2].status = 'failed'
-      steps[2].message = 'Erro ao instanciar MailerMessage: ' + msgErr.message
+      steps[2].message = 'Erro ao preparar mensagem de teste: ' + msgErr.message
       steps[2].duration_ms = Date.now() - t3Start
       for (var k3 = 3; k3 < 5; k3++) {
         steps[k3].status = 'skipped'
@@ -2147,6 +2159,8 @@
       if (typeof c.requestInfo === 'function') {
         var info = c.requestInfo()
         rawBody = (info && info.body) || {}
+      } else if (c && c.request && typeof c.request.body === 'object') {
+        rawBody = c.request.body || {}
       }
     } catch (_) {
       rawBody = {}
