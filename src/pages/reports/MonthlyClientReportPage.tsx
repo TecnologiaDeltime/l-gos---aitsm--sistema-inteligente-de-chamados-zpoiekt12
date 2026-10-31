@@ -70,13 +70,13 @@ import { MonthlyReportScheduleDialog } from '@/components/reports/MonthlyReportS
 const CHART_COLORS = [
   '#f59e0b', // amber-500
   '#d97706', // amber-600
-  '#2563eb', // blue-600
+  '#b45309', // amber-700
   '#16a34a', // green-600
   '#dc2626', // red-600
   '#ea580c', // orange-600
   '#059669', // emerald-600
   '#64748b', // slate-500
-  '#b45309', // amber-700
+  '#fcd34d', // amber-300
   '#334155', // slate-700
 ]
 
@@ -792,7 +792,7 @@ export default function MonthlyClientReportPage() {
                     <Legend wrapperStyle={{ fontSize: 11, paddingTop: 4 }} />
                     <Bar
                       dataKey="Contratado"
-                      fill="#3b82f6"
+                      fill="#d97706"
                       name="Horas Contratadas"
                       radius={[4, 4, 0, 0]}
                     >
@@ -952,7 +952,7 @@ export default function MonthlyClientReportPage() {
                         <Legend wrapperStyle={{ fontSize: 11 }} />
                         <Bar
                           dataKey="Horas"
-                          fill="#6366f1"
+                          fill="#d97706"
                           name="Horas Consumidas"
                           radius={[0, 4, 4, 0]}
                         >
@@ -1071,7 +1071,7 @@ export default function MonthlyClientReportPage() {
                         <Legend wrapperStyle={{ fontSize: 11, paddingTop: 4 }} />
                         <Bar
                           dataKey="Horas"
-                          fill="#0284c7"
+                          fill="#d97706"
                           name="Horas Utilizadas"
                           radius={[4, 4, 0, 0]}
                         >
@@ -1434,7 +1434,7 @@ export default function MonthlyClientReportPage() {
                       <Legend wrapperStyle={{ fontSize: 11, paddingTop: 4 }} />
                       <Bar
                         dataKey="total"
-                        fill="#3b82f6"
+                        fill="#d97706"
                         name="Total de Ativos"
                         radius={[4, 4, 0, 0]}
                       >
@@ -1639,8 +1639,8 @@ export default function MonthlyClientReportPage() {
                       >
                         <defs>
                           <linearGradient id="colorHours" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="#2563eb" stopOpacity={0.4} />
-                            <stop offset="95%" stopColor="#2563eb" stopOpacity={0.02} />
+                            <stop offset="5%" stopColor="#d97706" stopOpacity={0.4} />
+                            <stop offset="95%" stopColor="#d97706" stopOpacity={0.02} />
                           </linearGradient>
                         </defs>
                         <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
@@ -1666,12 +1666,12 @@ export default function MonthlyClientReportPage() {
                         <Area
                           type="monotone"
                           dataKey="Horas Utilizadas"
-                          stroke="#2563eb"
+                          stroke="#d97706"
                           strokeWidth={2.5}
                           fillOpacity={1}
                           fill="url(#colorHours)"
                           name="Horas Utilizadas"
-                          dot={{ r: 4, strokeWidth: 2, fill: '#ffffff', stroke: '#2563eb' }}
+                          dot={{ r: 4, strokeWidth: 2, fill: '#ffffff', stroke: '#d97706' }}
                           activeDot={{ r: 6 }}
                         >
                           <LabelList
@@ -1726,7 +1726,7 @@ export default function MonthlyClientReportPage() {
                               key={row.monthKey}
                               className={
                                 isSelected
-                                  ? 'bg-blue-50/70 dark:bg-blue-950/40 font-semibold border-l-4 border-l-blue-600 print:bg-slate-100'
+                                  ? 'bg-amber-500/10 dark:bg-amber-500/15 font-semibold border-l-4 border-l-primary print:bg-slate-100'
                                   : undefined
                               }
                             >
@@ -1736,7 +1736,7 @@ export default function MonthlyClientReportPage() {
                                   {isSelected && (
                                     <Badge
                                       variant="outline"
-                                      className="text-[9px] px-1.5 py-0 h-4 border-blue-400 text-blue-700 bg-blue-100/60 dark:bg-blue-900/40"
+                                      className="text-[9px] px-1.5 py-0 h-4 border-amber-400 text-amber-700 dark:text-amber-300 bg-amber-100/60 dark:bg-amber-900/40"
                                     >
                                       Mês Selecionado
                                     </Badge>
@@ -1795,7 +1795,7 @@ export default function MonthlyClientReportPage() {
                           <TableCell className="text-xs text-right font-mono">
                             {formatHours(reportData.comparison.totalHours6Months)}
                           </TableCell>
-                          <TableCell className="text-xs text-right font-mono text-blue-700 dark:text-blue-400">
+                          <TableCell className="text-xs text-right font-mono text-primary font-semibold">
                             {reportData.comparison.totalHours6Months.toFixed(2)}h
                           </TableCell>
                           <TableCell className="text-xs text-center font-mono">

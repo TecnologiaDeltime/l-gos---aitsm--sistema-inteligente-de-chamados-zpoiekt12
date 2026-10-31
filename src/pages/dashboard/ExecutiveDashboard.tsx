@@ -253,8 +253,8 @@ export default function ExecutiveDashboard() {
           label="Visitas Técnicas"
           value={kpis.visits}
           icon={MapPin}
-          color="text-sky-400"
-          bg="bg-sky-500/10 border border-sky-500/20"
+          color="text-amber-500 dark:text-amber-400"
+          bg="bg-amber-500/10 border border-amber-500/20"
         />
       </div>
 

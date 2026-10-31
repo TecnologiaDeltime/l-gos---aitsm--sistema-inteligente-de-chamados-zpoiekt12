@@ -6,8 +6,8 @@ const STATUS_CONFIG: Record<string, string> = {
   Inativo: 'bg-slate-100 text-slate-600 border-slate-300',
   'Em Manutenção': 'bg-orange-100 text-orange-800 border-orange-300',
   Descartado: 'bg-red-100 text-red-800 border-red-300',
-  Reserva: 'bg-blue-100 text-blue-800 border-blue-300',
-  Emprestado: 'bg-indigo-100 text-indigo-800 border-indigo-300',
+  Reserva: 'bg-amber-100 text-amber-800 border-amber-300',
+  Emprestado: 'bg-amber-100 text-amber-800 border-amber-300',
 }
 
 export function CiStatusBadge({ status }: { status?: string }) {

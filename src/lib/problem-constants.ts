@@ -64,17 +64,18 @@ export const REOPEN_REASONS = [
 ] as const
 
 export const STATUS_COLORS: Record<string, string> = {
-  Novo: 'bg-blue-100 text-blue-700',
-  'Em Investigação': 'bg-cyan-100 text-cyan-700',
-  'Causa Identificada': 'bg-indigo-100 text-indigo-700',
+  Novo: 'bg-amber-100 text-amber-800 dark:bg-amber-500/15 dark:text-amber-300',
+  'Em Investigação': 'bg-amber-100 text-amber-800 dark:bg-amber-500/15 dark:text-amber-300',
+  'Causa Identificada': 'bg-orange-100 text-orange-800 dark:bg-orange-500/15 dark:text-orange-300',
   'Solução de Contorno Planejada': 'bg-amber-100 text-amber-700',
   'Solução de Contorno Implantada': 'bg-orange-100 text-orange-700',
-  'Em Análise de Efetividade': 'bg-purple-100 text-purple-700',
+  'Em Análise de Efetividade': 'bg-stone-100 text-stone-700 dark:bg-stone-800 dark:text-stone-300',
   'Análise de Efetividade Pendente': 'bg-yellow-100 text-yellow-700',
-  'Avaliação Realizada': 'bg-teal-100 text-teal-700',
+  'Avaliação Realizada': 'bg-amber-100 text-amber-800 dark:bg-amber-500/15 dark:text-amber-300',
   Encerrado: 'bg-emerald-100 text-emerald-700',
   Reaberto: 'bg-rose-100 text-rose-700',
-  'Plano de Solução Definitiva': 'bg-violet-100 text-violet-700',
+  'Plano de Solução Definitiva':
+    'bg-stone-100 text-stone-700 dark:bg-stone-800 dark:text-stone-300',
 }
 
 export const PRIORITY_COLORS: Record<string, string> = {

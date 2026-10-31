@@ -21,10 +21,10 @@ const COLORS = [
   '#f59e0b',
   '#d97706',
   '#10b981',
-  '#3b82f6',
+  '#b45309',
   '#ef4444',
-  '#f97316',
-  '#eab308',
+  '#fcd34d',
+  '#78350f',
   '#64748b',
 ]
 
@@ -99,7 +99,7 @@ export default function ProblemDashboard() {
   }
 
   const kpis = [
-    { label: 'Total', value: stats.total, icon: Bug, color: 'text-blue-600 bg-blue-50' },
+    { label: 'Total', value: stats.total, icon: Bug, color: 'text-amber-600 bg-amber-500/10' },
     {
       label: 'Abertos',
       value: stats.open,
@@ -116,7 +116,7 @@ export default function ProblemDashboard() {
       label: 'Causa Identificada',
       value: stats.causeFound,
       icon: CheckCircle2,
-      color: 'text-indigo-600 bg-indigo-50',
+      color: 'text-amber-700 bg-amber-500/10',
     },
     {
       label: 'Sol. Contorno Implantada',
@@ -273,7 +273,10 @@ export default function ProblemDashboard() {
                 {problems.slice(0, 10).map((p) => (
                   <tr key={p.id} className="hover:bg-slate-50">
                     <td className="p-3">
-                      <Link to={`/problems/${p.id}`} className="font-bold text-blue-600">
+                      <Link
+                        to={`/problems/${p.id}`}
+                        className="font-bold text-primary hover:underline"
+                      >
                         {p.number}
                       </Link>
                     </td>

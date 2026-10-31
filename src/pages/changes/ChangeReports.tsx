@@ -15,7 +15,7 @@ import { getChanges, type ChangeRecord } from '@/services/changes'
 import { exportToCsv } from '@/lib/export-utils'
 import { useRealtime } from '@/hooks/use-realtime'
 
-const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6']
+const COLORS = ['#f59e0b', '#10b981', '#d97706', '#ef4444', '#b45309']
 
 export default function ChangeReports() {
   const [changes, setChanges] = useState<ChangeRecord[]>([])
@@ -130,7 +130,7 @@ export default function ChangeReports() {
         <Card>
           <CardContent className="p-4">
             <p className="text-xs text-slate-500">Em Andamento</p>
-            <p className="text-2xl font-bold text-blue-600">
+            <p className="text-2xl font-bold text-primary">
               {
                 filtered.filter((c) =>
                   ['Em Planejamento', 'Agendada', 'Em Execução', 'Em Validação'].includes(c.status),

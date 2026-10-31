@@ -30,8 +30,8 @@ export function VisitsSection({ data }: VisitsSectionProps) {
           label="Visitas Agendadas"
           value={metrics.scheduled}
           icon={Calendar}
-          color="text-blue-600"
-          bg="bg-blue-50"
+          color="text-amber-600 dark:text-amber-400"
+          bg="bg-amber-500/10"
         />
         <ExecutiveKpiCard
           label="Visitas Concluídas"
@@ -44,8 +44,8 @@ export function VisitsSection({ data }: VisitsSectionProps) {
           label="Taxa de Conclusão"
           value={`${metrics.completionRate.toFixed(1)}%`}
           icon={Percent}
-          color="text-purple-600"
-          bg="bg-purple-50"
+          color="text-primary"
+          bg="bg-primary/10"
         />
       </div>
       <ChartCard title="Visitas Agendadas x Concluídas por Mês">

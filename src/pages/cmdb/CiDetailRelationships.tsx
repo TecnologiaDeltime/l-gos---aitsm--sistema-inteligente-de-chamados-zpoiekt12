@@ -116,9 +116,9 @@ export function CiDetailRelationships({ equipmentId }: { equipmentId: string }) 
             cx="250"
             cy="150"
             r="50"
-            fill="#3b82f6"
+            fill="#f59e0b"
             opacity="0.2"
-            stroke="#3b82f6"
+            stroke="#d97706"
             strokeWidth="2"
           />
           <text

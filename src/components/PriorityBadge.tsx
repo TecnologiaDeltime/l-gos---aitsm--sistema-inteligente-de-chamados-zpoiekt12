@@ -19,9 +19,9 @@ const PRIORITY_CONFIG: Record<string, { label: string; dot: string; className: s
   },
   Média: {
     label: 'Média',
-    dot: 'bg-sky-400 shadow-[0_0_6px_rgba(56,189,248,0.6)]',
+    dot: 'bg-amber-400 shadow-[0_0_6px_rgba(251,191,36,0.6)]',
     className:
-      'bg-sky-100 text-sky-800 border-sky-300 dark:bg-sky-500/15 dark:text-sky-300 dark:border-sky-500/40 font-medium',
+      'bg-amber-500/10 text-amber-800 border-amber-300 dark:bg-amber-500/15 dark:text-amber-300 dark:border-amber-500/40 font-medium',
   },
   Baixa: {
     label: 'Baixa',

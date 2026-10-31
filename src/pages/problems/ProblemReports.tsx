@@ -15,7 +15,7 @@ import { getProblems, type ProblemRecord } from '@/services/problems'
 import { exportToCsv } from '@/lib/export-utils'
 import { useRealtime } from '@/hooks/use-realtime'
 
-const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6']
+const COLORS = ['#f59e0b', '#10b981', '#d97706', '#ef4444', '#b45309']
 
 export default function ProblemReports() {
   const [problems, setProblems] = useState<ProblemRecord[]>([])
@@ -128,7 +128,7 @@ export default function ProblemReports() {
         <Card>
           <CardContent className="p-4">
             <p className="text-xs text-slate-500">Taxa de Efetividade</p>
-            <p className="text-2xl font-bold text-blue-600">{effectiveness.rate}%</p>
+            <p className="text-2xl font-bold text-primary">{effectiveness.rate}%</p>
           </CardContent>
         </Card>
         <Card>

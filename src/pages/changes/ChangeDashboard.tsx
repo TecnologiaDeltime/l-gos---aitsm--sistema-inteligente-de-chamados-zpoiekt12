@@ -12,7 +12,7 @@ const COLORS = [
   '#f59e0b',
   '#d97706',
   '#10b981',
-  '#3b82f6',
+  '#b45309',
   '#ef4444',
   '#f97316',
   '#eab308',
@@ -64,8 +64,8 @@ export default function ChangeDashboard() {
               <p className="text-xs text-slate-500">Total de Mudanças</p>
               <p className="text-2xl font-bold">{changes.length}</p>
             </div>
-            <div className="p-3 rounded-xl bg-blue-50">
-              <GitBranch className="h-5 w-5 text-blue-600" />
+            <div className="p-3 rounded-xl bg-amber-500/10">
+              <GitBranch className="h-5 w-5 text-amber-600 dark:text-amber-400" />
             </div>
           </CardContent>
         </Card>
@@ -165,7 +165,10 @@ export default function ChangeDashboard() {
                 {changes.slice(0, 10).map((c) => (
                   <tr key={c.id} className="hover:bg-slate-50">
                     <td className="p-3">
-                      <Link to={`/changes/${c.id}`} className="font-bold text-blue-600">
+                      <Link
+                        to={`/changes/${c.id}`}
+                        className="font-bold text-primary hover:underline"
+                      >
                         {c.number}
                       </Link>
                     </td>

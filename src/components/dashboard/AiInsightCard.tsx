@@ -20,7 +20,7 @@ export function AiInsightCard() {
         </p>
         <div className="grid gap-2 md:grid-cols-2">
           <div className="flex items-start gap-2 p-2.5 rounded-lg bg-secondary/50 opacity-60">
-            <TrendingUp className="h-4 w-4 text-blue-500 shrink-0 mt-0.5" />
+            <TrendingUp className="h-4 w-4 text-primary shrink-0 mt-0.5" />
             <p className="text-[11px] text-muted-foreground">Tendências de volume de chamados</p>
           </div>
           <div className="flex items-start gap-2 p-2.5 rounded-lg bg-secondary/50 opacity-60">
@@ -28,7 +28,7 @@ export function AiInsightCard() {
             <p className="text-[11px] text-muted-foreground">Riscos de excedimento de horas</p>
           </div>
           <div className="flex items-start gap-2 p-2.5 rounded-lg bg-secondary/50 opacity-60">
-            <Lightbulb className="h-4 w-4 text-purple-500 shrink-0 mt-0.5" />
+            <Lightbulb className="h-4 w-4 text-amber-400 shrink-0 mt-0.5" />
             <p className="text-[11px] text-muted-foreground">Oportunidades de melhoria</p>
           </div>
           <div className="flex items-start gap-2 p-2.5 rounded-lg bg-secondary/50 opacity-60">

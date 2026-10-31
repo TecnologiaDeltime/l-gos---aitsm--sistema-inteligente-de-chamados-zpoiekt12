@@ -967,7 +967,7 @@ export default function TechnicianDashboardPage() {
                       borderColor: '#e2e8f0',
                     }}
                   />
-                  <Bar dataKey="Horas" fill="#3b82f6" radius={[6, 6, 0, 0]} maxBarSize={60}>
+                  <Bar dataKey="Horas" fill="#d97706" radius={[6, 6, 0, 0]} maxBarSize={60}>
                     <LabelList
                       dataKey="Horas"
                       position="top"

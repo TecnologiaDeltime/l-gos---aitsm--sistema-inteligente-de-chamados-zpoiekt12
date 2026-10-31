@@ -13,10 +13,10 @@ const COLORS = [
   '#f59e0b',
   '#d97706',
   '#10b981',
-  '#3b82f6',
+  '#b45309',
   '#ef4444',
-  '#f97316',
-  '#eab308',
+  '#fcd34d',
+  '#78350f',
   '#84cc16',
   '#64748b',
   '#475569',
@@ -115,8 +115,8 @@ export default function CmdbDashboard() {
                 <p className="text-2xl font-bold">{totalAssets}</p>
                 <p className="text-[11px] text-muted-foreground">Computadores, notebooks, etc.</p>
               </div>
-              <div className="p-3 rounded-xl bg-blue-50 dark:bg-blue-950/50">
-                <Server className="h-5 w-5 text-blue-600" />
+              <div className="p-3 rounded-xl bg-amber-500/10 dark:bg-amber-500/15">
+                <Server className="h-5 w-5 text-amber-600 dark:text-amber-400" />
               </div>
             </CardContent>
           </Card>
@@ -279,10 +279,8 @@ export default function CmdbDashboard() {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between pb-2">
           <CardTitle className="text-sm">Próximos Vencimentos de Garantia</CardTitle>
-          <Link
-            to="/cmdb/assets"
-            className="text-xs text-blue-600 hover:underline flex items-center"
-          >
+          <Link to="/cmdb/items" className="text-xs text-primary hover:underline flex items-center">
+            {' '}
             Ver Todos <ArrowUpRight className="h-3 w-3 ml-1" />
           </Link>
         </CardHeader>
