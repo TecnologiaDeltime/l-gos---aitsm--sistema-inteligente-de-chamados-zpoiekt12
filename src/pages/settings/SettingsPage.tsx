@@ -20,7 +20,8 @@ import VaultPage from '@/pages/vault/VaultPage'
 import { SecuritySettingsTab } from '@/components/settings/SecuritySettingsTab'
 import { ClientNotificationSettingsTab } from '@/components/settings/ClientNotificationSettingsTab'
 import { DesignSettingsTab } from '@/components/settings/DesignSettingsTab'
-import { ShieldCheck } from 'lucide-react'
+import ClientPortalSettingsTab from '@/components/settings/ClientPortalSettingsTab'
+import { ShieldCheck, Globe } from 'lucide-react'
 import {
   getVoiceAlertsEnabled,
   setVoiceAlertsEnabled,
@@ -54,44 +55,50 @@ export default function SettingsPage() {
 
   // Aba ativa de primeiro nível em Configurações
   const initialTab =
-    searchParams.get('tab') === 'design'
-      ? 'design'
-      : searchParams.get('tab') === 'email'
-        ? 'email'
-        : searchParams.get('tab') === 'client_notif'
-          ? 'client_notif'
-          : searchParams.get('tab') === 'vault'
-            ? 'vault'
-            : searchParams.get('tab') === 'security'
-              ? 'security'
-              : 'general'
+    searchParams.get('tab') === 'portal'
+      ? 'portal'
+      : searchParams.get('tab') === 'design'
+        ? 'design'
+        : searchParams.get('tab') === 'email'
+          ? 'email'
+          : searchParams.get('tab') === 'client_notif'
+            ? 'client_notif'
+            : searchParams.get('tab') === 'vault'
+              ? 'vault'
+              : searchParams.get('tab') === 'security'
+                ? 'security'
+                : 'general'
   const [mainTab, setMainTab] = useState<
-    'general' | 'design' | 'client_notif' | 'email' | 'vault' | 'security'
+    'general' | 'portal' | 'design' | 'client_notif' | 'email' | 'vault' | 'security'
   >(initialTab)
 
   const handleTabChange = (
-    tab: 'general' | 'design' | 'client_notif' | 'email' | 'vault' | 'security',
+    tab: 'general' | 'portal' | 'design' | 'client_notif' | 'email' | 'vault' | 'security',
   ) => {
     setMainTab(tab)
     setSearchParams(
-      tab === 'design'
-        ? { tab: 'design' }
-        : tab === 'client_notif'
-          ? { tab: 'client_notif' }
-          : tab === 'email'
-            ? { tab: 'email' }
-            : tab === 'vault'
-              ? { tab: 'vault' }
-              : tab === 'security'
-                ? { tab: 'security' }
-                : {},
+      tab === 'portal'
+        ? { tab: 'portal' }
+        : tab === 'design'
+          ? { tab: 'design' }
+          : tab === 'client_notif'
+            ? { tab: 'client_notif' }
+            : tab === 'email'
+              ? { tab: 'email' }
+              : tab === 'vault'
+                ? { tab: 'vault' }
+                : tab === 'security'
+                  ? { tab: 'security' }
+                  : {},
     )
   }
 
   // Sincronizar se o parâmetro de URL mudar
   useEffect(() => {
     const tabFromUrl = searchParams.get('tab')
-    if (tabFromUrl === 'design' && mainTab !== 'design') {
+    if (tabFromUrl === 'portal' && mainTab !== 'portal') {
+      setMainTab('portal')
+    } else if (tabFromUrl === 'design' && mainTab !== 'design') {
       setMainTab('design')
     } else if (tabFromUrl === 'client_notif' && mainTab !== 'client_notif') {
       setMainTab('client_notif')
@@ -324,6 +331,21 @@ export default function SettingsPage() {
           <Button
             type="button"
             size="sm"
+            variant={mainTab === 'portal' ? 'default' : 'ghost'}
+            onClick={() => handleTabChange('portal')}
+            className={`h-8 text-xs font-semibold rounded-lg transition-all ${
+              mainTab === 'portal'
+                ? 'bg-amber-500/20 text-amber-500 border border-amber-500/30 shadow-xs shadow-amber-500/10'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            <Globe className="h-3.5 w-3.5 mr-1.5 text-amber-500" />
+            Portal do Cliente
+          </Button>
+
+          <Button
+            type="button"
+            size="sm"
             variant={mainTab === 'design' ? 'default' : 'ghost'}
             onClick={() => handleTabChange('design')}
             className={`h-8 text-xs font-semibold rounded-lg transition-all ${
@@ -397,6 +419,9 @@ export default function SettingsPage() {
           </Button>
         </div>
       </div>
+
+      {/* SEÇÃO PORTAL DO CLIENTE */}
+      {mainTab === 'portal' && <ClientPortalSettingsTab />}
 
       {/* SEÇÃO DESIGN & APARÊNCIA */}
       {mainTab === 'design' && <DesignSettingsTab isAdminOrGestor={permissions.isGestor} />}
