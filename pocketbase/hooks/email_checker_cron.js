@@ -706,6 +706,57 @@ cronAdd('email_checker_cron', '*/2 * * * *', () => {
           'Chamado criado com sucesso vinculado ao cliente ' + (userCompanyId || 'Sem Empresa'),
       })
 
+      // DISPARO SEGURO / ASYNC DE RESPOSTA AUTOMÁTICA (NUNCA BLOQUEIA NEM FALHA O CHAMADO CRIADO)
+      try {
+        if (typeof globalThis.itsmTriggerAutoReply === 'function') {
+          var autoReplyCompanyName = ''
+          if (userCompanyId) {
+            try {
+              var cRec = $app.findRecordById('companies', userCompanyId)
+              autoReplyCompanyName =
+                cRec.getString('trade_name') || cRec.getString('legal_name') || ''
+            } catch (_) {}
+          }
+
+          var autoReplyDateFormatted =
+            ('0' + new Date().getDate()).slice(-2) +
+            '/' +
+            ('0' + (new Date().getMonth() + 1)).slice(-2) +
+            '/' +
+            new Date().getFullYear() +
+            ' às ' +
+            ('0' + new Date().getHours()).slice(-2) +
+            ':' +
+            ('0' + new Date().getMinutes()).slice(-2)
+
+          globalThis.itsmTriggerAutoReply({
+            ticketId: ticket.id,
+            ticketNumber: ticket.getString('number'),
+            ticketTitle: ticket.getString('title'),
+            recipientEmail: from,
+            requesterName: fromName || 'Cliente',
+            companyName: autoReplyCompanyName,
+            createdDateFormatted: autoReplyDateFormatted,
+            incomingMessageContext: {
+              from: from,
+              fromName: fromName,
+              subject: subject,
+              headers: (msg && msg.headers) || {},
+            },
+          })
+        }
+      } catch (autoReplyErr) {
+        $app
+          .logger()
+          .warn(
+            'email_checker_cron: falha não bloqueante na resposta automática',
+            'ticket',
+            ticket.getString('number'),
+            'err',
+            autoReplyErr.message,
+          )
+      }
+
       return {
         status: 'created',
         ticket_id: ticket.id,

@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-31T14:08:35.044Z",
+  "generatedAt": "2026-10-31T14:30:50.934Z",
   "collections": [
     {
       "name": "users",
@@ -9737,7 +9737,8 @@
             "abertura_chamado",
             "resolucao_chamado",
             "alerta_sla",
-            "aprovacao_chamado"
+            "aprovacao_chamado",
+            "resposta_automatica"
           ]
         },
         {
@@ -10501,6 +10502,83 @@
         }
       ],
       "indexes": ["CREATE INDEX idx_design_settings_scope ON design_settings (scope)"]
+    },
+    {
+      "name": "email_auto_replies",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != ''",
+        "view": "@request.auth.id != ''",
+        "create": "@request.auth.id != '' && (@request.auth.role = 'admin' || @request.auth.role = 'gestor')",
+        "update": "@request.auth.id != '' && (@request.auth.role = 'admin' || @request.auth.role = 'gestor')",
+        "delete": "@request.auth.id != '' && @request.auth.role = 'admin'"
+      },
+      "fields": [
+        {
+          "name": "scope",
+          "type": "select",
+          "required": true,
+          "system": false,
+          "selectValues": ["global"]
+        },
+        {
+          "name": "receipt_enabled",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "receipt_subject",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "receipt_body",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "out_of_office_enabled",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "out_of_office_subject",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "out_of_office_body",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "anti_loop_enabled",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": ["CREATE UNIQUE INDEX idx_auto_reply_scope ON email_auto_replies (scope)"]
     }
   ]
 }

@@ -219,6 +219,7 @@ export type EmailAuditTestType =
   | 'resolucao_chamado'
   | 'alerta_sla'
   | 'aprovacao_chamado'
+  | 'resposta_automatica'
 
 export interface EmailAuditLogRecord {
   id: string

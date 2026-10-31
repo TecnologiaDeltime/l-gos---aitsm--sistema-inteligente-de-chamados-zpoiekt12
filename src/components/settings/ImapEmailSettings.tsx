@@ -44,7 +44,9 @@ import {
   Trash2,
   Calendar,
   Timer,
+  Bot,
 } from 'lucide-react'
+import { EmailAutoReplySettingsTab } from '@/components/settings/EmailAutoReplySettingsTab'
 import {
   EmailConfigRecord,
   ImapTestResponse,
@@ -127,7 +129,7 @@ export function ImapEmailSettings({
   const [retentionRunResult, setRetentionRunResult] = useState<RetentionRunResponse | null>(null)
 
   const [activeTab, setActiveTab] = useState<
-    'config' | 'sendtest' | 'test' | 'smtptest' | 'dryrun' | 'audit'
+    'config' | 'autoreply' | 'sendtest' | 'test' | 'smtptest' | 'dryrun' | 'audit'
   >('config')
 
   // Carregar estatísticas da política de retenção
@@ -667,6 +669,16 @@ export function ImapEmailSettings({
           <Button
             type="button"
             size="sm"
+            variant={activeTab === 'autoreply' ? 'default' : 'ghost'}
+            className={`h-8 text-xs ${activeTab === 'autoreply' ? 'bg-amber-600 text-white' : 'text-amber-700 dark:text-amber-400 hover:text-amber-600'}`}
+            onClick={() => setActiveTab('autoreply')}
+          >
+            <Bot className="h-3.5 w-3.5 mr-1.5" />
+            Respostas Automáticas
+          </Button>
+          <Button
+            type="button"
+            size="sm"
             variant={activeTab === 'smtptest' ? 'default' : 'ghost'}
             className={`h-8 text-xs ${activeTab === 'smtptest' ? 'bg-blue-600 text-white' : ''}`}
             onClick={() => setActiveTab('smtptest')}
@@ -723,6 +735,9 @@ export function ImapEmailSettings({
       </CardHeader>
 
       <CardContent className="space-y-6 p-6">
+        {/* ABA RESPOSTAS AUTOMÁTICAS DE E-MAIL */}
+        {activeTab === 'autoreply' && <EmailAutoReplySettingsTab isGestor={isGestor} />}
+
         {/* ABA 1: PARÂMETROS DA CAIXA */}
         {activeTab === 'config' && (
           <div className="space-y-6">
@@ -2943,7 +2958,9 @@ export function ImapEmailSettings({
                                       ? 'Alerta de SLA'
                                       : log.test_type === 'aprovacao_chamado'
                                         ? 'Aprovação de Chamado'
-                                        : 'Simulação Ponta a Ponta'}
+                                        : log.test_type === 'resposta_automatica'
+                                          ? 'Resposta Automática'
+                                          : 'Simulação Ponta a Ponta'}
                         </Badge>
                         <span className="font-semibold text-slate-800 dark:text-slate-200">
                           {log.summary_message || 'Execução de teste'}
