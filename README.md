@@ -72,6 +72,9 @@ npm run lint:fix
 npm run format
 ```
 
+## 🏷️ Pontos de Restauração & Versões
+Consulte o arquivo [CHANGELOG.md](./CHANGELOG.md) para o histórico de tags e pontos de restauração (ex: `restore-point-v0.0.246` no commit `55d7ebf`).
+
 ## 📁 Estrutura do Projeto
 
 ```
