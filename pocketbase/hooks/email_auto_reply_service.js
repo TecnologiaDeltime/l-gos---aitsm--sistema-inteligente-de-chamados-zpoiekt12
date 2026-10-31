@@ -436,11 +436,25 @@
   function replaceVariables(templateText, vars) {
     if (!templateText) return ''
     vars = vars || {}
-    var numero = vars.numero || ''
-    var assunto = vars.assunto || ''
-    var solicitante = vars.solicitante || 'Cliente'
-    var empresa = vars.empresa || 'Cliente'
-    var data = vars.data || ''
+    var numero = vars.numero !== undefined && vars.numero !== null ? String(vars.numero) : ''
+    var assunto = vars.assunto !== undefined && vars.assunto !== null ? String(vars.assunto) : ''
+    var solicitante =
+      vars.solicitante !== undefined && vars.solicitante !== null
+        ? String(vars.solicitante)
+        : 'Cliente'
+    var empresa =
+      vars.empresa !== undefined && vars.empresa !== null ? String(vars.empresa) : 'Cliente'
+    var data = vars.data !== undefined && vars.data !== null ? String(vars.data) : ''
+    var prioridade =
+      vars.prioridade !== undefined && vars.prioridade !== null ? String(vars.prioridade) : ''
+    var atividade =
+      vars.atividade !== undefined && vars.atividade !== null ? String(vars.atividade) : ''
+    var prazo = vars.prazo !== undefined && vars.prazo !== null ? String(vars.prazo) : ''
+    var operador =
+      vars.operador !== undefined && vars.operador !== null && String(vars.operador).trim() !== ''
+        ? String(vars.operador)
+        : 'Ainda sem atribuição'
+    var status = vars.status !== undefined && vars.status !== null ? String(vars.status) : ''
 
     var res = String(templateText)
     res = res.replace(/\{\{\s*numero\s*\}\}/gi, numero)
@@ -448,6 +462,11 @@
     res = res.replace(/\{\{\s*solicitante\s*\}\}/gi, solicitante)
     res = res.replace(/\{\{\s*empresa\s*\}\}/gi, empresa)
     res = res.replace(/\{\{\s*data\s*\}\}/gi, data)
+    res = res.replace(/\{\{\s*prioridade\s*\}\}/gi, prioridade)
+    res = res.replace(/\{\{\s*atividade\s*\}\}/gi, atividade)
+    res = res.replace(/\{\{\s*prazo\s*\}\}/gi, prazo)
+    res = res.replace(/\{\{\s*operador\s*\}\}/gi, operador)
+    res = res.replace(/\{\{\s*status\s*\}\}/gi, status)
     return res
   }
 
@@ -781,6 +800,11 @@
       solicitante: params.requesterName || 'Cliente',
       empresa: params.companyName || 'Empresa Cliente',
       data: params.createdDateFormatted || new Date().toLocaleString('pt-BR'),
+      prioridade: params.priority || '',
+      atividade: params.activity || '',
+      prazo: params.deadlineFormatted || '',
+      operador: params.assignedOperatorName || 'Ainda sem atribuição',
+      status: params.status || 'Novo',
     }
 
     var rawSubject = isOutOfOffice ? cfg.out_of_office_subject : cfg.receipt_subject
@@ -917,6 +941,11 @@
             '/' +
             new Date().getFullYear() +
             ' às 14:35',
+        prioridade: body.priority || 'Alta',
+        atividade: body.activity || 'Suporte a Banco de Dados / Incidente Crítico',
+        prazo: body.deadline || '4 horas (até hoje às 18:35)',
+        operador: body.operator || 'Ainda sem atribuição',
+        status: body.status || 'Novo',
       }
 
       var cfg = getAutoReplyConfig()

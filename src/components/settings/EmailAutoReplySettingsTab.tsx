@@ -197,6 +197,11 @@ export function EmailAutoReplySettingsTab({ isGestor }: EmailAutoReplySettingsTa
         requester_name: 'Mariana Souza',
         company_name: 'Hospital Santa Helena',
         date: new Date().toLocaleDateString('pt-BR') + ' às 14:35',
+        priority: 'Alta',
+        activity: 'Suporte a Banco de Dados / Incidente Crítico',
+        deadline: '4 horas (até hoje às 18:35)',
+        operator: 'Ainda sem atribuição',
+        status: 'Novo',
       })
 
       setPreviewData(resp)
@@ -218,6 +223,27 @@ export function EmailAutoReplySettingsTab({ isGestor }: EmailAutoReplySettingsTa
     { key: 'solicitante', label: '{{solicitante}}', desc: 'Nome do remetente' },
     { key: 'empresa', label: '{{empresa}}', desc: 'Empresa / Cliente vinculado' },
     { key: 'data', label: '{{data}}', desc: 'Data e Hora da abertura' },
+    {
+      key: 'prioridade',
+      label: '{{prioridade}}',
+      desc: 'Prioridade do chamado criado (ex: Alta, Média)',
+    },
+    {
+      key: 'atividade',
+      label: '{{atividade}}',
+      desc: 'Atividade ou tipo do chamado (Catálogo de Serviços)',
+    },
+    {
+      key: 'prazo',
+      label: '{{prazo}}',
+      desc: 'Prazo previsto de atendimento (SLA) formatado em pt-BR',
+    },
+    {
+      key: 'operador',
+      label: '{{operador}}',
+      desc: 'Operador responsável atribuído (ou "Ainda sem atribuição")',
+    },
+    { key: 'status', label: '{{status}}', desc: 'Status atual do chamado (ex: Novo)' },
   ]
 
   if (loading) {
@@ -684,20 +710,59 @@ export function EmailAutoReplySettingsTab({ isGestor }: EmailAutoReplySettingsTa
               </div>
             </div>
             {previewData && (
-              <div className="mt-2 text-xs text-slate-600 dark:text-slate-400 bg-white dark:bg-slate-950 p-2.5 rounded border border-slate-200 dark:border-slate-800 space-y-1">
+              <div className="mt-2 text-xs text-slate-600 dark:text-slate-400 bg-white dark:bg-slate-950 p-2.5 rounded border border-slate-200 dark:border-slate-800 space-y-1.5">
                 <p>
                   <strong className="text-slate-700 dark:text-slate-300">Assunto:</strong>{' '}
                   {previewData.subject}
                 </p>
-                <div className="flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-slate-500">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-3 gap-y-1 text-[11px] text-slate-500 pt-1 border-t border-slate-100 dark:border-slate-800">
                   <span>
-                    Destinatário simulado: <strong>{previewData.vars.solicitante}</strong>
+                    Destinatário:{' '}
+                    <strong className="text-slate-700 dark:text-slate-300">
+                      {previewData.vars.solicitante}
+                    </strong>
                   </span>
                   <span>
-                    Empresa: <strong>{previewData.vars.empresa}</strong>
+                    Empresa:{' '}
+                    <strong className="text-slate-700 dark:text-slate-300">
+                      {previewData.vars.empresa}
+                    </strong>
                   </span>
                   <span>
-                    Chamado: <strong>#{previewData.vars.numero}</strong>
+                    Chamado:{' '}
+                    <strong className="text-slate-700 dark:text-slate-300">
+                      #{previewData.vars.numero}
+                    </strong>
+                  </span>
+                  <span>
+                    Prioridade:{' '}
+                    <strong className="text-amber-600 font-semibold">
+                      {previewData.vars.prioridade}
+                    </strong>
+                  </span>
+                  <span>
+                    Status:{' '}
+                    <strong className="text-slate-700 dark:text-slate-300">
+                      {previewData.vars.status}
+                    </strong>
+                  </span>
+                  <span>
+                    Operador:{' '}
+                    <strong className="text-slate-700 dark:text-slate-300">
+                      {previewData.vars.operador}
+                    </strong>
+                  </span>
+                  <span className="col-span-2 sm:col-span-2">
+                    Atividade:{' '}
+                    <strong className="text-slate-700 dark:text-slate-300">
+                      {previewData.vars.atividade}
+                    </strong>
+                  </span>
+                  <span>
+                    Prazo SLA:{' '}
+                    <strong className="text-emerald-600 font-semibold">
+                      {previewData.vars.prazo}
+                    </strong>
                   </span>
                 </div>
               </div>

@@ -729,6 +729,59 @@ cronAdd('email_checker_cron', '*/2 * * * *', () => {
             ':' +
             ('0' + new Date().getMinutes()).slice(-2)
 
+          // Carrega dados adicionais para as novas variáveis da resposta automática
+          var autoReplyPriority = ticket.getString('priority') || 'Média'
+          var autoReplyStatus = ticket.getString('status') || 'Novo'
+          var autoReplyActivity = ''
+          var autoReplyDeadline = ''
+          var autoReplyOperator = 'Ainda sem atribuição'
+
+          try {
+            // Se houver subcategoria ou categoria associada
+            var actId = ticket.getString('subcategory') || ticket.getString('category')
+            if (actId) {
+              try {
+                var actRecord = $app.findRecordById('tkt_categories', actId)
+                autoReplyActivity = actRecord.getString('name') || ''
+              } catch (_) {}
+            }
+          } catch (_) {}
+
+          try {
+            // Prazo de solução (SLA) formatado em pt-BR
+            var rawSolDeadline = ticket.getString('sla_solution_deadline')
+            if (rawSolDeadline) {
+              var dObj = new Date(rawSolDeadline)
+              if (!isNaN(dObj.getTime())) {
+                autoReplyDeadline =
+                  ('0' + dObj.getDate()).slice(-2) +
+                  '/' +
+                  ('0' + (dObj.getMonth() + 1)).slice(-2) +
+                  '/' +
+                  dObj.getFullYear() +
+                  ' às ' +
+                  ('0' + dObj.getHours()).slice(-2) +
+                  ':' +
+                  ('0' + dObj.getMinutes()).slice(-2)
+              }
+            }
+          } catch (_) {}
+
+          try {
+            // Operador atribuído
+            var assignedUserId = ticket.getString('assigned_to')
+            if (assignedUserId) {
+              try {
+                var uRecord = $app.findRecordById('users', assignedUserId)
+                autoReplyOperator =
+                  uRecord.getString('name') ||
+                  uRecord.getString('first_name') ||
+                  uRecord.getString('email') ||
+                  'Ainda sem atribuição'
+              } catch (_) {}
+            }
+          } catch (_) {}
+
           globalThis.itsmTriggerAutoReply({
             ticketId: ticket.id,
             ticketNumber: ticket.getString('number'),
@@ -737,6 +790,11 @@ cronAdd('email_checker_cron', '*/2 * * * *', () => {
             requesterName: fromName || 'Cliente',
             companyName: autoReplyCompanyName,
             createdDateFormatted: autoReplyDateFormatted,
+            priority: autoReplyPriority,
+            activity: autoReplyActivity,
+            deadlineFormatted: autoReplyDeadline,
+            assignedOperatorName: autoReplyOperator,
+            status: autoReplyStatus,
             incomingMessageContext: {
               from: from,
               fromName: fromName,

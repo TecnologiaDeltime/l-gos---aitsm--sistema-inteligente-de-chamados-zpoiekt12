@@ -64,6 +64,11 @@ export interface PreviewAutoReplyPayload {
   requester_name?: string
   company_name?: string
   date?: string
+  priority?: string
+  activity?: string
+  deadline?: string
+  operator?: string
+  status?: string
 }
 
 export interface PreviewAutoReplyResponse {
@@ -76,6 +81,11 @@ export interface PreviewAutoReplyResponse {
     solicitante: string
     empresa: string
     data: string
+    prioridade: string
+    atividade: string
+    prazo: string
+    operador: string
+    status: string
   }
 }
 
@@ -170,6 +180,11 @@ export const emailAutoReplyService = {
         solicitante: payload.requester_name || 'Mariana Souza',
         empresa: payload.company_name || 'Hospital Santa Helena',
         data: payload.date || new Date().toLocaleString('pt-BR'),
+        prioridade: payload.priority || 'Alta',
+        atividade: payload.activity || 'Suporte a Banco de Dados / Incidente Crítico',
+        prazo: payload.deadline || '4 horas (até hoje às 18:35)',
+        operador: payload.operator || 'Ainda sem atribuição',
+        status: payload.status || 'Novo',
       }
 
       let sub = payload.subject || ''
@@ -180,6 +195,11 @@ export const emailAutoReplyService = {
         .replace(/\{\{\s*solicitante\s*\}\}/gi, vars.solicitante)
         .replace(/\{\{\s*empresa\s*\}\}/gi, vars.empresa)
         .replace(/\{\{\s*data\s*\}\}/gi, vars.data)
+        .replace(/\{\{\s*prioridade\s*\}\}/gi, vars.prioridade)
+        .replace(/\{\{\s*atividade\s*\}\}/gi, vars.atividade)
+        .replace(/\{\{\s*prazo\s*\}\}/gi, vars.prazo)
+        .replace(/\{\{\s*operador\s*\}\}/gi, vars.operador)
+        .replace(/\{\{\s*status\s*\}\}/gi, vars.status)
 
       bdy = bdy
         .replace(/\{\{\s*numero\s*\}\}/gi, vars.numero)
@@ -187,6 +207,11 @@ export const emailAutoReplyService = {
         .replace(/\{\{\s*solicitante\s*\}\}/gi, vars.solicitante)
         .replace(/\{\{\s*empresa\s*\}\}/gi, vars.empresa)
         .replace(/\{\{\s*data\s*\}\}/gi, vars.data)
+        .replace(/\{\{\s*prioridade\s*\}\}/gi, vars.prioridade)
+        .replace(/\{\{\s*atividade\s*\}\}/gi, vars.atividade)
+        .replace(/\{\{\s*prazo\s*\}\}/gi, vars.prazo)
+        .replace(/\{\{\s*operador\s*\}\}/gi, vars.operador)
+        .replace(/\{\{\s*status\s*\}\}/gi, vars.status)
 
       return {
         subject: sub,
