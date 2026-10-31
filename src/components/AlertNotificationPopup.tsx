@@ -556,13 +556,13 @@ export function AlertNotificationPopup() {
 
       {pendingList.map((alert) => {
         // Estilização baseada no tipo de alerta
-        let borderClass = 'border-blue-400 dark:border-blue-600 bg-blue-50 dark:bg-slate-900'
-        let textTitleClass = 'text-blue-900 dark:text-blue-200'
-        let badgeClass = 'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300'
+        let borderClass = 'border-amber-400 dark:border-amber-600 bg-amber-50 dark:bg-slate-900'
+        let textTitleClass = 'text-amber-900 dark:text-amber-200'
+        let badgeClass = 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'
         let icon = (
-          <Hourglass className="mt-0.5 h-5 w-5 flex-shrink-0 text-blue-600 dark:text-blue-400" />
+          <Hourglass className="mt-0.5 h-5 w-5 flex-shrink-0 text-amber-600 dark:text-amber-400" />
         )
-        let primaryBtnClass = 'bg-blue-600 hover:bg-blue-700 text-white'
+        let primaryBtnClass = 'bg-primary hover:bg-primary/90 text-primary-foreground font-semibold'
 
         if (alert.alertType === 'SLA_RESPONSE' || alert.alertType === 'SLA_RESOLUTION') {
           const isResolution = alert.alertType === 'SLA_RESOLUTION'

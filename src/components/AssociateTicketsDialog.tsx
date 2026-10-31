@@ -117,7 +117,7 @@ export function AssociateTicketsDialog({
       <DialogContent className="sm:max-w-[680px]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Link2 className="h-5 w-5 text-blue-600" />
+            <Link2 className="h-5 w-5 text-primary" />
             Associar Chamados
           </DialogTitle>
           <DialogDescription>
@@ -164,7 +164,7 @@ export function AssociateTicketsDialog({
                     <li
                       key={c.id}
                       className={`flex items-center gap-3 px-3 py-2 text-xs cursor-pointer hover:bg-muted/60 ${
-                        isSelected ? 'bg-blue-50 dark:bg-blue-950/30' : ''
+                        isSelected ? 'bg-amber-50 dark:bg-amber-950/30' : ''
                       }`}
                       onClick={() => !isAlready && toggleSelect(c.id)}
                     >
@@ -173,7 +173,7 @@ export function AssociateTicketsDialog({
                           isAlready
                             ? 'border-emerald-500 bg-emerald-500 text-white'
                             : isSelected
-                              ? 'border-blue-600 bg-blue-600 text-white'
+                              ? 'border-primary bg-primary text-primary-foreground'
                               : 'border-slate-300'
                         }`}
                       >
@@ -222,7 +222,7 @@ export function AssociateTicketsDialog({
           <Button
             onClick={handleConfirm}
             disabled={submitting || selected.size === 0}
-            className="bg-blue-600 hover:bg-blue-700"
+            className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold"
           >
             {submitting && <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />}
             <Link2 className="mr-1.5 h-4 w-4" />

@@ -224,7 +224,7 @@ export function ApprovalConfigDialog({
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <ShieldCheck className="h-5 w-5 text-blue-600" />
+            <ShieldCheck className="h-5 w-5 text-primary" />
             {editingConfig ? 'Editar Regra de Aprovação' : 'Nova Regra de Aprovação'}
           </DialogTitle>
           <DialogDescription>
@@ -314,7 +314,7 @@ export function ApprovalConfigDialog({
           <div className="space-y-2 rounded-lg border p-3.5 bg-slate-50/50">
             <div className="flex items-center justify-between">
               <Label className="text-xs font-semibold flex items-center gap-1.5">
-                <Users className="h-4 w-4 text-blue-600" />
+                <Users className="h-4 w-4 text-primary" />
                 Pontos Focais do Cliente (Aprovadores Externos)
               </Label>
               <span className="text-[11px] text-slate-500">
@@ -462,7 +462,7 @@ export function ApprovalConfigDialog({
                   <Badge
                     key={c.id}
                     variant={checked ? 'default' : 'outline'}
-                    className={`cursor-pointer transition-colors ${checked ? 'bg-blue-600 text-white' : 'hover:bg-slate-100'}`}
+                    className={`cursor-pointer transition-colors ${checked ? 'bg-primary text-primary-foreground' : 'hover:bg-slate-100'}`}
                     onClick={() => handleToggleClient(c.id)}
                   >
                     {c.trade_name || c.legal_name || c.code}
@@ -500,7 +500,11 @@ export function ApprovalConfigDialog({
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
             Cancelar
           </Button>
-          <Button onClick={handleSave} disabled={saving} className="bg-blue-600 hover:bg-blue-700">
+          <Button
+            onClick={handleSave}
+            disabled={saving}
+            className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold"
+          >
             {saving ? 'Salvando...' : editingConfig ? 'Atualizar Regra' : 'Criar Regra'}
           </Button>
         </DialogFooter>

@@ -128,7 +128,7 @@ export function BatchDelegateDialog({
                         <span className="text-sm font-medium">{u.name || 'Sem nome'}</span>
                         <span className="text-xs text-slate-500">{u.email}</span>
                       </div>
-                      {selectedId === u.id && <Check className="h-4 w-4 text-blue-600" />}
+                      {selectedId === u.id && <Check className="h-4 w-4 text-primary" />}
                     </div>
                   </CommandItem>
                 ))}
@@ -144,7 +144,7 @@ export function BatchDelegateDialog({
                           <span className="text-xs text-slate-500">{q.description}</span>
                         )}
                       </div>
-                      {selectedId === q.id && <Check className="h-4 w-4 text-blue-600" />}
+                      {selectedId === q.id && <Check className="h-4 w-4 text-primary" />}
                     </div>
                   </CommandItem>
                 ))}
@@ -170,7 +170,7 @@ export function BatchDelegateDialog({
           <Button
             onClick={handleConfirm}
             disabled={!selectedId || loading}
-            className="bg-blue-600 hover:bg-blue-700"
+            className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold"
           >
             {loading && <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />}
             Delegar

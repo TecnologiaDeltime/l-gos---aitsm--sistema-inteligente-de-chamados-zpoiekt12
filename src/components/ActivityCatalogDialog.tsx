@@ -214,16 +214,16 @@ export function ActivityCatalogDialog({
                   <span className="text-xs text-slate-400">Selecione impacto e urgência</span>
                 )}
               </div>
-              <div className="rounded-lg border border-blue-200 bg-blue-50/50 p-3 space-y-2 dark:border-blue-900/50 dark:bg-blue-950/30">
+              <div className="rounded-lg border border-amber-200 bg-amber-50/50 p-3 space-y-2 dark:border-amber-900/50 dark:bg-amber-950/30">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-semibold text-blue-900 dark:text-blue-200">
+                  <span className="text-xs font-semibold text-amber-900 dark:text-amber-200">
                     SLA da Atividade (Precedência Máxima)
                   </span>
-                  <span className="text-[10px] uppercase font-bold text-blue-600 dark:text-blue-400 bg-blue-100 dark:bg-blue-900/60 px-1.5 py-0.5 rounded">
+                  <span className="text-[10px] uppercase font-bold text-amber-700 dark:text-amber-300 bg-amber-100 dark:bg-amber-900/60 px-1.5 py-0.5 rounded">
                     1º na Precedência
                   </span>
                 </div>
-                <p className="text-[11px] text-blue-800/80 dark:text-blue-300/80">
+                <p className="text-[11px] text-amber-800/80 dark:text-amber-300/80">
                   A configuração de SLA definida na atividade tem prioridade sobre as regras do
                   Cliente e do Contrato.
                 </p>
@@ -306,7 +306,11 @@ export function ActivityCatalogDialog({
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancelar
           </Button>
-          <Button onClick={handleSave} disabled={saving} className="bg-blue-600 hover:bg-blue-700">
+          <Button
+            onClick={handleSave}
+            disabled={saving}
+            className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold"
+          >
             {saving ? 'Salvando...' : 'Salvar'}
           </Button>
         </DialogFooter>

@@ -45,17 +45,17 @@ export function AiAssistantDrawer() {
     <>
       <Button
         onClick={() => setOpen(true)}
-        className="fixed bottom-6 right-6 z-40 rounded-full bg-blue-600 p-3 shadow-lg hover:bg-blue-700"
+        className="fixed bottom-6 right-6 z-40 rounded-full bg-primary p-3 shadow-lg hover:bg-primary/90 text-primary-foreground"
         size="icon"
       >
-        <Sparkles className="h-6 w-6 text-white" />
+        <Sparkles className="h-6 w-6" />
       </Button>
 
       {open && (
         <div className="fixed inset-y-0 right-0 z-50 flex w-full max-w-md flex-col bg-white shadow-2xl border-l dark:bg-slate-900">
           <div className="flex items-center justify-between border-b p-4">
             <div className="flex items-center gap-2">
-              <Bot className="h-5 w-5 text-blue-600" />
+              <Bot className="h-5 w-5 text-primary" />
               <h3 className="font-semibold text-slate-900 dark:text-slate-100">
                 Assistente Técnico ServiceOne
               </h3>
@@ -74,7 +74,7 @@ export function AiAssistantDrawer() {
                 <div
                   className={`max-w-[85%] rounded-lg p-3 text-sm ${
                     m.role === 'user'
-                      ? 'bg-blue-600 text-white'
+                      ? 'bg-primary text-primary-foreground font-medium'
                       : 'bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-200'
                   }`}
                 >
