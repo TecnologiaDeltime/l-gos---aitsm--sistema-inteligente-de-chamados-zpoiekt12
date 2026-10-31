@@ -1914,6 +1914,41 @@
               <button class="btn" id="btn-sim-demo-stop" style="display: none">⏹ Parar</button>
               <div class="sim-note" id="demo-status"></div>
             </div>
+            <div class="card" id="card-sim-concorrencia" style="border-color: var(--accent)">
+              <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px">
+                <h3 style="margin-bottom: 0">⚡ Concorrência — Rajada de Mensagens</h3>
+                <span
+                  class="badge"
+                  style="
+                    background: var(--accent-soft);
+                    color: var(--accent);
+                    font-size: 10px;
+                    padding: 2px 6px;
+                  "
+                  >Refinamento 3</span
+                >
+              </div>
+              <p
+                style="
+                  font-size: 12.5px;
+                  color: var(--text-dim);
+                  line-height: 1.55;
+                  margin-bottom: 10px;
+                "
+              >
+                Testa o cenário de corrida real: aciona o handoff e, enquanto o dossiê é gerado na
+                janela de congelamento, dispara <b>3 mensagens em rajada simultânea</b>. Garante que
+                nenhuma recebe resposta do bot e todas aparecem no inbox do agente na ordem exata.
+              </p>
+              <button
+                class="btn primary"
+                id="btn-sim-concorrencia"
+                style="background: var(--accent); color: #17181c; font-weight: 700"
+              >
+                ⚡ Testar concorrência
+              </button>
+              <div id="concorrencia-resultado" style="margin-top: 12px; display: none"></div>
+            </div>
             <div class="card">
               <h3>🔁 Teste de idempotência</h3>
               <p
@@ -2361,6 +2396,55 @@
             return JSON.parse(JSON.stringify(msg))
           },
 
+          async processarMensagemUsuario(conversaId, texto, canal) {
+            // Refinamento 3: Pipeline transacional para envio de mensagem de usuário,
+            // garantindo que sob concorrência/rajada e durante handoff o congelamento seja estrito.
+            const msg = await this.enviarMensagem(conversaId, texto, canal)
+            if (!msg) return null
+
+            await this.classificar(conversaId)
+            const { conversa: atual } = await this.obterConversa(conversaId)
+
+            // Regra 6.6 e 9: se estado é HANDOFF_PENDENTE, HUMANO_ATIVO ou RESOLVIDA,
+            // NUNCA responder pelo bot. Fila do agente assume.
+            if (
+              atual.estado === 'HANDOFF_PENDENTE' ||
+              atual.estado === 'HUMANO_ATIVO' ||
+              atual.estado === 'RESOLVIDA'
+            ) {
+              return {
+                mensagem: msg,
+                botRespondeu: false,
+                estado: atual.estado,
+                motivo: 'bot_congelado',
+              }
+            }
+
+            // Triagem ativa: avalia gatilhos de escalada ANTES de responder
+            const respostaProposta = gerarRespostaBot(atual, texto)
+            const gatilho = avaliarGatilhosHandoff(atual, texto, respostaProposta)
+
+            if (gatilho.deveEscalar) {
+              const dossie = await this.executarHandoff(conversaId, gatilho.motivo)
+              return {
+                mensagem: msg,
+                botRespondeu: false,
+                handoffAcionado: true,
+                gatilho,
+                dossie,
+                estado: 'HANDOFF_PENDENTE',
+              }
+            } else {
+              const respBot = await this.gravarRespostaBot(conversaId, respostaProposta)
+              return {
+                mensagem: msg,
+                botRespondeu: !respBot.descartada,
+                respostaBot: respBot,
+                estado: 'BOT_RESOLVENDO',
+              }
+            }
+          },
+
           async enviarMensagemComId(conversaId, msgObjeto) {
             // Usado para testar reenvio de duplicata (idempotência)
             db.mensagens[conversaId] = db.mensagens[conversaId] || []
@@ -2485,9 +2569,10 @@
             return JSON.parse(JSON.stringify(conv))
           },
 
-          async executarHandoff(conversaId, motivo) {
+          async executarHandoff(conversaId, motivo, delayDossieMs = 0) {
             const conv = acharConversa(conversaId)
             // Regra 6.6 e 6.7 passo 1 — Congelamento do bot: estado vira HANDOFF_PENDENTE na mesma transação
+            // O congelamento é imediato antes de qualquer trabalho assíncrono de geração de dossiê.
             conv.estado = 'HANDOFF_PENDENTE'
             conv.motivoHandoff = motivo
             conv.eventos = conv.eventos || []
@@ -2498,6 +2583,13 @@
               detalhe:
                 'Passo 1: Bot congelado no estado HANDOFF_PENDENTE. Mensagens futuras vão direto ao agente.',
             })
+            // Persistência imediata do congelamento (passo 1)
+            persistir()
+
+            // Simulação de janela de geração de dossiê assíncrona se fornecido delay
+            if (delayDossieMs > 0) {
+              await new Promise((r) => setTimeout(r, delayDossieMs))
+            }
 
             // Passo 2 — gerar o dossiê
             const msgs = db.mensagens[conversaId] || []
@@ -2635,6 +2727,16 @@
 
           async gravarRespostaBot(conversaId, resposta) {
             const conv = acharConversa(conversaId)
+            // Regra 6.6 e Refinamento 3: Garantia atômica de congelamento
+            // Se o bot estiver congelado (HANDOFF_PENDENTE, HUMANO_ATIVO ou RESOLVIDA),
+            // NUNCA grava resposta de bot e descarta com segurança para evitar race condition.
+            if (
+              conv.estado === 'HANDOFF_PENDENTE' ||
+              conv.estado === 'HUMANO_ATIVO' ||
+              conv.estado === 'RESOLVIDA'
+            ) {
+              return { descartada: true, motivo: 'bot_congelado', estado: conv.estado }
+            }
             const msg = {
               id: canalId('saida', conv.canal),
               conversaId,
@@ -3620,7 +3722,12 @@
               mostrarDigitando(true)
               setTimeout(async () => {
                 mostrarDigitando(false)
-                await store.executarHandoff(conversaSelecionadaId, gatilho.motivo)
+                // Se durante o intervalo o bot já tiver sido congelado ou handoff executado, evita conflito
+                const statusAntes = (await store.obterConversa(conversaSelecionadaId)).conversa
+                  .estado
+                if (statusAntes !== 'HANDOFF_PENDENTE' && statusAntes !== 'HUMANO_ATIVO') {
+                  await store.executarHandoff(conversaSelecionadaId, gatilho.motivo)
+                }
                 await renderThread()
                 await renderContexto()
                 await renderLista()
@@ -3631,10 +3738,19 @@
               mostrarDigitando(true)
               setTimeout(async () => {
                 mostrarDigitando(false)
-                await store.gravarRespostaBot(conversaSelecionadaId, respostaProposta)
-                await renderThread()
-                await renderContexto()
-                await renderLista()
+                // Checa se o estado ainda permite resposta do bot (regra 6.6: congelamento)
+                const statusAntes = (await store.obterConversa(conversaSelecionadaId)).conversa
+                  .estado
+                if (
+                  statusAntes !== 'HANDOFF_PENDENTE' &&
+                  statusAntes !== 'HUMANO_ATIVO' &&
+                  statusAntes !== 'RESOLVIDA'
+                ) {
+                  await store.gravarRespostaBot(conversaSelecionadaId, respostaProposta)
+                  await renderThread()
+                  await renderContexto()
+                  await renderLista()
+                }
               }, 900)
             }
           }
@@ -3752,6 +3868,164 @@
             await selecionarConversa(conv.id)
             toast('Mensagem recebida no canal ' + canal.toUpperCase() + '!')
             document.getElementById('sim-texto').value = ''
+          })
+
+          // Refinamento 3 — Teste de concorrência (rajada de mensagens durante handoff / congelamento)
+          document.getElementById('btn-sim-concorrencia').addEventListener('click', async () => {
+            const btnTest = document.getElementById('btn-sim-concorrencia')
+            const resEl = document.getElementById('concorrencia-resultado')
+            btnTest.disabled = true
+            btnTest.textContent = '⏳ Executando teste de corrida…'
+            resEl.style.display = 'block'
+            resEl.innerHTML =
+              '<div style="font-size:12px;color:var(--text-dim);padding:8px;background:var(--surface2);border-radius:6px;">Iniciando handoff e disparando rajada simultânea de 3 mensagens…</div>'
+
+            try {
+              // 1. Cria uma conversa limpa e dedicada para o teste de concorrência
+              const nomeContato =
+                'Teste Concorrência (Rajada #' + Math.floor(100 + Math.random() * 900) + ')'
+              const canal = 'whatsapp'
+              const convInicial = await store.criarOuReusarConversaPorParticipante(
+                nomeContato,
+                canal,
+                'Mensagem 1 pré-handoff: Preciso de suporte urgente com VPN de diretoria.',
+              )
+              const idConv = convInicial.id
+
+              // 2. Inicia o handoff com janela de geração de dossiê (250ms), simulando o trabalho assíncrono
+              const promessaHandoff = store.executarHandoff(idConv, 'pedido_humano', 250)
+
+              // 3. Enquanto o dossiê está sendo gerado (durante a janela assíncrona do handoff),
+              // dispara 3 mensagens do usuário em rajada encadeada/simultânea
+              const textosRajada = [
+                'Rajada [1/3]: Alô? Vocês estão recebendo minhas mensagens?',
+                'Rajada [2/3]: Preciso resolver isso agora para a reunião de resultados.',
+                'Rajada [3/3]: Estou aguardando confirmação do atendente no canal.',
+              ]
+
+              // Disparo em rajada com intervalo mínimo (5ms)
+              const promessasRajada = textosRajada.map(async (txt, idx) => {
+                await new Promise((r) => setTimeout(r, idx * 6))
+                return store.processarMensagemUsuario(idConv, txt, canal)
+              })
+
+              // Aguarda tanto a conclusão do handoff quanto o processamento das 3 mensagens da rajada
+              const [dossieGerado, resultadosRajada] = await Promise.all([
+                promessaHandoff,
+                Promise.all(promessasRajada),
+              ])
+
+              // 4. Aceita o handoff pelo agente para transitar para HUMANO_ATIVO
+              await store.aceitarHandoff(idConv, 'ag-1')
+
+              // 5. Avalia as asserções estritas do teste
+              const { mensagens, conversa: convFinal } = await store.obterConversa(idConv)
+
+              // Asserção (a): Nenhuma das 3 mensagens da rajada recebeu resposta do bot durante a geração do dossiê
+              // Filtra respostas de bot gravadas após o início do handoff
+              const msgsBotAposHandoff = mensagens.filter(
+                (m) =>
+                  m.autor === 'bot' && textosRajada.some((t) => m.texto && m.texto.includes(t)),
+              )
+              const assercaoABotNaoRespondeu =
+                msgsBotAposHandoff.length === 0 &&
+                resultadosRajada.every((r) => r && r.botRespondeu === false)
+
+              // Asserção (b): As 3 mensagens aparecem no inbox do agente na ordem exata em que foram enviadas
+              const msgsEntrada = mensagens
+                .filter((m) => m.direcao === 'entrada')
+                .map((m) => m.texto)
+              const idx1 = msgsEntrada.indexOf(textosRajada[0])
+              const idx2 = msgsEntrada.indexOf(textosRajada[1])
+              const idx3 = msgsEntrada.indexOf(textosRajada[2])
+              const assercaoBOrdemCorreta =
+                idx1 !== -1 && idx2 !== -1 && idx3 !== -1 && idx1 < idx2 && idx2 < idx3
+
+              // Asserção (c): Estado da conversa ficou consistente (congelamento sustentado e transição para HUMANO_ATIVO)
+              const assercaoCEstadoConsistente =
+                convFinal.estado === 'HUMANO_ATIVO' &&
+                convFinal.agenteId === 'ag-1' &&
+                Boolean(dossieGerado)
+
+              const passou =
+                assercaoABotNaoRespondeu && assercaoBOrdemCorreta && assercaoCEstadoConsistente
+
+              // 6. Exibe resultado visual em verde ou vermelho com o detalhe de cada asserção
+              const bgCor = passou ? 'rgba(34, 197, 94, 0.12)' : 'rgba(239, 68, 68, 0.12)'
+              const bordaCor = passou ? 'var(--green)' : 'var(--red)'
+              const textoCor = passou ? 'var(--green)' : 'var(--red)'
+              const badgeStatus = passou ? 'PASSOOU (SUCESSO)' : 'FALHOU'
+
+              let detalhesHtml =
+                '<div style="background:' +
+                bgCor +
+                ';border:1px solid ' +
+                bordaCor +
+                ';border-radius:8px;padding:12px;font-size:12px;color:var(--text);line-height:1.5;">' +
+                '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">' +
+                '<span style="font-weight:800;font-size:13px;color:' +
+                textoCor +
+                ';">' +
+                (passou ? '✅' : '❌') +
+                ' Teste de concorrência: ' +
+                badgeStatus +
+                '</span>' +
+                '</div>' +
+                '<div style="display:flex;flex-direction:column;gap:6px;font-family:var(--font-mono, monospace);font-size:11.5px;">' +
+                '<div>' +
+                (assercaoABotNaoRespondeu ? '🟢' : '🔴') +
+                ' <b>Asserção 1 (Silêncio do bot):</b> ' +
+                (assercaoABotNaoRespondeu
+                  ? 'Nenhuma das 3 mensagens da rajada recebeu resposta do bot (congelamento estrito).'
+                  : 'Falha: bot gravou resposta para mensagem da rajada.') +
+                '</div>' +
+                '<div>' +
+                (assercaoBOrdemCorreta ? '🟢' : '🔴') +
+                ' <b>Asserção 2 (Ordem no inbox):</b> ' +
+                (assercaoBOrdemCorreta
+                  ? 'Todas as 3 mensagens estão preservadas no inbox na ordem exata de envio (1 → 2 → 3).'
+                  : 'Falha: mensagens foram salvas fora de ordem ou estão incompletas.') +
+                '</div>' +
+                '<div>' +
+                (assercaoCEstadoConsistente ? '🟢' : '🔴') +
+                ' <b>Asserção 3 (Consistência de estado):</b> ' +
+                (assercaoCEstadoConsistente
+                  ? 'Estado consistente e seguro (HANDOFF_PENDENTE → HUMANO_ATIVO com Agente Fernanda Lima).'
+                  : 'Falha: estado final inconsistente.') +
+                '</div>' +
+                '</div>' +
+                '<div style="margin-top:10px;padding-top:8px;border-top:1px dashed var(--border);font-size:11px;color:var(--text-dim);">' +
+                'Conversa de teste: <code>' +
+                idConv +
+                '</code> · ' +
+                mensagens.length +
+                ' mensagens gravadas no store <code>aitsm.v1</code>.' +
+                '</div>' +
+                '</div>'
+
+              resEl.innerHTML = detalhesHtml
+
+              // Atualiza o console operacional com a nova conversa
+              conversaSelecionadaId = idConv
+              await renderLista()
+              await renderContexto()
+              await renderThread()
+
+              toast(
+                passou
+                  ? 'Teste de concorrência aprovado com sucesso!'
+                  : 'Falha no teste de concorrência.',
+              )
+            } catch (err) {
+              resEl.innerHTML =
+                '<div style="background:rgba(239,68,68,0.12);border:1px solid var(--red);color:var(--red);border-radius:8px;padding:12px;font-size:12px;">' +
+                '❌ Erro ao executar teste: ' +
+                (err.message || String(err)) +
+                '</div>'
+            } finally {
+              btnTest.disabled = false
+              btnTest.textContent = '⚡ Testar concorrência'
+            }
           })
 
           // Teste de reenvio / idempotência (regra 6.10)
