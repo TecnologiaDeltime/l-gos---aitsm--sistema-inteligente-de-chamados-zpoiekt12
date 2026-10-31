@@ -89,6 +89,7 @@ import ProblemCreate from '@/pages/problems/ProblemCreate'
 import ProblemDetail from '@/pages/problems/ProblemDetail'
 import MyProblems from '@/pages/problems/MyProblems'
 import VaultPage from '@/pages/vault/VaultPage'
+import { AtendimentoPage } from '@/pages/atendimento/AtendimentoPage'
 import ProblemInvestigation from '@/pages/problems/ProblemInvestigation'
 import ProblemEffectivenessAnalysis from '@/pages/problems/ProblemEffectivenessAnalysis'
 import ProblemPending from '@/pages/problems/ProblemPending'
@@ -164,6 +165,7 @@ const App = () => (
                 <Route path="/" element={<RootRedirect />} />
                 <Route path="/dashboard" element={<Dashboard />} />
                 <Route path="/dashboard-gerencial" element={<ExecutiveDashboard />} />
+                <Route path="/atendimento" element={<AtendimentoPage />} />
                 <Route path="/tickets" element={<TicketList />} />
                 <Route path="/tickets/new" element={<TicketCreate />} />
                 <Route path="/tickets/scheduled" element={<ScheduledTickets />} />

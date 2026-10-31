@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-31T18:57:46.353Z",
+  "generatedAt": "2026-10-31T21:47:15.341Z",
   "collections": [
     {
       "name": "users",
@@ -10579,6 +10579,409 @@
         }
       ],
       "indexes": ["CREATE UNIQUE INDEX idx_auto_reply_scope ON email_auto_replies (scope)"]
+    },
+    {
+      "name": "atendimento_conversas",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != ''",
+        "view": "@request.auth.id != ''",
+        "create": "@request.auth.id != ''",
+        "update": "@request.auth.id != ''",
+        "delete": "@request.auth.id != ''"
+      },
+      "fields": [
+        {
+          "name": "canal",
+          "type": "select",
+          "required": true,
+          "system": false,
+          "selectValues": ["whatsapp", "webchat", "email"]
+        },
+        {
+          "name": "estado",
+          "type": "select",
+          "required": true,
+          "system": false,
+          "selectValues": [
+            "NOVA",
+            "TRIAGEM_BOT",
+            "BOT_RESOLVENDO",
+            "HANDOFF_PENDENTE",
+            "HUMANO_ATIVO",
+            "RESOLVIDA"
+          ]
+        },
+        {
+          "name": "prioridade",
+          "type": "select",
+          "required": true,
+          "system": false,
+          "selectValues": ["P1", "P2", "P3", "P4"]
+        },
+        {
+          "name": "pratica",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["incident", "service_request", "change", "question"]
+        },
+        {
+          "name": "categoria",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "impacto",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["menor", "moderado", "significativo", "extenso"]
+        },
+        {
+          "name": "urgencia",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["baixa", "média", "alta", "crítica"]
+        },
+        {
+          "name": "contato_nome",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "contato_handle",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "contato_vip",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "contato_locale",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "sentimento",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "confianca_bot",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "motivo_handoff",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "operador_atribuido",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "chamado_vinculado",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "tickets"
+        },
+        {
+          "name": "sla_resposta_deadline",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "sla_resolucao_deadline",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "sla_resposta_at",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "sla_resolucao_at",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "ultima_mensagem_texto",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "ultima_atividade_at",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "metadata",
+          "type": "json",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": [
+        "CREATE INDEX idx_atend_conv_canal ON atendimento_conversas (canal)",
+        "CREATE INDEX idx_atend_conv_estado ON atendimento_conversas (estado)",
+        "CREATE INDEX idx_atend_conv_prioridade ON atendimento_conversas (prioridade)",
+        "CREATE INDEX idx_atend_conv_operador ON atendimento_conversas (operador_atribuido)",
+        "CREATE INDEX idx_atend_conv_chamado ON atendimento_conversas (chamado_vinculado)"
+      ]
+    },
+    {
+      "name": "atendimento_mensagens",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != ''",
+        "view": "@request.auth.id != ''",
+        "create": "@request.auth.id != ''",
+        "update": "@request.auth.id != ''",
+        "delete": "@request.auth.id != ''"
+      },
+      "fields": [
+        {
+          "name": "conversa",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "atendimento_conversas"
+        },
+        {
+          "name": "direcao",
+          "type": "select",
+          "required": true,
+          "system": false,
+          "selectValues": ["entrada", "saida"]
+        },
+        {
+          "name": "autor_tipo",
+          "type": "select",
+          "required": true,
+          "system": false,
+          "selectValues": ["usuario", "bot", "operador", "sistema"]
+        },
+        {
+          "name": "autor_nome",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "operador",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "texto",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "artigos_consultados",
+          "type": "json",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "classificacao",
+          "type": "json",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "id_externo",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": [
+        "CREATE INDEX idx_atend_msg_conversa ON atendimento_mensagens (conversa)",
+        "CREATE INDEX idx_atend_msg_autor ON atendimento_mensagens (autor_tipo)"
+      ]
+    },
+    {
+      "name": "atendimento_dossies",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != ''",
+        "view": "@request.auth.id != ''",
+        "create": "@request.auth.id != ''",
+        "update": "@request.auth.id != ''",
+        "delete": "@request.auth.id != ''"
+      },
+      "fields": [
+        {
+          "name": "conversa",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "atendimento_conversas"
+        },
+        {
+          "name": "headline",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "narrativa",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "objetivo_cliente",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "passos_tomados",
+          "type": "json",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "artigos_tentados",
+          "type": "json",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "perguntas_abertas",
+          "type": "json",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "riscos",
+          "type": "json",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "proxima_acao_recomendada",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "roteamento_score",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "roteamento_justificativa",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "skills_avaliadas",
+          "type": "json",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "agente_sugerido",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "eventos_handoff",
+          "type": "json",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "aceito_por",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "aceito_at",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": ["CREATE INDEX idx_atend_dossie_conv ON atendimento_dossies (conversa)"]
     }
   ]
 }

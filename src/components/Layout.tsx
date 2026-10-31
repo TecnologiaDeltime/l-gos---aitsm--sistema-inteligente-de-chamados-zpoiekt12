@@ -184,6 +184,12 @@ export default function Layout() {
 
   const chamadosSubmenuItems = [
     {
+      label: 'Atendimento Omnichannel',
+      path: '/atendimento',
+      icon: Sparkles,
+      show: true,
+    },
+    {
       label: 'Fila de Tickets',
       path: '/tickets',
       icon: Ticket,
