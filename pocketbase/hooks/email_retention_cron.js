@@ -748,11 +748,20 @@
 
       if (userRecord && userRecord.id) {
         rec.set('executed_by', userRecord.id)
-        rec.set(
-          'executed_by_name',
-          userRecord.getString('name') || userRecord.getString('email') || '',
-        )
-        rec.set('executed_by_email', userRecord.getString('email') || '')
+        var uName = ''
+        var uEmail = ''
+        try {
+          uName =
+            (typeof userRecord.getString === 'function'
+              ? userRecord.getString('name')
+              : userRecord.name) || ''
+          uEmail =
+            (typeof userRecord.getString === 'function'
+              ? userRecord.getString('email')
+              : userRecord.email) || ''
+        } catch (_) {}
+        rec.set('executed_by_name', uName || uEmail || '')
+        rec.set('executed_by_email', uEmail || '')
       }
 
       var steps = [
@@ -792,12 +801,28 @@
     }
   }
 
+  // Expõe executeRetentionPolicy no escopo global para garantir que referências externas ou empacotamento nunca falhem
+  try {
+    if (typeof globalThis !== 'undefined') {
+      globalThis.executeRetentionPolicy = executeRetentionPolicy
+    }
+  } catch (_) {}
+
   // =========================================================================
   // CRON DIÁRIO DE RETENÇÃO (0 3 * * * = 03:00 UTC)
   // =========================================================================
   cronAdd('email_retention_cron', '0 3 * * *', function () {
     $app.logger().info('Iniciando cron diário de retenção de e-mails (email_retention_cron)...')
-    var result = executeRetentionPolicy({ manual: false })
+    var fn =
+      typeof executeRetentionPolicy === 'function'
+        ? executeRetentionPolicy
+        : typeof globalThis !== 'undefined' &&
+            typeof globalThis.executeRetentionPolicy === 'function'
+          ? globalThis.executeRetentionPolicy
+          : null
+    var result = fn
+      ? fn({ manual: false })
+      : { success: false, error: 'executeRetentionPolicy unavailable' }
     $app.logger().info('Cron de retenção finalizado', 'result', JSON.stringify(result))
   })
 
@@ -807,9 +832,11 @@
   routerAdd('POST', '/backend/v1/emails/retention/run', function (c) {
     var authUser = null
     try {
-      if (typeof c.authRecord === 'function') {
+      if (c && c.auth) {
+        authUser = c.auth
+      } else if (typeof c.authRecord === 'function') {
         authUser = c.authRecord()
-      } else if (c.authRecord) {
+      } else if (c && c.authRecord) {
         authUser = c.authRecord
       }
     } catch (_) {}

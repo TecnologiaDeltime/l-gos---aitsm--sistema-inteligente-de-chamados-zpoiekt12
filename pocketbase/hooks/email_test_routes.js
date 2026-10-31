@@ -170,6 +170,13 @@
     return fallback
   }
 
+  try {
+    if (typeof globalThis !== 'undefined') {
+      globalThis.createSystemMailMessage = createSystemMailMessage
+      globalThis.resolveSystemMailerConfig = resolveSystemMailerConfig
+    }
+  } catch (_) {}
+
   // Envia um MailerMessage aplicando a caixa dedicada ou fallback (autocontido)
   function sendSystemMailMessage(message, mailerConfig) {
     if (!mailerConfig) {
@@ -350,6 +357,13 @@
 
     return sendSystemMailMessage(message, mailerConfig)
   }
+
+  try {
+    if (typeof globalThis !== 'undefined') {
+      globalThis.sendSystemMailMessage = sendSystemMailMessage
+      globalThis.sendSystemEmail = sendSystemEmail
+    }
+  } catch (_) {}
 
   // Helper para registrar log de auditoria
   function logAuditRecord(params) {
