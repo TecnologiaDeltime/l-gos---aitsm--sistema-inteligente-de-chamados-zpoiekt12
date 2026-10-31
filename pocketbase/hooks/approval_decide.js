@@ -126,16 +126,15 @@ routerAdd('GET', '/backend/v1/approvals/act', (e) => {
     var icon = isSuccess ? (action === 'approve' ? '✅' : '🚫') : '⚠️'
     var statusTitle = title || (isSuccess ? 'Decisão Processada com Sucesso' : 'Atenção')
 
-    var esc =
-      typeof globalThis.itsmEscapeHtml === 'function'
-        ? globalThis.itsmEscapeHtml
-        : function (s) {
-            return String(s || '')
-              .replace(/&/g, '&amp;')
-              .replace(/</g, '&lt;')
-              .replace(/>/g, '&gt;')
-              .replace(/"/g, '&quot;')
-          }
+    function esc(s) {
+      if (s === null || s === undefined) return ''
+      return String(s)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;')
+    }
 
     var html =
       '<!DOCTYPE html>\n<html lang="pt-BR">\n<head>\n' +

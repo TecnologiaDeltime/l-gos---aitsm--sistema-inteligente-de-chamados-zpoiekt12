@@ -425,6 +425,12 @@
     return 'Erro no servidor SMTP: ' + str
   }
 
+  try {
+    if (typeof globalThis !== 'undefined') {
+      globalThis.translateSmtpError = translateSmtpError
+    }
+  } catch (_) {}
+
   // =========================================================================
   // TESTE DE CONEXÃO: 7 ETAPAS
   // POST /backend/v1/emails/test-connection
