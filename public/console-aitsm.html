@@ -830,6 +830,240 @@
       /* ============================================================
    4. DOSSIÊ DE HANDOFF
    ============================================================ */
+      /* ============================================================
+         4.1 MODAL DE COMPARAÇÃO DE VISÕES (Refinamento 2 - Transição Invisível)
+         ============================================================ */
+      .compare-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.75);
+        z-index: 100;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        padding: 16px;
+      }
+      .compare-overlay.open {
+        display: flex;
+      }
+      .compare-modal {
+        width: min(1360px, 100%);
+        max-height: 94vh;
+        height: 94vh;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        display: flex;
+        flex-direction: column;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
+        overflow: hidden;
+      }
+      .compare-head {
+        padding: 12px 18px;
+        background: var(--surface2);
+        border-bottom: 1px solid var(--border);
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        flex-wrap: wrap;
+      }
+      .compare-head-info {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+      }
+      .compare-head-title {
+        font-size: 15px;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .compare-head-sub {
+        font-size: 11.5px;
+        color: var(--text-dim);
+      }
+      .compare-grid {
+        flex: 1;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        min-height: 0;
+        overflow: hidden;
+        background: var(--bg);
+      }
+      @media (max-width: 860px) {
+        .compare-overlay {
+          padding: 8px;
+        }
+        .compare-modal {
+          max-height: 98vh;
+          height: 98vh;
+          border-radius: 8px;
+        }
+        .compare-grid {
+          grid-template-columns: 100%;
+          overflow-y: auto;
+          overflow-x: hidden;
+        }
+      }
+      .compare-pane {
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+        min-height: 0;
+        background: var(--surface);
+        overflow: hidden;
+      }
+      .compare-pane-user {
+        border-right: 1px solid var(--border);
+      }
+      @media (max-width: 860px) {
+        .compare-pane {
+          min-width: 0;
+          width: 100%;
+        }
+        .compare-pane-user {
+          border-right: none;
+          border-bottom: 2px solid var(--border);
+          min-height: 420px;
+          height: auto;
+        }
+        .compare-pane-agent {
+          min-height: 460px;
+          height: auto;
+        }
+      }
+      @media (max-width: 480px) {
+        .compare-overlay {
+          padding: 4px;
+        }
+        .compare-head {
+          padding: 10px 12px;
+        }
+        .compare-head-title {
+          font-size: 13.5px;
+        }
+        .compare-pane-head {
+          padding: 8px 10px;
+        }
+        .compare-pane-body {
+          padding: 10px;
+        }
+      }
+      .compare-pane-head {
+        padding: 10px 14px;
+        border-bottom: 1px solid var(--border);
+        background: var(--surface2);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+      }
+      .compare-pane-title {
+        font-size: 13px;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .compare-pane-subtitle {
+        font-size: 11px;
+        color: var(--text-dim);
+      }
+      .compare-tag {
+        font-size: 10.5px;
+        font-weight: 700;
+        padding: 2px 8px;
+        border-radius: 999px;
+      }
+      .compare-tag.user {
+        background: rgba(34, 197, 94, 0.15);
+        color: var(--green);
+        border: 1px solid rgba(34, 197, 94, 0.35);
+      }
+      .compare-tag.agent {
+        background: var(--accent-soft);
+        color: var(--accent);
+        border: 1px solid var(--accent);
+      }
+      .compare-pane-body {
+        flex: 1;
+        overflow-y: auto;
+        padding: 14px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        min-height: 0;
+      }
+      .compare-user-channel-bar {
+        padding: 8px 12px;
+        background: var(--surface2);
+        border-radius: 8px;
+        border: 1px solid var(--border);
+        font-size: 11.5px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 4px;
+      }
+      .compare-user-note {
+        font-size: 11px;
+        color: var(--text-dim);
+        background: var(--surface2);
+        border: 1px dashed var(--border);
+        border-radius: 6px;
+        padding: 6px 10px;
+        margin-top: 4px;
+        line-height: 1.4;
+      }
+      .compare-agent-action-box {
+        background: var(--surface2);
+        border: 1px solid var(--accent);
+        border-radius: var(--radius);
+        padding: 12px 14px;
+        margin-bottom: 12px;
+      }
+      .compare-agent-action-box .lbl {
+        font-size: 10.5px;
+        text-transform: uppercase;
+        letter-spacing: 0.6px;
+        color: var(--accent);
+        font-weight: 700;
+        margin-bottom: 4px;
+      }
+      .compare-agent-action-box .txt {
+        font-size: 13px;
+        font-weight: 600;
+        line-height: 1.45;
+        color: var(--text);
+      }
+      .compare-empty-state {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        padding: 40px 20px;
+        gap: 12px;
+        margin: auto;
+        max-width: 440px;
+      }
+      .compare-empty-icon {
+        font-size: 38px;
+        line-height: 1;
+        opacity: 0.85;
+      }
+      .compare-empty-title {
+        font-size: 15px;
+        font-weight: 700;
+        color: var(--text);
+      }
+      .compare-empty-desc {
+        font-size: 12.5px;
+        color: var(--text-dim);
+        line-height: 1.55;
+      }
+
       .dossier-overlay {
         position: fixed;
         inset: 0;
@@ -1512,6 +1746,72 @@
             <div class="dossier-right" id="dossier-right"></div>
           </div>
           <div class="dossier-actions" id="dossier-actions"></div>
+        </div>
+      </div>
+
+      <!-- ======================= TELA: COMPARAR VISÕES (Refinamento 2 - Transição Invisível) ======================= -->
+      <div
+        class="compare-overlay"
+        id="compare-overlay"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Comparar Visões: Usuário versus Agente"
+      >
+        <div class="compare-modal">
+          <div class="compare-head">
+            <div class="compare-head-info">
+              <div class="compare-head-title">
+                <span>⚖️ Comparar Visões — Prova da Transição Invisível</span>
+                <span id="compare-conv-badge" class="badge estado"></span>
+              </div>
+              <div class="compare-head-sub" id="compare-head-sub">
+                Demonstração lado a lado: o que o USUÁRIO vê (thread contínua, sem costura) versus o
+                que o AGENTE vê (dossiê completo + transcrição + próxima ação).
+              </div>
+            </div>
+            <div style="margin-left: auto; display: flex; gap: 8px; align-items: center">
+              <button class="btn small" id="btn-compare-demo" style="display: none">
+                🎬 Rodar demonstração
+              </button>
+              <button class="btn small" id="compare-close" aria-label="Fechar Comparar Visões">
+                ✕ Fechar
+              </button>
+            </div>
+          </div>
+          <div class="compare-grid" id="compare-grid">
+            <!-- Painel Esquerdo: Visão do Usuário -->
+            <div class="compare-pane compare-pane-user" id="compare-pane-user">
+              <div class="compare-pane-head">
+                <div>
+                  <div class="compare-pane-title">
+                    <span>📱 O que o USUÁRIO vê</span>
+                    <span class="compare-tag user">Experiência do Cliente</span>
+                  </div>
+                  <div class="compare-pane-subtitle">
+                    Thread contínua e natural · Nenhuma menção a bot, robô ou transferência
+                  </div>
+                </div>
+              </div>
+              <div class="compare-pane-body" id="compare-user-body"></div>
+            </div>
+
+            <!-- Painel Direito: Visão do Agente -->
+            <div class="compare-pane compare-pane-agent" id="compare-pane-agent">
+              <div class="compare-pane-head">
+                <div>
+                  <div class="compare-pane-title">
+                    <span>🎧 O que o AGENTE vê</span>
+                    <span class="compare-tag agent">Console Operacional</span>
+                  </div>
+                  <div class="compare-pane-subtitle">
+                    Dossiê estruturado com fatos reais · Transcrição completa · Próxima ação
+                    recomendada
+                  </div>
+                </div>
+              </div>
+              <div class="compare-pane-body" id="compare-agent-body"></div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -3236,6 +3536,7 @@
           ligarFiltros()
           ligarComposer()
           ligarDossieModal()
+          ligarCompararModal()
           ligarSimulador()
           ligarTema()
           ligarTeclado()
@@ -3383,6 +3684,25 @@
           overlay.addEventListener('click', (e) => {
             if (e.target === overlay) overlay.classList.remove('open')
           })
+        }
+
+        function ligarCompararModal() {
+          const overlay = document.getElementById('compare-overlay')
+          document.getElementById('compare-close').addEventListener('click', () => {
+            overlay.classList.remove('open')
+          })
+          overlay.addEventListener('click', (e) => {
+            if (e.target === overlay) overlay.classList.remove('open')
+          })
+          const btnDemoModal = document.getElementById('btn-compare-demo')
+          if (btnDemoModal) {
+            btnDemoModal.addEventListener('click', () => {
+              overlay.classList.remove('open')
+              document.querySelector('[data-screen="simulador"]').click()
+              const btnDemo = document.getElementById('btn-sim-demo')
+              if (btnDemo) btnDemo.click()
+            })
+          }
         }
 
         function ligarTeclado() {
@@ -3682,6 +4002,9 @@
             '">' +
             formataEstado(conversa.estado) +
             '</span>' +
+            '<button class="btn small" id="btn-head-comparar" style="margin-left:auto;font-size:11.5px;padding:3px 9px;" title="Ver lado a lado o que o usuário e o agente vêem">' +
+            '⚖️ Comparar visões' +
+            '</button>' +
             '</div>' +
             '<div class="sub">' +
             escapeHtml(conversa.participante.handle) +
@@ -3690,6 +4013,13 @@
             '</b> · Prática: ' +
             formataPratica(conversa.pratica) +
             '</div>'
+
+          const btnHeadComparar = document.getElementById('btn-head-comparar')
+          if (btnHeadComparar) {
+            btnHeadComparar.addEventListener('click', () =>
+              abrirCompararVisoes(conversaSelecionadaId),
+            )
+          }
 
           // Mensagens
           const body = document.getElementById('thread-body')
@@ -3803,8 +4133,9 @@
             conversa.id === 'conv-b-senha',
           )
           const handoffBtn = podeVerDossie
-            ? '<button class="btn primary small" id="ctx-abrir-dossie" style="width:100%;margin-top:8px">📋 Ver Dossiê de Handoff</button>'
-            : ''
+            ? '<button class="btn primary small" id="ctx-abrir-dossie" style="width:100%;margin-top:8px">📋 Ver Dossiê de Handoff</button>' +
+              '<button class="btn small" id="ctx-abrir-comparar" style="width:100%;margin-top:6px;border-color:var(--accent);">⚖️ Comparar visões (prova da transição)</button>'
+            : '<button class="btn small" id="ctx-abrir-comparar" style="width:100%;margin-top:8px">⚖️ Comparar visões</button>'
 
           cont.innerHTML =
             '<div class="ctx-section">' +
@@ -3900,6 +4231,12 @@
           const btnAbrirDossie = document.getElementById('ctx-abrir-dossie')
           if (btnAbrirDossie) {
             btnAbrirDossie.addEventListener('click', () => abrirDossie(conversaSelecionadaId))
+          }
+          const btnCtxComparar = document.getElementById('ctx-abrir-comparar')
+          if (btnCtxComparar) {
+            btnCtxComparar.addEventListener('click', () =>
+              abrirCompararVisoes(conversaSelecionadaId),
+            )
           }
         }
 
@@ -4156,6 +4493,327 @@
               toast('Reatribuído para ' + outro.nome + '. Mensagem de continuidade enviada.')
             }
           })
+
+          overlay.classList.add('open')
+        }
+
+        // ================= COMPARAR VISÕES (REFINAMENTO 2 - TRANSIÇÃO INVISÍVEL) =================
+
+        async function abrirCompararVisoes(conversaId) {
+          const overlay = document.getElementById('compare-overlay')
+          const badgeEl = document.getElementById('compare-conv-badge')
+          const btnDemo = document.getElementById('btn-compare-demo')
+          const subEl = document.getElementById('compare-head-sub')
+          const userBody = document.getElementById('compare-user-body')
+          const agentBody = document.getElementById('compare-agent-body')
+
+          userBody.innerHTML = ''
+          agentBody.innerHTML = ''
+          btnDemo.style.display = 'none'
+
+          if (!conversaId) {
+            badgeEl.textContent = 'Sem conversa'
+            badgeEl.className = 'badge estado'
+            subEl.textContent = 'Nenhuma conversa ativa selecionada.'
+            userBody.innerHTML =
+              '<div class="compare-empty-state"><div class="compare-empty-icon">💬</div><div class="compare-empty-title">Nenhuma conversa selecionada</div><div class="compare-empty-desc">Selecione uma conversa na lista para inspecionar e comparar as visões do usuário e do agente.</div></div>'
+            agentBody.innerHTML =
+              '<div class="compare-empty-state"><div class="compare-empty-icon">📋</div><div class="compare-empty-title">Aguardando seleção</div><div class="compare-empty-desc">O dossiê estruturado e a transcrição do agente serão carregados aqui.</div></div>'
+            overlay.classList.add('open')
+            return
+          }
+
+          const { conversa, mensagens, ticket } = await store.obterConversa(conversaId)
+          const dossie = await store.obterDossie(conversaId)
+
+          const teveHandoff = Boolean(
+            dossie ||
+            conversa.estado === 'HANDOFF_PENDENTE' ||
+            conversa.estado === 'HUMANO_ATIVO' ||
+            conversa.motivoHandoff,
+          )
+
+          badgeEl.textContent =
+            (conversa.participante ? conversa.participante.nome : 'Contato') +
+            ' · ' +
+            formataEstado(conversa.estado)
+          badgeEl.className = 'badge estado ' + (conversa.estado || '')
+
+          // CASO 1: A conversa ainda NÃO teve handoff
+          if (!teveHandoff) {
+            subEl.textContent =
+              'Esta conversa ainda está em autoatendimento com bot — a comparação lado a lado é exibida após a transição (handoff).'
+            btnDemo.style.display = 'inline-flex'
+            btnDemo.textContent = '🎬 Rodar demonstração com handoff'
+
+            // Painel Esquerdo: Mostra como o usuário vê a thread atual do bot
+            userBody.innerHTML =
+              '<div class="compare-user-channel-bar">' +
+              '<span>Canal: <b>' +
+              nomeCanal(conversa.canal) +
+              '</b> (' +
+              escapeHtml(conversa.participante ? conversa.participante.nome : '') +
+              ')</span>' +
+              '<span class="badge ' +
+              (conversa.prioridade || 'P3').toLowerCase() +
+              '">' +
+              (conversa.prioridade || 'P3') +
+              '</span>' +
+              '</div>' +
+              '<div class="compare-user-note">ℹ️ Na visão do usuário, esta é uma conversa normal em andamento. Não houve transição até este momento.</div>'
+
+            mensagens.forEach((m) => {
+              const div = document.createElement('div')
+              div.className = 'msg-row ' + (m.autor === 'usuario' ? 'usuario' : 'bot')
+              div.innerHTML =
+                '<div class="bubble">' +
+                escapeHtml(m.texto) +
+                '</div>' +
+                '<div class="msg-meta"><span>' +
+                (m.autor === 'usuario'
+                  ? conversa.participante
+                    ? conversa.participante.nome
+                    : 'Você'
+                  : 'Assistente') +
+                '</span><span>' +
+                formatarHora(m.em) +
+                '</span></div>'
+              userBody.appendChild(div)
+            })
+
+            // Painel Direito: Mensagem amigável de que ainda não houve handoff
+            agentBody.innerHTML =
+              '<div class="compare-empty-state">' +
+              '<div class="compare-empty-icon">🤖</div>' +
+              '<div class="compare-empty-title">Ainda sem transição (handoff pendente)</div>' +
+              '<div class="compare-empty-desc">Esta conversa está sob atendimento automatizado inicial do bot. O dossiê de handoff, roteamento do especialista e plano de ação são gerados assim que os gatilhos de escalada (insatisfação, baixa confiança, limite de turnos ou pedido humano) são disparados.</div>' +
+              '<button class="btn primary small" id="btn-rodar-handoff-agora" style="margin-top:6px;">⚡ Gerar handoff e comparar visões</button>' +
+              '</div>'
+
+            const btnGerarHandoff = agentBody.querySelector('#btn-rodar-handoff-agora')
+            if (btnGerarHandoff) {
+              btnGerarHandoff.addEventListener('click', async () => {
+                await store.executarHandoff(conversaId, 'baixa_confianca')
+                await renderThread()
+                await renderContexto()
+                await renderLista()
+                await abrirCompararVisoes(conversaId)
+                toast('Handoff executado! Comparação atualizada.')
+              })
+            }
+
+            overlay.classList.add('open')
+            return
+          }
+
+          // CASO 2: A conversa JÁ teve handoff (ou possui dossiê ativo)
+          subEl.textContent =
+            'Contraste evidente: o usuário experimenta uma thread contínua e sem atrito; o agente recebe todo o dossiê factual, riscos e transcrição.'
+
+          // --- PAINEL ESQUERDO: O QUE O USUÁRIO VÊ ---
+          // Regra do briefing:
+          // "a thread exatamente como o usuário final a vê — contínua, sem quebra, sem badge/marcador
+          // de handoff, sem mencionar 'transferência' ou 'robô': mensagens do usuário, bot e agente fluem
+          // na mesma conversa; a mensagem de continuidade aparece como resposta normal. A moldura/título
+          // do painel deixa claro que é a visão do usuário."
+          const canalIcon = iconCanal(conversa.canal)
+          const canalNome = nomeCanal(conversa.canal)
+          const userName = conversa.participante ? conversa.participante.nome : 'Usuário'
+
+          const userHeaderHtml =
+            '<div class="compare-user-channel-bar">' +
+            '<span>' +
+            canalIcon +
+            ' <b>' +
+            canalNome +
+            '</b> · Chat de ' +
+            escapeHtml(userName) +
+            '</span>' +
+            '<span style="font-size:10.5px;color:var(--text-dim);">Status: Online</span>' +
+            '</div>' +
+            '<div class="compare-user-note">' +
+            '✨ <b>Transição invisível:</b> Sem badges de sistema, sem aviso de "transferindo para operador", sem menção a robô. Todas as mensagens fluem naturalmente na mesma linha do tempo.' +
+            '</div>'
+
+          userBody.innerHTML = userHeaderHtml
+
+          // Renderiza mensagens na visão do usuário
+          mensagens.forEach((m) => {
+            const row = document.createElement('div')
+            const isUser = m.autor === 'usuario'
+            row.className = 'msg-row ' + (isUser ? 'usuario' : 'bot')
+
+            // Rótulo neutro e natural: para mensagens de saída, o usuário vê apenas o nome do suporte ou assistente institucional
+            const rotuloExibido = isUser
+              ? userName
+              : m.autor === 'agente'
+                ? 'Suporte TI'
+                : 'Suporte TI'
+
+            row.innerHTML =
+              '<div class="bubble">' +
+              escapeHtml(m.texto) +
+              '</div>' +
+              '<div class="msg-meta">' +
+              '<span>' +
+              escapeHtml(rotuloExibido) +
+              '</span>' +
+              '<span>' +
+              formatarHora(m.em) +
+              '</span>' +
+              (isUser ? '<span style="color:var(--green)">✓✓</span>' : '') +
+              '</div>'
+            userBody.appendChild(row)
+          })
+
+          // --- PAINEL DIREITO: O QUE O AGENTE VÊ ---
+          // "o dossiê de handoff REAL desta conversa (headline, narrativa, objetivo, passos tomados,
+          // artigos tentados com resultado, perguntas abertas, riscos, próxima ação recomendada)
+          // + transcrição completa (reuse o bloco colapsável existente) + próxima ação em destaque.
+          // Evidencie que o agente vê toda a costura que o usuário não vê."
+
+          // Garante dossiê factual carregado
+          let dossieReal = dossie
+          if (!dossieReal) {
+            dossieReal = await store.executarHandoff(
+              conversaId,
+              conversa.motivoHandoff || 'baixa_confianca',
+            )
+          }
+          const r = dossieReal.resumo || {}
+
+          // 1. Próxima ação recomendada em DESTAQUE no topo da visão do agente
+          let proximaAcaoHtml = ''
+          if (r.proximaAcaoRecomendada) {
+            proximaAcaoHtml =
+              '<div class="compare-agent-action-box">' +
+              '<div class="lbl">⚡ PRÓXIMA AÇÃO RECOMENDADA (EM DESTAQUE)</div>' +
+              '<div class="txt">👉 ' +
+              escapeHtml(r.proximaAcaoRecomendada) +
+              '</div>' +
+              '</div>'
+          }
+
+          // 2. Headline e Narrativa
+          const headlineHtml =
+            '<div class="dossier-sec" style="margin-bottom:12px">' +
+            '<h3>Headline do Caso</h3>' +
+            '<div class="headline" style="font-size:13px;padding:8px 10px;">' +
+            escapeHtml(r.headline || 'Demanda em atendimento') +
+            '</div>' +
+            '</div>'
+
+          const narrativaHtml =
+            '<div class="dossier-sec" style="margin-bottom:12px">' +
+            '<h3>Narrativa Estruturada (Fatos Reais)</h3>' +
+            '<p class="narrativa" style="font-size:12.5px;line-height:1.5;">' +
+            escapeHtml(r.narrativa || 'Sem narrativa estruturada.') +
+            '</p>' +
+            '</div>'
+
+          // 3. Objetivo do Cliente
+          const objetivoHtml =
+            '<div class="dossier-sec" style="margin-bottom:12px">' +
+            '<h3>Objetivo do Cliente</h3>' +
+            '<p class="narrativa" style="font-size:12.5px;">🎯 ' +
+            escapeHtml(r.objetivoCliente || 'Atendimento da solicitação') +
+            '</p>' +
+            '</div>'
+
+          // 4. Passos já tomados
+          let passosHtml = '<ul class="plain-list">'
+          ;(r.passosTomados || []).forEach((p) => {
+            passosHtml +=
+              '<li><span class="ico">✓</span><span style="font-size:12px;">' +
+              escapeHtml(p) +
+              '</span></li>'
+          })
+          passosHtml += '</ul>'
+
+          // 5. Artigos tentados com resultado
+          let artigosHtml = '<ul class="plain-list">'
+          ;(r.artigosTentados || []).forEach((a) => {
+            const detalheMotivo = a.motivoFalha
+              ? '<span style="display:block;font-size:11px;color:var(--text-dim);margin-top:2px">Motivo: ' +
+                escapeHtml(a.motivoFalha) +
+                '</span>'
+              : ''
+            artigosHtml +=
+              '<li><span class="artigo-resultado ' +
+              (a.resultado || 'falhou') +
+              '">' +
+              (a.resultado || 'falhou').toUpperCase() +
+              '</span><div style="flex:1;font-size:12px;"><b>' +
+              escapeHtml(a.titulo || 'Base de Conhecimento') +
+              '</b>' +
+              detalheMotivo +
+              '</div></li>'
+          })
+          artigosHtml += '</ul>'
+
+          // 6. Perguntas abertas para o agente
+          let perguntasHtml = '<ul class="plain-list">'
+          ;(r.perguntasAbertas || []).forEach((q) => {
+            perguntasHtml +=
+              '<li><span class="ico">?</span><span style="font-size:12px;">' +
+              escapeHtml(q) +
+              '</span></li>'
+          })
+          perguntasHtml += '</ul>'
+
+          // 7. Riscos identificados
+          let riscosHtml = ''
+          ;(r.riscos || []).forEach((rk) => {
+            riscosHtml +=
+              '<div class="risco-item" style="font-size:12px;padding:6px 9px;">⚠️ ' +
+              escapeHtml(rk) +
+              '</div>'
+          })
+
+          // 8. Transcrição completa colapsável
+          let transcricaoHtml = '<ul class="transcricao">'
+          ;(dossieReal.transcricao || []).forEach((t) => {
+            transcricaoHtml +=
+              '<li><span class="de ' +
+              t.de +
+              '">' +
+              t.de.toUpperCase() +
+              ':</span>' +
+              escapeHtml(t.texto) +
+              '<span class="ts">' +
+              formatarHora(t.em) +
+              '</span></li>'
+          })
+          transcricaoHtml += '</ul>'
+
+          const transcricaoBlock =
+            '<div class="dossier-sec" style="margin-top:12px;margin-bottom:12px">' +
+            '<h3>Transcrição Completa (' +
+            (dossieReal.transcricao || []).length +
+            ' turnos)</h3>' +
+            '<details class="roteiro" open><summary>Exibir histórico integral da conversa</summary><div class="inner" style="padding:10px 0 0 0">' +
+            transcricaoHtml +
+            '</div></details>' +
+            '</div>'
+
+          agentBody.innerHTML =
+            proximaAcaoHtml +
+            headlineHtml +
+            narrativaHtml +
+            objetivoHtml +
+            '<div class="dossier-sec" style="margin-bottom:12px"><h3>Passos Já Tomados</h3>' +
+            passosHtml +
+            '</div>' +
+            '<div class="dossier-sec" style="margin-bottom:12px"><h3>Artigos da Base Tentados</h3>' +
+            artigosHtml +
+            '</div>' +
+            '<div class="dossier-sec" style="margin-bottom:12px"><h3>Perguntas Abertas Para o Agente</h3>' +
+            perguntasHtml +
+            '</div>' +
+            '<div class="dossier-sec" style="margin-bottom:12px"><h3>Riscos Identificados</h3>' +
+            riscosHtml +
+            '</div>' +
+            transcricaoBlock
 
           overlay.classList.add('open')
         }
