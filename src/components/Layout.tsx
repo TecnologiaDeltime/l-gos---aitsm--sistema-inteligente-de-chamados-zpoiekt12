@@ -51,6 +51,7 @@ import {
   Palette,
   Sun,
   Moon,
+  Sparkles,
 } from 'lucide-react'
 import { useAuth } from '@/hooks/use-auth'
 import { useTheme } from '@/hooks/use-theme'
@@ -404,6 +405,13 @@ export default function Layout() {
 
   const configuracoesSubmenuItems = [
     {
+      label: 'Console AITSM (Protótipo)',
+      path: '/console-aitsm.html',
+      icon: Sparkles,
+      show: true,
+      external: true,
+    },
+    {
       label: 'Caixa de E-mail & IMAP',
       path: '/settings?tab=email',
       icon: Mail,
@@ -526,6 +534,26 @@ export default function Layout() {
       ? currentFull === sub.path ||
         (location.pathname === sub.path && !location.search && !sub.path.includes('?'))
       : location.pathname === sub.path
+    if (sub.external) {
+      return (
+        <a
+          key={sub.path}
+          href={sub.path}
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={() => setMobileOpen(false)}
+          style={{ color: customSidebarText }}
+          className="relative flex items-center gap-2.5 px-2.5 py-1.5 text-xs font-medium rounded-md transition-all duration-150 hover:bg-sidebar-accent hover:text-sidebar-foreground"
+        >
+          <SubIcon
+            style={{ color: customSidebarText || undefined }}
+            className="h-3.5 w-3.5 shrink-0 opacity-85 text-amber-500"
+          />
+          <span className="truncate">{sub.label}</span>
+        </a>
+      )
+    }
+
     return (
       <Link
         key={sub.path}

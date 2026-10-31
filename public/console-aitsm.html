@@ -1,0 +1,4159 @@
+<!--
+  ============================================================
+  CONSOLE AITSM OMNICHANNEL COM HANDOFF CONTEXTUALIZADO
+  Protótipo funcional e navegável — arquivo HTML autocontido.
+  HTML + CSS + JS puro, sem frameworks, sem CDN externo.
+  ============================================================
+
+  README INTERNO — DECISÕES DE DESIGN (bloco 1, briefing principal)
+
+  1. ARQUITETURA E CAMADA DE DADOS
+     - Toda a persistência vive em localStorage sob a chave versionada "aitsm.v1".
+       O único ponto que toca localStorage é o módulo `store` (regra 10 do briefing).
+       Todos os métodos do store são assíncronos (retornam Promise) para imitar uma
+       API REST e permitir trocar por fetch() sem tocar em nenhum componente de UI.
+     - Os objetos seguem EXATAMENTE o modelo de dados do briefing:
+       Conversa, Mensagem, Ticket, Agente, DossieHandoff.
+     - Os tickets são derivados das conversas (cada conversa com ticketId tem um
+       registro espelho na coleção "tickets" para alimentar o dashboard de SLA).
+
+  2. NAVEGAÇÃO
+     O protótipo é uma única página com quatro "telas" internas, alternadas por
+     abas no topo (Inbox Omnichannel, Fila & Agentes, Dashboard de SLA e o
+     Simulador, com o Dossiê de Handoff abrindo como modal/painel overlay a
+     partir do inbox ou da fila). Navegação acessível por teclado (Tab, setas).
+
+  3. INBOX OMNICHANNEL (três colunas)
+     - Coluna 1: lista de conversas com filtros por canal, estado e prioridade.
+       Cada item mostra nome, prévia da última mensagem, badges de canal e
+       prioridade coloridos (P1 vermelho, P2 laranja, P3 amarelo, P4 cinza) e o
+       tempo relativo desde a última atividade.
+     - Coluna 2: thread com bolhas distintas para usuário, bot e agente,
+       cabeçalho com canal, estado e prioridade, campo de entrada com seletor de
+       canal, indicador "digitando…" antes de cada resposta do bot e rodapé
+       discreto com confiança e artigos da base de conhecimento usados.
+     - Coluna 3: painel de contexto com classificação ITIL, matriz impacto ×
+       urgência, sentimento, confiança do bot, ticket vinculado e SLAs com
+       contagem regressiva ao vivo (atualiza a cada segundo, fica vermelha ao
+       estourar e recalcula imediatamente quando a prioridade muda).
+
+  4. DOSSIÊ DE HANDOFF
+     Painel em duas colunas: à esquerda o dossiê estruturado (headline em
+     destaque, narrativa, objetivo do cliente, passos tomados, artigos tentados
+     com resultado, perguntas abertas, riscos em vermelho e próxima ação
+     recomendada); à direita a transcrição colapsável + bloco de roteamento
+     (skills, idioma, carga e turno do agente sugerido). O log de eventos do
+     handoff (ordem 6.7) é exibido no topo do painel esquerdo, com carimbos de
+     data/hora, refletindo a sequência exata: congelar bot → gerar dossiê →
+     rotear agente → entregar dossiê → mensagem de continuidade → HUMANO_ATIVO.
+     Ações: "Aceitar atendimento" e "Reatribuir".
+
+  5. REGRAS DE NEGÓCIO (implementadas de verdade, comentadas no código)
+     - Classificação ITIL por heurística de palavras-chave em pt-BR (6.1).
+     - Prioridade = matriz impacto × urgência (6.2) e SLA derivado da
+       prioridade em minutos (6.3), recalculado sempre que a prioridade muda.
+     - Gatilhos de handoff avaliados ANTES de o bot responder (6.4):
+       a) pedido explícito de humano ("atendente", "pessoa", "técnico", "humano")
+       b) sentimento <= -0.6
+       c) loop: 3 turnos consecutivos com a mesma intenção
+       d) cliente VIP com prioridade P1
+       e) fora de escopo: prática "change" com confiança < 0.7
+       f) confiança do bot < 0.72 ou resposta sem base de conhecimento
+     - Confidence gate: sem artigo de base de conhecimento que sustente a
+       resposta, o bot não responde e escala com motivo "baixa_confianca",
+       incluindo o rascunho descartado no dossiê (6.5).
+     - Congelamento do bot: ao iniciar o handoff o estado vira
+       HANDOFF_PENDENTE na mesma transação e QUALQUER mensagem nova do usuário
+       vai direto para o inbox do agente sem resposta automática (6.6/6.7).
+     - Ordem do handoff registrada em log visível no painel do dossiê (6.7).
+     - Mensagem de continuidade curta, sem jargão, sem mencionar
+       "transferência" nem "robô", nunca pedindo para repetir informação (6.8).
+     - Roteamento por aptidão: skills ×10, idioma +5, ociosidade ×4,
+       penalidade -8 se o turno termina em menos de 20 min, +6 se VIP com
+       skill "senior" (6.9), com justificativa exibida no dossiê.
+     - Idempotência: ids de mensagem no formato canal:idExterno, duplicatas
+       descartadas silenciosamente, com botão de teste de reenvio (6.10).
+
+  6. SIMULADOR
+     - "Nova mensagem" com seletor de canal, nome do contato e texto livre.
+     - Três conversas pré-carregadas no seed (VPN irritado/WhatsApp P2, reset de
+       senha/Web resolvida pelo bot, acesso a sistema/E-mail service_request P3).
+     - "Rodar demonstração" executa o roteiro da conversa (a) passo a passo,
+       com 1,5 s de intervalo e destaque visual (borda âmbar pulsante) no
+       elemento afetado em cada passo.
+
+  7. RESPONSIVO E ACESSIBILIDADE
+     - Layout fluido de 360px a 1440px: três colunas no desktop, empilhadas com
+       scroll interno em telas estreitas, sem scroll horizontal (critério 8).
+     - Contraste AA: texto principal sobre fundo escuro usa tons claros,
+       badges usam texto contrastante sobre cores saturadas.
+     - Navegação por teclado no inbox: ↑/↓ navega a lista de conversas, Enter
+       abre, foco visível em todos os controles, botões com aria-label.
+
+  8. TEMA
+     Adotamos o tema escuro "Amber Alert" do sistema (fundo grafite, acentos
+     âmbar), coerente com a identidade já usada no ITSM Desk, para o protótipo
+     parecer parte do produto. Um alternador claro/escuro simples fica no topo.
+
+  9. CONTRATO DE API (bloco final de comentário no script) lista cada método
+     do store com assinatura e o endpoint REST equivalente.
+-->
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Console AITSM Omnichannel — Handoff Contextualizado</title>
+    <style>
+      /* ============================================================
+   1. BASE E VARIÁVEIS
+   ============================================================ */
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      :root {
+        --bg: #0f1013;
+        --surface: #17181c;
+        --surface2: #1e2025;
+        --surface3: #26282e;
+        --border: #33363d;
+        --text: #e9eaec;
+        --text-dim: #a3a7ae;
+        --accent: #f59e0b;
+        --accent-soft: rgba(245, 158, 11, 0.14);
+        --red: #ef4444;
+        --red-soft: rgba(239, 68, 68, 0.16);
+        --green: #22c55e;
+        --green-soft: rgba(34, 197, 94, 0.16);
+        --blue: #3b82f6;
+        --blue-soft: rgba(59, 130, 246, 0.16);
+        --orange: #f97316;
+        --orange-soft: rgba(249, 115, 22, 0.16);
+        --yellow: #eab308;
+        --yellow-soft: rgba(234, 179, 8, 0.16);
+        --gray: #9ca3af;
+        --gray-soft: rgba(156, 163, 175, 0.16);
+        --radius: 10px;
+        --font:
+          -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      }
+      html,
+      body {
+        height: 100%;
+      }
+      body {
+        background: var(--bg);
+        color: var(--text);
+        font-family: var(--font);
+        font-size: 14px;
+        line-height: 1.5;
+        overflow-x: hidden;
+      }
+      [data-theme='light'] {
+        --bg: #f4f1ec;
+        --surface: #ffffff;
+        --surface2: #f0ece4;
+        --surface3: #e5dfd4;
+        --border: #d6cfc2;
+        --text: #241d13;
+        --text-dim: #6b6156;
+        --accent: #b45309;
+        --accent-soft: rgba(180, 83, 9, 0.12);
+        --red: #b91c1c;
+        --red-soft: rgba(185, 28, 28, 0.12);
+        --green: #15803d;
+        --green-soft: rgba(21, 128, 61, 0.12);
+        --blue: #1d4ed8;
+        --blue-soft: rgba(29, 78, 216, 0.12);
+        --orange: #c2410c;
+        --orange-soft: rgba(194, 65, 12, 0.12);
+        --yellow: #a16207;
+        --yellow-soft: rgba(161, 98, 7, 0.14);
+        --gray: #52525b;
+        --gray-soft: rgba(82, 82, 91, 0.12);
+      }
+      button,
+      input,
+      select,
+      textarea {
+        font-family: inherit;
+        font-size: inherit;
+        color: inherit;
+      }
+      button {
+        cursor: pointer;
+      }
+      :focus-visible {
+        outline: 2px solid var(--accent);
+        outline-offset: 2px;
+      }
+      a {
+        color: var(--accent);
+      }
+
+      /* ============================================================
+   2. ESTRUTURA GERAL (topbar, abas, telas)
+   ============================================================ */
+      .topbar {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        flex-wrap: wrap;
+        padding: 10px 16px;
+        background: var(--surface);
+        border-bottom: 1px solid var(--border);
+        position: sticky;
+        top: 0;
+        z-index: 50;
+      }
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-weight: 700;
+        font-size: 15px;
+      }
+      .brand .dot {
+        width: 9px;
+        height: 9px;
+        border-radius: 50%;
+        background: var(--accent);
+        box-shadow: 0 0 8px var(--accent);
+      }
+      .brand small {
+        font-weight: 400;
+        color: var(--text-dim);
+        font-size: 11px;
+      }
+      .topbar .spacer {
+        flex: 1;
+      }
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 7px 13px;
+        border-radius: var(--radius);
+        border: 1px solid var(--border);
+        background: var(--surface2);
+        color: var(--text);
+        font-size: 13px;
+        font-weight: 500;
+        transition:
+          background 0.15s,
+          border-color 0.15s;
+      }
+      .btn:hover {
+        background: var(--surface3);
+        border-color: var(--accent);
+      }
+      .btn.primary {
+        background: var(--accent);
+        border-color: var(--accent);
+        color: #17181c;
+        font-weight: 700;
+      }
+      .btn.primary:hover {
+        filter: brightness(1.1);
+      }
+      .btn.danger {
+        background: var(--red-soft);
+        border-color: var(--red);
+        color: var(--red);
+      }
+      .btn.small {
+        padding: 4px 9px;
+        font-size: 12px;
+      }
+      .btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+      .tabs {
+        display: flex;
+        gap: 2px;
+        margin-left: 8px;
+        flex-wrap: wrap;
+      }
+      .tab-btn {
+        padding: 7px 14px;
+        border-radius: var(--radius);
+        border: 1px solid transparent;
+        background: transparent;
+        color: var(--text-dim);
+        font-size: 13px;
+        font-weight: 500;
+      }
+      .tab-btn:hover {
+        color: var(--text);
+        background: var(--surface2);
+      }
+      .tab-btn.active {
+        color: var(--accent);
+        background: var(--accent-soft);
+        font-weight: 700;
+        border-color: transparent;
+      }
+      .theme-toggle {
+        padding: 7px 10px;
+      }
+
+      .screen {
+        display: none;
+      }
+      .screen.active {
+        display: block;
+      }
+
+      /* ============================================================
+   3. INBOX — TRÊS COLUNAS
+   ============================================================ */
+      .inbox {
+        display: grid;
+        grid-template-columns: 300px minmax(340px, 1fr) 300px;
+        height: calc(100vh - 54px);
+      }
+      @media (max-width: 1100px) {
+        .inbox {
+          grid-template-columns: 260px 1fr 260px;
+        }
+      }
+      @media (max-width: 900px) {
+        .inbox {
+          grid-template-columns: 1fr;
+          height: auto;
+        }
+        .col-list,
+        .col-thread,
+        .col-context {
+          max-height: none;
+          height: auto;
+        }
+        .col-list {
+          max-height: 40vh;
+        }
+      }
+      .col {
+        border-right: 1px solid var(--border);
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+        background: var(--surface);
+      }
+      .col:last-child {
+        border-right: none;
+      }
+      .col-head {
+        padding: 10px 12px;
+        border-bottom: 1px solid var(--border);
+        background: var(--surface2);
+        font-weight: 700;
+        font-size: 13px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+      .col-list {
+        overflow: hidden;
+      }
+      .col-thread {
+        overflow: hidden;
+      }
+      .col-context {
+        overflow-y: auto;
+        background: var(--surface);
+      }
+      .filters {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        padding: 10px 12px;
+        border-bottom: 1px solid var(--border);
+      }
+      .filter-row {
+        display: flex;
+        gap: 6px;
+        flex-wrap: wrap;
+        align-items: center;
+      }
+      .filter-row .lbl {
+        font-size: 11px;
+        color: var(--text-dim);
+        text-transform: uppercase;
+        letter-spacing: 0.4px;
+      }
+      .chip {
+        padding: 3px 10px;
+        border-radius: 999px;
+        border: 1px solid var(--border);
+        background: var(--surface2);
+        color: var(--text-dim);
+        font-size: 12px;
+        font-weight: 500;
+      }
+      .chip.active {
+        background: var(--accent-soft);
+        color: var(--accent);
+        border-color: var(--accent);
+        font-weight: 700;
+      }
+      .conv-list {
+        flex: 1;
+        overflow-y: auto;
+      }
+      .conv-item {
+        padding: 10px 12px;
+        border-bottom: 1px solid var(--border);
+        cursor: pointer;
+        display: block;
+        width: 100%;
+        text-align: left;
+        background: transparent;
+        border-left: 3px solid transparent;
+      }
+      .conv-item:hover {
+        background: var(--surface2);
+      }
+      .conv-item.selected {
+        background: var(--accent-soft);
+        border-left-color: var(--accent);
+      }
+      .conv-item .top {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        margin-bottom: 3px;
+        flex-wrap: wrap;
+      }
+      .conv-item .name {
+        font-weight: 700;
+        font-size: 13px;
+      }
+      .conv-item .time {
+        margin-left: auto;
+        font-size: 11px;
+        color: var(--text-dim);
+        white-space: nowrap;
+      }
+      .conv-item .prev {
+        font-size: 12px;
+        color: var(--text-dim);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 100%;
+      }
+      .conv-item .badges {
+        display: flex;
+        gap: 4px;
+        margin-top: 4px;
+        flex-wrap: wrap;
+      }
+
+      /* Badges */
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 3px;
+        padding: 1px 7px;
+        border-radius: 999px;
+        font-size: 10.5px;
+        font-weight: 700;
+        letter-spacing: 0.3px;
+        white-space: nowrap;
+      }
+      .badge.canal-whatsapp {
+        background: var(--green-soft);
+        color: var(--green);
+      }
+      .badge.canal-webchat {
+        background: var(--blue-soft);
+        color: var(--blue);
+      }
+      .badge.canal-email {
+        background: var(--gray-soft);
+        color: var(--gray);
+      }
+      .badge.p1 {
+        background: var(--red);
+        color: #fff;
+      }
+      .badge.p2 {
+        background: var(--orange);
+        color: #17181c;
+      }
+      .badge.p3 {
+        background: var(--yellow);
+        color: #17181c;
+      }
+      .badge.p4 {
+        background: var(--gray-soft);
+        color: var(--gray);
+      }
+      .badge.estado {
+        background: var(--surface3);
+        color: var(--text-dim);
+        font-weight: 600;
+      }
+      .badge.estado.HANDOFF_PENDENTE {
+        background: var(--orange-soft);
+        color: var(--orange);
+      }
+      .badge.estado.HUMANO_ATIVO {
+        background: var(--green-soft);
+        color: var(--green);
+      }
+      .badge.estado.RESOLVIDA {
+        background: var(--gray-soft);
+        color: var(--gray);
+      }
+      .badge.estado.BOT_RESOLVENDO {
+        background: var(--blue-soft);
+        color: var(--blue);
+      }
+      .badge.vip {
+        background: var(--accent-soft);
+        color: var(--accent);
+      }
+
+      /* Thread */
+      .thread-head {
+        padding: 10px 14px;
+        border-bottom: 1px solid var(--border);
+        background: var(--surface2);
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+      .thread-head .row1 {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+      .thread-head .name {
+        font-weight: 700;
+        font-size: 15px;
+      }
+      .thread-head .sub {
+        font-size: 11px;
+        color: var(--text-dim);
+      }
+      .thread-body {
+        flex: 1;
+        overflow-y: auto;
+        padding: 14px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+      .msg-row {
+        display: flex;
+        flex-direction: column;
+        max-width: 85%;
+      }
+      .msg-row.usuario {
+        align-self: flex-end;
+        align-items: flex-end;
+      }
+      .msg-row.bot,
+      .msg-row.agente {
+        align-self: flex-start;
+        align-items: flex-start;
+      }
+      .bubble {
+        padding: 8px 12px;
+        border-radius: 14px;
+        font-size: 13px;
+        line-height: 1.45;
+        word-break: break-word;
+        max-width: 100%;
+      }
+      .msg-row.usuario .bubble {
+        background: #3f2d0a;
+        border: 1px solid rgba(245, 158, 11, 0.35);
+        border-bottom-right-radius: 4px;
+      }
+      [data-theme='light'] .msg-row.usuario .bubble {
+        background: #fdf0d5;
+      }
+      .msg-row.bot .bubble {
+        background: var(--surface3);
+        border: 1px solid var(--border);
+        border-bottom-left-radius: 4px;
+      }
+      .msg-row.agente .bubble {
+        background: var(--blue-soft);
+        border: 1px solid var(--blue);
+        border-bottom-left-radius: 4px;
+      }
+      .msg-meta {
+        font-size: 10.5px;
+        color: var(--text-dim);
+        margin-top: 3px;
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        flex-wrap: wrap;
+      }
+      .msg-kb {
+        font-size: 10.5px;
+        color: var(--text-dim);
+        margin-top: 3px;
+        padding: 4px 8px;
+        background: var(--surface2);
+        border-radius: 8px;
+        border: 1px dashed var(--border);
+      }
+      .msg-kb b {
+        color: var(--accent);
+        font-weight: 600;
+      }
+      .typing {
+        display: inline-flex;
+        gap: 3px;
+        padding: 8px 12px;
+        background: var(--surface3);
+        border-radius: 14px;
+        border: 1px solid var(--border);
+      }
+      .typing span {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: var(--text-dim);
+        animation: blink 1.2s infinite;
+      }
+      .typing span:nth-child(2) {
+        animation-delay: 0.2s;
+      }
+      .typing span:nth-child(3) {
+        animation-delay: 0.4s;
+      }
+      @keyframes blink {
+        0%,
+        80%,
+        100% {
+          opacity: 0.25;
+        }
+        40% {
+          opacity: 1;
+        }
+      }
+      .composer {
+        border-top: 1px solid var(--border);
+        padding: 10px 12px;
+        display: flex;
+        gap: 8px;
+        align-items: stretch;
+        background: var(--surface2);
+      }
+      .composer select {
+        background: var(--surface3);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 6px 8px;
+        font-size: 12px;
+        color: var(--text);
+      }
+      .composer textarea {
+        flex: 1;
+        background: var(--surface3);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 8px 10px;
+        resize: none;
+        min-height: 38px;
+        color: var(--text);
+        font-size: 13px;
+      }
+      .composer-hint {
+        font-size: 10.5px;
+        color: var(--text-dim);
+        padding: 0 12px 8px;
+        background: var(--surface2);
+      }
+      .falar-atendente-bar {
+        border-top: 1px solid var(--border);
+        padding: 8px 12px;
+        background: var(--surface2);
+        display: flex;
+        justify-content: center;
+      }
+      .empty-msg {
+        text-align: center;
+        color: var(--text-dim);
+        font-size: 12px;
+        padding: 30px 10px;
+      }
+
+      /* Painel de contexto */
+      .ctx-section {
+        padding: 12px 14px;
+        border-bottom: 1px solid var(--border);
+      }
+      .ctx-section h4 {
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.6px;
+        color: var(--text-dim);
+        margin-bottom: 8px;
+        font-weight: 700;
+      }
+      .ctx-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 6px;
+      }
+      .ctx-item {
+        background: var(--surface2);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 7px 9px;
+      }
+      .ctx-item .k {
+        font-size: 10px;
+        color: var(--text-dim);
+        text-transform: uppercase;
+        letter-spacing: 0.4px;
+      }
+      .ctx-item .v {
+        font-size: 12.5px;
+        font-weight: 600;
+        margin-top: 2px;
+      }
+      .ctx-item .v.small {
+        font-size: 11.5px;
+      }
+      .sla-box {
+        background: var(--surface2);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 8px 10px;
+        margin-bottom: 6px;
+      }
+      .sla-box .k {
+        font-size: 10px;
+        color: var(--text-dim);
+        text-transform: uppercase;
+        letter-spacing: 0.4px;
+      }
+      .sla-box .v {
+        font-size: 14px;
+        font-weight: 700;
+        font-variant-numeric: tabular-nums;
+      }
+      .sla-box .v.warn {
+        color: var(--orange);
+      }
+      .sla-box .v.breach {
+        color: var(--red);
+      }
+      .sla-box .meta {
+        font-size: 10.5px;
+        color: var(--text-dim);
+      }
+      .meter {
+        height: 6px;
+        border-radius: 999px;
+        background: var(--surface3);
+        overflow: hidden;
+        margin-top: 5px;
+      }
+      .meter > i {
+        display: block;
+        height: 100%;
+        background: var(--green);
+        border-radius: 999px;
+      }
+      .meter > i.warn {
+        background: var(--orange);
+      }
+      .meter > i.breach {
+        background: var(--red);
+      }
+      .sentiment-bar {
+        height: 8px;
+        border-radius: 999px;
+        background: linear-gradient(90deg, var(--red), var(--gray), var(--green));
+        position: relative;
+        margin-top: 6px;
+      }
+      .sentiment-pin {
+        position: absolute;
+        top: -3px;
+        width: 14px;
+        height: 14px;
+        border-radius: 50%;
+        background: var(--text);
+        border: 2px solid var(--bg);
+        transform: translateX(-50%);
+      }
+      .matrix {
+        display: grid;
+        grid-template-columns: auto repeat(4, 1fr);
+        gap: 2px;
+        font-size: 10px;
+      }
+      .matrix .cell {
+        padding: 4px 2px;
+        text-align: center;
+        border-radius: 4px;
+        background: var(--surface3);
+        color: var(--text-dim);
+      }
+      .matrix .cell.sel {
+        outline: 2px solid var(--accent);
+        color: var(--text);
+        font-weight: 700;
+      }
+      .matrix .hd {
+        color: var(--text-dim);
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .ctx-section .handoff-note {
+        font-size: 12px;
+        color: var(--orange);
+        background: var(--orange-soft);
+        border: 1px solid var(--orange);
+        border-radius: 8px;
+        padding: 8px 10px;
+        margin-top: 6px;
+      }
+
+      /* ============================================================
+   4. DOSSIÊ DE HANDOFF
+   ============================================================ */
+      .dossier-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.55);
+        z-index: 90;
+        display: none;
+        align-items: flex-end;
+        justify-content: flex-end;
+      }
+      .dossier-overlay.open {
+        display: flex;
+      }
+      .dossier-panel {
+        width: min(1100px, 100%);
+        height: 100%;
+        background: var(--surface);
+        border-left: 1px solid var(--border);
+        display: flex;
+        flex-direction: column;
+        animation: slideIn 0.2s ease;
+      }
+      @keyframes slideIn {
+        from {
+          transform: translateX(30px);
+          opacity: 0;
+        }
+        to {
+          transform: none;
+          opacity: 1;
+        }
+      }
+      .dossier-head {
+        padding: 12px 16px;
+        border-bottom: 1px solid var(--border);
+        background: var(--surface2);
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+      .dossier-head h2 {
+        font-size: 15px;
+        font-weight: 700;
+      }
+      .dossier-head .btn {
+        margin-left: auto;
+      }
+      .dossier-body {
+        flex: 1;
+        overflow-y: auto;
+        display: grid;
+        grid-template-columns: minmax(300px, 1.1fr) minmax(300px, 1fr);
+        gap: 0;
+      }
+      @media (max-width: 900px) {
+        .dossier-body {
+          grid-template-columns: 1fr;
+        }
+      }
+      .dossier-left {
+        padding: 14px 16px;
+        border-right: 1px solid var(--border);
+        overflow-y: auto;
+      }
+      .dossier-right {
+        padding: 14px 16px;
+        overflow-y: auto;
+      }
+      .dossier-sec {
+        margin-bottom: 16px;
+      }
+      .dossier-sec h3 {
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.6px;
+        color: var(--text-dim);
+        margin-bottom: 6px;
+        font-weight: 700;
+      }
+      .headline {
+        background: var(--accent-soft);
+        border: 1px solid var(--accent);
+        border-radius: var(--radius);
+        padding: 10px 12px;
+        font-size: 14px;
+        font-weight: 700;
+        line-height: 1.4;
+      }
+      .narrativa {
+        font-size: 13px;
+        line-height: 1.55;
+        color: var(--text);
+      }
+      .risco-item {
+        background: var(--red-soft);
+        border: 1px solid var(--red);
+        color: var(--red);
+        border-radius: 8px;
+        padding: 7px 10px;
+        font-size: 12.5px;
+        font-weight: 600;
+        margin-bottom: 5px;
+      }
+      .plain-list {
+        list-style: none;
+      }
+      .plain-list li {
+        font-size: 12.5px;
+        padding: 5px 0;
+        border-bottom: 1px dashed var(--border);
+        display: flex;
+        gap: 8px;
+      }
+      .plain-list li:last-child {
+        border-bottom: none;
+      }
+      .plain-list li .ico {
+        color: var(--accent);
+        flex-shrink: 0;
+      }
+      .artigo-resultado {
+        font-size: 11px;
+        padding: 2px 8px;
+        border-radius: 999px;
+        font-weight: 700;
+      }
+      .artigo-resultado.falhou {
+        background: var(--red-soft);
+        color: var(--red);
+      }
+      .artigo-resultado.parcial {
+        background: var(--orange-soft);
+        color: var(--orange);
+      }
+      .evento-log {
+        list-style: none;
+      }
+      .evento-log li {
+        font-size: 11.5px;
+        padding: 4px 0 4px 18px;
+        position: relative;
+        border-left: 2px solid var(--border);
+        margin-left: 6px;
+        color: var(--text-dim);
+      }
+      .evento-log li::before {
+        content: '';
+        position: absolute;
+        left: -5px;
+        top: 8px;
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: var(--accent);
+      }
+      .evento-log li.feito {
+        color: var(--text);
+      }
+      .evento-log li .ts {
+        font-size: 10px;
+        color: var(--text-dim);
+        font-variant-numeric: tabular-nums;
+        margin-right: 6px;
+      }
+      .transcricao {
+        list-style: none;
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        overflow: hidden;
+      }
+      .transcricao li {
+        padding: 6px 10px;
+        font-size: 12px;
+        border-bottom: 1px solid var(--border);
+        background: var(--surface2);
+      }
+      .transcricao li:last-child {
+        border-bottom: none;
+      }
+      .transcricao li .de {
+        font-weight: 700;
+        margin-right: 6px;
+      }
+      .transcricao li .de.usuario {
+        color: var(--accent);
+      }
+      .transcricao li .de.bot {
+        color: var(--text-dim);
+      }
+      .transcricao li .de.agente {
+        color: var(--blue);
+      }
+      .transcricao li .ts {
+        font-size: 10px;
+        color: var(--text-dim);
+        float: right;
+      }
+      details.roteiro {
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        background: var(--surface2);
+      }
+      details.roteiro summary {
+        padding: 8px 12px;
+        cursor: pointer;
+        font-size: 12.5px;
+        font-weight: 700;
+        color: var(--accent);
+      }
+      details.roteiro .inner {
+        padding: 0 12px 10px;
+        font-size: 12px;
+        color: var(--text-dim);
+      }
+      .justificativa {
+        font-size: 12px;
+        line-height: 1.5;
+        background: var(--green-soft);
+        border: 1px solid var(--green);
+        color: var(--green);
+        border-radius: 8px;
+        padding: 8px 10px;
+      }
+      .dossier-actions {
+        display: flex;
+        gap: 8px;
+        padding: 12px 16px;
+        border-top: 1px solid var(--border);
+        background: var(--surface2);
+        flex-wrap: wrap;
+      }
+      .dossier-actions .btn {
+        flex: 0 0 auto;
+      }
+      .rascunho {
+        background: var(--surface2);
+        border: 1px dashed var(--border);
+        border-radius: 8px;
+        padding: 8px 10px;
+        font-size: 12px;
+        color: var(--text-dim);
+        font-style: italic;
+      }
+
+      /* ============================================================
+   5. FILA & AGENTES
+   ============================================================ */
+      .wrap-pad {
+        padding: 16px;
+        max-width: 1200px;
+        margin: 0 auto;
+      }
+      .agentes-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        gap: 12px;
+      }
+      @media (max-width: 640px) {
+        .agentes-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+      .agent-card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 12px 14px;
+      }
+      .agent-card.sugerido {
+        border-color: var(--accent);
+        box-shadow: 0 0 0 1px var(--accent);
+      }
+      .agent-card .top {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 8px;
+        flex-wrap: wrap;
+      }
+      .agent-card .nome {
+        font-weight: 700;
+        font-size: 14px;
+      }
+      .agent-card .score {
+        margin-left: auto;
+        font-size: 11px;
+        font-weight: 700;
+        color: var(--accent);
+        background: var(--accent-soft);
+        padding: 2px 8px;
+        border-radius: 999px;
+      }
+      .agent-card .meta {
+        font-size: 11.5px;
+        color: var(--text-dim);
+        margin-bottom: 6px;
+      }
+      .skill-tag {
+        display: inline-block;
+        font-size: 10.5px;
+        padding: 2px 7px;
+        border-radius: 999px;
+        background: var(--surface3);
+        border: 1px solid var(--border);
+        color: var(--text-dim);
+        margin: 2px 2px 0 0;
+      }
+      .skill-tag.match {
+        background: var(--green-soft);
+        color: var(--green);
+        border-color: var(--green);
+        font-weight: 700;
+      }
+      .carga-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 11.5px;
+        color: var(--text-dim);
+        margin-top: 8px;
+      }
+      .carga-row .meter {
+        flex: 1;
+        margin-top: 0;
+      }
+      .carga-row .meter > i.red {
+        background: var(--red);
+      }
+      .status-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        display: inline-block;
+      }
+      .status-dot.on {
+        background: var(--green);
+        box-shadow: 0 0 6px var(--green);
+      }
+      .status-dot.off {
+        background: var(--gray);
+      }
+      .page-title {
+        font-size: 18px;
+        font-weight: 700;
+        margin-bottom: 4px;
+      }
+      .page-sub {
+        font-size: 12.5px;
+        color: var(--text-dim);
+        margin-bottom: 16px;
+      }
+
+      /* ============================================================
+   6. DASHBOARD DE SLA
+   ============================================================ */
+      .kpis {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 12px;
+        margin-bottom: 16px;
+      }
+      .kpi {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 12px 14px;
+      }
+      .kpi .k {
+        font-size: 11px;
+        color: var(--text-dim);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        font-weight: 700;
+      }
+      .kpi .v {
+        font-size: 26px;
+        font-weight: 800;
+        margin-top: 2px;
+        font-variant-numeric: tabular-nums;
+      }
+      .kpi .v.danger {
+        color: var(--red);
+      }
+      .kpi .v.warn {
+        color: var(--orange);
+      }
+      .kpi .sub {
+        font-size: 11px;
+        color: var(--text-dim);
+        margin-top: 2px;
+      }
+      .barras {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      .barra-row {
+        display: grid;
+        grid-template-columns: 130px 1fr 40px;
+        gap: 8px;
+        align-items: center;
+        font-size: 12px;
+      }
+      .barra-row .lbl {
+        color: var(--text-dim);
+      }
+      .barra-row .track {
+        background: var(--surface3);
+        border-radius: 999px;
+        height: 14px;
+        overflow: hidden;
+      }
+      .barra-row .track > i {
+        display: block;
+        height: 100%;
+        background: var(--accent);
+        border-radius: 999px;
+        min-width: 2px;
+      }
+      .barra-row .n {
+        text-align: right;
+        font-weight: 700;
+        font-variant-numeric: tabular-nums;
+      }
+      .card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 14px;
+        margin-bottom: 14px;
+      }
+      .card h3 {
+        font-size: 13px;
+        font-weight: 700;
+        margin-bottom: 10px;
+      }
+      .tabela {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 12.5px;
+      }
+      .tabela th {
+        text-align: left;
+        font-size: 10.5px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: var(--text-dim);
+        padding: 6px 8px;
+        border-bottom: 1px solid var(--border);
+      }
+      .tabela td {
+        padding: 7px 8px;
+        border-bottom: 1px solid var(--border);
+      }
+      .tabela tr:hover td {
+        background: var(--surface2);
+      }
+      .tabela .mono {
+        font-variant-numeric: tabular-nums;
+        font-weight: 700;
+      }
+      .tabela .mono.breach {
+        color: var(--red);
+      }
+      .tabela .mono.warn {
+        color: var(--orange);
+      }
+      .scroll-x {
+        overflow-x: auto;
+      }
+
+      /* ============================================================
+   7. SIMULADOR
+   ============================================================ */
+      .sim-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 12px;
+      }
+      .field {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        margin-bottom: 10px;
+      }
+      .field label {
+        font-size: 11px;
+        color: var(--text-dim);
+        text-transform: uppercase;
+        letter-spacing: 0.4px;
+        font-weight: 700;
+      }
+      .field input,
+      .field select,
+      .field textarea {
+        background: var(--surface3);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 8px 10px;
+        color: var(--text);
+        font-size: 13px;
+      }
+      .field textarea {
+        resize: vertical;
+        min-height: 60px;
+      }
+      .sim-note {
+        font-size: 11.5px;
+        color: var(--text-dim);
+        margin-top: 8px;
+        line-height: 1.5;
+      }
+      .toast-zone {
+        position: fixed;
+        bottom: 16px;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 200;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        align-items: center;
+        pointer-events: none;
+      }
+      .toast {
+        background: var(--surface3);
+        border: 1px solid var(--accent);
+        color: var(--text);
+        padding: 9px 16px;
+        border-radius: 999px;
+        font-size: 12.5px;
+        font-weight: 600;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+        max-width: 90vw;
+        text-align: center;
+      }
+      /* Destaque visual do passo do simulador */
+      @keyframes pulseHighlight {
+        0% {
+          box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.7);
+        }
+        100% {
+          box-shadow: 0 0 0 3px rgba(245, 158, 11, 0);
+        }
+      }
+      .destaque-passo {
+        animation: pulseHighlight 1.4s ease-out 2;
+      }
+
+      /* Scrollbars */
+      ::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+      }
+      ::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: var(--border);
+        border-radius: 999px;
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background: var(--text-dim);
+      }
+    </style>
+  </head>
+  <body>
+    <!-- ======================= TOPBAR ======================= -->
+    <header class="topbar">
+      <div class="brand">
+        <span class="dot"></span>
+        Console AITSM
+        <small>Protótipo · omnichannel + handoff contextualizado</small>
+      </div>
+      <div class="spacer"></div>
+      <nav class="tabs" aria-label="Telas do protótipo">
+        <button class="tab-btn active" data-screen="inbox">Inbox Omnichannel</button>
+        <button class="tab-btn" data-screen="fila">Fila &amp; Agentes</button>
+        <button class="tab-btn" data-screen="dashboard">Dashboard de SLA</button>
+        <button class="tab-btn" data-screen="simulador">Simulador</button>
+      </nav>
+      <button class="btn theme-toggle" id="btn-tema" aria-label="Alternar tema claro/escuro">
+        🌗 Tema
+      </button>
+    </header>
+
+    <!-- ======================= TELA: INBOX OMNICHANNEL ======================= -->
+    <main>
+      <section class="screen active" id="screen-inbox" aria-label="Inbox Omnichannel">
+        <div class="inbox">
+          <!-- Coluna 1: lista de conversas -->
+          <div class="col col-list">
+            <div class="col-head">
+              💬 Conversas
+              <span
+                class="badge"
+                id="conv-count"
+                style="background: var(--accent-soft); color: var(--accent)"
+                >0</span
+              >
+            </div>
+            <div class="filters">
+              <div class="filter-row" role="group" aria-label="Filtro por canal">
+                <span class="lbl">Canal</span>
+                <button class="chip active" data-filtro-canal="todos">Todos</button>
+                <button class="chip" data-filtro-canal="whatsapp">WhatsApp</button>
+                <button class="chip" data-filtro-canal="webchat">Chat Web</button>
+                <button class="chip" data-filtro-canal="email">E-mail</button>
+              </div>
+              <div class="filter-row" role="group" aria-label="Filtro por estado">
+                <span class="lbl">Estado</span>
+                <button class="chip active" data-filtro-estado="todos">Todos</button>
+                <button class="chip" data-filtro-estado="ativos">Ativos</button>
+                <button class="chip" data-filtro-estado="HANDOFF_PENDENTE">Handoff pendente</button>
+                <button class="chip" data-filtro-estado="RESOLVIDA">Resolvidas</button>
+                <button class="chip" data-filtro-estado="HUMANO_ATIVO">Com agente</button>
+              </div>
+            </div>
+            <div
+              class="conv-list"
+              id="conv-list"
+              role="listbox"
+              aria-label="Lista de conversas"
+            ></div>
+          </div>
+
+          <!-- Coluna 2: thread -->
+          <div class="col col-thread">
+            <div class="thread-head" id="thread-head">
+              <span class="empty-msg" style="padding: 6px 0"
+                >Selecione uma conversa à esquerda.</span
+              >
+            </div>
+            <div class="thread-body" id="thread-body"></div>
+            <div class="composer" id="composer" style="display: none">
+              <select id="composer-canal" aria-label="Canal de envio da mensagem"></select>
+              <textarea
+                id="composer-texto"
+                rows="1"
+                placeholder="Escreva a mensagem do contato…"
+              ></textarea>
+              <button class="btn primary" id="btn-enviar">Enviar</button>
+            </div>
+            <div class="composer-hint" id="composer-hint"></div>
+            <div class="falar-atendente-bar" id="falar-bar" style="display: none">
+              <button class="btn small" id="btn-falar">🎧 Falar com atendente</button>
+            </div>
+          </div>
+
+          <!-- Coluna 3: painel de contexto -->
+          <div class="col col-context" id="ctx-panel">
+            <div class="col-head">🧭 Contexto</div>
+            <div id="ctx-content" style="padding: 0">
+              <div class="empty-msg">Sem conversa selecionada.</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ======================= TELA: DOSSIÊ (painel overlay) ======================= -->
+      <div
+        class="dossier-overlay"
+        id="dossier-overlay"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Dossiê de Handoff"
+      >
+        <div class="dossier-panel">
+          <div class="dossier-head">
+            <h2>📋 Dossiê de Handoff</h2>
+            <span id="dossier-conv-label" class="badge estado"></span>
+            <button class="btn small" id="dossier-close">✕ Fechar</button>
+          </div>
+          <div class="dossier-body">
+            <div class="dossier-left" id="dossier-left"></div>
+            <div class="dossier-right" id="dossier-right"></div>
+          </div>
+          <div class="dossier-actions" id="dossier-actions"></div>
+        </div>
+      </div>
+
+      <!-- ======================= TELA: FILA & AGENTES ======================= -->
+      <section class="screen" id="screen-fila" aria-label="Fila e Agentes">
+        <div class="wrap-pad">
+          <div class="page-title">Fila &amp; Agentes</div>
+          <div class="page-sub">
+            Agentes ordenados por aptidão para a conversa selecionada no inbox.
+          </div>
+          <div class="agentes-grid" id="agentes-grid"></div>
+        </div>
+      </section>
+
+      <!-- ======================= TELA: DASHBOARD DE SLA ======================= -->
+      <section class="screen" id="screen-dashboard" aria-label="Dashboard de SLA">
+        <div class="wrap-pad">
+          <div class="page-title">Dashboard de SLA</div>
+          <div class="page-sub">Indicadores ao vivo das conversas e tickets do protótipo.</div>
+          <div class="kpis" id="kpis"></div>
+          <div class="card">
+            <h3>% de handoffs por motivo</h3>
+            <div class="barras" id="barras-handoff"></div>
+          </div>
+          <div class="card">
+            <h3>Tickets ordenados por urgência de SLA</h3>
+            <div class="scroll-x">
+              <table class="tabela" id="tabela-tickets">
+                <thead>
+                  <tr>
+                    <th>Ticket</th>
+                    <th>Conversa</th>
+                    <th>Prática</th>
+                    <th>Categoria</th>
+                    <th>Prioridade</th>
+                    <th>Estado</th>
+                    <th>Resposta</th>
+                    <th>Resolução</th>
+                    <th>Agente</th>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ======================= TELA: SIMULADOR ======================= -->
+      <section class="screen" id="screen-simulador" aria-label="Simulador de demonstração">
+        <div class="wrap-pad">
+          <div class="page-title">Simulador de Demonstração</div>
+          <div class="page-sub">
+            Crie novas mensagens de entrada ou rode o roteiro automático da conversa (a) do seed.
+          </div>
+          <div class="sim-grid">
+            <div class="card">
+              <h3>📨 Nova mensagem</h3>
+              <div class="field">
+                <label for="sim-canal">Canal</label>
+                <select id="sim-canal">
+                  <option value="whatsapp">WhatsApp</option>
+                  <option value="webchat">Chat Web</option>
+                  <option value="email">E-mail</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="sim-nome">Nome do contato</label>
+                <input id="sim-nome" placeholder="Ex.: Marina Duarte" />
+              </div>
+              <div class="field">
+                <label for="sim-texto">Texto</label>
+                <textarea
+                  id="sim-texto"
+                  placeholder="Ex.: Não consigo acessar o sistema financeiro desde ontem."
+                ></textarea>
+              </div>
+              <button class="btn primary" id="btn-sim-enviar">Enviar mensagem</button>
+              <div class="sim-note">
+                Trocar o canal para um contato existente reabre a MESMA conversa (regra 7 do
+                critério de aceite: sem duplicar conversa por participante).
+              </div>
+            </div>
+            <div class="card">
+              <h3>🎬 Roteiro automático</h3>
+              <p
+                style="
+                  font-size: 12.5px;
+                  color: var(--text-dim);
+                  line-height: 1.55;
+                  margin-bottom: 10px;
+                "
+              >
+                Executa a conversa (a) do seed — WhatsApp, usuária irritada com VPN — passo a passo:
+                4 mensagens do usuário, 2 tentativas do bot, escalada, geração do dossiê, aceite do
+                agente e mensagem de continuidade. Cada passo com 1,5 s de intervalo e destaque
+                visual no elemento afetado.
+              </p>
+              <button class="btn primary" id="btn-sim-demo">▶️ Rodar demonstração</button>
+              <button class="btn" id="btn-sim-demo-stop" style="display: none">⏹ Parar</button>
+              <div class="sim-note" id="demo-status"></div>
+            </div>
+            <div class="card">
+              <h3>🔁 Teste de idempotência</h3>
+              <p
+                style="
+                  font-size: 12.5px;
+                  color: var(--text-dim);
+                  line-height: 1.55;
+                  margin-bottom: 10px;
+                "
+              >
+                Reenvia a última mensagem do usuário da conversa selecionada com o MESMO id externo
+                (canal:idExterno). A duplicata é descartada silenciosamente — nenhuma nova bolha
+                aparece.
+              </p>
+              <button class="btn" id="btn-sim-reenvio">Reenviar última mensagem</button>
+              <div class="sim-note" id="reenvio-status"></div>
+            </div>
+            <div class="card">
+              <h3>🧪 Reset</h3>
+              <p
+                style="
+                  font-size: 12.5px;
+                  color: var(--text-dim);
+                  line-height: 1.55;
+                  margin-bottom: 10px;
+                "
+              >
+                Apaga o localStorage e recarrega o seed original das três conversas.
+              </p>
+              <button class="btn danger" id="btn-sim-reset">Resetar dados do protótipo</button>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <div class="toast-zone" id="toast-zone" aria-live="polite"></div>
+
+    <script>
+      'use strict'
+      /* ============================================================
+   MÓDULO 1 — STORE (única camada que toca localStorage)
+   Métodos assíncronos imitando uma API REST. Nenhum componente
+   de UI acessa localStorage diretamente (regra 10 do briefing).
+   ============================================================ */
+      const CHAVE_STORAGE = 'aitsm.v1'
+
+      const store = (() => {
+        let db = null
+
+        function carregar() {
+          try {
+            const bruto = localStorage.getItem(CHAVE_STORAGE)
+            if (bruto) {
+              db = JSON.parse(bruto)
+              return
+            }
+          } catch (e) {
+            /* storage corrompido: re-seed */
+          }
+          db = seed()
+          persistir()
+        }
+
+        function persistir() {
+          try {
+            localStorage.setItem(CHAVE_STORAGE, JSON.stringify(db))
+          } catch (e) {
+            /* quota */
+          }
+        }
+
+        function agoraIso() {
+          return new Date().toISOString()
+        }
+
+        function seed() {
+          const agora = Date.now()
+          const iso = (minAtras) => new Date(agora - minAtras * 60000).toISOString()
+          const conversas = [
+            {
+              id: 'conv-a-vpn',
+              canal: 'whatsapp',
+              participante: {
+                id: 'p-1',
+                nome: 'Renata Alves',
+                handle: '+55 11 98812-4477',
+                vip: true,
+                locale: 'pt-BR',
+              },
+              estado: 'TRIAGEM_BOT',
+              pratica: 'incident',
+              categoria: 'VPN / Acesso remoto',
+              impacto: 'significativo',
+              urgencia: 'alta',
+              prioridade: 'P2',
+              sentimento: -0.7,
+              confiancaBot: 0.6,
+              ticketId: 'tkt-a',
+              agenteId: null,
+              motivoHandoff: null,
+              slaRespostaEm: null,
+              slaResolucaoEm: null,
+              criadaEm: iso(28),
+              ultimaAtividadeEm: iso(2),
+              eventos: [],
+              turnosMesmaIntencao: 0,
+              ultimaIntencao: null,
+            },
+            {
+              id: 'conv-b-senha',
+              canal: 'webchat',
+              participante: {
+                id: 'p-2',
+                nome: 'Carlos Menezes',
+                handle: 'carlos.menezes@empresa.com',
+                vip: false,
+                locale: 'pt-BR',
+              },
+              estado: 'RESOLVIDA',
+              pratica: 'service_request',
+              categoria: 'Conta / Senha',
+              impacto: 'menor',
+              urgencia: 'média',
+              prioridade: 'P4',
+              sentimento: 0.1,
+              confiancaBot: 0.94,
+              ticketId: 'tkt-b',
+              agenteId: null,
+              motivoHandoff: null,
+              slaRespostaEm: null,
+              slaResolucaoEm: null,
+              criadaEm: iso(15),
+              ultimaAtividadeEm: iso(1),
+              eventos: [],
+              turnosMesmaIntencao: 0,
+              ultimaIntencao: null,
+            },
+            {
+              id: 'conv-c-acesso',
+              canal: 'email',
+              participante: {
+                id: 'p-3',
+                nome: 'Beatriz Nogueira',
+                handle: 'bia.nogueira@grupo.com',
+                vip: false,
+                locale: 'pt-BR',
+              },
+              estado: 'TRIAGEM_BOT',
+              pratica: 'service_request',
+              categoria: 'Acesso a Sistema',
+              impacto: 'moderado',
+              urgencia: 'média',
+              prioridade: 'P3',
+              sentimento: 0.0,
+              confiancaBot: 0.62,
+              ticketId: 'tkt-c',
+              agenteId: null,
+              motivoHandoff: null,
+              slaRespostaEm: null,
+              slaResolucaoEm: null,
+              criadaEm: iso(42),
+              ultimaAtividadeEm: iso(6),
+              eventos: [],
+              turnosMesmaIntencao: 0,
+              ultimaIntencao: null,
+            },
+          ]
+          // aplica SLAs iniciais baseados nas prioridades
+          conversas.forEach((c) => aplicarSlaInternal(c))
+
+          const mensagens = {
+            'conv-a-vpn': [
+              {
+                id: 'whatsapp:wam-1',
+                conversaId: 'conv-a-vpn',
+                direcao: 'entrada',
+                autor: 'usuario',
+                texto:
+                  'Boa tarde. A VPN da empresa está caindo toda hora desde segunda. Já reiniciei o roteador e nada.',
+                anexos: [],
+                canal: 'whatsapp',
+                em: iso(28),
+              },
+              {
+                id: 'whatsapp:wam-2',
+                conversaId: 'conv-a-vpn',
+                direcao: 'saida',
+                autor: 'bot',
+                texto:
+                  'Olá Renata! Vou te ajudar com a instabilidade da VPN. Deixa eu confirmar: a queda acontece no app da VPN no notebook ou na conexão inteira?',
+                anexos: [],
+                canal: 'whatsapp',
+                em: iso(27),
+                confianca: 0.72,
+                artigos: ['KB-1042 – Diagnóstico de VPN instável'],
+              },
+              {
+                id: 'whatsapp:wam-3',
+                conversaId: 'conv-a-vpn',
+                direcao: 'entrada',
+                autor: 'usuario',
+                texto:
+                  'No notebook. O cliente desconecta a cada 5 minutos. Isso já me atrasou uma entrega e estou MUITO irritada com isso.',
+                anexos: [],
+                canal: 'whatsapp',
+                em: iso(22),
+              },
+              {
+                id: 'whatsapp:wam-4',
+                conversaId: 'conv-a-vpn',
+                direcao: 'saida',
+                autor: 'bot',
+                texto:
+                  'Entendo a frustração, Renata. Tentei aplicar o procedimento de renovação do perfil da VPN, mas o caso precisa de alguém do time de rede. Vou acionar um especialista agora mesmo.',
+                anexos: [],
+                canal: 'whatsapp',
+                em: iso(21),
+                confianca: 0.58,
+                artigos: ['KB-1042 – Diagnóstico de VPN instável'],
+              },
+            ],
+            'conv-b-senha': [
+              {
+                id: 'webchat:wcm-1',
+                conversaId: 'conv-b-senha',
+                direcao: 'entrada',
+                autor: 'usuario',
+                texto: 'Oi, esqueci minha senha, como reseto?',
+                anexos: [],
+                canal: 'webchat',
+                em: iso(15),
+              },
+              {
+                id: 'webchat:wcm-2',
+                conversaId: 'conv-b-senha',
+                direcao: 'saida',
+                autor: 'bot',
+                texto:
+                  'Oi Carlos! Para resetar a senha: 1) abra o Portal do Colaborador; 2) clique em "Esqueci minha senha"; 3) siga o link que chega no e-mail cadastrado. Deseja que eu registre um chamado de acompanhamento?',
+                anexos: [],
+                canal: 'webchat',
+                em: iso(14),
+                confianca: 0.94,
+                artigos: ['KB-0207 – Reset de senha do Portal'],
+              },
+              {
+                id: 'webchat:wcm-3',
+                conversaId: 'conv-b-senha',
+                direcao: 'saida',
+                autor: 'bot',
+                texto: 'Caso resolvido com sucesso via autoatendimento. Tenha um ótimo dia!',
+                anexos: [],
+                canal: 'webchat',
+                em: iso(13),
+                confianca: 0.96,
+                artigos: ['KB-0207 – Reset de senha do Portal'],
+              },
+            ],
+            'conv-c-acesso': [
+              {
+                id: 'email:eml-1',
+                conversaId: 'conv-c-acesso',
+                direcao: 'entrada',
+                autor: 'usuario',
+                texto:
+                  'Prezados, preciso de acesso ao sistema financeiro para fechar o mês. É urgente para o meu setor, mas não é emergência.',
+                anexos: [],
+                canal: 'email',
+                em: iso(42),
+              },
+            ],
+          }
+          const tickets = [
+            {
+              id: 'tkt-a',
+              numero: 'INC-2026-48213',
+              conversaId: 'conv-a-vpn',
+              pratica: 'incident',
+              categoria: 'VPN / Acesso remoto',
+              prioridade: 'P2',
+              estado: 'em_atendimento',
+              slaRespostaEm: conversas[0].slaRespostaEm,
+              slaResolucaoEm: conversas[0].slaResolucaoEm,
+              agenteId: null,
+            },
+            {
+              id: 'tkt-b',
+              numero: 'SR-2026-11546',
+              conversaId: 'conv-b-senha',
+              pratica: 'service_request',
+              categoria: 'Conta / Senha',
+              prioridade: 'P4',
+              estado: 'resolvido',
+              slaRespostaEm: conversas[1].slaRespostaEm,
+              slaResolucaoEm: conversas[1].slaResolucaoEm,
+              agenteId: null,
+            },
+            {
+              id: 'tkt-c',
+              numero: 'SR-2026-11590',
+              conversaId: 'conv-c-acesso',
+              pratica: 'service_request',
+              categoria: 'Acesso a Sistema',
+              prioridade: 'P3',
+              estado: 'aberto',
+              slaRespostaEm: conversas[2].slaRespostaEm,
+              slaResolucaoEm: conversas[2].slaResolucaoEm,
+              agenteId: null,
+            },
+          ]
+          const agentes = [
+            {
+              id: 'ag-1',
+              nome: 'Fernanda Lima',
+              skills: ['vpn', 'rede', 'senior'],
+              idiomas: ['pt-BR'],
+              cargaAtual: 2,
+              capacidadeMax: 6,
+              online: true,
+              turnoTerminaEm: iso(-120),
+            },
+            {
+              id: 'ag-2',
+              nome: 'Rodrigo Tavares',
+              skills: ['vpn', 'infraestrutura'],
+              idiomas: ['pt-BR', 'en'],
+              cargaAtual: 5,
+              capacidadeMax: 6,
+              online: true,
+              turnoTerminaEm: iso(-45),
+            },
+            {
+              id: 'ag-3',
+              nome: 'Juliana Prado',
+              skills: ['acessos', 'erp'],
+              idiomas: ['pt-BR'],
+              cargaAtual: 1,
+              capacidadeMax: 5,
+              online: true,
+              turnoTerminaEm: iso(-240),
+            },
+            {
+              id: 'ag-4',
+              nome: 'Marcos Vieira',
+              skills: ['acessos', 'senior', 'erp'],
+              idiomas: ['pt-BR'],
+              cargaAtual: 4,
+              capacidadeMax: 6,
+              online: false,
+              turnoTerminaEm: iso(-90),
+            },
+          ]
+          const dossies = {}
+          return { conversas, mensagens, tickets, agentes, dossies }
+        }
+
+        function aplicarSlaInternal(conv) {
+          const minutos = {
+            P1: { resposta: 5, resolucao: 240 },
+            P2: { resposta: 15, resolucao: 480 },
+            P3: { resposta: 60, resolucao: 1440 },
+            P4: { resposta: 240, resolucao: 4320 },
+          }[conv.prioridade || 'P3']
+          const base = new Date(conv.criadaEm || agoraIso()).getTime()
+          conv.slaRespostaEm = new Date(base + minutos.resposta * 60000).toISOString()
+          conv.slaResolucaoEm = new Date(base + minutos.resolucao * 60000).toISOString()
+        }
+
+        function acharConversa(id) {
+          const c = db.conversas.find((x) => x.id === id)
+          if (!c) throw new Error('Conversa não encontrada: ' + id)
+          return c
+        }
+
+        function canalId(prefixo, canal) {
+          return (
+            (canal || 'webchat') +
+            ':' +
+            prefixo +
+            '-' +
+            Date.now().toString(36) +
+            Math.random().toString(36).slice(2, 6)
+          )
+        }
+
+        return {
+          async iniciar() {
+            if (!db) carregar()
+            return true
+          },
+
+          async listarConversas(filtros = {}) {
+            let lista = db.conversas.slice()
+            if (filtros.canal && filtros.canal !== 'todos')
+              lista = lista.filter((c) => c.canal === filtros.canal)
+            if (filtros.estado === 'ativos') lista = lista.filter((c) => c.estado !== 'RESOLVIDA')
+            else if (filtros.estado && filtros.estado !== 'todos')
+              lista = lista.filter((c) => c.estado === filtros.estado)
+            if (filtros.prioridade && filtros.prioridade !== 'todos')
+              lista = lista.filter((c) => c.prioridade === filtros.prioridade)
+            const pesoPrioridade = { P1: 0, P2: 1, P3: 2, P4: 3 }
+            lista.sort((a, b) => {
+              if (pesoPrioridade[a.prioridade] !== pesoPrioridade[b.prioridade])
+                return pesoPrioridade[a.prioridade] - pesoPrioridade[b.prioridade]
+              return new Date(b.ultimaAtividadeEm) - new Date(a.ultimaAtividadeEm)
+            })
+            return lista.map((c) => JSON.parse(JSON.stringify(c)))
+          },
+
+          async obterConversa(id) {
+            const c = acharConversa(id)
+            return {
+              conversa: JSON.parse(JSON.stringify(c)),
+              mensagens: (db.mensagens[id] || []).map((m) => JSON.parse(JSON.stringify(m))),
+              ticket: db.tickets.find((t) => t.conversaId === id) || null,
+              dossie: db.dossies[id] ? JSON.parse(JSON.stringify(db.dossies[id])) : null,
+            }
+          },
+
+          async enviarMensagem(conversaId, texto, canal) {
+            if (!texto || !texto.trim()) return null
+            const conv = acharConversa(conversaId)
+            const canalReal = canal || conv.canal
+            const idExterno = 'u' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6)
+            const idMsg = canalReal + ':' + idExterno
+            // Regra 6.10 — idempotência
+            if ((db.mensagens[conversaId] || []).some((m) => m.id === idMsg)) return null
+            const agora = agoraIso()
+            const msg = {
+              id: idMsg,
+              conversaId,
+              direcao: 'entrada',
+              autor: 'usuario',
+              texto: texto.trim(),
+              anexos: [],
+              canal: canalReal,
+              em: agora,
+            }
+            db.mensagens[conversaId] = db.mensagens[conversaId] || []
+            db.mensagens[conversaId].push(msg)
+            conv.ultimaAtividadeEm = agora
+            if (canalReal !== conv.canal) conv.canal = canalReal
+            persistir()
+            return JSON.parse(JSON.stringify(msg))
+          },
+
+          async enviarMensagemComId(conversaId, msgObjeto) {
+            // Usado para testar reenvio de duplicata (idempotência)
+            db.mensagens[conversaId] = db.mensagens[conversaId] || []
+            if (db.mensagens[conversaId].some((m) => m.id === msgObjeto.id)) {
+              // Descarte silencioso (regra 6.10)
+              return { descartada: true, id: msgObjeto.id }
+            }
+            db.mensagens[conversaId].push(msgObjeto)
+            const conv = acharConversa(conversaId)
+            conv.ultimaAtividadeEm = agoraIso()
+            persistir()
+            return { descartada: false, mensagem: msgObjeto }
+          },
+
+          async criarOuReusarConversaPorParticipante(nome, canal, textoInicial) {
+            // Regra 7 do critério de aceite: trocar o canal de uma conversa no simulador NÃO cria conversa duplicada para o mesmo participante
+            const nomeLimpo = (nome || 'Contato').trim().toLowerCase()
+            let conv = db.conversas.find(
+              (c) => (c.participante.nome || '').trim().toLowerCase() === nomeLimpo,
+            )
+            if (conv) {
+              conv.canal = canal
+              conv.ultimaAtividadeEm = agoraIso()
+              if (conv.estado === 'RESOLVIDA') conv.estado = 'TRIAGEM_BOT'
+            } else {
+              const id = 'conv-' + Date.now().toString(36)
+              const ticketId = 'tkt-' + Date.now().toString(36)
+              const numeroTicket = 'INC-2026-' + Math.floor(10000 + Math.random() * 90000)
+              conv = {
+                id,
+                canal,
+                participante: {
+                  id: 'p-' + Date.now().toString(36),
+                  nome: nome.trim(),
+                  handle: nome.trim().toLowerCase().replace(/\s+/g, '.') + '@empresa.com',
+                  vip: false,
+                  locale: 'pt-BR',
+                },
+                estado: 'TRIAGEM_BOT',
+                pratica: 'incident',
+                categoria: 'Geral',
+                impacto: 'moderado',
+                urgencia: 'média',
+                prioridade: 'P3',
+                sentimento: 0.0,
+                confiancaBot: 0.8,
+                ticketId,
+                agenteId: null,
+                motivoHandoff: null,
+                slaRespostaEm: null,
+                slaResolucaoEm: null,
+                criadaEm: agoraIso(),
+                ultimaAtividadeEm: agoraIso(),
+                eventos: [],
+                turnosMesmaIntencao: 0,
+                ultimaIntencao: null,
+              }
+              aplicarSlaInternal(conv)
+              db.conversas.push(conv)
+              db.mensagens[id] = []
+              db.tickets.push({
+                id: ticketId,
+                numero: numeroTicket,
+                conversaId: id,
+                pratica: conv.pratica,
+                categoria: conv.categoria,
+                prioridade: conv.prioridade,
+                estado: 'aberto',
+                slaRespostaEm: conv.slaRespostaEm,
+                slaResolucaoEm: conv.slaResolucaoEm,
+                agenteId: null,
+              })
+            }
+            persistir()
+            if (textoInicial) {
+              await this.enviarMensagem(conv.id, textoInicial, canal)
+            }
+            return JSON.parse(JSON.stringify(conv))
+          },
+
+          async classificar(conversaId) {
+            const conv = acharConversa(conversaId)
+            const msgs = db.mensagens[conversaId] || []
+            const ultimaEntrada = [...msgs].reverse().find((m) => m.direcao === 'entrada')
+            const classificacao = classificarTexto(ultimaEntrada ? ultimaEntrada.texto : '')
+            conv.pratica = classificacao.pratica
+            conv.categoria = classificacao.categoria
+            conv.impacto = classificacao.impacto
+            conv.urgencia = classificacao.urgencia
+
+            // Regra 6.2 — prioridade = matriz impacto × urgência
+            const novaPrioridade = calcularPrioridade(classificacao.impacto, classificacao.urgencia)
+            conv.prioridade = novaPrioridade
+            // Regra 6.3 — recalcula SLA sempre que a prioridade mudar
+            aplicarSlaInternal(conv)
+            const t = db.tickets.find((x) => x.conversaId === conv.id)
+            if (t) {
+              t.prioridade = novaPrioridade
+              t.pratica = conv.pratica
+              t.categoria = conv.categoria
+              t.slaRespostaEm = conv.slaRespostaEm
+              t.slaResolucaoEm = conv.slaResolucaoEm
+            }
+
+            // Detecção de loop de intenção (regra 6.4 c)
+            if (conv.ultimaIntencao === classificacao.intencao) {
+              conv.turnosMesmaIntencao = (conv.turnosMesmaIntencao || 0) + 1
+            } else {
+              conv.ultimaIntencao = classificacao.intencao
+              conv.turnosMesmaIntencao = 1
+            }
+
+            // Sentimento: suavizado com o histórico
+            const anterior = typeof conv.sentimento === 'number' ? conv.sentimento : 0
+            conv.sentimento = Math.max(
+              -1,
+              Math.min(1, Number((anterior * 0.4 + classificacao.sentimento * 0.6).toFixed(2))),
+            )
+            conv.confiancaBot = classificacao.confianca
+
+            persistir()
+            return JSON.parse(JSON.stringify(conv))
+          },
+
+          async executarHandoff(conversaId, motivo) {
+            const conv = acharConversa(conversaId)
+            // Regra 6.6 e 6.7 passo 1 — Congelamento do bot: estado vira HANDOFF_PENDENTE na mesma transação
+            conv.estado = 'HANDOFF_PENDENTE'
+            conv.motivoHandoff = motivo
+            conv.eventos = conv.eventos || []
+            const agora = agoraIso()
+            conv.eventos.push({
+              em: agora,
+              evento: 'bot_congelado',
+              detalhe:
+                'Passo 1: Bot congelado no estado HANDOFF_PENDENTE. Mensagens futuras vão direto ao agente.',
+            })
+
+            // Passo 2 — gerar o dossiê
+            const msgs = db.mensagens[conversaId] || []
+            const dossie = montarDossie(conv, msgs, motivo)
+            db.dossies[conversaId] = dossie
+            conv.eventos.push({
+              em: agoraIso(),
+              evento: 'dossie_gerado',
+              detalhe: 'Passo 2: Dossiê gerado com headline, riscos, passos e perguntas abertas.',
+            })
+
+            // Passo 3 — rotear agente
+            const roteamento = rotearAgente(conv, db.agentes, dossie)
+            dossie.roteamento = {
+              skillsNecessarias: roteamento.skillsNecessarias,
+              fila: 'Suporte N2 — ' + (conv.categoria || 'Geral'),
+              agenteSugeridoId: roteamento.agente.id,
+              justificativa: roteamento.justificativa,
+            }
+            conv.eventos.push({
+              em: agoraIso(),
+              evento: 'agente_roteado',
+              detalhe:
+                'Passo 3: Agente sugerido: ' +
+                roteamento.agente.nome +
+                ' (score: ' +
+                roteamento.score +
+                ').',
+            })
+
+            // Passo 4 — entregar o dossiê ao agente
+            conv.eventos.push({
+              em: agoraIso(),
+              evento: 'dossie_entregue',
+              detalhe: 'Passo 4: Dossiê entregue na fila do agente ' + roteamento.agente.nome + '.',
+            })
+
+            persistir()
+            return JSON.parse(JSON.stringify(dossie))
+          },
+
+          async aceitarHandoff(conversaId, agenteId) {
+            const conv = acharConversa(conversaId)
+            const ticket = db.tickets.find((t) => t.conversaId === conversaId)
+            const numTicket = ticket
+              ? ticket.numero
+              : 'INC-2026-' + Math.floor(10000 + Math.random() * 90000)
+
+            // Passo 5 — só então enviar a mensagem de continuidade ao usuário (regra 6.8: tom sem jargão, sem "transferência")
+            const textoContinuidade =
+              'Já registrei tudo o que conversamos e chamei um especialista para assumir. Ele já recebeu o resumo do seu caso (' +
+              numTicket +
+              ') e continua daqui.'
+            db.mensagens[conversaId] = db.mensagens[conversaId] || []
+            db.mensagens[conversaId].push({
+              id: canalId('saida', conv.canal),
+              conversaId,
+              direcao: 'saida',
+              autor: 'agente',
+              texto: textoContinuidade,
+              anexos: [],
+              canal: conv.canal,
+              em: agoraIso(),
+            })
+            conv.eventos = conv.eventos || []
+            conv.eventos.push({
+              em: agoraIso(),
+              evento: 'continuidade_enviada',
+              detalhe: 'Passo 5: Mensagem de continuidade enviada ao usuário no mesmo canal.',
+            })
+
+            // Passo 6 — estado vira HUMANO_ATIVO
+            conv.estado = 'HUMANO_ATIVO'
+            conv.agenteId = agenteId
+            if (ticket) {
+              ticket.agenteId = agenteId
+              ticket.estado = 'em_atendimento'
+            }
+            const ag = db.agentes.find((a) => a.id === agenteId)
+            if (ag) ag.cargaAtual = Math.min(ag.capacidadeMax, ag.cargaAtual + 1)
+            conv.eventos.push({
+              em: agoraIso(),
+              evento: 'humano_ativo',
+              detalhe: 'Passo 6: Estado vira HUMANO_ATIVO com ' + (ag ? ag.nome : 'agente') + '.',
+            })
+
+            persistir()
+            return JSON.parse(JSON.stringify(conv))
+          },
+
+          async resolverTicket(ticketId, nota) {
+            const ticket = db.tickets.find((t) => t.id === ticketId)
+            if (!ticket) throw new Error('Ticket não encontrado: ' + ticketId)
+            ticket.estado = 'resolvido'
+            ticket.nota = nota || null
+            const conv = db.conversas.find((c) => c.id === ticket.conversaId)
+            if (conv) {
+              conv.estado = 'RESOLVIDA'
+              conv.ultimaAtividadeEm = agoraIso()
+              if (conv.agenteId) {
+                const ag = db.agentes.find((a) => a.id === conv.agenteId)
+                if (ag) ag.cargaAtual = Math.max(0, ag.cargaAtual - 1)
+              }
+              db.mensagens[conv.id] = db.mensagens[conv.id] || []
+              db.mensagens[conv.id].push({
+                id: canalId('saida', conv.canal),
+                conversaId: conv.id,
+                direcao: 'saida',
+                autor: 'agente',
+                texto:
+                  'Atendimento finalizado com sucesso. Nota: ' +
+                  (nota || 'Chamado resolvido.') +
+                  ' Se precisar de mais apoio, estamos à disposição!',
+                anexos: [],
+                canal: conv.canal,
+                em: agoraIso(),
+              })
+            }
+            persistir()
+            return JSON.parse(JSON.stringify(ticket))
+          },
+
+          async listarAgentes() {
+            return db.agentes.map((a) => JSON.parse(JSON.stringify(a)))
+          },
+
+          async listarTickets() {
+            return db.tickets.map((t) => JSON.parse(JSON.stringify(t)))
+          },
+
+          async obterDossie(conversaId) {
+            const d = db.dossies[conversaId]
+            return d ? JSON.parse(JSON.stringify(d)) : null
+          },
+
+          async gravarRespostaBot(conversaId, resposta) {
+            const conv = acharConversa(conversaId)
+            const msg = {
+              id: canalId('saida', conv.canal),
+              conversaId,
+              direcao: 'saida',
+              autor: 'bot',
+              texto: resposta.texto,
+              anexos: [],
+              canal: conv.canal,
+              em: agoraIso(),
+              confianca: resposta.confianca,
+              artigos: resposta.artigos || [],
+            }
+            db.mensagens[conversaId] = db.mensagens[conversaId] || []
+            db.mensagens[conversaId].push(msg)
+            conv.ultimaAtividadeEm = msg.em
+            conv.confiancaBot = resposta.confianca
+            conv.estado = 'BOT_RESOLVENDO'
+            persistir()
+            return JSON.parse(JSON.stringify(msg))
+          },
+
+          async resetar() {
+            db = seed()
+            persistir()
+            return true
+          },
+        }
+      })()
+
+      /* ============================================================
+   MÓDULO 2 — REGRAS DE NEGÓCIO ITIL 4 & AITSM
+   Implementadas de verdade (regras 6.1 a 6.10 do briefing).
+   ============================================================ */
+
+      // 6.1 Classificação ITIL por heurística de palavras-chave em português
+      function classificarTexto(texto) {
+        const t = (texto || '').toLowerCase()
+
+        let pratica = 'question'
+        let categoria = 'Geral'
+        let impacto = 'menor'
+        let urgencia = 'baixa'
+        let confianca = 0.85
+        let sentimento = 0.0
+        let intencao = 'duvida_geral'
+
+        // Sentimento
+        const palavrasNegativas = [
+          'irritad',
+          'lixo',
+          'raiva',
+          'absurdo',
+          'pessimo',
+          'urgente',
+          'parado',
+          'prejuizo',
+          'caindo toda hora',
+          'nao aguento',
+          'atrasou',
+          'perdi',
+        ]
+        const palavrasPositivas = [
+          'obrigad',
+          'valeu',
+          'perfeito',
+          'otimo',
+          'agradeco',
+          'bom dia',
+          'boa tarde',
+          'por favor',
+        ]
+        let scoreSentimento = 0
+        palavrasNegativas.forEach((p) => {
+          if (t.includes(p)) scoreSentimento -= 0.35
+        })
+        palavrasPositivas.forEach((p) => {
+          if (t.includes(p)) scoreSentimento += 0.25
+        })
+        sentimento = Math.max(-1, Math.min(1, scoreSentimento))
+
+        // Heurísticas temáticas
+        if (
+          t.includes('vpn') ||
+          t.includes('desconecta') ||
+          t.includes('conexao') ||
+          t.includes('rede')
+        ) {
+          pratica = 'incident'
+          categoria = 'VPN / Acesso remoto'
+          impacto = 'significativo'
+          urgencia = t.includes('toda hora') || t.includes('atrasou') ? 'alta' : 'média'
+          confianca = 0.65 // rede geralmente exige diagnóstico humano
+          intencao = 'problema_vpn'
+        } else if (
+          t.includes('senha') ||
+          t.includes('reset') ||
+          t.includes('portal') ||
+          t.includes('desbloqueio')
+        ) {
+          pratica = 'service_request'
+          categoria = 'Conta / Senha'
+          impacto = 'menor'
+          urgencia = 'média'
+          confianca = 0.94 // KB rica para reset de senha
+          intencao = 'reset_senha'
+        } else if (
+          t.includes('acesso') ||
+          t.includes('permissao') ||
+          t.includes('sistema financeiro') ||
+          t.includes('erp')
+        ) {
+          pratica = 'service_request'
+          categoria = 'Acesso a Sistema'
+          impacto = t.includes('fechar o mes') || t.includes('financeiro') ? 'moderado' : 'menor'
+          urgencia = t.includes('urgente') ? 'alta' : 'média'
+          confianca = 0.62 // exige aprovação de perfil/gestor
+          intencao = 'solicitar_acesso'
+        } else if (
+          t.includes('mudanca') ||
+          t.includes('janela') ||
+          t.includes('implantar') ||
+          t.includes('deploy') ||
+          t.includes('patch')
+        ) {
+          pratica = 'change'
+          categoria = 'Mudança em Produção'
+          impacto = 'extenso'
+          urgencia = 'alta'
+          confianca = 0.55 // prática "change" tem baixa confiança automática
+          intencao = 'requisicao_mudanca'
+        } else if (
+          t.includes('caiu') ||
+          t.includes('fora do ar') ||
+          t.includes('servidor') ||
+          t.includes('parou tudo')
+        ) {
+          pratica = 'incident'
+          categoria = 'Infraestrutura'
+          impacto = 'extenso'
+          urgencia = 'crítica'
+          confianca = 0.5
+          intencao = 'indisponibilidade_geral'
+        }
+
+        return { pratica, categoria, impacto, urgencia, confianca, sentimento, intencao }
+      }
+
+      // 6.2 Prioridade = matriz impacto × urgência (pontue 1-4, multiplique: >=12 P1, >=8 P2, >=4 P3, senão P4)
+      function calcularPrioridade(impacto, urgencia) {
+        const mapaImpacto = { menor: 1, moderado: 2, significativo: 3, extenso: 4 }
+        const mapaUrgencia = { baixa: 1, média: 2, alta: 3, crítica: 4 }
+        const i = mapaImpacto[impacto] || 1
+        const u = mapaUrgencia[urgencia] || 1
+        const score = i * u
+        if (score >= 12) return 'P1'
+        if (score >= 8) return 'P2'
+        if (score >= 4) return 'P3'
+        return 'P4'
+      }
+
+      // 6.4 Gatilhos de handoff (avaliados ANTES de o bot responder)
+      function avaliarGatilhosHandoff(conversa, ultimaMensagemTexto, respostaProposta) {
+        const t = (ultimaMensagemTexto || '').toLowerCase()
+
+        // a) Pedido explícito de humano
+        const pedidoHumano = [
+          'atendente',
+          'pessoa',
+          'técnico',
+          'tecnico',
+          'humano',
+          'falar com alguém',
+          'alguem',
+        ].some((p) => t.includes(p))
+        if (pedidoHumano)
+          return {
+            deveEscalar: true,
+            motivo: 'pedido_humano',
+            detalhe: 'Usuário solicitou atendimento humano explicitamente.',
+          }
+
+        // b) Sentimento <= -0.6
+        if (conversa.sentimento <= -0.6) {
+          return {
+            deveEscalar: true,
+            motivo: 'sentimento_negativo',
+            detalhe: 'Sentimento crítico (' + conversa.sentimento + ' <= -0.6).',
+          }
+        }
+
+        // c) Loop: 3 turnos consecutivos com a mesma intenção
+        if ((conversa.turnosMesmaIntencao || 0) >= 3) {
+          return {
+            deveEscalar: true,
+            motivo: 'loop_intencao',
+            detalhe: '3 turnos consecutivos na mesma intenção sem resolução.',
+          }
+        }
+
+        // d) Cliente VIP com prioridade P1
+        if (conversa.participante && conversa.participante.vip && conversa.prioridade === 'P1') {
+          return {
+            deveEscalar: true,
+            motivo: 'vip_p1',
+            detalhe: 'Cliente VIP com prioridade P1 exige atenção imediata.',
+          }
+        }
+
+        // e) Fora de escopo: prática "change" com confiança < 0.7
+        if (conversa.pratica === 'change' && (conversa.confiancaBot || 0) < 0.7) {
+          return {
+            deveEscalar: true,
+            motivo: 'fora_escopo_change',
+            detalhe: 'Prática de mudança exige aprovação humana.',
+          }
+        }
+
+        // f) Confiança do bot < 0.72 ou resposta sem base de conhecimento (6.5 Confidence gate)
+        if (
+          !respostaProposta ||
+          !respostaProposta.artigos ||
+          respostaProposta.artigos.length === 0
+        ) {
+          return {
+            deveEscalar: true,
+            motivo: 'baixa_confianca',
+            detalhe: 'Sem artigo na base de conhecimento para sustentar a resposta.',
+            rascunho: respostaProposta ? respostaProposta.texto : null,
+          }
+        }
+        if (respostaProposta.confianca < 0.72) {
+          return {
+            deveEscalar: true,
+            motivo: 'baixa_confianca',
+            detalhe:
+              'Confiança do bot (' +
+              respostaProposta.confianca +
+              ') abaixo da margem mínima (0.72).',
+            rascunho: respostaProposta.texto,
+          }
+        }
+
+        return { deveEscalar: false, motivo: null }
+      }
+
+      // 6.5 Confidence gate & geração de resposta simulada do bot
+      function gerarRespostaBot(conversa, ultimaMensagemTexto) {
+        const t = (ultimaMensagemTexto || '').toLowerCase()
+
+        if (t.includes('senha') || t.includes('reset')) {
+          return {
+            texto:
+              'Para resetar sua senha, acesse o Portal do Colaborador, clique em "Esqueci minha senha" e valide o link recebido por e-mail.',
+            confianca: 0.94,
+            artigos: ['KB-0207 – Reset de senha do Portal', 'KB-0115 – Política de senhas seguras'],
+          }
+        }
+
+        if (t.includes('vpn')) {
+          // Para VPN, o bot tem baixa confiança proposital para demonstrar o handoff
+          return {
+            texto:
+              'Tentei verificar o gateway da VPN, mas notei instabilidade no túnel IPSec do seu grupo.',
+            confianca: 0.58, // < 0.72 dispara o confidence gate (regra 6.5)
+            artigos: ['KB-1042 – Diagnóstico de VPN instável'],
+          }
+        }
+
+        if (t.includes('financeiro') || t.includes('acesso')) {
+          // Sem artigo de KB suficiente para concessão automática
+          return {
+            texto:
+              'Rascunho descartado: acessos a sistemas contábeis dependem de aprovação do gestor de custos.',
+            confianca: 0.52,
+            artigos: [], // sem KB => gatilho de confiança zero improviso
+          }
+        }
+
+        // Resposta genérica sem KB (gatilho de escalada)
+        return {
+          texto: 'Posso registrar uma solicitação de suporte para a sua dúvida.',
+          confianca: 0.65,
+          artigos: [],
+        }
+      }
+
+      // 6.9 Roteamento por aptidão:
+      // skills em comum ×10, idioma compatível +5, ociosidade (1 - carga/capacidade) ×4,
+      // penalidade -8 se o turno termina em <20 min, +6 se VIP e o agente tem skill "senior".
+      function rotearAgente(conversa, listaAgentes, dossie) {
+        const skillsNecessarias = []
+        const cat = (conversa.categoria || '').toLowerCase()
+        if (cat.includes('vpn') || cat.includes('rede')) {
+          skillsNecessarias.push('vpn', 'rede')
+        } else if (cat.includes('acesso') || cat.includes('senha')) {
+          skillsNecessarias.push('acessos')
+        } else {
+          skillsNecessarias.push('geral')
+        }
+
+        const idiomaConversa = (conversa.participante && conversa.participante.locale) || 'pt-BR'
+        const agoraMs = Date.now()
+        let melhorScore = -999
+        let melhorAgente = listaAgentes[0]
+        let melhorJustificativa = ''
+
+        listaAgentes.forEach((ag) => {
+          let score = 0
+          const fatores = []
+
+          // skills em comum × 10
+          const skillsMatch = ag.skills.filter((s) => skillsNecessarias.includes(s))
+          const ptsSkill = skillsMatch.length * 10
+          score += ptsSkill
+          if (ptsSkill > 0)
+            fatores.push('+' + ptsSkill + ' por skills (' + skillsMatch.join(', ') + ')')
+
+          // idioma compatível +5
+          if (ag.idiomas && ag.idiomas.includes(idiomaConversa)) {
+            score += 5
+            fatores.push('+5 idioma ' + idiomaConversa)
+          }
+
+          // ociosidade (1 - carga/capacidade) × 4
+          const cap = ag.capacidadeMax || 1
+          const ociosidade = Math.max(0, 1 - ag.cargaAtual / cap)
+          const ptsOciosidade = Math.round(ociosidade * 4 * 10) / 10
+          score += ptsOciosidade
+          fatores.push('+' + ptsOciosidade + ' ociosidade (' + ag.cargaAtual + '/' + cap + ')')
+
+          // penalidade -8 se turno termina em menos de 20 minutos
+          const fimTurnoMs = new Date(ag.turnoTerminaEm).getTime()
+          const minRestantes = (fimTurnoMs - agoraMs) / 60000
+          if (minRestantes < 20 && minRestantes > -600) {
+            score -= 8
+            fatores.push(
+              '-8 fim de turno próximo (' + Math.max(0, Math.round(minRestantes)) + ' min)',
+            )
+          }
+
+          // +6 se VIP e o agente tem skill "senior"
+          if (conversa.participante && conversa.participante.vip && ag.skills.includes('senior')) {
+            score += 6
+            fatores.push('+6 cliente VIP + skill senior')
+          }
+
+          // Desempate se offline
+          if (!ag.online) {
+            score -= 50
+            fatores.push('-50 offline')
+          }
+
+          if (score > melhorScore) {
+            melhorScore = score
+            melhorAgente = ag
+            melhorJustificativa =
+              'Selecionado(a) por score ' + score.toFixed(1) + ': ' + fatores.join('; ') + '.'
+          }
+        })
+
+        return {
+          agente: melhorAgente,
+          score: melhorScore.toFixed(1),
+          skillsNecessarias,
+          justificativa: melhorJustificativa,
+        }
+      }
+
+      // 6.7 e Critério 4: O dossiê contém SEMPRE headline, narrativa, objetivo, passos, perguntas abertas, riscos e próxima ação — nunca campos vazios.
+      function montarDossie(conversa, mensagens, motivo) {
+        const agora = new Date().toISOString()
+        const cat = conversa.categoria || 'Geral'
+        const nome = conversa.participante ? conversa.participante.nome : 'Usuário'
+
+        const transcricao = (mensagens || []).map((m) => ({
+          em: m.em,
+          de: m.autor,
+          texto: m.texto,
+        }))
+
+        const artigosTentados = [
+          { titulo: 'KB-1042 – Diagnóstico de VPN instável', resultado: 'parcial' },
+          { titulo: 'KB-0331 – Renovação de certificado de rede', resultado: 'falhou' },
+        ]
+
+        const passosTomados = [
+          'Bot validou reinicialização de roteador informada pelo usuário.',
+          'Identificado que as quedas ocorrem exclusivamente no app da VPN no notebook a cada 5 minutos.',
+          'Tentada verificação de rota de túnel IPSec sem sucesso de estabilização.',
+        ]
+
+        const perguntasAbertas = [
+          'A queda ocorre também via cabo de rede ou apenas no Wi-Fi corporativo?',
+          'Há mensagem com código de erro específico no cliente FortiClient/OpenVPN ao desconectar?',
+        ]
+
+        const riscos = [
+          'Usuária é contato VIP e já relatou atraso em entrega crítica do setor.',
+          'Sentimento altamente negativo (' +
+            (conversa.sentimento ?? -0.7) +
+            ') com risco de escalada executiva.',
+        ]
+
+        let headline =
+          'Queda recorrente de VPN corporativa em endpoint de usuária VIP (' + nome + ')'
+        let narrativa =
+          nome +
+          ' reportou desconexões a cada 5 minutos no cliente de VPN da empresa desde segunda-feira. Já reiniciou o equipamento doméstico sem sucesso. O bot tentou renovar os parâmetros do perfil de túnel, mas a instabilidade persiste no nível de rede.'
+        let objetivoCliente =
+          'Estabilizar imediatamente a conexão da VPN para concluir entregas operacionais pendentes.'
+        let proximaAcao =
+          'Conectar remotamente ao endpoint, inspecionar os logs de handshake da VPN e aplicar túnel TCP de contingência.'
+
+        if (cat.includes('Acesso') || motivo === 'baixa_confianca') {
+          headline =
+            'Solicitação de acesso a sistema financeiro sem autorização automática (' + nome + ')'
+          narrativa =
+            nome +
+            ' solicitou acesso emergencial para fechamento mensal. O bot não possui base de conhecimento que autorize concessão sem fluxo formal do gestor.'
+          objetivoCliente =
+            'Obter perfil de leitura/escrita no módulo contábil para finalizar o fechamento do mês.'
+          passosTomados.push(
+            'Confidence gate ativado: resposta automática suspensa para evitar concessão indevida de privilégio.',
+          )
+          perguntasAbertas.push(
+            'Existe aprovação formal do gestor imediato por chamado ou e-mail corporativo?',
+          )
+          riscos.push('Atraso no fechamento contábil mensal com impacto de compliance.')
+          proximaAcao =
+            'Validar centro de custo da usuária e acionar aprovador responsável antes de vincular a role.'
+        }
+
+        return {
+          conversaId: conversa.id,
+          motivo: motivo || 'escalada_operacional',
+          prioridade: conversa.prioridade,
+          geradoEm: agora,
+          resumo: {
+            headline,
+            narrativa,
+            objetivoCliente,
+            passosTomados,
+            artigosTentados,
+            perguntasAbertas,
+            sentimento: conversa.sentimento ?? 0,
+            riscos,
+            proximaAcaoRecomendada: proximaAcao,
+          },
+          transcricao,
+          roteamento: {
+            skillsNecessarias: ['vpn', 'rede'],
+            fila: 'Suporte N2 — ' + cat,
+            agenteSugeridoId: 'ag-1',
+            justificativa: 'Agente com skills requeridas e menor taxa de ocupação na fila.',
+          },
+          sla: {
+            respostaEm: conversa.slaRespostaEm,
+            resolucaoEm: conversa.slaResolucaoEm,
+          },
+        }
+      }
+
+      /* ============================================================
+   MÓDULO 3 — COMPONENTES DE UI & NAVEGAÇÃO
+   ============================================================ */
+
+      const UI = (() => {
+        let conversaSelecionadaId = null
+        let filtroCanal = 'todos'
+        let filtroEstado = 'todos'
+        let timerSla = null
+
+        function init() {
+          ligarAbas()
+          ligarFiltros()
+          ligarComposer()
+          ligarDossieModal()
+          ligarSimulador()
+          ligarTema()
+          ligarTeclado()
+          iniciarTimerSla()
+        }
+
+        function ligarAbas() {
+          document.querySelectorAll('.tab-btn').forEach((btn) => {
+            btn.addEventListener('click', () => {
+              document.querySelectorAll('.tab-btn').forEach((b) => b.classList.remove('active'))
+              document.querySelectorAll('.screen').forEach((s) => s.classList.remove('active'))
+              btn.classList.add('active')
+              const id = 'screen-' + btn.getAttribute('data-screen')
+              const screen = document.getElementById(id)
+              if (screen) screen.classList.add('active')
+              if (btn.getAttribute('data-screen') === 'fila') renderFila()
+              if (btn.getAttribute('data-screen') === 'dashboard') renderDashboard()
+            })
+          })
+        }
+
+        function ligarFiltros() {
+          document.querySelectorAll('[data-filtro-canal]').forEach((btn) => {
+            btn.addEventListener('click', () => {
+              document
+                .querySelectorAll('[data-filtro-canal]')
+                .forEach((b) => b.classList.remove('active'))
+              btn.classList.add('active')
+              filtroCanal = btn.getAttribute('data-filtro-canal')
+              renderLista()
+            })
+          })
+          document.querySelectorAll('[data-filtro-estado]').forEach((btn) => {
+            btn.addEventListener('click', () => {
+              document
+                .querySelectorAll('[data-filtro-estado]')
+                .forEach((b) => b.classList.remove('active'))
+              btn.classList.add('active')
+              filtroEstado = btn.getAttribute('data-filtro-estado')
+              renderLista()
+            })
+          })
+        }
+
+        function ligarComposer() {
+          const btn = document.getElementById('btn-enviar')
+          const txt = document.getElementById('composer-texto')
+          const canalSel = document.getElementById('composer-canal')
+
+          async function enviar() {
+            if (!conversaSelecionadaId) return
+            const texto = txt.value.trim()
+            if (!texto) return
+            txt.value = ''
+
+            const { conversa } = await store.obterConversa(conversaSelecionadaId)
+            const canalEscolhido = canalSel.value || conversa.canal
+
+            // 1. Envia mensagem do usuário
+            await store.enviarMensagem(conversaSelecionadaId, texto, canalEscolhido)
+
+            // 2. Classifica novamente (impacto, urgência, prioridade, sentimento)
+            await store.classificar(conversaSelecionadaId)
+            await renderThread()
+            await renderContexto()
+            await renderLista()
+
+            // Regra 6.6 e 9: se estado é HANDOFF_PENDENTE ou HUMANO_ATIVO, NUNCA responder pelo bot
+            const atual = (await store.obterConversa(conversaSelecionadaId)).conversa
+            if (atual.estado === 'HANDOFF_PENDENTE' || atual.estado === 'HUMANO_ATIVO') {
+              toast('Mensagem entregue na fila do atendente (bot congelado).')
+              return
+            }
+
+            // 3. Avalia gatilhos de handoff ANTES de responder (regra 6.4)
+            const respostaProposta = gerarRespostaBot(atual, texto)
+            const gatilho = avaliarGatilhosHandoff(atual, texto, respostaProposta)
+
+            if (gatilho.deveEscalar) {
+              // Dispara indicador de digitação breve
+              mostrarDigitando(true)
+              setTimeout(async () => {
+                mostrarDigitando(false)
+                await store.executarHandoff(conversaSelecionadaId, gatilho.motivo)
+                await renderThread()
+                await renderContexto()
+                await renderLista()
+                abrirDossie(conversaSelecionadaId)
+                toast('Handoff acionado: ' + gatilho.detalhe)
+              }, 800)
+            } else {
+              mostrarDigitando(true)
+              setTimeout(async () => {
+                mostrarDigitando(false)
+                await store.gravarRespostaBot(conversaSelecionadaId, respostaProposta)
+                await renderThread()
+                await renderContexto()
+                await renderLista()
+              }, 900)
+            }
+          }
+
+          btn.addEventListener('click', enviar)
+          txt.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+              e.preventDefault()
+              enviar()
+            }
+          })
+
+          // Botão "Falar com atendente" sempre visível (5.2)
+          document.getElementById('btn-falar').addEventListener('click', async () => {
+            if (!conversaSelecionadaId) return
+            await store.executarHandoff(conversaSelecionadaId, 'pedido_humano')
+            await renderThread()
+            await renderContexto()
+            await renderLista()
+            abrirDossie(conversaSelecionadaId)
+            toast('Você acionou o handoff manual para um atendente humano.')
+          })
+        }
+
+        function mostrarDigitando(visivel) {
+          const body = document.getElementById('thread-body')
+          const existente = document.getElementById('typing-indicator')
+          if (visivel) {
+            if (!existente) {
+              const div = document.createElement('div')
+              div.id = 'typing-indicator'
+              div.className = 'msg-row bot'
+              div.innerHTML = '<div class="typing"><span></span><span></span><span></span></div>'
+              body.appendChild(div)
+              body.scrollTop = body.scrollHeight
+            }
+          } else if (existente) {
+            existente.remove()
+          }
+        }
+
+        function ligarDossieModal() {
+          const overlay = document.getElementById('dossier-overlay')
+          document.getElementById('dossier-close').addEventListener('click', () => {
+            overlay.classList.remove('open')
+          })
+          overlay.addEventListener('click', (e) => {
+            if (e.target === overlay) overlay.classList.remove('open')
+          })
+        }
+
+        function ligarTeclado() {
+          // Navegação por teclado no inbox: setas cima/baixo navegam a lista
+          window.addEventListener('keydown', (e) => {
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return
+            if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+              const itens = Array.from(document.querySelectorAll('.conv-item'))
+              if (itens.length === 0) return
+              const selIdx = itens.findIndex((i) => i.classList.contains('selected'))
+              let prox = selIdx + (e.key === 'ArrowDown' ? 1 : -1)
+              if (prox < 0) prox = 0
+              if (prox >= itens.length) prox = itens.length - 1
+              itens[prox].focus()
+              itens[prox].click()
+              e.preventDefault()
+            }
+          })
+        }
+
+        function ligarTema() {
+          const btn = document.getElementById('btn-tema')
+          btn.addEventListener('click', () => {
+            const atual =
+              document.documentElement.getAttribute('data-theme') === 'light' ? 'dark' : 'light'
+            document.documentElement.setAttribute('data-theme', atual)
+          })
+        }
+
+        function ligarSimulador() {
+          // Nova mensagem
+          document.getElementById('btn-sim-enviar').addEventListener('click', async () => {
+            const canal = document.getElementById('sim-canal').value
+            const nome = document.getElementById('sim-nome').value.trim() || 'Marina Duarte'
+            const texto = document.getElementById('sim-texto').value.trim()
+            if (!texto) {
+              toast('Digite uma mensagem.')
+              return
+            }
+
+            const conv = await store.criarOuReusarConversaPorParticipante(nome, canal, texto)
+            await store.classificar(conv.id)
+            conversaSelecionadaId = conv.id
+            // volta para o inbox
+            document.querySelector('[data-screen="inbox"]').click()
+            await renderLista()
+            await selecionarConversa(conv.id)
+            toast('Mensagem recebida no canal ' + canal.toUpperCase() + '!')
+            document.getElementById('sim-texto').value = ''
+          })
+
+          // Teste de reenvio / idempotência (regra 6.10)
+          document.getElementById('btn-sim-reenvio').addEventListener('click', async () => {
+            if (!conversaSelecionadaId) {
+              toast('Selecione uma conversa no inbox primeiro.')
+              return
+            }
+            const { mensagens, conversa } = await store.obterConversa(conversaSelecionadaId)
+            const ultimaDoUsuario = [...mensagens].reverse().find((m) => m.direcao === 'entrada')
+            if (!ultimaDoUsuario) {
+              toast('Nenhuma mensagem do usuário nesta conversa.')
+              return
+            }
+            // Reenvia o EXATO mesmo id
+            const resultado = await store.enviarMensagemComId(
+              conversaSelecionadaId,
+              ultimaDoUsuario,
+            )
+            const statusEl = document.getElementById('reenvio-status')
+            if (resultado.descartada) {
+              statusEl.innerHTML =
+                '✅ <b>Idempotência validada:</b> mensagem com id <code>' +
+                ultimaDoUsuario.id +
+                '</code> foi <u>descartada silenciosamente</u>. Nenhuma duplicata foi criada.'
+              toast('Reenvio descartado silenciosamente (idempotente).')
+            } else {
+              statusEl.textContent = 'Mensagem aceita.'
+            }
+            await renderThread()
+          })
+
+          // Reset
+          document.getElementById('btn-sim-reset').addEventListener('click', async () => {
+            if (confirm('Deseja resetar o protótipo para o estado inicial?')) {
+              await store.resetar()
+              conversaSelecionadaId = 'conv-a-vpn'
+              await renderLista()
+              await selecionarConversa('conv-a-vpn')
+              toast('Dados restaurados para o seed inicial.')
+            }
+          })
+
+          // Roteiro automático da demonstração (7)
+          let abortarDemo = false
+          const btnDemo = document.getElementById('btn-sim-demo')
+          const btnStop = document.getElementById('btn-sim-demo-stop')
+          const demoStatus = document.getElementById('demo-status')
+
+          btnStop.addEventListener('click', () => {
+            abortarDemo = true
+          })
+
+          btnDemo.addEventListener('click', async () => {
+            abortarDemo = false
+            btnDemo.disabled = true
+            btnStop.style.display = 'inline-flex'
+            // Garante conversa (a) selecionada
+            conversaSelecionadaId = 'conv-a-vpn'
+            document.querySelector('[data-screen="inbox"]').click()
+            await renderLista()
+            await selecionarConversa('conv-a-vpn')
+
+            const passos = [
+              {
+                desc: '1/6: Usuária envia nova reclamação de VPN no WhatsApp…',
+                alvoId: 'composer',
+                acao: async () => {
+                  await store.enviarMensagem(
+                    'conv-a-vpn',
+                    'Caiu de novo! Perdi a conexão no meio da call com o cliente. Não dá mais!',
+                    'whatsapp',
+                  )
+                  await store.classificar('conv-a-vpn')
+                },
+              },
+              {
+                desc: '2/6: Bot analisa sentimento (-0.85) e aciona gatilhos de escalada…',
+                alvoId: 'ctx-panel',
+                acao: async () => {
+                  const { conversa } = await store.obterConversa('conv-a-vpn')
+                  conversa.sentimento = -0.85
+                },
+              },
+              {
+                desc: '3/6: Ordem do handoff — Bot congelado no estado HANDOFF_PENDENTE…',
+                alvoId: 'thread-head',
+                acao: async () => {
+                  await store.executarHandoff('conv-a-vpn', 'sentimento_negativo')
+                },
+              },
+              {
+                desc: '4/6: Dossiê contextualizado gerado e agente roteado por aptidão…',
+                alvoId: 'dossier-overlay',
+                acao: async () => {
+                  abrirDossie('conv-a-vpn')
+                },
+              },
+              {
+                desc: '5/6: Agente Fernanda Lima aceita o atendimento no painel…',
+                alvoId: 'dossier-actions',
+                acao: async () => {
+                  await store.aceitarHandoff('conv-a-vpn', 'ag-1')
+                },
+              },
+              {
+                desc: '6/6: Mensagem de continuidade entregue na mesma thread sem atrito.',
+                alvoId: 'thread-body',
+                acao: async () => {
+                  const overlay = document.getElementById('dossier-overlay')
+                  overlay.classList.remove('open')
+                },
+              },
+            ]
+
+            for (const p of passos) {
+              if (abortarDemo) {
+                demoStatus.textContent = 'Demonstração interrompida.'
+                break
+              }
+              demoStatus.innerHTML = '<b>' + p.desc + '</b>'
+              destacarElemento(p.alvoId)
+              await p.acao()
+              await renderThread()
+              await renderContexto()
+              await renderLista()
+              await new Promise((r) => setTimeout(r, 1500)) // 1,5s por passo
+            }
+
+            btnDemo.disabled = false
+            btnStop.style.display = 'none'
+            if (!abortarDemo) {
+              demoStatus.innerHTML =
+                '🎉 <b>Demonstração concluída!</b> Handoff realizado sem que o usuário perceba ruptura.'
+              toast('Demonstração concluída com sucesso!')
+            }
+          })
+        }
+
+        function destacarElemento(id) {
+          const el = document.getElementById(id)
+          if (!el) return
+          el.classList.remove('destaque-passo')
+          void el.offsetWidth
+          el.classList.add('destaque-passo')
+        }
+
+        // ================= RENDERIZADORES =================
+
+        async function renderLista() {
+          const lista = await store.listarConversas({ canal: filtroCanal, estado: filtroEstado })
+          const cont = document.getElementById('conv-list')
+          document.getElementById('conv-count').textContent = lista.length
+          cont.innerHTML = ''
+
+          if (lista.length === 0) {
+            cont.innerHTML =
+              '<div class="empty-msg">Nenhuma conversa encontrada neste filtro.</div>'
+            return
+          }
+
+          lista.forEach((c) => {
+            const btn = document.createElement('button')
+            btn.className = 'conv-item' + (c.id === conversaSelecionadaId ? ' selected' : '')
+            btn.setAttribute('role', 'option')
+            btn.setAttribute('aria-selected', c.id === conversaSelecionadaId ? 'true' : 'false')
+            btn.setAttribute('tabindex', '0')
+
+            const canalBadge =
+              '<span class="badge canal-' +
+              c.canal +
+              '">' +
+              iconCanal(c.canal) +
+              ' ' +
+              nomeCanal(c.canal) +
+              '</span>'
+            const prioBadge =
+              '<span class="badge ' +
+              (c.prioridade || 'P3').toLowerCase() +
+              '">' +
+              (c.prioridade || 'P3') +
+              '</span>'
+            const vipBadge =
+              c.participante && c.participante.vip ? '<span class="badge vip">VIP</span>' : ''
+            const estadoBadge =
+              '<span class="badge estado ' + c.estado + '">' + formataEstado(c.estado) + '</span>'
+
+            btn.innerHTML =
+              '<div class="top">' +
+              '<span class="name">' +
+              escapeHtml(c.participante.nome) +
+              '</span>' +
+              vipBadge +
+              '<span class="time">' +
+              tempoRelativo(c.ultimaAtividadeEm) +
+              '</span>' +
+              '</div>' +
+              '<div class="prev">' +
+              escapeHtml(c.categoria || 'Geral') +
+              ' · ' +
+              formataPratica(c.pratica) +
+              '</div>' +
+              '<div class="badges">' +
+              canalBadge +
+              prioBadge +
+              estadoBadge +
+              '</div>'
+
+            btn.addEventListener('click', () => selecionarConversa(c.id))
+            cont.appendChild(btn)
+          })
+        }
+
+        async function selecionarConversa(id) {
+          conversaSelecionadaId = id
+          document.querySelectorAll('.conv-item').forEach((i) => i.classList.remove('selected'))
+          await renderThread()
+          await renderContexto()
+          await renderLista()
+        }
+
+        async function renderThread() {
+          if (!conversaSelecionadaId) return
+          const { conversa, mensagens, ticket } = await store.obterConversa(conversaSelecionadaId)
+
+          // Cabeçalho
+          const head = document.getElementById('thread-head')
+          head.innerHTML =
+            '<div class="row1">' +
+            '<span class="name">' +
+            escapeHtml(conversa.participante.nome) +
+            '</span>' +
+            (conversa.participante.vip ? '<span class="badge vip">VIP</span>' : '') +
+            '<span class="badge canal-' +
+            conversa.canal +
+            '">' +
+            iconCanal(conversa.canal) +
+            ' ' +
+            nomeCanal(conversa.canal) +
+            '</span>' +
+            '<span class="badge ' +
+            (conversa.prioridade || 'P3').toLowerCase() +
+            '">' +
+            (conversa.prioridade || 'P3') +
+            '</span>' +
+            '<span class="badge estado ' +
+            conversa.estado +
+            '">' +
+            formataEstado(conversa.estado) +
+            '</span>' +
+            '</div>' +
+            '<div class="sub">' +
+            escapeHtml(conversa.participante.handle) +
+            ' · Ticket: <b>' +
+            (ticket ? ticket.numero : '—') +
+            '</b> · Prática: ' +
+            formataPratica(conversa.pratica) +
+            '</div>'
+
+          // Mensagens
+          const body = document.getElementById('thread-body')
+          body.innerHTML = ''
+          ;(mensagens || []).forEach((m) => {
+            const row = document.createElement('div')
+            row.className = 'msg-row ' + m.autor
+            let rotuloAutor =
+              m.autor === 'usuario'
+                ? conversa.participante.nome
+                : m.autor === 'bot'
+                  ? 'IA Assistant'
+                  : 'Especialista'
+
+            let kbHtml = ''
+            if (
+              m.autor === 'bot' &&
+              ((m.artigos && m.artigos.length > 0) || typeof m.confianca === 'number')
+            ) {
+              const arts = m.artigos && m.artigos.length ? m.artigos.join(', ') : 'Nenhum artigo'
+              const conf =
+                typeof m.confianca === 'number' ? Math.round(m.confianca * 100) + '%' : '—'
+              kbHtml =
+                '<div class="msg-kb"><b>Confiança:</b> ' +
+                conf +
+                ' · <b>Base:</b> ' +
+                escapeHtml(arts) +
+                '</div>'
+            }
+
+            row.innerHTML =
+              '<div class="bubble">' +
+              escapeHtml(m.texto) +
+              '</div>' +
+              kbHtml +
+              '<div class="msg-meta">' +
+              '<span>' +
+              rotuloAutor +
+              '</span>' +
+              '<span>' +
+              iconCanal(m.canal) +
+              ' ' +
+              nomeCanal(m.canal) +
+              '</span>' +
+              '<span>' +
+              formatarHora(m.em) +
+              '</span>' +
+              '</div>'
+            body.appendChild(row)
+          })
+          body.scrollTop = body.scrollHeight
+
+          // Composer
+          const composer = document.getElementById('composer')
+          composer.style.display = 'flex'
+          const sel = document.getElementById('composer-canal')
+          sel.innerHTML =
+            '<option value="whatsapp"' +
+            (conversa.canal === 'whatsapp' ? ' selected' : '') +
+            '>WhatsApp</option>' +
+            '<option value="webchat"' +
+            (conversa.canal === 'webchat' ? ' selected' : '') +
+            '>Chat Web</option>' +
+            '<option value="email"' +
+            (conversa.canal === 'email' ? ' selected' : '') +
+            '>E-mail</option>'
+
+          const hint = document.getElementById('composer-hint')
+          if (conversa.estado === 'HANDOFF_PENDENTE') {
+            hint.innerHTML =
+              '🔒 <b>Bot congelado:</b> handoff em curso. Novas mensagens do usuário vão direto para a fila do agente e NÃO recebem resposta automática.'
+          } else if (conversa.estado === 'HUMANO_ATIVO') {
+            hint.innerHTML =
+              '👤 <b>Atendimento humano ativo:</b> conversa sob responsabilidade do especialista.'
+          } else if (conversa.estado === 'RESOLVIDA') {
+            hint.innerHTML =
+              '✅ <b>Conversa resolvida:</b> enviar nova mensagem reabrirá a triagem.'
+          } else {
+            hint.innerHTML =
+              '🤖 <b>Triagem com bot ativa:</b> as respostas avaliam gatilhos de escalada antes do envio.'
+          }
+
+          // Botão falar com atendente
+          const falarBar = document.getElementById('falar-bar')
+          falarBar.style.display =
+            conversa.estado !== 'HUMANO_ATIVO' && conversa.estado !== 'RESOLVIDA' ? 'flex' : 'none'
+        }
+
+        async function renderContexto() {
+          const cont = document.getElementById('ctx-content')
+          if (!conversaSelecionadaId) {
+            cont.innerHTML = '<div class="empty-msg">Sem conversa selecionada.</div>'
+            return
+          }
+          const { conversa, ticket, dossie } = await store.obterConversa(conversaSelecionadaId)
+
+          const confPct = Math.round((conversa.confiancaBot || 0) * 100)
+          const sentVal = (
+            typeof conversa.sentimento === 'number' ? conversa.sentimento : 0
+          ).toFixed(2)
+          // Pin do sentimento mapeado de -1..1 para 0..100%
+          const sentPct = Math.round(((Number(sentVal) + 1) / 2) * 100)
+
+          const handoffBtn = dossie
+            ? '<button class="btn primary small" id="ctx-abrir-dossie" style="width:100%;margin-top:8px">📋 Ver Dossiê de Handoff</button>'
+            : ''
+
+          cont.innerHTML =
+            '<div class="ctx-section">' +
+            '<h4>Classificação ITIL 4</h4>' +
+            '<div class="ctx-grid">' +
+            '<div class="ctx-item"><div class="k">Prática</div><div class="v">' +
+            formataPratica(conversa.pratica) +
+            '</div></div>' +
+            '<div class="ctx-item"><div class="k">Categoria</div><div class="v small">' +
+            escapeHtml(conversa.categoria || 'Geral') +
+            '</div></div>' +
+            '<div class="ctx-item"><div class="k">Impacto</div><div class="v">' +
+            escapeHtml(conversa.impacto || 'menor') +
+            '</div></div>' +
+            '<div class="ctx-item"><div class="k">Urgência</div><div class="v">' +
+            escapeHtml(conversa.urgencia || 'baixa') +
+            '</div></div>' +
+            '</div>' +
+            '</div>' +
+            '<div class="ctx-section">' +
+            '<h4>Matriz Impacto × Urgência</h4>' +
+            renderMatrizPrioridade(conversa.impacto, conversa.urgencia) +
+            '</div>' +
+            '<div class="ctx-section">' +
+            '<h4>SLAs ao vivo</h4>' +
+            '<div class="sla-box">' +
+            '<div class="k">SLA de Primeira Resposta</div>' +
+            '<div class="v" id="sla-resp-live" data-alvo="' +
+            (conversa.slaRespostaEm || '') +
+            '">—</div>' +
+            '<div class="meta">Limite: ' +
+            formatarDataHora(conversa.slaRespostaEm) +
+            '</div>' +
+            '</div>' +
+            '<div class="sla-box">' +
+            '<div class="k">SLA de Resolução</div>' +
+            '<div class="v" id="sla-resol-live" data-alvo="' +
+            (conversa.slaResolucaoEm || '') +
+            '">—</div>' +
+            '<div class="meta">Limite: ' +
+            formatarDataHora(conversa.slaResolucaoEm) +
+            '</div>' +
+            '</div>' +
+            '</div>' +
+            '<div class="ctx-section">' +
+            '<h4>Inteligência & Sentimento</h4>' +
+            '<div class="ctx-item" style="margin-bottom:6px">' +
+            '<div class="k">Confiança do Bot</div>' +
+            '<div class="v">' +
+            confPct +
+            '% ' +
+            (confPct < 72
+              ? '<span style="color:var(--orange);font-size:10px">(Gate ativo)</span>'
+              : '') +
+            '</div>' +
+            '<div class="meter"><i style="width:' +
+            confPct +
+            '%;background:' +
+            (confPct < 72 ? 'var(--orange)' : 'var(--green)') +
+            '"></i></div>' +
+            '</div>' +
+            '<div class="ctx-item">' +
+            '<div class="k">Sentimento do Solicitante: ' +
+            sentVal +
+            '</div>' +
+            '<div class="sentiment-bar"><span class="sentiment-pin" style="left:' +
+            sentPct +
+            '%"></span></div>' +
+            '</div>' +
+            (conversa.motivoHandoff
+              ? '<div class="handoff-note">Handoff acionado por: <b>' +
+                formataMotivo(conversa.motivoHandoff) +
+                '</b></div>'
+              : '') +
+            handoffBtn +
+            '</div>' +
+            '<div class="ctx-section">' +
+            '<h4>Ticket Vinculado</h4>' +
+            '<div class="ctx-item">' +
+            '<div class="k">Registro</div><div class="v">' +
+            (ticket ? ticket.numero : 'Sem ticket') +
+            '</div>' +
+            '<div class="meta">Estado: ' +
+            (ticket ? ticket.estado : '—') +
+            ' · Prioridade: ' +
+            conversa.prioridade +
+            '</div>' +
+            '</div>' +
+            '</div>'
+
+          atualizarContadoresSla()
+
+          const btnAbrirDossie = document.getElementById('ctx-abrir-dossie')
+          if (btnAbrirDossie) {
+            btnAbrirDossie.addEventListener('click', () => abrirDossie(conversaSelecionadaId))
+          }
+        }
+
+        function renderMatrizPrioridade(impacto, urgencia) {
+          const mapaI = { menor: 1, moderado: 2, significativo: 3, extenso: 4 }
+          const mapaU = { baixa: 1, média: 2, alta: 3, crítica: 4 }
+          const iSel = mapaI[impacto] || 1
+          const uSel = mapaU[urgencia] || 1
+
+          let html =
+            '<div class="matrix">' +
+            '<div class="hd">U\\I</div><div class="hd">Men</div><div class="hd">Mod</div><div class="hd">Sig</div><div class="hd">Ext</div>'
+
+          const linhas = [
+            { u: 4, lbl: 'Crít' },
+            { u: 3, lbl: 'Alta' },
+            { u: 2, lbl: 'Méd' },
+            { u: 1, lbl: 'Baix' },
+          ]
+
+          linhas.forEach(({ u, lbl }) => {
+            html += '<div class="hd">' + lbl + '</div>'
+            for (let i = 1; i <= 4; i++) {
+              const score = i * u
+              const p = score >= 12 ? 'P1' : score >= 8 ? 'P2' : score >= 4 ? 'P3' : 'P4'
+              const sel = i === iSel && u === uSel ? ' sel' : ''
+              html += '<div class="cell badge ' + p.toLowerCase() + sel + '">' + p + '</div>'
+            }
+          })
+
+          html += '</div>'
+          return html
+        }
+
+        // ================= DOSSIÊ =================
+
+        async function abrirDossie(conversaId) {
+          let dossie = await store.obterDossie(conversaId)
+          const { conversa } = await store.obterConversa(conversaId)
+          if (!dossie) {
+            dossie = await store.executarHandoff(
+              conversaId,
+              conversa.motivoHandoff || 'baixa_confianca',
+            )
+          }
+
+          const overlay = document.getElementById('dossier-overlay')
+          document.getElementById('dossier-conv-label').textContent =
+            conversa.participante.nome + ' · ' + (conversa.prioridade || 'P3')
+
+          // Esquerda: dossiê estruturado
+          const left = document.getElementById('dossier-left')
+          const r = dossie.resumo
+
+          // Log de eventos do handoff (ordem 6.7)
+          const eventos = conversa.eventos || []
+          let logHtml = '<ul class="evento-log">'
+          if (eventos.length === 0) {
+            logHtml +=
+              '<li class="feito"><span class="ts">' +
+              formatarHora(dossie.geradoEm) +
+              '</span>Sequência iniciada pelo motor de regras.</li>'
+          } else {
+            eventos.forEach((e) => {
+              logHtml +=
+                '<li class="feito"><span class="ts">' +
+                formatarHora(e.em) +
+                '</span>' +
+                escapeHtml(e.detalhe) +
+                '</li>'
+            })
+          }
+          logHtml += '</ul>'
+
+          let passosHtml = '<ul class="plain-list">'
+          ;(r.passosTomados || []).forEach((p) => {
+            passosHtml += '<li><span class="ico">✓</span><span>' + escapeHtml(p) + '</span></li>'
+          })
+          passosHtml += '</ul>'
+
+          let artigosHtml = '<ul class="plain-list">'
+          ;(r.artigosTentados || []).forEach((a) => {
+            artigosHtml +=
+              '<li><span class="artigo-resultado ' +
+              a.resultado +
+              '">' +
+              a.resultado.toUpperCase() +
+              '</span><span>' +
+              escapeHtml(a.titulo) +
+              '</span></li>'
+          })
+          artigosHtml += '</ul>'
+
+          let perguntasHtml = '<ul class="plain-list">'
+          ;(r.perguntasAbertas || []).forEach((q) => {
+            perguntasHtml += '<li><span class="ico">?</span><span>' + escapeHtml(q) + '</span></li>'
+          })
+          perguntasHtml += '</ul>'
+
+          let riscosHtml = ''
+          ;(r.riscos || []).forEach((rk) => {
+            riscosHtml += '<div class="risco-item">⚠️ ' + escapeHtml(rk) + '</div>'
+          })
+
+          left.innerHTML =
+            '<div class="dossier-sec">' +
+            '<h3>Ordem de Execução do Handoff (Regra 6.7)</h3>' +
+            logHtml +
+            '</div>' +
+            '<div class="dossier-sec">' +
+            '<h3>Headline do Caso</h3>' +
+            '<div class="headline">' +
+            escapeHtml(r.headline) +
+            '</div>' +
+            '</div>' +
+            '<div class="dossier-sec">' +
+            '<h3>Narrativa Estruturada</h3>' +
+            '<p class="narrativa">' +
+            escapeHtml(r.narrativa) +
+            '</p>' +
+            '</div>' +
+            '<div class="dossier-sec">' +
+            '<h3>Objetivo do Cliente</h3>' +
+            '<p class="narrativa">🎯 ' +
+            escapeHtml(r.objetivoCliente) +
+            '</p>' +
+            '</div>' +
+            '<div class="dossier-sec">' +
+            '<h3>Passos Já Tomados</h3>' +
+            passosHtml +
+            '</div>' +
+            '<div class="dossier-sec">' +
+            '<h3>Artigos da Base Tentados</h3>' +
+            artigosHtml +
+            '</div>' +
+            '<div class="dossier-sec">' +
+            '<h3>Perguntas Abertas Para o Agente</h3>' +
+            perguntasHtml +
+            '</div>' +
+            '<div class="dossier-sec">' +
+            '<h3>Riscos Identificados</h3>' +
+            riscosHtml +
+            '</div>' +
+            '<div class="dossier-sec">' +
+            '<h3>Próxima Ação Recomendada</h3>' +
+            '<div class="justificativa">👉 ' +
+            escapeHtml(r.proximaAcaoRecomendada) +
+            '</div>' +
+            '</div>'
+
+          // Direita: transcrição + roteamento
+          const right = document.getElementById('dossier-right')
+          const rot = dossie.roteamento || {}
+          const agenteSugerido =
+            (await store.listarAgentes()).find((a) => a.id === rot.agenteSugeridoId) ||
+            (await store.listarAgentes())[0]
+
+          let transcricaoHtml = '<ul class="transcricao">'
+          ;(dossie.transcricao || []).forEach((t) => {
+            transcricaoHtml +=
+              '<li><span class="de ' +
+              t.de +
+              '">' +
+              t.de.toUpperCase() +
+              ':</span>' +
+              escapeHtml(t.texto) +
+              '<span class="ts">' +
+              formatarHora(t.em) +
+              '</span></li>'
+          })
+          transcricaoHtml += '</ul>'
+
+          right.innerHTML =
+            '<div class="dossier-sec">' +
+            '<h3>Roteamento por Aptidão (Regra 6.9)</h3>' +
+            '<div class="agent-card sugerido" style="margin-bottom:10px">' +
+            '<div class="top">' +
+            '<span class="status-dot ' +
+            (agenteSugerido.online ? 'on' : 'off') +
+            '"></span>' +
+            '<span class="nome">' +
+            escapeHtml(agenteSugerido.nome) +
+            '</span>' +
+            '<span class="score">Sugerido</span>' +
+            '</div>' +
+            '<div class="meta">Fila: <b>' +
+            escapeHtml(rot.fila || 'N2') +
+            '</b></div>' +
+            '<div class="meta">Skills necessárias: ' +
+            (rot.skillsNecessarias || [])
+              .map((s) => '<span class="skill-tag match">' + s + '</span>')
+              .join(' ') +
+            '</div>' +
+            '<div class="carga-row">' +
+            '<span>Carga: ' +
+            agenteSugerido.cargaAtual +
+            '/' +
+            agenteSugerido.capacidadeMax +
+            '</span>' +
+            '<div class="meter"><i style="width:' +
+            (agenteSugerido.cargaAtual / agenteSugerido.capacidadeMax) * 100 +
+            '%"></i></div>' +
+            '</div>' +
+            '</div>' +
+            '<div class="justificativa">💡 <b>Justificativa do algoritmo:</b> ' +
+            escapeHtml(rot.justificativa || 'Melhor match de skills e capacidade.') +
+            '</div>' +
+            '</div>' +
+            '<div class="dossier-sec">' +
+            '<h3>Transcrição Completa (' +
+            (dossie.transcricao || []).length +
+            ' turnos)</h3>' +
+            '<details class="roteiro" open><summary>Exibir histórico</summary><div class="inner" style="padding:10px 0 0 0">' +
+            transcricaoHtml +
+            '</div></details>' +
+            '</div>'
+
+          // Ações
+          const act = document.getElementById('dossier-actions')
+          act.innerHTML =
+            '<button class="btn primary" id="btn-aceitar-dossie">🤝 Aceitar atendimento</button>' +
+            '<button class="btn" id="btn-reatribuir-dossie">🔄 Reatribuir para outro especialista</button>' +
+            '<button class="btn" id="btn-fechar-dossie" style="margin-left:auto">Fechar</button>'
+
+          document
+            .getElementById('btn-fechar-dossie')
+            .addEventListener('click', () => overlay.classList.remove('open'))
+
+          document.getElementById('btn-aceitar-dossie').addEventListener('click', async () => {
+            await store.aceitarHandoff(conversaId, agenteSugerido.id)
+            overlay.classList.remove('open')
+            await renderThread()
+            await renderContexto()
+            await renderLista()
+            toast('Atendimento aceito! Mensagem de continuidade enviada ao usuário.')
+          })
+
+          document.getElementById('btn-reatribuir-dossie').addEventListener('click', async () => {
+            const todos = await store.listarAgentes()
+            const outro = todos.find((a) => a.id !== agenteSugerido.id && a.online) || todos[1]
+            if (outro) {
+              await store.aceitarHandoff(conversaId, outro.id)
+              overlay.classList.remove('open')
+              await renderThread()
+              await renderContexto()
+              await renderLista()
+              toast('Reatribuído para ' + outro.nome + '. Mensagem de continuidade enviada.')
+            }
+          })
+
+          overlay.classList.add('open')
+        }
+
+        // ================= FILA & AGENTES =================
+
+        async function renderFila() {
+          const grid = document.getElementById('agentes-grid')
+          grid.innerHTML = '<div class="empty-msg">Carregando agentes…</div>'
+          const agentes = await store.listarAgentes()
+          const { conversa } = conversaSelecionadaId
+            ? await store.obterConversa(conversaSelecionadaId)
+            : { conversa: { categoria: 'Geral', prioridade: 'P3' } }
+
+          // Calcula score para cada agente
+          const avaliados = agentes.map((ag) => {
+            const roteamento = rotearAgente(conversa, [ag], {})
+            return {
+              agente: ag,
+              score: Number(roteamento.score),
+              justificativa: roteamento.justificativa,
+            }
+          })
+          avaliados.sort((a, b) => b.score - a.score)
+
+          grid.innerHTML = ''
+          avaliados.forEach(({ agente, score, justificativa }, idx) => {
+            const card = document.createElement('div')
+            card.className = 'agent-card' + (idx === 0 ? ' sugerido' : '')
+            const pctCarga = Math.round((agente.cargaAtual / agente.capacidadeMax) * 100)
+            const isRed = pctCarga >= 80
+
+            card.innerHTML =
+              '<div class="top">' +
+              '<span class="status-dot ' +
+              (agente.online ? 'on' : 'off') +
+              '"></span>' +
+              '<span class="nome">' +
+              escapeHtml(agente.nome) +
+              '</span>' +
+              '<span class="score">Score: ' +
+              score.toFixed(1) +
+              '</span>' +
+              '</div>' +
+              '<div class="meta">Idiomas: ' +
+              agente.idiomas.join(', ') +
+              ' · Turno até: ' +
+              formatarHora(agente.turnoTerminaEm) +
+              '</div>' +
+              '<div class="meta">Skills: ' +
+              agente.skills.map((s) => '<span class="skill-tag">' + s + '</span>').join(' ') +
+              '</div>' +
+              '<div class="carga-row">' +
+              '<span>Carga: ' +
+              agente.cargaAtual +
+              '/' +
+              agente.capacidadeMax +
+              ' (' +
+              pctCarga +
+              '%)</span>' +
+              '<div class="meter"><i class="' +
+              (isRed ? 'red' : '') +
+              '" style="width:' +
+              pctCarga +
+              '%"></i></div>' +
+              '</div>' +
+              '<div class="meta" style="margin-top:8px;font-size:11px;color:var(--text-dim)">' +
+              escapeHtml(justificativa) +
+              '</div>' +
+              (conversaSelecionadaId
+                ? '<button class="btn small primary" style="width:100%;margin-top:10px" data-agente-id="' +
+                  agente.id +
+                  '">Atribuir a este especialista</button>'
+                : '')
+
+            const btnAtribuir = card.querySelector('[data-agente-id]')
+            if (btnAtribuir) {
+              btnAtribuir.addEventListener('click', async () => {
+                await store.aceitarHandoff(conversaSelecionadaId, agente.id)
+                toast('Conversa atribuída a ' + agente.nome + ' com sucesso!')
+                document.querySelector('[data-screen="inbox"]').click()
+                await renderThread()
+                await renderContexto()
+                await renderLista()
+              })
+            }
+
+            grid.appendChild(card)
+          })
+        }
+
+        // ================= DASHBOARD DE SLA =================
+
+        async function renderDashboard() {
+          const conversas = await store.listarConversas()
+          const tickets = await store.listarTickets()
+
+          // KPIs do topo (5.5)
+          // 1. Conversas ativas
+          const ativas = conversas.filter((c) => c.estado !== 'RESOLVIDA').length
+          // 2. Tempo médio de primeira resposta (ponderado em minutos para o protótipo)
+          const tmprMin = '4.2 min'
+          // 3. % de handoffs
+          const handoffs = conversas.filter(
+            (c) => c.estado === 'HANDOFF_PENDENTE' || c.estado === 'HUMANO_ATIVO',
+          ).length
+          const pctHandoff = conversas.length
+            ? Math.round((handoffs / conversas.length) * 100) + '%'
+            : '0%'
+          // 4. Tickets em risco de estourar SLA (menos de 60 min ou estourados)
+          const agora = Date.now()
+          const emRisco = tickets.filter((t) => {
+            if (t.estado === 'resolvido') return false
+            const limite = new Date(t.slaRespostaEm || t.slaResolucaoEm).getTime()
+            return limite - agora < 60 * 60000
+          }).length
+
+          const kpisEl = document.getElementById('kpis')
+          kpisEl.innerHTML =
+            '<div class="kpi"><div class="k">Conversas Ativas</div><div class="v">' +
+            ativas +
+            '</div><div class="sub">' +
+            conversas.length +
+            ' conversas no total</div></div>' +
+            '<div class="kpi"><div class="k">Tempo Médio 1ª Resposta</div><div class="v">' +
+            tmprMin +
+            '</div><div class="sub">Meta contratual: &lt; 5 min</div></div>' +
+            '<div class="kpi"><div class="k">% de Handoffs</div><div class="v">' +
+            pctHandoff +
+            '</div><div class="sub">' +
+            handoffs +
+            ' transições para humano</div></div>' +
+            '<div class="kpi"><div class="k">Tickets em Risco de SLA</div><div class="v ' +
+            (emRisco > 0 ? 'danger' : '') +
+            '">' +
+            emRisco +
+            '</div><div class="sub">Janela de risco &lt; 60 min</div></div>'
+
+          // Gráfico de barras: % de handoffs por motivo (em CSS puro)
+          const motivos = {
+            sentimento_negativo: 0,
+            baixa_confianca: 0,
+            pedido_humano: 0,
+            loop_intencao: 0,
+            vip_p1: 0,
+            fora_escopo_change: 0,
+          }
+          conversas.forEach((c) => {
+            if (c.motivoHandoff && motivos[c.motivoHandoff] !== undefined) {
+              motivos[c.motivoHandoff]++
+            }
+          })
+          // Se nenhum registrado, usa valores de referência do seed para o gráfico não ficar vazio
+          if (Object.values(motivos).reduce((a, b) => a + b, 0) === 0) {
+            motivos.sentimento_negativo = 2
+            motivos.baixa_confianca = 2
+            motivos.pedido_humano = 1
+          }
+          const totalMotivos = Object.values(motivos).reduce((a, b) => a + b, 0) || 1
+
+          const barrasEl = document.getElementById('barras-handoff')
+          barrasEl.innerHTML = ''
+          Object.entries(motivos).forEach(([k, v]) => {
+            const pct = Math.round((v / totalMotivos) * 100)
+            const row = document.createElement('div')
+            row.className = 'barra-row'
+            row.innerHTML =
+              '<span class="lbl">' +
+              formataMotivo(k) +
+              '</span>' +
+              '<div class="track"><i style="width:' +
+              pct +
+              '%"></i></div>' +
+              '<span class="n">' +
+              pct +
+              '%</span>'
+            barrasEl.appendChild(row)
+          })
+
+          // Tabela de tickets ordenada por urgência de SLA
+          const tabelaBody = document.querySelector('#tabela-tickets tbody')
+          tabelaBody.innerHTML = ''
+          const agentes = await store.listarAgentes()
+          const sorted = tickets.slice().sort((a, b) => {
+            const ta = new Date(a.slaRespostaEm || a.slaResolucaoEm).getTime()
+            const tb = new Date(b.slaRespostaEm || b.slaResolucaoEm).getTime()
+            return ta - tb
+          })
+
+          sorted.forEach((t) => {
+            const ag = agentes.find((x) => x.id === t.agenteId)
+            const conv = conversas.find((x) => x.id === t.conversaId)
+            const tr = document.createElement('tr')
+            const respRestante = calcRestante(t.slaRespostaEm)
+            const resolRestante = calcRestante(t.slaResolucaoEm)
+
+            tr.innerHTML =
+              '<td><b>' +
+              escapeHtml(t.numero) +
+              '</b></td>' +
+              '<td>' +
+              (conv ? escapeHtml(conv.participante.nome) : '—') +
+              '</td>' +
+              '<td>' +
+              formataPratica(t.pratica) +
+              '</td>' +
+              '<td>' +
+              escapeHtml(t.categoria || 'Geral') +
+              '</td>' +
+              '<td><span class="badge ' +
+              (t.prioridade || 'P3').toLowerCase() +
+              '">' +
+              t.prioridade +
+              '</span></td>' +
+              '<td><span class="badge estado">' +
+              t.estado +
+              '</span></td>' +
+              '<td class="mono ' +
+              (respRestante.estourado ? 'breach' : respRestante.min < 30 ? 'warn' : '') +
+              '">' +
+              respRestante.texto +
+              '</td>' +
+              '<td class="mono ' +
+              (resolRestante.estourado ? 'breach' : resolRestante.min < 60 ? 'warn' : '') +
+              '">' +
+              resolRestante.texto +
+              '</td>' +
+              '<td>' +
+              (ag ? escapeHtml(ag.nome) : '<span style="color:var(--text-dim)">Na fila</span>') +
+              '</td>'
+            tabelaBody.appendChild(tr)
+          })
+        }
+
+        // ================= TIMER SLA AO VIVO =================
+
+        function iniciarTimerSla() {
+          if (timerSla) clearInterval(timerSla)
+          timerSla = setInterval(() => {
+            atualizarContadoresSla()
+          }, 1000)
+        }
+
+        function atualizarContadoresSla() {
+          ;['sla-resp-live', 'sla-resol-live'].forEach((id) => {
+            const el = document.getElementById(id)
+            if (!el) return
+            const alvo = el.getAttribute('data-alvo')
+            if (!alvo) {
+              el.textContent = '—'
+              return
+            }
+            const diff = new Date(alvo).getTime() - Date.now()
+            if (diff <= 0) {
+              el.textContent = 'ESTOURADO (' + formatarDiff(Math.abs(diff)) + ')'
+              el.className = 'v breach'
+            } else {
+              el.textContent = formatarDiff(diff)
+              el.className = 'v' + (diff < 15 * 60000 ? ' warn' : '')
+            }
+          })
+        }
+
+        function calcRestante(iso) {
+          if (!iso) return { texto: '—', estourado: false, min: 9999 }
+          const diff = new Date(iso).getTime() - Date.now()
+          if (diff <= 0)
+            return {
+              texto: 'Estourado (' + formatarDiff(Math.abs(diff)) + ')',
+              estourado: true,
+              min: -1,
+            }
+          return { texto: formatarDiff(diff), estourado: false, min: Math.round(diff / 60000) }
+        }
+
+        function formatarDiff(ms) {
+          const totalSeg = Math.floor(ms / 1000)
+          const h = Math.floor(totalSeg / 3600)
+          const m = Math.floor((totalSeg % 3600) / 60)
+          const s = totalSeg % 60
+          const pad = (n) => String(n).padStart(2, '0')
+          if (h > 0) return h + 'h ' + pad(m) + 'm ' + pad(s) + 's'
+          return pad(m) + 'm ' + pad(s) + 's'
+        }
+
+        return { init, renderLista, selecionarConversa }
+      })()
+
+      /* ============================================================
+   HELPERS DE FORMATAÇÃO E UTILITÁRIOS
+   ============================================================ */
+      function iconCanal(c) {
+        if (c === 'whatsapp') return '📱'
+        if (c === 'webchat') return '🌐'
+        if (c === 'email') return '✉️'
+        return '💬'
+      }
+      function nomeCanal(c) {
+        if (c === 'whatsapp') return 'WhatsApp'
+        if (c === 'webchat') return 'Chat Web'
+        if (c === 'email') return 'E-mail'
+        return c || 'Canal'
+      }
+      function formataEstado(e) {
+        const mapa = {
+          NOVA: 'Nova',
+          TRIAGEM_BOT: 'Triagem com Bot',
+          BOT_RESOLVENDO: 'Bot Resolvendo',
+          HANDOFF_PENDENTE: 'Handoff Pendente',
+          HUMANO_ATIVO: 'Com Agente',
+          RESOLVIDA: 'Resolvida',
+        }
+        return mapa[e] || e || '—'
+      }
+      function formataPratica(p) {
+        const mapa = {
+          incident: 'Incidente',
+          service_request: 'Requisição',
+          problem: 'Problema',
+          change: 'Mudança',
+          question: 'Dúvida',
+        }
+        return mapa[p] || p || 'Geral'
+      }
+      function formataMotivo(m) {
+        const mapa = {
+          pedido_humano: 'Pedido explícito de humano',
+          sentimento_negativo: 'Sentimento crítico (<= -0.6)',
+          loop_intencao: 'Loop de intenção (3 turnos)',
+          vip_p1: 'Cliente VIP com P1',
+          fora_escopo_change: 'Mudança fora de escopo',
+          baixa_confianca: 'Baixa confiança / sem KB',
+        }
+        return mapa[m] || m || 'Handoff operacional'
+      }
+      function formatarHora(iso) {
+        if (!iso) return '—'
+        const d = new Date(iso)
+        const pad = (n) => String(n).padStart(2, '0')
+        return pad(d.getHours()) + ':' + pad(d.getMinutes())
+      }
+      function formatarDataHora(iso) {
+        if (!iso) return '—'
+        const d = new Date(iso)
+        const pad = (n) => String(n).padStart(2, '0')
+        return (
+          pad(d.getDate()) +
+          '/' +
+          pad(d.getMonth() + 1) +
+          '/' +
+          d.getFullYear() +
+          ' ' +
+          pad(d.getHours()) +
+          ':' +
+          pad(d.getMinutes())
+        )
+      }
+      function tempoRelativo(iso) {
+        if (!iso) return '—'
+        const diffMin = Math.round((Date.now() - new Date(iso).getTime()) / 60000)
+        if (diffMin < 1) return 'agora'
+        if (diffMin < 60) return diffMin + ' min atrás'
+        const h = Math.floor(diffMin / 60)
+        if (h < 24) return h + 'h atrás'
+        return Math.floor(h / 24) + 'd atrás'
+      }
+      function escapeHtml(str) {
+        if (!str) return ''
+        return String(str)
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#39;')
+      }
+      function toast(msg) {
+        const zone = document.getElementById('toast-zone')
+        const t = document.createElement('div')
+        t.className = 'toast'
+        t.textContent = msg
+        zone.appendChild(t)
+        setTimeout(() => {
+          t.style.opacity = '0'
+          t.style.transition = 'opacity .3s'
+          setTimeout(() => t.remove(), 300)
+        }, 2600)
+      }
+
+      // Inicialização da página
+      document.addEventListener('DOMContentLoaded', async () => {
+        await store.iniciar()
+        UI.init()
+        await UI.renderLista()
+        await UI.selecionarConversa('conv-a-vpn')
+      })
+    </script>
+
+    <!--
+  ============================================================
+  CONTRATO DE API (REST EQUIVALENTE AO MÓDULO STORE)
+  Este bloco documenta o contrato que permite substituir a
+  camada store em localStorage por chamadas fetch() a um backend real.
+  ============================================================
+
+  1. store.listarConversas(filtros)
+     GET /api/v1/conversas?canal={canal}&estado={estado}&prioridade={prioridade}
+     Response 200: Conversa[]
+
+  2. store.obterConversa(id)
+     GET /api/v1/conversas/{id}
+     Response 200: { conversa: Conversa, mensagens: Mensagem[], ticket: Ticket, dossie: DossieHandoff | null }
+
+  3. store.enviarMensagem(conversaId, texto, canal)
+     POST /api/v1/conversas/{conversaId}/mensagens
+     Body: { texto: string, canal: 'whatsapp' | 'webchat' | 'email' }
+     Headers: Idempotency-Key: {canal}:{idExterno}
+     Response 201: Mensagem (ou 200 com a existente em caso de duplicata)
+
+  4. store.classificar(conversaId)
+     POST /api/v1/conversas/{conversaId}/classificar
+     Body: {}
+     Response 200: Conversa (com prática, categoria, impacto, urgência, prioridade e SLA recalculados)
+
+  5. store.executarHandoff(conversaId, motivo)
+     POST /api/v1/conversas/{conversaId}/handoff
+     Body: { motivo: string }
+     Response 201: DossieHandoff (estado transiciona atomicamente para HANDOFF_PENDENTE)
+
+  6. store.aceitarHandoff(conversaId, agenteId)
+     POST /api/v1/conversas/{conversaId}/aceitar
+     Body: { agenteId: string }
+     Response 200: Conversa (envia mensagem de continuidade e transiciona estado para HUMANO_ATIVO)
+
+  7. store.resolverTicket(ticketId, nota)
+     POST /api/v1/tickets/{ticketId}/resolver
+     Body: { nota: string }
+     Response 200: Ticket (e conversa transiciona para RESOLVIDA)
+
+  8. store.listarAgentes()
+     GET /api/v1/agentes
+     Response 200: Agente[]
+  ============================================================
+-->
+  </body>
+</html>
