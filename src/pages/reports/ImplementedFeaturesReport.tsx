@@ -453,21 +453,21 @@ const FEATURE_CATEGORIES: FeatureCategory[] = [
         id: 'rep-6',
         title: 'Relatório de Chamados (/reports/tickets)',
         description:
-          'Listagem detalhada linha a linha com Ticket, Cliente, Filial, Setor Solicitante, Data de abertura, Atividade, título, status, Total de Horas de Acompanhamento (debitam franquia), Data de Resolução, Ativo, Operador e descrição da Solução, com 7 filtros completos (Cliente, Período, Operador, Filial, Setor, Status e Atividade) e exportação para CSV.',
+          'Listagem detalhada linha a linha com Ticket, Cliente, Filial, Setor Solicitante, Data de abertura, Atividade, título, status, Total de Horas de Acompanhamento (debitam franquia), Data de Resolução, Ativo, Operador e descrição da Solução, com 7 filtros completos (Cliente, Período, Operador, Filial, Setor, Status e Atividade) e exportação completa em CSV, planilha XLSX e PDF com cabeçalho oficial e totalizadores.',
         tag: 'Auditoria / Atendimento',
       },
       {
         id: 'rep-7',
         title: 'Relatório de Interações nos Chamados (/reports/ticket-interactions)',
         description:
-          'Inspeção linha a linha de todas as interações e logs de acompanhamento lançados para controlar cada tempo registrado, com os mesmos campos cadastrais, dados da interação e os 7 filtros completos.',
+          'Inspeção linha a linha de todas as interações e logs de acompanhamento lançados para controlar cada tempo registrado, com os mesmos campos cadastrais, dados da interação e os 7 filtros completos, com exportação para CSV, XLSX e PDF com cabeçalho oficial da empresa e total de horas.',
         tag: 'Controle de Logs / Franquia',
       },
       {
         id: 'rep-8',
         title: 'Relatório de Interações Horas Trabalhadas (/reports/worked-hours)',
         description:
-          'Apuração linha a linha do tempo efetivo de trabalho utilizando o play e pause do chamado (origem Cronômetro, não debita franquia do cliente e acumula nas horas do operador), totalizadores de horas trabalhadas e os 7 filtros completos.',
+          'Apuração linha a linha do tempo efetivo de trabalho utilizando o play e pause do chamado (origem Cronômetro, não debita franquia do cliente e acumula nas horas do operador), totalizadores de horas trabalhadas e os 7 filtros completos, com exportação em CSV, XLSX e PDF.',
         tag: 'Produtividade / Cronômetro',
       },
     ],

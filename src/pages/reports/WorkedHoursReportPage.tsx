@@ -8,6 +8,8 @@ import {
   CheckCircle2,
   AlertCircle,
   Play,
+  FileSpreadsheet,
+  Printer,
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -26,6 +28,7 @@ import { useToast } from '@/hooks/use-toast'
 import { useTheme } from '@/hooks/use-theme'
 import { useRealtime } from '@/hooks/use-realtime'
 import { exportToCsv } from '@/lib/export-utils'
+import { exportReportToXlsx, exportReportToPdf, type ExportColumn } from '@/lib/export-reports'
 import { getErrorMessage } from '@/lib/pocketbase/errors'
 import {
   getWorkedHoursReport,
@@ -158,6 +161,62 @@ export default function WorkedHoursReportPage() {
     return filteredRows.slice(start, start + ITEMS_PER_PAGE)
   }, [filteredRows, currentPage])
 
+  // Nome do cliente filtrado
+  const selectedClientName = useMemo(() => {
+    if (!filterParams.companyId || filterParams.companyId === 'all') {
+      return 'Todos os clientes'
+    }
+    const found = filterOptions.companies.find((c) => c.id === filterParams.companyId)
+    return found ? found.name : 'Todos os clientes'
+  }, [filterParams.companyId, filterOptions.companies])
+
+  // Colunas completas e legíveis para exportação XLSX e PDF
+  const reportColumns: ExportColumn<WorkedHoursReportRow>[] = useMemo(
+    () => [
+      { header: 'Ticket', accessor: (r) => r.ticketNumber, align: 'left', width: '70px' },
+      { header: 'Cliente', accessor: (r) => r.companyName, align: 'left', width: '100px' },
+      { header: 'Filial', accessor: (r) => r.branchName, align: 'left', width: '80px' },
+      { header: 'Setor', accessor: (r) => r.sectorName, align: 'left', width: '80px' },
+      {
+        header: 'Abertura',
+        accessor: (r) => new Date(r.createdAt).toLocaleDateString('pt-BR'),
+        align: 'center',
+        width: '70px',
+      },
+      { header: 'Atividade', accessor: (r) => r.activityName, align: 'left', width: '90px' },
+      { header: 'Título', accessor: (r) => r.title, align: 'left', width: '140px' },
+      { header: 'Status', accessor: (r) => r.status, align: 'center', width: '75px' },
+      {
+        header: 'Horas Trabalhadas',
+        accessor: (r) => formatSecondsToHMS(r.workedSeconds),
+        align: 'right',
+        width: '95px',
+      },
+      {
+        header: 'Ciclos Crono',
+        accessor: (r) => r.cronoInteractionsCount,
+        align: 'center',
+        width: '65px',
+      },
+      {
+        header: 'Resolução',
+        accessor: (r) =>
+          r.resolutionDate ? new Date(r.resolutionDate).toLocaleDateString('pt-BR') : '—',
+        align: 'center',
+        width: '70px',
+      },
+      { header: 'Ativo', accessor: (r) => r.assetName, align: 'left', width: '85px' },
+      { header: 'Operador', accessor: (r) => r.operatorName, align: 'left', width: '95px' },
+      {
+        header: 'Descrição da Solução',
+        accessor: (r) => r.solution.replace(/\n/g, ' ') || '—',
+        align: 'left',
+        width: '160px',
+      },
+    ],
+    [],
+  )
+
   const handleExportCsv = () => {
     if (filteredRows.length === 0) return
 
@@ -204,6 +263,39 @@ export default function WorkedHoursReportPage() {
     )
   }
 
+  const handleExportXlsx = () => {
+    if (filteredRows.length === 0) return
+
+    exportReportToXlsx({
+      filename: `relatorio_horas_trabalhadas_${new Date().toISOString().slice(0, 10)}`,
+      reportTitle: 'Relatório Detalhado de Chamados',
+      clientName: selectedClientName,
+      columns: reportColumns,
+      rows: filteredRows,
+      totalSummary: {
+        label: `Total de Chamados: ${filteredRows.length} | Total de Horas Trabalhadas:`,
+        value: formatSecondsToHMS(filteredWorkedSeconds),
+      },
+    })
+  }
+
+  const handleExportPdf = () => {
+    if (filteredRows.length === 0) return
+
+    exportReportToPdf({
+      filename: `relatorio_horas_trabalhadas_${new Date().toISOString().slice(0, 10)}`,
+      reportTitle: 'Relatório Detalhado de Chamados',
+      clientName: selectedClientName,
+      logoUrl: designSettings?.report_logo_url || designSettings?.logo_url,
+      columns: reportColumns,
+      rows: filteredRows,
+      totalSummary: {
+        label: `Total de Chamados: ${filteredRows.length} | Total de Horas Trabalhadas:`,
+        value: formatSecondsToHMS(filteredWorkedSeconds),
+      },
+    })
+  }
+
   return (
     <div className="space-y-6">
       {/* Cabeçalho */}
@@ -235,15 +327,36 @@ export default function WorkedHoursReportPage() {
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <Button
             size="sm"
             variant="outline"
             onClick={handleExportCsv}
             disabled={loading || filteredRows.length === 0}
             className="h-8 text-xs hover:border-primary/40"
+            title="Exportar dados filtrados em CSV"
           >
-            <Download className="h-3.5 w-3.5 mr-1.5 text-primary" /> Exportar CSV
+            <Download className="h-3.5 w-3.5 mr-1.5 text-primary" /> CSV
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={handleExportXlsx}
+            disabled={loading || filteredRows.length === 0}
+            className="h-8 text-xs hover:border-primary/40"
+            title="Exportar dados filtrados em planilha XLSX"
+          >
+            <FileSpreadsheet className="h-3.5 w-3.5 mr-1.5 text-emerald-500" /> XLSX
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={handleExportPdf}
+            disabled={loading || filteredRows.length === 0}
+            className="h-8 text-xs hover:border-primary/40"
+            title="Exportar relatório em PDF com cabeçalho oficial"
+          >
+            <Printer className="h-3.5 w-3.5 mr-1.5 text-amber-500" /> PDF
           </Button>
           <Button
             size="sm"
@@ -251,7 +364,7 @@ export default function WorkedHoursReportPage() {
             disabled={loading}
             className="h-8 text-xs bg-primary text-primary-foreground hover:brightness-110 shadow-xs"
           >
-            <RefreshCw className={`h-3.5 w-3.5 mr-1.5 ${loading ? 'animate-spin' : ''}`} />{' '}
+            <RefreshCw className={`h-3.5 w-3.5 mr-1.5 ${loading ? 'animate-spin' : ''}`} />
             Atualizar
           </Button>
         </div>
