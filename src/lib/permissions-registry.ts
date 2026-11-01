@@ -52,12 +52,6 @@ const BASE_SYSTEM_MODULES: GranularModuleDefinition[] = [
         description: 'Métricas de atendimento individuais do operador',
         path: '/operator-dashboard',
       },
-      {
-        key: 'painel_gerencial',
-        label: 'Painel Gerencial de Desempenho',
-        description: 'Acompanhamento de metas e produtividade geral',
-        path: '/manager-dashboard',
-      },
     ],
   },
   {

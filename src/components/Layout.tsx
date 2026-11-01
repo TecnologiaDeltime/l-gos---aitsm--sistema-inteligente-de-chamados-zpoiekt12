@@ -31,7 +31,6 @@ import {
   CalendarClock,
   Gauge,
   ShieldOff,
-  TrendingUp,
   Workflow,
   ListTree,
   Clock,
@@ -127,12 +126,6 @@ export default function Layout() {
       path: '/operator-dashboard',
       icon: Gauge,
       show: permissions.canAccessItem('dashboard', 'meu_painel'),
-    },
-    {
-      label: 'Painel Gerencial',
-      path: '/manager-dashboard',
-      icon: TrendingUp,
-      show: permissions.canAccessItem('dashboard', 'painel_gerencial'),
     },
     {
       label: 'Pesquisa de Satisfação',
@@ -677,9 +670,10 @@ export default function Layout() {
   const configuracoesGroupVisible =
     !permissions.isModuleHidden('settings') && configuracoesSubmenuItems.some((i) => i.show)
 
-  const teamIdx = navItems.findIndex((i) => i.path === '/manager-dashboard')
-  const navBeforeClient = navItems.slice(0, teamIdx).filter((i) => i.show)
-  const navAfterClient = navItems.slice(teamIdx).filter((i) => i.show)
+  const satisfactionIdx = navItems.findIndex((i) => i.path === '/satisfaction')
+  const splitIdx = satisfactionIdx !== -1 ? satisfactionIdx : 1
+  const navBeforeClient = navItems.slice(0, splitIdx).filter((i) => i.show)
+  const navAfterClient = navItems.slice(splitIdx).filter((i) => i.show)
 
   const renderSubItem = (sub: any, currentFull?: string) => {
     const SubIcon = sub.icon

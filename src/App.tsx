@@ -50,7 +50,6 @@ import VisitList from '@/pages/visits/VisitList'
 import SatisfactionDashboard from '@/pages/satisfaction/SatisfactionDashboard'
 import SurveyPublic from '@/pages/satisfaction/SurveyPublic'
 import OperatorDashboard from '@/pages/dashboard/OperatorDashboard'
-import ManagerDashboard from '@/pages/dashboard/ManagerDashboard'
 import ExecutiveDashboard from '@/pages/dashboard/ExecutiveDashboard'
 import ContractConsumptionDashboard from '@/pages/contracts/ContractConsumptionDashboard'
 import ConsumoContratosPlaceholder from '@/pages/contracts/ConsumoContratosPlaceholder'
@@ -248,7 +247,6 @@ const App = () => (
                 />
                 <Route path="/notifications" element={<NotificationsPage />} />
                 <Route path="/operator-dashboard" element={<OperatorDashboard />} />
-                <Route path="/manager-dashboard" element={<ManagerDashboard />} />
                 <Route path="/contracts/consumption" element={<ContractConsumptionDashboard />} />
                 <Route path="/consumo-contratos" element={<ConsumoContratosPlaceholder />} />
                 <Route path="/dashboard-contratos" element={<DashboardContratosPlaceholder />} />
