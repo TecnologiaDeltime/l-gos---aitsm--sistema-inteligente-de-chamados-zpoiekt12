@@ -921,9 +921,24 @@ export default function PortalPage() {
             <PortalAssetsTab
               assets={data?.configurationItems || []}
               loading={loading}
+              companyId={effectiveCompanyId}
               onOpenTicketWithAsset={(asset) => {
                 setTicketInitialAssetId(asset.id)
                 setNewTicketOpen(true)
+              }}
+              onViewTicketDetail={(ticketId) => {
+                const found = data?.tickets.find((t) => t.id === ticketId)
+                if (found) {
+                  setSelectedTicket(found)
+                } else {
+                  // Se o chamado não estava no primeiro lote ou estiver em outra página, busca via pb
+                  pb.collection('tickets')
+                    .getOne<TicketRecord>(ticketId, {
+                      expand: 'category,subcategory,assigned_to',
+                    })
+                    .then((t) => setSelectedTicket(t))
+                    .catch((e) => console.warn('Erro ao carregar detalhes do chamado:', e))
+                }
               }}
             />
           </TabsContent>

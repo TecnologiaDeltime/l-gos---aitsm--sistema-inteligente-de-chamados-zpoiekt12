@@ -49,13 +49,17 @@ import AssetDetailModal from '@/components/portal/AssetDetailModal'
 interface PortalAssetsTabProps {
   assets: ConfigurationItemRecord[]
   loading: boolean
+  companyId?: string
   onOpenTicketWithAsset?: (asset: ConfigurationItemRecord) => void
+  onViewTicketDetail?: (ticketId: string) => void
 }
 
 export default function PortalAssetsTab({
   assets,
   loading,
+  companyId,
   onOpenTicketWithAsset,
+  onViewTicketDetail,
 }: PortalAssetsTabProps) {
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedType, setSelectedType] = useState<string>('todos')
@@ -685,13 +689,15 @@ export default function PortalAssetsTab({
       )}
 
       {/* =========================================================================
-          MODAL DE DETALHES COMPLETOS DO ATIVO
+          MODAL DE DETALHES COMPLETOS DO ATIVO (COM HISTÓRICO DE MANUTENÇÃO)
           ========================================================================= */}
       <AssetDetailModal
         asset={selectedAsset}
         open={detailModalOpen}
         onOpenChange={setDetailModalOpen}
+        companyId={companyId}
         onOpenTicketWithAsset={onOpenTicketWithAsset}
+        onViewTicketDetail={onViewTicketDetail}
       />
     </div>
   )

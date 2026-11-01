@@ -191,6 +191,13 @@ const BASE_SYSTEM_MODULES: GranularModuleDefinition[] = [
         path: '/cmdb/configuration-items',
       },
       {
+        key: 'cmdb_maintenance_history',
+        label: 'Histórico de Manutenção de Ativos',
+        description:
+          'Consulta aos atendimentos técnicos e chamados vinculados aos ativos e itens de configuração',
+        path: '/portal?tab=assets',
+      },
+      {
         key: 'cmdb_import',
         label: 'Importação de Ativos',
         description: 'Carga em lote de ativos via planilhas e inventário',

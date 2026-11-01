@@ -207,8 +207,15 @@ const FEATURE_CATEGORIES: FeatureCategory[] = [
         id: 'portal-6',
         title: 'Inventário de TI (CMDB do Cliente)',
         description:
-          'Consulta detalhada aos ativos e itens de configuração cadastrados para a empresa, com busca textual instantânea, filtros múltiplos por tipo, status e localização, totalizadores de resumo no topo, alternância entre visualização em cards e tabela, além de modal com ficha técnica completa e atalho para abertura de chamado vinculado.',
+          'Consulta detalhada aos ativos e itens de configuração cadastrados para a empresa, com busca textual instantânea, filtros múltiplos por tipo, status e localização, totalizadores de resumo no topo, alternância entre visualização em cards e tabela, modal com ficha técnica completa, atalho para abertura de chamado vinculado e seção de Histórico de Manutenção com atendimentos, datas, status e resumos de cada intervenção.',
         tag: 'Ativos / CMDB',
+      },
+      {
+        id: 'portal-6-manutencao',
+        title: 'Histórico de Manutenção no Inventário de TI',
+        description:
+          'Linha do tempo de atendimentos técnicos e chamados vinculados ao equipamento na ficha do ativo, exibindo número, data, status atual, última interação/solução aplicada e técnico responsável, ordenados do mais recente ao mais antigo com sincronização dinâmica por empresa.',
+        tag: 'Histórico & Manutenção',
       },
       {
         id: 'portal-7',

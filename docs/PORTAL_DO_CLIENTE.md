@@ -114,6 +114,9 @@ _Observação:_ No Modo Suporte do Administrador, ao alternar a empresa no selet
 - **Modal de Detalhes do Ativo (`AssetDetailModal`):**
   - Acesso ao clicar no card ou na linha da tabela, sem sair do Portal do Cliente.
   - Apresenta especificações técnicas completas, fabricante, modelo, número de série, empresa, filial, sala/andar, notas de configuração e datas de criação/atualização.
+  - **Histórico de Manutenção do Ativo:** Seção dedicada na ficha com a lista dos chamados e ordens de atendimento vinculados ao equipamento (`configuration_item = asset.id`), ordenados do mais recente para o mais antigo (`-created`). Para cada entrada, informa número do chamado, título/tipo, status atual, data de abertura, técnico responsável, resumo do atendimento (última interação pública do operador, solução aplicada ou descrição original) e atalho direto para visualizar o chamado na íntegra.
+  - **Estado Vazio Amigável:** Quando o equipamento ainda não teve manutenção, exibe mensagem clara e ilustrada sem quebras de layout, com convite para abertura do primeiro chamado.
+  - **Sincronização com Modo Suporte:** A listagem de histórico obedece à empresa atualmente selecionada (inclusive ao alternar no seletor de suporte do administrador).
   - **Ação Rápida Integrada:** Botão _"Abrir Chamado para este Ativo"_ que aciona diretamente o modal de novo chamado com o IC já pré-selecionado.
 
 ### Módulo E: Visitas Técnicas

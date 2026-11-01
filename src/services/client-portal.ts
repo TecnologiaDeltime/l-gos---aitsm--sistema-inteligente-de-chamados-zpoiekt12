@@ -6,6 +6,23 @@ import { TechnicalVisitRecord } from '@/services/technical-visits'
 import { ContractPeriodRecord } from '@/services/contract-periods'
 import { CategoryRecord } from '@/services/categories'
 
+export interface AssetMaintenanceItem {
+  id: string
+  number: string
+  title: string
+  type?: string
+  status: string
+  created: string
+  updated?: string
+  resolution_date?: string
+  solution?: string
+  description?: string
+  lastPublicInteraction?: string
+  lastInteractionDate?: string
+  assignedToName?: string
+  categoryName?: string
+}
+
 export interface PublicLogRecord {
   id: string
   ticket: string
@@ -184,6 +201,82 @@ export async function getClientPortalAssets(companyId: string): Promise<Configur
     filter: `company = "${companyId}"`,
     sort: 'name',
     expand: 'unit',
+  })
+}
+
+/**
+ * Busca o histórico de manutenção (chamados e atendimentos vinculados) de um ativo específico.
+ * Filtra estritamente pela empresa (respeitando o modo suporte do administrador) e pelo configuration_item.
+ * Ordena do mais recente para o mais antigo (-created).
+ * Para cada chamado, carrega a última interação pública / resumo do atendimento.
+ */
+export async function getAssetMaintenanceHistory(
+  assetId: string,
+  companyId?: string,
+): Promise<AssetMaintenanceItem[]> {
+  if (!assetId) return []
+
+  const filterParts = [`configuration_item = "${assetId}"`]
+  if (companyId) {
+    filterParts.push(`company = "${companyId}"`)
+  }
+
+  const tickets = await pb.collection('tickets').getFullList<TicketRecord>({
+    filter: filterParts.join(' && '),
+    sort: '-created',
+    expand: 'category,subcategory,assigned_to',
+  })
+
+  if (tickets.length === 0) {
+    return []
+  }
+
+  // Para enriquecer com a última interação pública (ou solução/descrição),
+  // buscamos as interações públicas dos chamados retornados
+  const ticketIds = tickets.map((t) => t.id)
+  let publicInteractions: PublicLogRecord[] = []
+  try {
+    // PocketBase aceita filtros com OR ou buscamos com lote
+    // Ex: ticket = "id1" || ticket = "id2"
+    const interactionFilter = ticketIds.map((id) => `ticket = "${id}"`).join(' || ')
+    publicInteractions = await pb.collection('ticket_interactions').getFullList<PublicLogRecord>({
+      filter: `(${interactionFilter}) && type != "Interno"`,
+      sort: '-created',
+      expand: 'author',
+    })
+  } catch (err) {
+    console.warn('Erro ao carregar interações públicas do histórico do ativo:', err)
+  }
+
+  // Agrupa a última interação pública por ticket
+  const latestInteractionByTicket = new Map<string, PublicLogRecord>()
+  for (const inter of publicInteractions) {
+    if (!latestInteractionByTicket.has(inter.ticket)) {
+      latestInteractionByTicket.set(inter.ticket, inter)
+    }
+  }
+
+  return tickets.map((t) => {
+    const lastInter = latestInteractionByTicket.get(t.id)
+    const assignedUser = t.expand?.assigned_to as any
+    const cat = t.expand?.category as any
+
+    return {
+      id: t.id,
+      number: t.number || 'Chamado',
+      title: t.title || 'Sem título',
+      type: t.type,
+      status: t.status,
+      created: t.created,
+      updated: t.updated,
+      resolution_date: t.resolution_date,
+      solution: t.solution,
+      description: t.description,
+      lastPublicInteraction: lastInter?.content,
+      lastInteractionDate: lastInter?.created,
+      assignedToName: assignedUser?.name,
+      categoryName: cat?.name,
+    }
   })
 }
 
