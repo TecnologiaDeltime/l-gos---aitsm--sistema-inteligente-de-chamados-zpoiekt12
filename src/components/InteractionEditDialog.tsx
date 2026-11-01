@@ -17,7 +17,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { HOUR_TYPES, BILLING_STATUSES } from '@/services/ticket-interactions'
 import { editInteractionWithRecalculation } from '@/services/ticket-interactions'
 import { getErrorMessage, extractFieldErrors, type FieldErrors } from '@/lib/pocketbase/errors'
 import { useToast } from '@/hooks/use-toast'
@@ -39,8 +38,6 @@ export function InteractionEditDialog({
   const { toast } = useToast()
   const [content, setContent] = useState('')
   const [duration, setDuration] = useState('')
-  const [hourType, setHourType] = useState('Contratada')
-  const [billingStatus, setBillingStatus] = useState('Faturável')
   const [saving, setSaving] = useState(false)
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({})
 
@@ -48,8 +45,6 @@ export function InteractionEditDialog({
     if (interaction) {
       setContent(interaction.content || '')
       setDuration(String(interaction.duration_minutes || 0))
-      setHourType(interaction.hour_type || 'Contratada')
-      setBillingStatus(interaction.billing_status || 'Faturável')
       setFieldErrors({})
     }
   }, [interaction])
@@ -63,8 +58,8 @@ export function InteractionEditDialog({
       await editInteractionWithRecalculation(interaction.id, {
         content,
         duration_minutes: isNaN(durationNum) ? 0 : durationNum,
-        hour_type: hourType,
-        billing_status: billingStatus,
+        hour_type: interaction.hour_type || 'Contratada',
+        billing_status: interaction.billing_status || 'Faturável',
       })
       toast({ title: 'Interação atualizada e horas recalculadas!' })
       onOpenChange(false)
@@ -98,55 +93,23 @@ export function InteractionEditDialog({
             />
             {fieldErrors.content && <p className="text-xs text-red-500">{fieldErrors.content}</p>}
           </div>
-          <div className="grid gap-4 sm:grid-cols-3">
-            <div className="space-y-1.5">
-              <Label className="text-sm">Duração (min)</Label>
-              <Input
-                type="number"
-                min={0}
-                value={duration}
-                onChange={(e) => setDuration(e.target.value)}
-                disabled={interaction?.origin === 'Cronômetro'}
-              />
-              {interaction?.origin === 'Cronômetro' && (
-                <p className="text-xs text-muted-foreground">
-                  Horas de cronômetro não podem ser editadas.
-                </p>
-              )}
-              {fieldErrors.duration_minutes && (
-                <p className="text-xs text-red-500">{fieldErrors.duration_minutes}</p>
-              )}
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-sm">Tipo de Hora</Label>
-              <Select value={hourType} onValueChange={setHourType}>
-                <SelectTrigger className="h-9">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {HOUR_TYPES.map((t) => (
-                    <SelectItem key={t} value={t}>
-                      {t}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-sm">Faturamento</Label>
-              <Select value={billingStatus} onValueChange={setBillingStatus}>
-                <SelectTrigger className="h-9">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {BILLING_STATUSES.map((s) => (
-                    <SelectItem key={s} value={s}>
-                      {s}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+          <div className="space-y-1.5 max-w-xs">
+            <Label className="text-sm">Duração (min)</Label>
+            <Input
+              type="number"
+              min={0}
+              value={duration}
+              onChange={(e) => setDuration(e.target.value)}
+              disabled={interaction?.origin === 'Cronômetro'}
+            />
+            {interaction?.origin === 'Cronômetro' && (
+              <p className="text-xs text-muted-foreground">
+                Horas de cronômetro não podem ser editadas.
+              </p>
+            )}
+            {fieldErrors.duration_minutes && (
+              <p className="text-xs text-red-500">{fieldErrors.duration_minutes}</p>
+            )}
           </div>
         </div>
         <DialogFooter>

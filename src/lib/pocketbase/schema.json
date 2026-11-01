@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-01T17:49:23.457Z",
+  "generatedAt": "2026-11-01T20:20:02.920Z",
   "collections": [
     {
       "name": "users",
@@ -1567,6 +1567,13 @@
           "type": "date",
           "required": false,
           "system": false
+        },
+        {
+          "name": "sla_response_compliance",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["Em conformidade", "Fora de conformidade"]
         }
       ],
       "indexes": [

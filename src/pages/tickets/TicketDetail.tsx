@@ -69,7 +69,6 @@ import {
   createInteraction,
   updateTicket,
   createSlaPause,
-  startService,
   pauseTicketSla,
   resumeTicketSla,
   startOperatorWorkCycle,
@@ -79,7 +78,7 @@ import {
   TicketRecord,
   SlaPauseRecord,
 } from '@/services/tickets'
-import { HOUR_TYPES, BILLING_STATUSES } from '@/services/ticket-interactions'
+
 import { getErrorMessage } from '@/lib/pocketbase/errors'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -156,8 +155,6 @@ export default function TicketDetail({
   const [isInternal, setIsInternal] = useState(false)
   const [timeSpent, setTimeSpent] = useState('')
   const [timeError, setTimeError] = useState('')
-  const [hourType, setHourType] = useState('Contratada')
-  const [billingStatus, setBillingStatus] = useState('Faturável')
   const [sending, setSending] = useState(false)
   const [showVisit, setShowVisit] = useState(false)
   const [contracts, setContracts] = useState<ContractRecord[]>([])
@@ -400,7 +397,7 @@ export default function TicketDetail({
   const handleStopTimer = () => {
     if (!timerStart) return
     const elapsed = Math.floor((Date.now() - timerStart.getTime()) / 60000)
-    const h = String(Math.floor(elapsed / 60)).padStart(2, '0')
+    const h = String(Math.min(99, Math.floor(elapsed / 60))).padStart(2, '0')
     const m = String(elapsed % 60).padStart(2, '0')
     setTimeSpent(`${h}:${m}`)
     setTimerRunning(false)
@@ -409,12 +406,33 @@ export default function TicketDetail({
     setTimeError('')
   }
 
+  // Máscara com dois pontos (:) fixos no formato 00:00
+  const handleTimeSpentChange = (rawInput: string) => {
+    // Mantém apenas dígitos
+    const digits = rawInput.replace(/\D/g, '').slice(0, 4)
+    if (!digits) {
+      setTimeSpent('')
+      setTimeError('')
+      return
+    }
+    let formatted = ''
+    if (digits.length <= 2) {
+      formatted = `${digits.padStart(2, '0')}:00`
+    } else {
+      const hh = digits.slice(0, 2)
+      const mm = digits.slice(2).padEnd(2, '0')
+      formatted = `${hh}:${mm}`
+    }
+    setTimeSpent(formatted)
+    setTimeError(validateTimeSpent(formatted))
+  }
+
   const validateTimeSpent = (value: string): string => {
     if (!value.trim()) return ''
-    const match = value.trim().match(/^(\d{1,2}):(\d{2})$/)
-    if (!match) return 'Formato inválido. Use hh:mm.'
+    const match = value.trim().match(/^(\d{2}):(\d{2})$/)
+    if (!match) return 'Formato inválido. Use 00:00.'
     const mins = parseInt(match[2], 10)
-    if (mins > 59) return 'Formato inválido. Use hh:mm.'
+    if (mins > 59) return 'Minutos devem ser menores que 60.'
     return ''
   }
 
@@ -440,22 +458,28 @@ export default function TicketDetail({
         type: isInternal ? 'Interno' : 'Público',
         content: comment,
         duration_minutes: durationMinutes,
-        hour_type: hourType,
-        billing_status: billingStatus,
+        hour_type: 'Contratada',
+        billing_status: 'Faturável',
         origin: 'Manual',
         template: selectedCommentTemplate?.id || undefined,
       })
+      // Horas lançadas através do log alimentam Horas de Acompanhamento (accompaniment_seconds)
+      if (durationMinutes > 0) {
+        const currentAcc = ticket.accompaniment_seconds || 0
+        const durationSec = durationMinutes * 60
+        await updateTicket(id, {
+          accompaniment_seconds: currentAcc + durationSec,
+        })
+      }
       setComment('')
       setTimeSpent('')
-      setHourType('Contratada')
-      setBillingStatus('Faturável')
       setSelectedCommentTemplate(null)
       setTimerRunning(false)
       setTimerStart(null)
       setTimerDisplay('00:00')
       loadData()
-      if (durationMinutes > 0 && hourType === 'Contratada') {
-        toast({ title: 'Interação salva e horas debitadas do contrato' })
+      if (durationMinutes > 0) {
+        toast({ title: 'Interação salva e horas somadas em Horas de Acompanhamento' })
       } else {
         toast({ title: 'Interação adicionada!' })
       }
@@ -516,9 +540,9 @@ export default function TicketDetail({
       return
     }
     // Validação 2: atendimento não iniciado impede a resolução.
-    if (!ticket?.sla_response_start) {
+    if (!ticket?.sla_response_start && !ticket?.sla_response_at) {
       setResolveBlockMessage(
-        'O atendimento deste chamado ainda não foi iniciado. Inicie o atendimento antes de resolver o chamado.',
+        'O atendimento deste chamado ainda não foi iniciado. Dê o Play no chamado antes de resolver.',
       )
       return
     }
@@ -546,22 +570,7 @@ export default function TicketDetail({
     }
   }
 
-  const handleStartService = async () => {
-    if (!id) return
-    try {
-      await startService(id)
-      toast({ title: 'Atendimento iniciado! SLA Response em contagem.' })
-      loadData()
-    } catch (err) {
-      toast({
-        title: 'Erro ao iniciar atendimento',
-        description: getErrorMessage(err),
-        variant: 'destructive',
-      })
-    }
-  }
-
-  // Ações de Iniciar (Play) e Pausar SLA (Pause) no canto direito minimalista acima de Solicitante
+  // Ações de Play e Pausar SLA (Pause) no canto direito minimalista acima de Solicitante
   const handlePlayOperatorCycle = async () => {
     if (!id) return
     setCycleActionLoading(true)
@@ -569,17 +578,19 @@ export default function TicketDetail({
       const res = await startOperatorWorkCycle(id)
       loadData()
       const respTimeSec = res.sla_response_time_seconds || 0
+      const compliance =
+        res.sla_response_compliance ||
+        (res.response_met ? 'Em conformidade' : 'Fora de conformidade')
       let respMsg = 'Contando cada segundo para Horas Trabalhadas.'
       if (respTimeSec > 0) {
         const rH = Math.floor(respTimeSec / 3600)
         const rM = Math.floor((respTimeSec % 3600) / 60)
         const rS = respTimeSec % 60
         const formattedResp = `${rH > 0 ? `${rH}h ` : ''}${rM > 0 || rH > 0 ? `${rM}min ` : ''}${rS}s`
-        const statusText = res.response_met ? 'Cumprido (Dentro do Prazo)' : 'Violado (Estourado)'
-        respMsg = `Tempo de resposta apurado: ${formattedResp} — SLA Resposta ${statusText}.`
+        respMsg = `Tempo de resposta: ${formattedResp} — SLA Resposta parado: ${compliance}.`
       }
       toast({
-        title: '▶ Atendimento e SLA Resposta iniciados!',
+        title: `▶ Atendimento iniciado — SLA Resposta ${compliance}!`,
         description: respMsg,
       })
     } catch (err) {
@@ -972,25 +983,21 @@ export default function TicketDetail({
           )}
           <div className="flex flex-wrap items-center gap-2 pt-2 border-t">
             {canEditTicket &&
-              !ticket.sla_response_start &&
-              ticket.status !== 'Resolvido' &&
-              ticket.status !== 'Encerrado' &&
-              ticket.status !== 'Cancelado' && (
-                <Button
-                  size="sm"
-                  onClick={handleStartService}
-                  className="bg-primary hover:bg-primary/90 text-primary-foreground"
-                >
-                  <PlayCircle className="mr-1.5 h-4 w-4" /> Iniciar Atendimento
-                </Button>
-              )}
-            {canEditTicket &&
               (ticket.sla_paused ? (
                 <Button size="sm" variant="outline" onClick={handleResumeSla}>
                   <PlayCircle className="mr-1.5 h-4 w-4 text-green-600" /> Retomar SLA
                 </Button>
               ) : (
-                <Button size="sm" variant="outline" onClick={() => setShowSlaPause(true)}>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setShowSlaPause(true)}
+                  disabled={
+                    ticket.status === 'Resolvido' ||
+                    ticket.status === 'Encerrado' ||
+                    ticket.status === 'Cancelado'
+                  }
+                >
                   <PauseCircle className="mr-1.5 h-4 w-4 text-amber-600" /> Pausar SLA
                 </Button>
               ))}
@@ -1161,75 +1168,38 @@ export default function TicketDetail({
                   value={comment}
                   onChange={(e) => setComment(e.target.value)}
                 />
-                <div className="grid gap-3 sm:grid-cols-3">
-                  <div className="space-y-1">
-                    <Label className="text-xs text-muted-foreground">Tempo Gasto</Label>
-                    <div className="flex gap-2">
+                <div className="space-y-1 max-w-sm">
+                  <Label className="text-xs text-muted-foreground">Tempo Gasto (00:00)</Label>
+                  <div className="flex gap-2 items-center">
+                    <div className="relative flex items-center">
                       <Input
-                        placeholder="hh:mm"
+                        placeholder="00:00"
                         value={timeSpent}
-                        onChange={(e) => {
-                          setTimeSpent(e.target.value)
-                          setTimeError(validateTimeSpent(e.target.value))
-                        }}
-                        className="h-8 text-sm"
+                        onChange={(e) => handleTimeSpentChange(e.target.value)}
+                        maxLength={5}
+                        className="h-8 w-28 text-center font-mono text-sm tracking-wider"
                       />
-                      {timerRunning ? (
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="destructive"
-                          className="h-8 shrink-0 whitespace-nowrap"
-                          onClick={handleStopTimer}
-                        >
-                          <Timer className="mr-1 h-3.5 w-3.5" />
-                          Parar {timerDisplay}
-                        </Button>
-                      ) : (
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="outline"
-                          className="h-8 shrink-0"
-                          onClick={handleStartTimer}
-                        >
-                          <Timer className="mr-1 h-3.5 w-3.5" />
-                          Iniciar
-                        </Button>
-                      )}
                     </div>
-                    {timeError && <p className="text-xs text-red-500">{timeError}</p>}
+                    {timerRunning && (
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="destructive"
+                        className="h-8 shrink-0 whitespace-nowrap"
+                        onClick={handleStopTimer}
+                      >
+                        <Timer className="mr-1 h-3.5 w-3.5" />
+                        Parar {timerDisplay}
+                      </Button>
+                    )}
                   </div>
-                  <div className="space-y-1">
-                    <Label className="text-xs text-muted-foreground">Tipo de Hora</Label>
-                    <Select value={hourType} onValueChange={setHourType}>
-                      <SelectTrigger className="h-8 text-sm">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {HOUR_TYPES.map((t) => (
-                          <SelectItem key={t} value={t}>
-                            {t}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-1">
-                    <Label className="text-xs text-muted-foreground">Faturamento</Label>
-                    <Select value={billingStatus} onValueChange={setBillingStatus}>
-                      <SelectTrigger className="h-8 text-sm">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {BILLING_STATUSES.map((s) => (
-                          <SelectItem key={s} value={s}>
-                            {s}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+                  {timeError ? (
+                    <p className="text-xs text-red-500">{timeError}</p>
+                  ) : (
+                    <p className="text-[11px] text-muted-foreground">
+                      Digite os dígitos das horas e minutos — os dois pontos ficam fixos (00:00).
+                    </p>
+                  )}
                 </div>
                 <div className="flex items-center gap-2">
                   <FileText className="h-3.5 w-3.5 text-slate-400" />
@@ -1472,21 +1442,39 @@ export default function TicketDetail({
                 </p>
               </div>
               <div className="rounded-lg border bg-muted/40 p-3 text-xs space-y-1">
-                <span className="text-[11px] text-muted-foreground block font-medium">
-                  Primeira Resposta
-                </span>
-                {ticket.sla_response_start ? (
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] text-muted-foreground block font-medium">
+                    SLA Resposta
+                  </span>
+                  {ticket.sla_response_compliance && (
+                    <Badge
+                      variant="outline"
+                      className={`text-[10px] font-semibold ${
+                        ticket.sla_response_compliance === 'Em conformidade'
+                          ? 'bg-emerald-50 text-emerald-700 border-emerald-300 dark:bg-emerald-950 dark:text-emerald-300'
+                          : 'bg-red-50 text-red-700 border-red-300 dark:bg-red-950 dark:text-red-300'
+                      }`}
+                    >
+                      {ticket.sla_response_compliance}
+                    </Badge>
+                  )}
+                </div>
+                {ticket.sla_response_start || ticket.sla_response_at ? (
                   <>
-                    <span className="font-semibold text-emerald-600 dark:text-emerald-400">
-                      {new Date(ticket.sla_response_start).toLocaleString('pt-BR')}
+                    <span className="font-semibold text-emerald-600 dark:text-emerald-400 block">
+                      {new Date(
+                        ticket.sla_response_start || ticket.sla_response_at!,
+                      ).toLocaleString('pt-BR')}
                     </span>
                     <p className="text-[10px] text-muted-foreground">
-                      Atendimento iniciado pelo operador
+                      {ticket.sla_response_compliance
+                        ? `Parado via Play — ${ticket.sla_response_compliance}`
+                        : 'Atendimento iniciado pelo operador'}
                     </p>
                   </>
                 ) : (
                   <span className="font-medium text-amber-600 dark:text-amber-400">
-                    Aguardando Início de Atendimento
+                    Aguardando Início (Play)
                   </span>
                 )}
               </div>
@@ -1664,9 +1652,7 @@ export default function TicketDetail({
                   ticket.status === 'Encerrado' ||
                   ticket.status === 'Cancelado'
                 }
-                title={
-                  isCycleActive ? 'Ciclo de atendimento em andamento' : 'Iniciar atendimento (▶)'
-                }
+                title={isCycleActive ? 'Ciclo de atendimento em andamento' : 'Play atendimento (▶)'}
                 className={`h-7 px-2.5 rounded-md inline-flex items-center gap-1 text-xs font-semibold transition-all shadow-xs ${
                   isCycleActive
                     ? 'bg-emerald-600/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/40 cursor-default'
@@ -1764,7 +1750,7 @@ export default function TicketDetail({
                 )}
               </div>
               <p className="text-[10px] text-muted-foreground leading-tight">
-                Ciclos + acompanhamentos
+                Play / pause de atendimento
               </p>
             </div>
 
@@ -1822,6 +1808,7 @@ export default function TicketDetail({
             createdAt={ticket.created}
             totalPauseMinutes={0}
             responseTimeSeconds={ticket.sla_response_time_seconds}
+            compliance={ticket.sla_response_compliance}
           />
           <SlaDetailBlock
             type="solution"
@@ -1875,10 +1862,33 @@ export default function TicketDetail({
                   </span>
                 </div>
               )}
-            {ticket.sla_response_start && (
-              <div className="flex items-center gap-2 text-muted-foreground">
-                <PlayCircle className="h-4 w-4 text-muted-foreground" /> Início Atend.:{' '}
-                {new Date(ticket.sla_response_start).toLocaleString('pt-BR')}
+            {(ticket.sla_response_start || ticket.sla_response_at) && (
+              <div className="flex items-center justify-between text-muted-foreground">
+                <span className="flex items-center gap-2">
+                  <PlayCircle className="h-4 w-4 text-muted-foreground" /> Início Atend.:
+                </span>
+                <span className="font-medium text-foreground">
+                  {new Date(ticket.sla_response_start || ticket.sla_response_at!).toLocaleString(
+                    'pt-BR',
+                  )}
+                </span>
+              </div>
+            )}
+            {ticket.sla_response_compliance && (
+              <div className="flex items-center justify-between text-muted-foreground">
+                <span className="flex items-center gap-2">
+                  <CheckCircle2 className="h-4 w-4 text-muted-foreground" /> Conformidade SLA Resp.:
+                </span>
+                <Badge
+                  variant="outline"
+                  className={`text-[10px] font-semibold ${
+                    ticket.sla_response_compliance === 'Em conformidade'
+                      ? 'bg-emerald-50 text-emerald-700 border-emerald-300 dark:bg-emerald-950 dark:text-emerald-300'
+                      : 'bg-red-50 text-red-700 border-red-300 dark:bg-red-950 dark:text-red-300'
+                  }`}
+                >
+                  {ticket.sla_response_compliance}
+                </Badge>
               </div>
             )}
             {ticket.equipment && ticket.expand?.equipment && (

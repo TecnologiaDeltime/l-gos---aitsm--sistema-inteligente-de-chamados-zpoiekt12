@@ -18,7 +18,6 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Clock, Loader2 } from 'lucide-react'
-import { HOUR_TYPES, BILLING_STATUSES } from '@/services/ticket-interactions'
 import { addAccompanimentHours } from '@/services/tickets'
 import { useToast } from '@/hooks/use-toast'
 import { getErrorMessage } from '@/lib/pocketbase/errors'
@@ -40,15 +39,33 @@ export function AccompanimentDialog({
   const [content, setContent] = useState('')
   const [timeSpent, setTimeSpent] = useState('')
   const [timeError, setTimeError] = useState('')
-  const [hourType, setHourType] = useState('Contratada')
-  const [billingStatus, setBillingStatus] = useState('Faturável')
   const [isInternal, setIsInternal] = useState(true)
   const [submitting, setSubmitting] = useState(false)
 
+  // Máscara com dois pontos (:) fixos no formato 00:00
+  const handleTimeSpentChange = (rawInput: string) => {
+    const digits = rawInput.replace(/\D/g, '').slice(0, 4)
+    if (!digits) {
+      setTimeSpent('')
+      setTimeError('')
+      return
+    }
+    let formatted = ''
+    if (digits.length <= 2) {
+      formatted = `${digits.padStart(2, '0')}:00`
+    } else {
+      const hh = digits.slice(0, 2)
+      const mm = digits.slice(2).padEnd(2, '0')
+      formatted = `${hh}:${mm}`
+    }
+    setTimeSpent(formatted)
+    setTimeError(validateTimeSpent(formatted))
+  }
+
   const validateTimeSpent = (val: string): string => {
     if (!val.trim()) return 'Informe o tempo gasto no acompanhamento.'
-    const match = val.trim().match(/^(\d{1,2}):(\d{2})$/)
-    if (!match) return 'Formato inválido. Use hh:mm (ex: 00:30).'
+    const match = val.trim().match(/^(\d{2}):(\d{2})$/)
+    if (!match) return 'Formato inválido. Use 00:00.'
     const mins = parseInt(match[2], 10)
     if (mins > 59) return 'Minutos inválidos (máximo 59).'
     const totalMin = parseInt(match[1], 10) * 60 + mins
@@ -87,14 +104,14 @@ export function AccompanimentDialog({
         content: trimmed,
         duration_seconds: durationSeconds,
         duration_minutes: durationSeconds / 60,
-        hour_type: hourType,
-        billing_status: billingStatus,
+        hour_type: 'Contratada',
+        billing_status: 'Faturável',
         is_internal: isInternal,
       })
 
       toast({
         title: 'Acompanhamento registrado com sucesso!',
-        description: 'O tempo foi somado em Horas de Acompanhamento e Horas Trabalhadas.',
+        description: 'O tempo foi somado em Horas de Acompanhamento.',
       })
 
       setContent('')
@@ -126,7 +143,7 @@ export function AccompanimentDialog({
         <div className="space-y-4 py-2">
           <p className="text-xs text-muted-foreground leading-relaxed">
             Registre o relato do acompanhamento técnico realizado. O tempo gasto será registrado em
-            um log no chamado e somado diretamente no Total de Horas Trabalhadas.
+            um log no chamado e somado em Horas de Acompanhamento.
           </p>
 
           <div className="space-y-1.5">
@@ -139,52 +156,22 @@ export function AccompanimentDialog({
             />
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div className="space-y-1">
-              <Label className="text-xs font-medium">Tempo Gasto (hh:mm) *</Label>
-              <Input
-                placeholder="00:30"
-                value={timeSpent}
-                onChange={(e) => {
-                  setTimeSpent(e.target.value)
-                  setTimeError(validateTimeSpent(e.target.value))
-                }}
-                className="h-8 text-sm font-mono"
-              />
-              {timeError && <p className="text-[11px] text-red-500">{timeError}</p>}
-            </div>
-
-            <div className="space-y-1">
-              <Label className="text-xs font-medium">Tipo de Hora</Label>
-              <Select value={hourType} onValueChange={setHourType}>
-                <SelectTrigger className="h-8 text-xs">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {HOUR_TYPES.map((t) => (
-                    <SelectItem key={t} value={t}>
-                      {t}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-1">
-              <Label className="text-xs font-medium">Faturamento</Label>
-              <Select value={billingStatus} onValueChange={setBillingStatus}>
-                <SelectTrigger className="h-8 text-xs">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {BILLING_STATUSES.map((s) => (
-                    <SelectItem key={s} value={s}>
-                      {s}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+          <div className="space-y-1 max-w-xs">
+            <Label className="text-xs font-medium">Tempo Gasto (00:00) *</Label>
+            <Input
+              placeholder="00:00"
+              value={timeSpent}
+              onChange={(e) => handleTimeSpentChange(e.target.value)}
+              maxLength={5}
+              className="h-8 w-28 text-center font-mono text-sm tracking-wider"
+            />
+            {timeError ? (
+              <p className="text-[11px] text-red-500">{timeError}</p>
+            ) : (
+              <p className="text-[10px] text-muted-foreground">
+                Digite os números — os dois pontos ficam fixos (00:00).
+              </p>
+            )}
           </div>
 
           <label className="text-xs text-muted-foreground flex items-center gap-2 cursor-pointer pt-1">

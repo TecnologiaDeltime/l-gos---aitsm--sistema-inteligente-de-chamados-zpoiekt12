@@ -487,13 +487,16 @@ routerAdd(
       }
 
       // Cumprimento do SLA Resposta:
-      // Se Play foi dado até o deadline -> cumprido (Dentro do Prazo); se depois -> violado
+      // Se Play foi dado até o deadline -> cumprido (Dentro do Prazo / Em conformidade); se depois -> violado (Fora de conformidade)
       if (slaResponseDeadlineStr) {
         var deadlineMs = new Date(slaResponseDeadlineStr).getTime()
         if (!isNaN(deadlineMs)) {
           responseMet = nowTime <= deadlineMs
         }
       }
+
+      var complianceText = responseMet ? 'Em conformidade' : 'Fora de conformidade'
+      ticket.set('sla_response_compliance', complianceText)
 
       // Se violado, reflete também no sla_status geral caso o ticket não esteja já resolvido
       if (!responseMet) {
@@ -513,6 +516,11 @@ routerAdd(
         if (!isNaN(dMs) && !isNaN(respAtMs)) {
           responseMet = respAtMs <= dMs
         }
+      }
+      var complianceCurrent = ticket.getString('sla_response_compliance')
+      if (!complianceCurrent) {
+        var compCalc = responseMet ? 'Em conformidade' : 'Fora de conformidade'
+        ticket.set('sla_response_compliance', compCalc)
       }
     }
 
@@ -536,16 +544,21 @@ routerAdd(
       var hist = new Record(histCol)
       hist.set('ticket', id)
       hist.set('user', userId)
-      hist.set('action', 'Play - Início de Atendimento e SLA Resposta')
-      hist.set('field', 'sla_response_at')
-      hist.set('old_value', isFirstResponse ? '' : 'Já respondido')
+      var complianceValue = responseMet ? 'Em conformidade' : 'Fora de conformidade'
+      hist.set('action', 'Play - SLA Resposta (' + complianceValue + ')')
+      hist.set('field', 'sla_response_compliance')
+      hist.set(
+        'old_value',
+        isFirstResponse ? 'Aguardando Início' : ticket.getString('sla_response_compliance'),
+      )
       hist.set(
         'new_value',
-        'Ciclo iniciado. Tempo de Resposta apurado: ' +
-          formattedRespTime +
+        'SLA Resposta parado via Play. Status: ' +
+          complianceValue +
           ' (' +
-          (responseMet ? 'SLA Resposta Cumprido' : 'SLA Resposta Violado') +
-          ')',
+          (responseMet ? 'dentro do prazo' : 'tempo estourado') +
+          '). Tempo apurado: ' +
+          formattedRespTime,
       )
       $app.save(hist)
     } catch (_) {}
@@ -558,12 +571,15 @@ routerAdd(
         interRec.set('ticket', id)
         interRec.set('author', userId)
         interRec.set('type', 'Interno')
+        var compLabel = responseMet
+          ? 'Em conformidade (dentro do prazo)'
+          : 'Fora de conformidade (prazo estourado)'
         interRec.set(
           'content',
-          '▶ Play acionado pelo operador. Tempo de resposta apurado desde a chegada: ' +
+          '▶ Play acionado pelo operador: SLA Resposta parado. Resultado: ' +
+            compLabel +
+            '. Tempo de resposta apurado: ' +
             formattedRespTime +
-            '. Status do SLA Resposta: ' +
-            (responseMet ? 'Dentro do Prazo (Cumprido)' : 'Violado (Estourado)') +
             '. Ciclo de atendimento em andamento.',
         )
         interRec.set('origin', 'Cronômetro')
@@ -588,6 +604,9 @@ routerAdd(
       sla_response_deadline: ticket.getString('sla_response_deadline'),
       sla_response_time_seconds: ticket.getInt('sla_response_time_seconds') || 0,
       sla_status: ticket.getString('sla_status'),
+      sla_response_compliance:
+        ticket.getString('sla_response_compliance') ||
+        (responseMet ? 'Em conformidade' : 'Fora de conformidade'),
       response_met: responseMet,
     })
   },
@@ -706,13 +725,15 @@ routerAdd(
       ':' +
       String(as).padStart(2, '0')
 
-    // Atualiza contadores no ticket
+    // Atualiza contadores no ticket:
+    // Horas via log alimentam Horas de Acompanhamento (accompaniment_seconds).
+    // Horas de play/pause alimentam Total de Horas Trabalhadas (operator_worked_seconds).
     var currentAccSec = ticket.getInt('accompaniment_seconds') || 0
     var newAccSec = currentAccSec + durationSeconds
     ticket.set('accompaniment_seconds', newAccSec)
 
     var currentWorkedSec = ticket.getInt('operator_worked_seconds') || 0
-    var newWorkedSec = currentWorkedSec + durationSeconds
+    var newWorkedSec = currentWorkedSec // não soma em operator_worked_seconds para manter separadas as duas acumulações
     ticket.set('operator_worked_seconds', newWorkedSec)
     ticket.set('work_hours', Number((newWorkedSec / 3600).toFixed(4)))
     $app.save(ticket)
@@ -749,11 +770,7 @@ routerAdd(
       hist.set('old_value', String(currentAccSec) + 's')
       hist.set(
         'new_value',
-        '+' +
-          formattedAccTime +
-          ' somado em Acompanhamento e Horas Trabalhadas. Total: ' +
-          newAccSec +
-          's',
+        '+' + formattedAccTime + ' somado em Horas de Acompanhamento. Total: ' + newAccSec + 's',
       )
       $app.save(hist)
     } catch (_) {}

@@ -10,6 +10,7 @@ interface SlaDetailBlockProps {
   createdAt?: string
   totalPauseMinutes?: number
   responseTimeSeconds?: number
+  compliance?: 'Em conformidade' | 'Fora de conformidade' | string
 }
 
 const STATUS_CONFIG: Record<
@@ -69,6 +70,7 @@ export function SlaDetailBlock({
   createdAt,
   totalPauseMinutes = 0,
   responseTimeSeconds,
+  compliance,
 }: SlaDetailBlockProps) {
   const config = STATUS_CONFIG[status] || STATUS_CONFIG['Não definido']
   const { Icon } = config
@@ -114,7 +116,20 @@ export function SlaDetailBlock({
   return (
     <div className="rounded-lg border p-3 space-y-2 dark:border-slate-700 bg-card">
       <div className="flex items-center justify-between">
-        <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">{label}</span>
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">{label}</span>
+          {type === 'response' && compliance && (
+            <span
+              className={`text-[10px] px-1.5 py-0.5 rounded-full font-semibold border ${
+                compliance === 'Em conformidade'
+                  ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30'
+                  : 'bg-red-500/15 text-red-600 dark:text-red-400 border-red-500/30'
+              }`}
+            >
+              {compliance}
+            </span>
+          )}
+        </div>
         <span className={`flex items-center gap-1 text-xs font-medium ${config.text}`}>
           <Icon className="h-3.5 w-3.5" />
           {status}
