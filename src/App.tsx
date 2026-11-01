@@ -50,6 +50,7 @@ import VisitList from '@/pages/visits/VisitList'
 import SatisfactionDashboard from '@/pages/satisfaction/SatisfactionDashboard'
 import SurveyPublic from '@/pages/satisfaction/SurveyPublic'
 import ExecutiveDashboard from '@/pages/dashboard/ExecutiveDashboard'
+import OperatorDashboard from '@/pages/dashboard/OperatorDashboard'
 import ContractConsumptionDashboard from '@/pages/contracts/ContractConsumptionDashboard'
 import ConsumoContratosPlaceholder from '@/pages/contracts/ConsumoContratosPlaceholder'
 import DashboardContratosPlaceholder from '@/pages/contracts/DashboardContratosPlaceholder'
@@ -169,6 +170,14 @@ const App = () => (
               >
                 <Route path="/" element={<RootRedirect />} />
                 <Route path="/dashboard" element={<Dashboard />} />
+                <Route
+                  path="/operator-dashboard"
+                  element={
+                    <ProtectedRoute requiredModule="dashboard" requiredItem="meu_painel">
+                      <OperatorDashboard />
+                    </ProtectedRoute>
+                  }
+                />
                 <Route path="/dashboard-gerencial" element={<ExecutiveDashboard />} />
                 <Route path="/atendimento" element={<AtendimentoPage />} />
                 <Route path="/tickets" element={<TicketList />} />

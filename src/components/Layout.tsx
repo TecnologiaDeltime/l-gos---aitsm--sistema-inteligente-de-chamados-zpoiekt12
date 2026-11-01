@@ -231,6 +231,12 @@ export default function Layout() {
 
   const dashboardSubmenuItems = [
     {
+      label: 'Painel do Operador',
+      path: '/operator-dashboard',
+      icon: LayoutDashboard,
+      show: permissions.canAccessItem('dashboard', 'meu_painel'),
+    },
+    {
       label: 'Dashboard Gerencial',
       path: '/dashboard-gerencial',
       icon: LayoutDashboard,

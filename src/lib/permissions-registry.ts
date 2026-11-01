@@ -35,6 +35,12 @@ const BASE_SYSTEM_MODULES: GranularModuleDefinition[] = [
     category: 'Atendimento',
     items: [
       {
+        key: 'meu_painel',
+        label: 'Painel do Operador',
+        description: 'Painel individual do operador com chamados, horas e indicadores',
+        path: '/operator-dashboard',
+      },
+      {
         key: 'dashboard_gerencial',
         label: 'Dashboard Gerencial',
         description: 'Painel executivo com KPIs estratégicos',
