@@ -122,12 +122,6 @@ export default function Layout() {
 
   const navItems = [
     {
-      label: 'Meu Painel',
-      path: '/operator-dashboard',
-      icon: Gauge,
-      show: permissions.canAccessItem('dashboard', 'meu_painel'),
-    },
-    {
       label: 'Pesquisa de Satisfação',
       path: '/satisfaction',
       icon: Star,

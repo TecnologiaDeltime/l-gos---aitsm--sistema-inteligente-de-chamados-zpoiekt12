@@ -46,12 +46,6 @@ const BASE_SYSTEM_MODULES: GranularModuleDefinition[] = [
         description: 'Visão consolidada da fila de atendimento',
         path: '/dashboard',
       },
-      {
-        key: 'meu_painel',
-        label: 'Meu Painel (Operador)',
-        description: 'Métricas de atendimento individuais do operador',
-        path: '/operator-dashboard',
-      },
     ],
   },
   {
