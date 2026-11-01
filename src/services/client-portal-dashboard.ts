@@ -36,6 +36,19 @@ export interface PortalTopRequester {
   hours: number
 }
 
+export interface PortalSatisfactionMetrics {
+  averageScore: number // 0 a 5, ex: 4.3 (0 quando sem avaliações)
+  totalEvaluated: number
+  totalNotEvaluated: number
+  distribution: {
+    1: number
+    2: number
+    3: number
+    4: number
+    5: number
+  }
+}
+
 export interface PortalDashboardMetrics {
   totalTicketsOpened: number
   totalTicketsClosed: number
@@ -44,6 +57,7 @@ export interface PortalDashboardMetrics {
   currentMonthConsumedHours: number
   currentMonthContractedHours: number
   currentMonthBalanceHours: number
+  satisfaction: PortalSatisfactionMetrics
   sectors: PortalSectorConsumption[]
   last3Months: PortalMonthlyHoursHistory[]
   top10Activities: PortalTopActivity[]
@@ -83,6 +97,12 @@ export async function getClientPortalDashboardMetrics(
       currentMonthConsumedHours: 0,
       currentMonthContractedHours: 0,
       currentMonthBalanceHours: 0,
+      satisfaction: {
+        averageScore: 0,
+        totalEvaluated: 0,
+        totalNotEvaluated: 0,
+        distribution: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 },
+      },
       sectors: [],
       last3Months: [],
       top10Activities: [],
@@ -195,6 +215,34 @@ export async function getClientPortalDashboardMetrics(
   ).length
   const totalPending = totalOpened - totalClosed
   const resolutionRate = totalOpened > 0 ? Math.round((totalClosed / totalOpened) * 100) : 0
+
+  // Cálculo da satisfação dos chamados do período
+  const distribution = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 }
+  let evaluatedSum = 0
+  let evaluatedCount = 0
+  let notEvaluatedCount = 0
+
+  ticketsInPeriod.forEach((t) => {
+    const rawScore = Number((t as any).satisfaction_score)
+    if (rawScore >= 1 && rawScore <= 5) {
+      const roundedScore = Math.min(5, Math.max(1, Math.round(rawScore))) as 1 | 2 | 3 | 4 | 5
+      distribution[roundedScore] = (distribution[roundedScore] || 0) + 1
+      evaluatedSum += rawScore
+      evaluatedCount++
+    } else {
+      notEvaluatedCount++
+    }
+  })
+
+  const averageScore =
+    evaluatedCount > 0 ? Math.round((evaluatedSum / evaluatedCount) * 10) / 10 : 0
+
+  const satisfactionMetrics: PortalSatisfactionMetrics = {
+    averageScore,
+    totalEvaluated: evaluatedCount,
+    totalNotEvaluated: notEvaluatedCount,
+    distribution,
+  }
 
   // 4. Consumo por mês nos últimos 3 meses
   const last3Months: PortalMonthlyHoursHistory[] = months3.map((mObj) => {
@@ -442,6 +490,7 @@ export async function getClientPortalDashboardMetrics(
     currentMonthConsumedHours: currentMonthData?.consumedHours || 0,
     currentMonthContractedHours: currentMonthData?.contractedHours || 0,
     currentMonthBalanceHours: currentMonthData?.balanceHours || 0,
+    satisfaction: satisfactionMetrics,
     sectors,
     last3Months,
     top10Activities,

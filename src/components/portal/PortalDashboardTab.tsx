@@ -9,6 +9,8 @@ import {
   BarChart3,
   Calendar,
   ArrowUpRight,
+  Star,
+  Smile,
 } from 'lucide-react'
 import {
   BarChart,
@@ -100,6 +102,8 @@ export default function PortalDashboardTab({
   const last3Months = metrics?.last3Months || []
   const top10Activities = metrics?.top10Activities || []
   const top10Requesters = metrics?.top10Requesters || []
+  const satisfaction = metrics?.satisfaction
+  const hasEvaluations = (satisfaction?.totalEvaluated || 0) > 0
 
   // Prepara dados para o gráfico de consumo por setor (memoizado para evitar re-criação de array)
   const sectorChartData = useMemo(
@@ -235,7 +239,113 @@ export default function PortalDashboardTab({
       {/* =========================================================================
           INDICADORES PRINCIPAIS (KPIS)
           ========================================================================= */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
+        {/* Satisfação Geral */}
+        <Card
+          onClick={onOpenTicketsTab}
+          className="cursor-pointer bg-card border hover:border-amber-500/50 transition-all shadow-2xs group flex flex-col justify-between"
+        >
+          <CardHeader className="p-4 pb-2">
+            <div className="flex items-center justify-between text-xs text-muted-foreground">
+              <span className="font-medium">Satisfação Geral</span>
+              <div className="p-1.5 rounded-lg bg-amber-500/10 text-amber-500 group-hover:scale-110 transition-transform">
+                <Smile className="h-4 w-4" />
+              </div>
+            </div>
+            <div className="mt-1">
+              {hasEvaluations ? (
+                <div>
+                  <div className="flex items-baseline gap-1">
+                    <span className="text-2xl sm:text-3xl font-extrabold font-mono text-amber-500">
+                      {satisfaction?.averageScore.toLocaleString('pt-BR', {
+                        minimumFractionDigits: 1,
+                        maximumFractionDigits: 1,
+                      })}
+                    </span>
+                    <span className="text-xs font-semibold text-muted-foreground">/5</span>
+                  </div>
+                  {/* Estrelas âmbar / cinza */}
+                  <div
+                    className="flex items-center gap-0.5 mt-1"
+                    title={`Média: ${satisfaction?.averageScore} de 5 estrelas`}
+                  >
+                    {[1, 2, 3, 4, 5].map((starIdx) => {
+                      const rounded = Math.round(satisfaction?.averageScore || 0)
+                      const isFilled = starIdx <= rounded
+                      return (
+                        <Star
+                          key={starIdx}
+                          className={`h-3.5 w-3.5 ${
+                            isFilled
+                              ? 'text-amber-500 fill-amber-500 drop-shadow-xs'
+                              : 'text-zinc-300 dark:text-zinc-600'
+                          }`}
+                        />
+                      )
+                    })}
+                  </div>
+                  {/* Mini-distribuição de notas (1 a 5) */}
+                  <div className="grid grid-cols-5 gap-1 mt-2 pt-1.5 border-t border-border/40">
+                    {([1, 2, 3, 4, 5] as const).map((note) => {
+                      const count = satisfaction?.distribution[note] || 0
+                      const total = satisfaction?.totalEvaluated || 1
+                      const pct = Math.round((count / total) * 100)
+                      return (
+                        <div
+                          key={note}
+                          className="flex flex-col items-center gap-0.5"
+                          title={`Nota ${note}: ${count} chamado(s) (${pct}%)`}
+                        >
+                          <span className="text-[9px] text-muted-foreground font-mono">
+                            {note}★
+                          </span>
+                          <div className="w-full h-1.5 bg-muted rounded-full overflow-hidden">
+                            <div
+                              className="h-full bg-amber-500 transition-all"
+                              style={{ width: `${pct}%` }}
+                            />
+                          </div>
+                          <span className="text-[9px] font-mono font-semibold text-foreground/80">
+                            {count}
+                          </span>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              ) : (
+                <div className="py-2">
+                  <span className="text-xs font-medium text-muted-foreground block">
+                    Sem avaliações no período
+                  </span>
+                  <div className="flex items-center gap-0.5 mt-1 opacity-40">
+                    {[1, 2, 3, 4, 5].map((starIdx) => (
+                      <Star
+                        key={starIdx}
+                        className="h-3.5 w-3.5 text-zinc-300 dark:text-zinc-600"
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </CardHeader>
+          <CardContent className="p-4 pt-0 text-[11px] text-muted-foreground flex items-center justify-between border-t border-border/40 mt-2">
+            <span>
+              {satisfaction?.totalEvaluated || 0} avaliado(s)
+              {(satisfaction?.totalNotEvaluated || 0) > 0 && (
+                <span className="text-muted-foreground/80">
+                  {' '}
+                  • {satisfaction?.totalNotEvaluated} pendente(s)
+                </span>
+              )}
+            </span>
+            <span className="text-amber-500 flex items-center font-semibold gap-0.5">
+              Ver <ArrowUpRight className="h-3 w-3" />
+            </span>
+          </CardContent>
+        </Card>
+
         {/* Total de chamados abertos */}
         <Card
           onClick={onOpenTicketsTab}
