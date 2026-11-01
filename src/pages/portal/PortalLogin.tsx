@@ -15,7 +15,26 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Shield, ShieldAlert, KeyRound, Building2, Sun, Moon, ArrowRight } from 'lucide-react'
+import {
+  Shield,
+  ShieldAlert,
+  KeyRound,
+  Building2,
+  Sun,
+  Moon,
+  ArrowRight,
+  Wrench,
+  ExternalLink,
+  CheckCircle2,
+} from 'lucide-react'
+import { getCompanies, CompanyRecord } from '@/services/companies'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 
 export default function PortalLogin() {
   const [email, setEmail] = useState('')
@@ -27,17 +46,55 @@ export default function PortalLogin() {
   const { user, login, isAuthenticated } = useAuth()
   const { theme, toggleTheme, designSettings } = useTheme()
 
-  // Se já autenticado como cliente, redireciona ao portal
+  // Modo suporte: apenas Administrador do sistema
+  const isAdmin = isAuthenticated && user?.role === 'admin'
+  const [companies, setCompanies] = useState<CompanyRecord[]>([])
+  const [selectedCompanyId, setSelectedCompanyId] = useState<string>('')
+  const [loadingCompanies, setLoadingCompanies] = useState(false)
+
+  // Carrega empresas caso o usuário atual já seja Administrador autenticado
+  useEffect(() => {
+    if (isAdmin) {
+      setLoadingCompanies(true)
+      getCompanies('status = "Ativo" || status = null')
+        .then((list) => {
+          setCompanies(list)
+          if (list.length > 0) {
+            setSelectedCompanyId(list[0].id)
+          }
+        })
+        .catch((err) => {
+          console.warn('Erro ao carregar empresas para login de suporte:', err)
+        })
+        .finally(() => {
+          setLoadingCompanies(false)
+        })
+    }
+  }, [isAdmin])
+
+  // Se já autenticado como cliente, redireciona ao portal automaticamente
   useEffect(() => {
     if (isAuthenticated && user) {
       if (user.role === 'cliente_solicitante' || user.role === 'cliente_gestor') {
         navigate('/portal', { replace: true })
-      } else {
-        // Operadores acessando a rota do portal
+      }
+      // Se for operador comum (gestor, tecnico, operador sem role admin), vai ao dashboard ou portal normal
+      else if (user.role !== 'admin') {
         navigate('/portal', { replace: true })
       }
+      // Se for admin, NÃO redireciona de imediato de forma cega: permite escolher a empresa ou entrar como suporte
     }
   }, [isAuthenticated, user, navigate])
+
+  const handleSupportEnter = (targetCompanyId?: string) => {
+    const compId = targetCompanyId || selectedCompanyId
+    if (compId) {
+      sessionStorage.setItem('itsm_portal_support_company', compId)
+      navigate(`/portal?company=${compId}`)
+    } else {
+      navigate('/portal')
+    }
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -147,6 +204,61 @@ export default function PortalLogin() {
               <ShieldAlert className="h-4 w-4" />
               <AlertDescription className="text-xs">{error}</AlertDescription>
             </Alert>
+          )}
+
+          {/* Atalho de Modo Suporte — EXCLUSIVO para Administrador Autenticado */}
+          {isAdmin && (
+            <div className="rounded-xl bg-amber-500/15 border border-amber-500/40 p-4 space-y-3 shadow-xs">
+              <div className="flex items-center gap-2 text-amber-700 dark:text-amber-300">
+                <Wrench className="h-4 w-4 flex-shrink-0" />
+                <span className="font-bold text-xs uppercase tracking-wider">
+                  Modo Suporte — Administrador
+                </span>
+              </div>
+              <p className="text-[11px] text-muted-foreground leading-relaxed">
+                Você está autenticado como <strong>{user?.name}</strong> (Administrador do Sistema).
+                Você pode entrar no portal sem credenciais de cliente para aferir erros e
+                manutenção.
+              </p>
+
+              <div className="space-y-1.5 pt-1">
+                <label className="text-[11px] font-semibold text-foreground block">
+                  Escolha o Cliente / Empresa para Impersonação:
+                </label>
+                <Select
+                  value={selectedCompanyId}
+                  onValueChange={setSelectedCompanyId}
+                  disabled={loadingCompanies}
+                >
+                  <SelectTrigger className="text-xs h-8 bg-background border-amber-500/30">
+                    <SelectValue placeholder="Selecione a empresa..." />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-56">
+                    {companies.map((c) => (
+                      <SelectItem key={c.id} value={c.id} className="text-xs">
+                        {c.trade_name || c.legal_name || c.code}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="flex items-center gap-2 pt-1">
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={() => handleSupportEnter()}
+                  className="w-full bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs gap-1.5 shadow-xs"
+                >
+                  <ExternalLink className="h-3.5 w-3.5" />
+                  Entrar no Portal como este Cliente
+                </Button>
+              </div>
+
+              <div className="text-[10px] text-muted-foreground text-center">
+                ou digite credenciais de outro cliente abaixo se preferir login manual.
+              </div>
+            </div>
           )}
         </div>
 

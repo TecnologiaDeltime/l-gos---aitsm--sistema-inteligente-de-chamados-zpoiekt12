@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import {
   LifeBuoy,
   Plus,
@@ -23,6 +23,10 @@ import {
   MapPin,
   CheckCircle,
   XCircle,
+  Wrench,
+  ArrowLeft,
+  Building,
+  AlertTriangle,
 } from 'lucide-react'
 import pb from '@/lib/pocketbase/client'
 import { useAuth } from '@/hooks/use-auth'
@@ -41,6 +45,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { getClientPortalData, getClientHoursBalance, PortalData } from '@/services/client-portal'
+import { CompanyRecord, getCompanies } from '@/services/companies'
 import { TicketRecord } from '@/services/tickets'
 import { formatDateTime } from '@/lib/date-format'
 
@@ -54,9 +59,25 @@ import PortalHoursTab from '@/components/portal/PortalHoursTab'
 
 export default function PortalPage() {
   const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
   const { user, logout } = useAuth()
   const { theme, toggleTheme, designSettings } = useTheme()
   const { toast } = useToast()
+
+  // Verificação estrita de Administrador para o Modo Suporte
+  const isAdmin = user?.role === 'admin'
+
+  // Lista de empresas para seleção no modo suporte
+  const [availableCompanies, setAvailableCompanies] = useState<CompanyRecord[]>([])
+
+  // Empresa ativa no modo suporte (URL query param ou sessionStorage)
+  const initialCompanyFromUrl = searchParams.get('company')
+  const initialCompanyFromStorage = isAdmin
+    ? sessionStorage.getItem('itsm_portal_support_company')
+    : null
+  const [supportCompanyId, setSupportCompanyId] = useState<string>(
+    isAdmin ? initialCompanyFromUrl || initialCompanyFromStorage || '' : '',
+  )
 
   // Tabs
   const [activeTab, setActiveTab] = useState<
@@ -94,8 +115,39 @@ export default function PortalPage() {
   const isFocalPoint =
     user?.role === 'cliente_gestor' || user?.role === 'admin' || user?.role === 'gestor'
 
-  const companyId = user?.company || (data?.company?.id as string) || ''
+  // Efetiva empresa vinculada (no modo suporte usa a selecionada; caso contrário, a empresa do usuário)
+  const effectiveCompanyId =
+    isAdmin && supportCompanyId
+      ? supportCompanyId
+      : user?.company || (data?.company?.id as string) || ''
+
   const companyName = data?.company?.trade_name || data?.company?.legal_name || 'Sua Empresa'
+
+  // Carrega lista de empresas caso seja Administrador
+  useEffect(() => {
+    if (isAdmin) {
+      getCompanies('status = "Ativo" || status = null')
+        .then((comps) => {
+          setAvailableCompanies(comps)
+          // Se ainda não tinha empresa selecionada e tem lista, seleciona a primeira
+          if (!supportCompanyId && comps.length > 0) {
+            const firstId = comps[0].id
+            setSupportCompanyId(firstId)
+            sessionStorage.setItem('itsm_portal_support_company', firstId)
+          }
+        })
+        .catch((err) => {
+          console.warn('Erro ao carregar lista de empresas para suporte:', err)
+        })
+    }
+  }, [isAdmin])
+
+  // Atualiza query param na URL quando admin altera a empresa
+  const handleSelectSupportCompany = (companyId: string) => {
+    setSupportCompanyId(companyId)
+    sessionStorage.setItem('itsm_portal_support_company', companyId)
+    setSearchParams({ company: companyId })
+  }
 
   // Carregar dados
   const loadPortalData = async (isSilent = false) => {
@@ -103,8 +155,15 @@ export default function PortalPage() {
     else setRefreshing(true)
 
     try {
-      const portalResult = await getClientPortalData(user)
+      const targetCompany = isAdmin && supportCompanyId ? supportCompanyId : undefined
+      const portalResult = await getClientPortalData(user, targetCompany)
       setData(portalResult)
+
+      // Atualiza o supportCompanyId se o serviço escolheu uma empresa e ainda não tínhamos uma definida
+      if (isAdmin && !supportCompanyId && portalResult.company?.id) {
+        setSupportCompanyId(portalResult.company.id)
+        sessionStorage.setItem('itsm_portal_support_company', portalResult.company.id)
+      }
 
       // Se temos empresa, busca dados de horas para o período selecionado
       if (portalResult.company?.id) {
@@ -150,7 +209,11 @@ export default function PortalPage() {
 
   useEffect(() => {
     loadPortalData()
-  }, [user])
+  }, [user, supportCompanyId])
+
+  const handleReturnToInternalSystem = () => {
+    navigate('/dashboard')
+  }
 
   const handleLogout = () => {
     logout()
@@ -192,9 +255,67 @@ export default function PortalPage() {
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col">
       {/* =========================================================================
+          BARRA DE MODO SUPORTE / IMPERSONAÇÃO — EXCLUSIVO ADMINISTRADOR
+          ========================================================================= */}
+      {isAdmin && (
+        <div className="w-full bg-gradient-to-r from-amber-600 via-amber-500 to-amber-600 text-slate-950 px-4 py-2 text-xs font-medium shadow-sm border-b border-amber-700/40 sticky top-0 z-50">
+          <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2.5">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-slate-950 text-amber-300 font-mono font-bold text-[11px] tracking-wider uppercase shadow-xs">
+                <Wrench className="h-3.5 w-3.5 text-amber-400" />
+                Modo Suporte • Administrador
+              </span>
+              <span className="text-slate-950 font-semibold hidden md:inline">
+                Visualizando o portal exatamente com a visão do cliente para aferir erros e
+                manutenção.
+              </span>
+            </div>
+
+            <div className="flex items-center gap-2 w-full sm:w-auto justify-end flex-wrap">
+              {/* Seletor de Empresa para Alternar Rapidamente */}
+              <div className="flex items-center gap-1.5 bg-slate-950/10 px-2 py-1 rounded-md border border-slate-950/20">
+                <Building className="h-3.5 w-3.5 text-slate-950" />
+                <span className="text-[11px] font-bold text-slate-950 hidden sm:inline">
+                  Empresa:
+                </span>
+                <Select
+                  value={supportCompanyId || effectiveCompanyId}
+                  onValueChange={handleSelectSupportCompany}
+                >
+                  <SelectTrigger className="h-7 text-[11px] bg-slate-950 text-amber-200 border-none font-semibold min-w-[180px] max-w-[240px]">
+                    <SelectValue placeholder="Selecione a empresa..." />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-60">
+                    {availableCompanies.map((c) => (
+                      <SelectItem key={c.id} value={c.id} className="text-xs">
+                        {c.trade_name || c.legal_name || c.code}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Botão de Saída Rápida de Volta ao Sistema Interno */}
+              <Button
+                size="sm"
+                onClick={handleReturnToInternalSystem}
+                className="h-7 text-xs bg-slate-950 hover:bg-slate-900 text-amber-300 font-bold border border-amber-400/40 gap-1.5 shadow-xs"
+                title="Voltar ao Dashboard / Atendimento do sistema ITSM"
+              >
+                <ArrowLeft className="h-3.5 w-3.5" />
+                Voltar ao Sistema Interno
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* =========================================================================
           CABEÇALHO OFICIAL: Grafite #17181C com letras âmbar/brancas
           ========================================================================= */}
-      <header className="sticky top-0 z-40 w-full border-b border-amber-500/20 bg-[#17181C] text-amber-100 shadow-md">
+      <header
+        className={`w-full border-b border-amber-500/20 bg-[#17181C] text-amber-100 shadow-md ${!isAdmin ? 'sticky top-0 z-40' : ''}`}
+      >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
           {/* Logo e Nome da Empresa */}
           <div className="flex items-center gap-3">
@@ -670,7 +791,7 @@ export default function PortalPage() {
       <PortalNewTicketDialog
         open={newTicketOpen}
         onOpenChange={setNewTicketOpen}
-        companyId={companyId}
+        companyId={effectiveCompanyId}
         companyName={companyName}
         user={{
           id: user?.id || '',

@@ -151,16 +151,26 @@ export interface PortalData {
   categories: CategoryRecord[]
 }
 
-export async function getClientPortalData(user: any): Promise<PortalData> {
-  let companyId = user?.company
+export async function getClientPortalData(
+  user: any,
+  overrideCompanyId?: string,
+): Promise<PortalData> {
+  let companyId = overrideCompanyId || user?.company
 
-  // Se o usuário não tiver companyId diretamente (ex: admin visualizando o portal),
+  // Se o usuário não tiver companyId diretamente (ex: admin visualizando o portal sem empresa selecionada),
   // tenta pegar a primeira empresa cadastrada
   if (!companyId) {
     try {
-      const companies = await pb.collection('companies').getList(1, 1, { sort: '-created' })
+      const companies = await pb
+        .collection('companies')
+        .getList(1, 1, { filter: 'status = "Ativo"', sort: 'trade_name' })
       if (companies.items.length > 0) {
         companyId = companies.items[0].id
+      } else {
+        const anyCompanies = await pb.collection('companies').getList(1, 1, { sort: '-created' })
+        if (anyCompanies.items.length > 0) {
+          companyId = anyCompanies.items[0].id
+        }
       }
     } catch {
       /* ignore */
@@ -176,7 +186,7 @@ export async function getClientPortalData(user: any): Promise<PortalData> {
     }
   }
 
-  // Busca dados em paralelo
+  // Busca dados em paralelo amarrados à empresa selecionada
   const [tickets, approvals, configurationItems, technicalVisits, categories] = await Promise.all([
     companyId ? getClientPortalTickets(companyId) : Promise.resolve([]),
     companyId ? getClientPortalApprovals(companyId) : Promise.resolve([]),

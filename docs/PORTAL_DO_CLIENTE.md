@@ -114,3 +114,38 @@ O Portal do Cliente respeita rigorosamente as diretrizes de design do sistema:
 - **Tema Claro (Marrom & Branco):** barra superior grafite `#17181C`, tipografia branca, destaques em âmbar `#D97706`.
 - Alternador de modo (Sol/Lua) disponível no cabeçalho superior.
 - Logotipo oficial da organização respeitado dinamicamente via `useTheme` / `designSettings`.
+
+---
+
+## 5. Modo Suporte e Impersonação do Administrador
+
+Para possibilitar que o **Administrador do sistema** aferir erros relatados pelos clientes, diagnosticar comportamentos e enxergar exatamente a visão real que a empresa contratante possui sem necessitar de suas credenciais pessoais:
+
+### 5.1 Regras de Acesso e Segurança
+
+1. **Exclusividade:** Válido **apenas** para usuários com perfil `admin` (`role === 'admin'`). Clientes comuns (`cliente_solicitante`, `cliente_gestor`) ou operadores sem perfil de Administrador não possuem acesso a esse atalho e devem realizar o login normal com e-mail e senha.
+2. **Sem Senha de Cliente:** O Administrador já autenticado no sistema interno não precisa digitar credenciais de nenhum cliente.
+
+### 5.2 Pontos de Entrada
+
+1. **Em `/portal/login`:** Quando um Administrador autenticado abre a página de login do portal, um painel destacado _"Modo Suporte — Administrador"_ é apresentado com a lista de empresas ativas para escolha imediata e entrada com um clique ("Entrar no Portal como este Cliente").
+2. **Em Configurações > Portal do Cliente (`/settings`):** Em cada card de empresa cliente, há o botão _"Acessar como Cliente"_, abrindo diretamente a visão do portal daquela empresa.
+3. **Por URL Direta:** O Administrador pode acessar `/portal?company=<company_id>` para impersonar diretamente uma empresa específica.
+
+### 5.3 Indicador Visual e Saída Rápida
+
+- Ao navegar em modo suporte, uma barra superior destacada âmbar é fixada no topo:
+  - **Badge visual:** `Modo Suporte • Administrador`.
+  - **Seletor dinâmico:** Permite alternar entre empresas clientes em tempo real sem precisar sair do portal.
+  - **Botão de saída:** _"Voltar ao Sistema Interno"_, que direciona imediatamente de volta ao Dashboard/Atendimento do ITSM.
+
+### 5.4 Funcionamento dos 6 Módulos em Modo Suporte
+
+Todos os 6 módulos do portal operam amarrados à empresa selecionada pelo Administrador:
+
+- **Meus Chamados:** Chamados da empresa selecionada e timeline de logs públicos (`is_private = false`).
+- **Abrir Chamado:** Formulário pré-preenchido com a empresa impersonada e seus ativos do CMDB.
+- **Aprovações:** Lista de pendências e histórico de aprovação daquela empresa.
+- **Meus Ativos:** Itens de configuração vinculados à empresa.
+- **Visitas Técnicas:** Visitas da empresa com o nome do técnico responsável.
+- **Horas e Saldo:** Franquia contratada, consumo e saldo do mês atual ou meses históricos para a empresa selecionada.

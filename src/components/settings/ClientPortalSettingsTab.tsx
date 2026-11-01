@@ -272,15 +272,30 @@ export default function ClientPortalSettingsTab() {
                         </p>
                       </div>
 
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="border-amber-500/30 hover:bg-amber-500/10 text-amber-700 dark:text-amber-300 gap-1.5 self-start sm:self-auto"
-                        onClick={() => handleOpenCreateModal(client)}
-                      >
-                        <UserPlus className="h-4 w-4" />
-                        Criar/Liberar Usuário
-                      </Button>
+                      <div className="flex items-center gap-2 self-start sm:self-auto">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="border-amber-500/50 bg-amber-500/10 hover:bg-amber-500/20 text-amber-800 dark:text-amber-300 gap-1.5 font-semibold text-xs"
+                          title="Acessar o portal com a visão desta empresa (Modo Suporte Administrador)"
+                          onClick={() => {
+                            sessionStorage.setItem('itsm_portal_support_company', client.company.id)
+                            window.open(`/portal?company=${client.company.id}`, '_blank')
+                          }}
+                        >
+                          <ExternalLink className="h-3.5 w-3.5" />
+                          Acessar como Cliente
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="border-amber-500/30 hover:bg-amber-500/10 text-amber-700 dark:text-amber-300 gap-1.5"
+                          onClick={() => handleOpenCreateModal(client)}
+                        >
+                          <UserPlus className="h-4 w-4" />
+                          Criar/Liberar Usuário
+                        </Button>
+                      </div>
                     </div>
 
                     {/* Lista de usuários de acesso ao portal */}
