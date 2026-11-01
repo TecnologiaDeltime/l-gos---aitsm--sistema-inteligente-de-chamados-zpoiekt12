@@ -40,7 +40,7 @@ import { usePermissions } from '@/hooks/use-permissions'
 import { ProfileDialog } from '@/components/profiles/ProfileDialog'
 import { getProfiles, createProfile, updateProfile, deleteProfile } from '@/services/profiles'
 import { getOperators } from '@/services/operators'
-import { ProfileRecord, SYSTEM_MODULES, ModuleKey } from '@/types/profiles'
+import { ProfileRecord, SYSTEM_MODULES, ModuleKey, PROFILE_LANDING_OPTIONS } from '@/types/profiles'
 import { useRealtime } from '@/hooks/use-realtime'
 
 interface ProfilesPageProps {
@@ -305,6 +305,7 @@ export default function ProfilesPage({ embeddedTab = false }: ProfilesPageProps)
               <TableHeader>
                 <TableRow className="bg-muted/50">
                   <TableHead className="font-semibold text-xs">Perfil</TableHead>
+                  <TableHead className="font-semibold text-xs">Tela Inicial</TableHead>
                   <TableHead className="font-semibold text-xs">Descrição</TableHead>
                   <TableHead className="font-semibold text-xs">Operadores</TableHead>
                   <TableHead className="font-semibold text-xs">Permissões dos Módulos</TableHead>
@@ -349,6 +350,28 @@ export default function ProfilesPage({ embeddedTab = false }: ProfilesPageProps)
                             </div>
                           </div>
                         </div>
+                      </TableCell>
+
+                      <TableCell className="text-xs">
+                        {(() => {
+                          const landing = PROFILE_LANDING_OPTIONS.find(
+                            (o) => o.route === p.landing_route,
+                          )
+                          const label =
+                            landing?.label ||
+                            p.landing_route ||
+                            (p.name.toLowerCase() === 'administrador'
+                              ? 'Dashboard'
+                              : 'Painel do Operador')
+                          return (
+                            <Badge
+                              variant="outline"
+                              className="text-[11px] font-medium bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30"
+                            >
+                              {label}
+                            </Badge>
+                          )
+                        })()}
                       </TableCell>
 
                       <TableCell className="text-xs text-muted-foreground max-w-xs truncate">
@@ -471,6 +494,22 @@ export default function ProfilesPage({ embeddedTab = false }: ProfilesPageProps)
                         <p className="text-xs text-muted-foreground mt-0.5">
                           {p.description || 'Sem descrição'}
                         </p>
+                        <div className="mt-1">
+                          <span className="text-[10px] text-muted-foreground mr-1.5">
+                            Tela inicial:
+                          </span>
+                          <Badge
+                            variant="outline"
+                            className="text-[10px] bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30"
+                          >
+                            {PROFILE_LANDING_OPTIONS.find((o) => o.route === p.landing_route)
+                              ?.label ||
+                              p.landing_route ||
+                              (p.name.toLowerCase() === 'administrador'
+                                ? 'Dashboard'
+                                : 'Painel do Operador')}
+                          </Badge>
+                        </div>
                       </div>
                     </div>
                   </div>

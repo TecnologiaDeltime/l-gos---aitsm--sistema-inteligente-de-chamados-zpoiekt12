@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-01T21:59:58.888Z",
+  "generatedAt": "2026-11-01T22:12:38.278Z",
   "collections": [
     {
       "name": "users",
@@ -8638,6 +8638,12 @@
           "required": false,
           "system": false,
           "autodateTriggers": ["onCreate", "onUpdate"]
+        },
+        {
+          "name": "landing_route",
+          "type": "text",
+          "required": false,
+          "system": false
         }
       ],
       "indexes": ["CREATE UNIQUE INDEX idx_profiles_name ON profiles (name)"]

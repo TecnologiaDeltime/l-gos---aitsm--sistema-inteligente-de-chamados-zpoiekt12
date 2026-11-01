@@ -45,8 +45,11 @@ A convenção de acesso foi estabelecida no hook `pocketbase/hooks/client_portal
 - **`/login`**:
   - Tela de login para operadores do sistema.
   - Possui link sutil no rodapé direcionando para `/portal/login` caso um cliente acerte a rota de operadores por engano.
-- **Redirecionamento Automático:**
+- **Redirecionamento Automático e Tela Inicial por Perfil de Acesso:**
   - Usuários autenticados com role `cliente_solicitante` ou `cliente_gestor` são redirecionados automaticamente para `/portal` caso tentem acessar `/login` ou a raiz `/`.
+  - Para operadores e administradores, a **Tela Inicial (Landing)** é configurável individualmente em cada **Perfil de Acesso** (em Configurações → Perfis de Acesso).
+  - Padrão inicial do backfill: perfis operacionais abrem no Painel do Operador (`/operator-dashboard`) e Administrador no Dashboard (`/dashboard`).
+  - Se a tela configurada for revogada na matriz de permissões do perfil, o sistema executa fallback seguro para `/dashboard` sem erro de rota bloqueada.
 
 ### 2.3 Auto-provisionamento e Gestão de Acessos
 

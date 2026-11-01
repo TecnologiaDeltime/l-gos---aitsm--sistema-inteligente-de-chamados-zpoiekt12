@@ -366,17 +366,34 @@ export function usePermissions() {
   }, [isAdmin, isCliente, profile])
 
   /**
-   * Destino padrão pós-login calculado com base nas permissões ativas:
+   * Destino padrão pós-login calculado com base nas permissões ativas e configuração do perfil:
    * - Clientes -> /portal
-   * - Administrador -> /dashboard
-   * - Operação com meu_painel concedido -> /operator-dashboard
-   * - Operação com meu_painel retirado -> /dashboard
+   * - Perfil configurado com landing_route:
+   *    Se o usuário puder acessar a rota (canAccessPath), abre nela.
+   *    Caso tenha sido retirada da matriz, fallback seguro para /dashboard.
+   * - Sem landing_route configurada:
+   *    Administrador -> /dashboard
+   *    Operação com meu_painel concedido -> /operator-dashboard
+   *    Operação com meu_painel retirado -> /dashboard
    */
   const defaultLandingRoute = useMemo(() => {
     if (isCliente) return '/portal'
+
+    const configuredRoute = profile?.landing_route?.trim()
+    if (configuredRoute) {
+      // Se for admin, sempre tem acesso total
+      if (isAdmin) return configuredRoute
+
+      // Validação se a rota está concedida
+      if (canAccessPath(configuredRoute)) {
+        return configuredRoute
+      }
+      return '/dashboard'
+    }
+
     if (!isOperational) return '/dashboard'
     return canAccessItem('dashboard', 'meu_painel') ? '/operator-dashboard' : '/dashboard'
-  }, [isCliente, isOperational, canAccessItem])
+  }, [isCliente, profile, isAdmin, canAccessPath, isOperational, canAccessItem])
 
   // Specific module checks for fast access
   const canManageProfiles = canWriteModule('profiles') || isAdmin

@@ -4,6 +4,7 @@ import {
   PermissionsMap,
   GRANULAR_SYSTEM_MODULES,
   ProfilePermissionMap,
+  PROFILE_LANDING_OPTIONS,
 } from '@/types/profiles'
 import {
   createProfile,
@@ -24,9 +25,16 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { useToast } from '@/hooks/use-toast'
 import { PermissionMatrixEditor } from './PermissionMatrixEditor'
-import { Shield, ShieldAlert, Check, Loader2 } from 'lucide-react'
+import { Shield, ShieldAlert, Check, Loader2, Home } from 'lucide-react'
 
 interface ProfileDialogProps {
   open: boolean
@@ -41,6 +49,7 @@ export function ProfileDialog({ open, onOpenChange, profile, onSuccess }: Profil
 
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
+  const [landingRoute, setLandingRoute] = useState('/operator-dashboard')
   const [granularPermissions, setGranularPermissions] = useState<ProfilePermissionMap>({})
   const [loading, setLoading] = useState(false)
   const [loadingPerms, setLoadingPerms] = useState(false)
@@ -53,6 +62,9 @@ export function ProfileDialog({ open, onOpenChange, profile, onSuccess }: Profil
       if (profile) {
         setName(profile.name)
         setDescription(profile.description || '')
+        const fallbackRoute =
+          profile.name?.toLowerCase() === 'administrador' ? '/dashboard' : '/operator-dashboard'
+        setLandingRoute(profile.landing_route || fallbackRoute)
         setActiveTab('permissions')
 
         // Carregar permissões granulares da collection
@@ -70,6 +82,7 @@ export function ProfileDialog({ open, onOpenChange, profile, onSuccess }: Profil
       } else {
         setName('')
         setDescription('')
+        setLandingRoute('/operator-dashboard')
         setActiveTab('info')
 
         // Novo perfil nasce com tudo concedido por padrão em nível 'edit'
@@ -126,6 +139,7 @@ export function ProfileDialog({ open, onOpenChange, profile, onSuccess }: Profil
         await updateProfile(profile.id, {
           name: name.trim(),
           description: description.trim(),
+          landing_route: landingRoute,
           permissions: legacyPerms,
         })
 
@@ -142,6 +156,7 @@ export function ProfileDialog({ open, onOpenChange, profile, onSuccess }: Profil
         const created = await createProfile({
           name: name.trim(),
           description: description.trim(),
+          landing_route: landingRoute,
           permissions: legacyPerms,
           is_system: false,
         })
@@ -228,6 +243,38 @@ export function ProfileDialog({ open, onOpenChange, profile, onSuccess }: Profil
                       O nome do perfil de sistema Administrador não pode ser alterado.
                     </p>
                   )}
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label
+                    htmlFor="landing_route"
+                    className="text-xs font-medium flex items-center gap-1.5"
+                  >
+                    <Home className="h-3.5 w-3.5 text-primary" />
+                    Tela Inicial (Landing Pós-Login)
+                  </Label>
+                  <Select value={landingRoute} onValueChange={setLandingRoute} disabled={loading}>
+                    <SelectTrigger id="landing_route" className="h-9 text-xs">
+                      <SelectValue placeholder="Selecione a tela inicial deste perfil" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {PROFILE_LANDING_OPTIONS.map((opt) => (
+                        <SelectItem key={opt.route} value={opt.route} className="text-xs">
+                          <div className="flex flex-col py-0.5">
+                            <span className="font-semibold text-foreground">{opt.label}</span>
+                            <span className="text-[10px] text-muted-foreground">
+                              {opt.description}
+                            </span>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-[11px] text-muted-foreground">
+                    Ao fazer login no sistema ou acessar o endereço raiz, usuários deste perfil
+                    abrirão diretamente nesta tela (se a tela for desmarcada na matriz de
+                    permissões, o sistema fará fallback seguro para o Dashboard).
+                  </p>
                 </div>
 
                 <div className="space-y-1.5">

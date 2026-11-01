@@ -1,6 +1,7 @@
 import pb from '@/lib/pocketbase/client'
 import type { UserRecord } from '@/hooks/use-auth'
 import type { ProfileRecord } from '@/types/profiles'
+import { PROFILE_LANDING_OPTIONS } from '@/types/profiles'
 
 /**
  * Verifica se um papel ou perfil de usuário pertence à operação (operador / atendimento).
@@ -36,65 +37,97 @@ export function isOperationalUser(
 }
 
 /**
- * Verifica se o usuário tem permissão para acessar o Painel do Operador ('meu_painel').
- * Leva em conta:
- * 1. Admin sempre tem acesso.
- * 2. Perfil associado: se o módulo 'dashboard' estiver oculto no JSON legado ou
- *    se na tabela `profile_permissions` a chave 'dashboard.meu_painel' tiver granted === false.
+ * Carrega o registro completo do perfil do usuário.
  */
-export async function canAccessOperatorPanel(user?: Partial<UserRecord> | null): Promise<boolean> {
-  if (!user) return false
-  if (user.role === 'admin') return true
+async function fetchUserProfile(user?: Partial<UserRecord> | null): Promise<ProfileRecord | null> {
+  if (!user) return null
 
-  const profileId = user.profile_id || user.expand?.profile_id?.id
-
-  // Se não tem perfil associado, fallback por role:
-  // perfis de operação têm acesso padrão a dashboard e meu_painel
-  if (!profileId) {
-    return true
+  if (user.expand?.profile_id) {
+    return user.expand.profile_id as ProfileRecord
   }
 
+  const profileId = user.profile_id
+  if (!profileId) return null
+
   try {
-    // 1. Checar se o perfil tem o módulo 'dashboard' oculto nas permissões base
-    let profileRecord: ProfileRecord | undefined = user.expand?.profile_id
-    if (!profileRecord || !profileRecord.permissions) {
-      try {
-        profileRecord = await pb.collection('profiles').getOne<ProfileRecord>(profileId)
-      } catch {
-        /* ignora falha de busca */
-      }
-    }
-
-    if (profileRecord?.permissions?.dashboard?.hidden) {
-      return false
-    }
-
-    // 2. Checar permissão granular na collection profile_permissions
-    const perm = await pb
-      .collection('profile_permissions')
-      .getFirstListItem(
-        `profile = "${profileId}" && module_key = "dashboard" && item_key = "meu_painel"`,
-      )
-      .catch(() => null)
-
-    if (perm) {
-      return !!perm.granted
-    }
-
-    // Se ainda não tem registro granular na collection, o padrão do catálogo para meu_painel é concedido
-    return true
-  } catch (err) {
-    console.warn('Erro ao checar permissão meu_painel:', err)
-    return true
+    return await pb.collection('profiles').getOne<ProfileRecord>(profileId)
+  } catch {
+    return null
   }
 }
 
 /**
+ * Verifica se o usuário tem permissão para acessar uma rota de destino configurada.
+ * Regras:
+ * 1. Admin tem sempre acesso total.
+ * 2. Se a rota apontar para um item conhecido no PROFILE_LANDING_OPTIONS,
+ *    verifica se o módulo ou item não foi revogado na matriz de permissões.
+ * 3. Se a rota foi revogada, retorna false para acionar fallback seguro.
+ */
+export async function canAccessRoute(
+  route: string,
+  user?: Partial<UserRecord> | null,
+  profile?: ProfileRecord | null,
+): Promise<boolean> {
+  if (!user) return false
+  if (user.role === 'admin') return true
+
+  const prof = profile || (await fetchUserProfile(user))
+  if (!prof) return true
+
+  // Administrador tem sempre acesso
+  if (prof.name?.trim().toLowerCase() === 'administrador') {
+    return true
+  }
+
+  const option = PROFILE_LANDING_OPTIONS.find((o) => o.route === route)
+  if (!option) {
+    return true
+  }
+
+  // 1. Verificar se o módulo pai está oculto nas permissões legadas
+  if (prof.permissions?.[option.moduleKey]?.hidden) {
+    return false
+  }
+
+  // 2. Se houver itemKey específico, checar em profile_permissions
+  if (option.itemKey && prof.id) {
+    try {
+      const perm = await pb
+        .collection('profile_permissions')
+        .getFirstListItem(
+          `profile = "${prof.id}" && module_key = "${option.moduleKey}" && item_key = "${option.itemKey}"`,
+        )
+        .catch(() => null)
+
+      if (perm) {
+        return !!perm.granted
+      }
+    } catch {
+      // Se der erro de busca, segue fallback permissivo
+    }
+  }
+
+  return true
+}
+
+/**
+ * Verifica se o usuário tem permissão para acessar o Painel do Operador ('meu_painel').
+ */
+export async function canAccessOperatorPanel(user?: Partial<UserRecord> | null): Promise<boolean> {
+  return await canAccessRoute('/operator-dashboard', user)
+}
+
+/**
  * Resolve o destino pós-login para o usuário informado:
- * - Clientes -> /portal
- * - Administrador -> /dashboard (ou destino padrão)
- * - Perfis de operação -> /operator-dashboard (caso tenha permissão 'meu_painel')
- * - Se a permissão 'meu_painel' tiver sido retirada -> /dashboard (destino padrão)
+ * 1. Clientes -> /portal
+ * 2. Perfil configurado com `landing_route`:
+ *    - Se configurado, valida se o usuário tem acesso a essa rota na matriz de permissões.
+ *    - Se tiver permissão, redireciona para a rota configurada.
+ *    - Se a permissão tiver sido retirada, faz fallback seguro para /dashboard.
+ * 3. Se o perfil não tiver landing_route:
+ *    - Administrador -> /dashboard
+ *    - Perfis de operação -> /operator-dashboard (se tiver 'meu_painel', senão /dashboard)
  */
 export async function resolvePostLoginDestination(
   user?: Partial<UserRecord> | null,
@@ -106,17 +139,25 @@ export async function resolvePostLoginDestination(
     return '/portal'
   }
 
-  // 2. Administrador
-  if (!isOperationalUser(user)) {
+  // Carregar perfil associado
+  const profile = await fetchUserProfile(user)
+
+  // 2. Destino configurado explicitamente no perfil
+  const configuredRoute = profile?.landing_route?.trim()
+  if (configuredRoute) {
+    const hasAccess = await canAccessRoute(configuredRoute, user, profile)
+    if (hasAccess) {
+      return configuredRoute
+    }
+    // Fallback seguro caso a tela configurada tenha sido desmarcada
     return '/dashboard'
   }
 
-  // 3. Perfis de operação: checar permissão 'meu_painel'
-  const hasPanelAccess = await canAccessOperatorPanel(user)
-  if (hasPanelAccess) {
-    return '/operator-dashboard'
+  // 3. Fallback preservando v0.0.279
+  if (!isOperationalUser(user, profile?.name)) {
+    return '/dashboard'
   }
 
-  // Se retirado o item meu_painel, fallback seguro para o dashboard padrão
-  return '/dashboard'
+  const hasPanelAccess = await canAccessRoute('/operator-dashboard', user, profile)
+  return hasPanelAccess ? '/operator-dashboard' : '/dashboard'
 }

@@ -62,11 +62,107 @@ export const SYSTEM_MODULES = GRANULAR_SYSTEM_MODULES.map((m) => ({
 
 export type PermissionsMap = Record<string, ModulePermission>
 
+export interface ProfileLandingOption {
+  route: string
+  label: string
+  description: string
+  moduleKey: ModuleKey
+  itemKey?: string
+}
+
+export const PROFILE_LANDING_OPTIONS: ProfileLandingOption[] = [
+  {
+    route: '/dashboard',
+    label: 'Dashboard (Fila de Tickets)',
+    description: 'Visão consolidada da fila de chamados e métricas de atendimento',
+    moduleKey: 'dashboard',
+    itemKey: 'painel_tickets',
+  },
+  {
+    route: '/operator-dashboard',
+    label: 'Painel do Operador',
+    description: 'Painel pessoal com chamados do operador, cronômetro e indicadores',
+    moduleKey: 'dashboard',
+    itemKey: 'meu_painel',
+  },
+  {
+    route: '/tickets',
+    label: 'Chamados (Fila de Tickets)',
+    description: 'Listagem e visualização de chamados abertos e em andamento',
+    moduleKey: 'tickets',
+    itemKey: 'tickets_fila',
+  },
+  {
+    route: '/atendimento',
+    label: 'Atendimento Omnichannel',
+    description: 'Console de atendimento de conversas digitais e chat',
+    moduleKey: 'atendimento',
+    itemKey: 'atendimento_omnichannel',
+  },
+  {
+    route: '/portal',
+    label: 'Portal do Cliente',
+    description: 'Visão do portal corporativo para clientes e pontos focais',
+    moduleKey: 'settings',
+    itemKey: 'settings_portal',
+  },
+  {
+    route: '/dashboard-gerencial',
+    label: 'Dashboard Gerencial',
+    description: 'Painel executivo com KPIs estratégicos',
+    moduleKey: 'dashboard',
+    itemKey: 'dashboard_gerencial',
+  },
+  {
+    route: '/chamados/novo',
+    label: 'Abrir Chamado',
+    description: 'Formulário de abertura de novo chamado',
+    moduleKey: 'tickets',
+    itemKey: 'tickets_novo',
+  },
+  {
+    route: '/clients',
+    label: 'Clientes & Contratos',
+    description: 'Cadastro de empresas clientes e contratos',
+    moduleKey: 'clients',
+    itemKey: 'clients_cadastro',
+  },
+  {
+    route: '/cmdb/assets',
+    label: 'Ativos de TI (CMDB)',
+    description: 'Inventário de hardware, estações e servidores',
+    moduleKey: 'cmdb',
+    itemKey: 'cmdb_assets',
+  },
+  {
+    route: '/visitas-n2/dashboard',
+    label: 'Gestão de Visitas N2',
+    description: 'Painel e agenda de visitas técnicas presenciais',
+    moduleKey: 'visits',
+    itemKey: 'visits_n2_dashboard',
+  },
+  {
+    route: '/knowledge-base',
+    label: 'Base de Conhecimento',
+    description: 'Consulta e gestão de artigos técnicos',
+    moduleKey: 'knowledge',
+    itemKey: 'knowledge_base',
+  },
+  {
+    route: '/reports/implemented-features',
+    label: 'Relatórios',
+    description: 'Central de relatórios e auditorias',
+    moduleKey: 'reports',
+    itemKey: 'rep_implemented_features',
+  },
+]
+
 export interface ProfileRecord {
   id: string
   name: string
   description?: string
   is_system?: boolean
+  landing_route?: string
   permissions: PermissionsMap
   created: string
   updated: string
