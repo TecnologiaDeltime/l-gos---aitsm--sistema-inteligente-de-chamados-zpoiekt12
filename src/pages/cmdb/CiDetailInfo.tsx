@@ -27,6 +27,7 @@ import {
 import { getCompanies, getCompanyUnits, getCompanyDepartments } from '@/services/companies'
 import { extractFieldErrors, type FieldErrors } from '@/lib/pocketbase/errors'
 import { useToast } from '@/hooks/use-toast'
+import { usePermissions } from '@/hooks/use-permissions'
 
 export function CiDetailInfo({
   equipment,
@@ -35,6 +36,9 @@ export function CiDetailInfo({
   equipment: EquipmentRecord
   onUpdate: () => void
 }) {
+  const { canEdit, canDelete } = usePermissions()
+  const canEditEquipment = canEdit('cmdb_assets') || canEdit('cmdb')
+  const canDeleteEquipment = canDelete('cmdb_assets') || canDelete('cmdb')
   const [isEditing, setIsEditing] = useState(false)
   const [form, setForm] = useState<Partial<EquipmentRecord>>(equipment)
   const [companies, setCompanies] = useState<any[]>([])
@@ -110,15 +114,17 @@ export function CiDetailInfo({
     return (
       <div className="space-y-4">
         <div className="flex justify-end">
-          <Button
-            size="sm"
-            onClick={() => {
-              setForm(equipment)
-              setIsEditing(true)
-            }}
-          >
-            Editar
-          </Button>
+          {canEditEquipment && (
+            <Button
+              size="sm"
+              onClick={() => {
+                setForm(equipment)
+                setIsEditing(true)
+              }}
+            >
+              Editar
+            </Button>
+          )}
         </div>
         <div className="space-y-4">
           <div>
@@ -497,13 +503,15 @@ export function CiDetailInfo({
             <Button variant="outline" onClick={() => setShowDiscard(false)}>
               Cancelar
             </Button>
-            <Button
-              className="bg-red-600 hover:bg-red-700"
-              onClick={handleConfirmDiscard}
-              disabled={!justification.trim()}
-            >
-              Confirmar Descarte
-            </Button>
+            {canDeleteEquipment && (
+              <Button
+                className="bg-red-600 hover:bg-red-700"
+                onClick={handleConfirmDiscard}
+                disabled={!justification.trim()}
+              >
+                Confirmar Descarte
+              </Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>

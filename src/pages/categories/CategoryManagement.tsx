@@ -32,9 +32,13 @@ import {
 import { PriorityBadge } from '@/components/PriorityBadge'
 import { useRealtime } from '@/hooks/use-realtime'
 import { useToast } from '@/hooks/use-toast'
+import { usePermissions } from '@/hooks/use-permissions'
 
 export default function CategoryManagement() {
   const { toast } = useToast()
+  const { canEdit, canDelete } = usePermissions()
+  const canEditCategories = canEdit('tickets_categorias')
+  const canDeleteCategories = canDelete('tickets_categorias')
   const [categories, setCategories] = useState<CategoryRecord[]>([])
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editing, setEditing] = useState<CategoryRecord | null>(null)
@@ -138,18 +142,22 @@ export default function CategoryManagement() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-bold">Categorias de Chamados</h2>
-        <Button onClick={handleAddMain} className="bg-blue-600 hover:bg-blue-700" size="sm">
-          <Plus className="mr-1 h-4 w-4" /> Nova Categoria
-        </Button>
+        {canEditCategories && (
+          <Button onClick={handleAddMain} className="bg-blue-600 hover:bg-blue-700" size="sm">
+            <Plus className="mr-1 h-4 w-4" /> Nova Categoria
+          </Button>
+        )}
       </div>
 
       {mainCategories.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-16 space-y-4">
           <Tags className="h-12 w-12 text-slate-300" />
           <p className="text-sm text-slate-500">Nenhuma categoria cadastrada</p>
-          <Button onClick={handleAddMain} className="bg-blue-600 hover:bg-blue-700" size="sm">
-            <Plus className="mr-1 h-4 w-4" /> Criar primeira categoria
-          </Button>
+          {canEditCategories && (
+            <Button onClick={handleAddMain} className="bg-blue-600 hover:bg-blue-700" size="sm">
+              <Plus className="mr-1 h-4 w-4" /> Criar primeira categoria
+            </Button>
+          )}
         </div>
       ) : (
         <div className="space-y-3">
@@ -195,43 +203,49 @@ export default function CategoryManagement() {
                     </div>
                   </div>
                   <div className="flex items-center gap-1 flex-shrink-0">
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => handleAddSub(main.id)}
-                      title="Adicionar subcategoria"
-                      className="text-xs"
-                    >
-                      <Plus className="h-4 w-4" /> Subcategoria
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => handleEdit(main)}
-                      title="Editar"
-                    >
-                      <Pencil className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => handleToggleActive(main)}
-                      title={main.active ? 'Desativar' : 'Ativar'}
-                    >
-                      {main.active ? (
-                        <PowerOff className="h-4 w-4 text-amber-600" />
-                      ) : (
-                        <Power className="h-4 w-4 text-green-600" />
-                      )}
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => handleDelete(main)}
-                      title="Excluir"
-                    >
-                      <Trash2 className="h-4 w-4 text-red-600" />
-                    </Button>
+                    {canEditCategories && (
+                      <>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => handleAddSub(main.id)}
+                          title="Adicionar subcategoria"
+                          className="text-xs"
+                        >
+                          <Plus className="h-4 w-4" /> Subcategoria
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => handleEdit(main)}
+                          title="Editar"
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => handleToggleActive(main)}
+                          title={main.active ? 'Desativar' : 'Ativar'}
+                        >
+                          {main.active ? (
+                            <PowerOff className="h-4 w-4 text-amber-600" />
+                          ) : (
+                            <Power className="h-4 w-4 text-green-600" />
+                          )}
+                        </Button>
+                      </>
+                    )}
+                    {canDeleteCategories && (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => handleDelete(main)}
+                        title="Excluir"
+                      >
+                        <Trash2 className="h-4 w-4 text-red-600" />
+                      </Button>
+                    )}
                   </div>
                 </div>
                 {isExpanded && subs.length > 0 && (
@@ -268,37 +282,43 @@ export default function CategoryManagement() {
                           <span className="text-slate-500">
                             Sol: {sub.sla_solution_minutes || '-'}min
                           </span>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="h-7 w-7 p-0"
-                            onClick={() => handleEdit(sub)}
-                            title="Editar"
-                          >
-                            <Pencil className="h-3.5 w-3.5" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="h-7 w-7 p-0"
-                            onClick={() => handleToggleActive(sub)}
-                            title={sub.active ? 'Desativar' : 'Ativar'}
-                          >
-                            {sub.active ? (
-                              <PowerOff className="h-3.5 w-3.5 text-amber-600" />
-                            ) : (
-                              <Power className="h-3.5 w-3.5 text-green-600" />
-                            )}
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="h-7 w-7 p-0"
-                            onClick={() => handleDelete(sub)}
-                            title="Excluir"
-                          >
-                            <Trash2 className="h-3.5 w-3.5 text-red-600" />
-                          </Button>
+                          {canEditCategories && (
+                            <>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-7 w-7 p-0"
+                                onClick={() => handleEdit(sub)}
+                                title="Editar"
+                              >
+                                <Pencil className="h-3.5 w-3.5" />
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-7 w-7 p-0"
+                                onClick={() => handleToggleActive(sub)}
+                                title={sub.active ? 'Desativar' : 'Ativar'}
+                              >
+                                {sub.active ? (
+                                  <PowerOff className="h-3.5 w-3.5 text-amber-600" />
+                                ) : (
+                                  <Power className="h-3.5 w-3.5 text-green-600" />
+                                )}
+                              </Button>
+                            </>
+                          )}
+                          {canDeleteCategories && (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-7 w-7 p-0"
+                              onClick={() => handleDelete(sub)}
+                              title="Excluir"
+                            >
+                              <Trash2 className="h-3.5 w-3.5 text-red-600" />
+                            </Button>
+                          )}
                         </div>
                       </div>
                     ))}

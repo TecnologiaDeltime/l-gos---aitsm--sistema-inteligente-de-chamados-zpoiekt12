@@ -1,4 +1,4 @@
-export type PermissionLevel = 'read' | 'write' | 'hidden'
+export type LegacyPermissionLevel = 'read' | 'write' | 'hidden'
 
 export interface ModulePermission {
   read: boolean
@@ -33,6 +33,7 @@ export interface GranularPermissionItem {
   description?: string
   path?: string // Rota associada para guard
   defaultGranted?: boolean
+  defaultLevel?: PermissionLevel
 }
 
 export interface GranularModuleDefinition {
@@ -71,12 +72,26 @@ export interface ProfileRecord {
   updated: string
 }
 
+export type PermissionLevel = 'view' | 'edit' | 'configure'
+
 export interface ProfilePermissionRecord {
   id: string
   profile: string
   module_key: string
   item_key: string
   granted: boolean
+  level?: PermissionLevel | null
   created?: string
   updated?: string
 }
+
+export interface GranularPermissionValue {
+  granted: boolean
+  level: PermissionLevel
+}
+
+/**
+ * Mapa em memória de permissões granulares:
+ * chave do item -> { granted, level }
+ */
+export type ProfilePermissionMap = Record<string, GranularPermissionValue>

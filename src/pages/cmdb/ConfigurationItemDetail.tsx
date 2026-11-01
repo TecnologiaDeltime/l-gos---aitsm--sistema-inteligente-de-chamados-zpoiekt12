@@ -91,10 +91,10 @@ export default function ConfigurationItemDetail() {
   }
 
   const canEdit =
-    permissions.isAdmin ||
-    permissions.isGestor ||
-    permissions.isTecnico ||
-    permissions.canWriteModule('cmdb')
+    permissions.isAdmin || permissions.canEdit('cmdb_items') || permissions.canEdit('cmdb')
+
+  const canDeleteCi =
+    permissions.isAdmin || permissions.canDelete('cmdb_items') || permissions.canDelete('cmdb')
 
   if (loading) {
     return (
@@ -123,13 +123,15 @@ export default function ConfigurationItemDetail() {
           </div>
         </div>
 
-        {canEdit && (
-          <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2">
+          {canEdit && (
             <Link to={`/cmdb/configuration-items/${item.id}/edit`}>
               <Button size="sm" variant="outline" className="gap-1.5">
                 <Edit className="h-4 w-4" /> Editar
               </Button>
             </Link>
+          )}
+          {canDeleteCi && (
             <Button
               size="sm"
               variant="destructive"
@@ -138,8 +140,8 @@ export default function ConfigurationItemDetail() {
             >
               <Trash2 className="h-4 w-4" /> Excluir
             </Button>
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
       {/* Main Info Card */}

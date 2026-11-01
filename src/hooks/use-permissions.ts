@@ -1,7 +1,14 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useAuth } from '@/hooks/use-auth'
-import { ModuleKey, ProfileRecord, GRANULAR_SYSTEM_MODULES } from '@/types/profiles'
-import { getProfilePermissions } from '@/services/profiles'
+import {
+  ModuleKey,
+  ProfileRecord,
+  GRANULAR_SYSTEM_MODULES,
+  PermissionLevel,
+  GranularPermissionValue,
+  ProfilePermissionMap,
+} from '@/types/profiles'
+import { getProfilePermissions, normalizePermissionLevel } from '@/services/profiles'
 import pb from '@/lib/pocketbase/client'
 
 export function usePermissions() {
@@ -16,7 +23,8 @@ export function usePermissions() {
   const isCliente = role === 'cliente_solicitante' || isClienteGestor
 
   // Mapa de permissões granulares carregadas da collection profile_permissions
-  const [granularPermissions, setGranularPermissions] = useState<Record<string, boolean>>({})
+  // fullKey (module.item) -> { granted: boolean, level: 'view' | 'edit' | 'configure' }
+  const [granularPermissions, setGranularPermissions] = useState<ProfilePermissionMap>({})
   const [loadingGranular, setLoadingGranular] = useState(false)
 
   const profileId = profile?.id || user?.profile_id
@@ -30,9 +38,14 @@ export function usePermissions() {
     try {
       setLoadingGranular(true)
       const list = await getProfilePermissions(profileId)
-      const map: Record<string, boolean> = {}
+      const map: ProfilePermissionMap = {}
       list.forEach((r) => {
-        map[`${r.module_key}.${r.item_key}`] = !!r.granted
+        const isGranted = !!r.granted
+        const level = normalizePermissionLevel(r.level, isGranted)
+        map[`${r.module_key}.${r.item_key}`] = {
+          granted: isGranted,
+          level,
+        }
       })
       setGranularPermissions(map)
     } catch (err) {
@@ -167,25 +180,150 @@ export function usePermissions() {
   }
 
   /**
+   * Resolve o objeto { granted, level } para um item ou módulo.
+   * Pode ser chamado com:
+   * - (moduleKey, itemKey) -> ex: getItemPermission('tickets', 'tickets_fila')
+   * - (key) onde key é 'module.item' ou apenas 'module' ou 'item'
+   */
+  const getItemPermission = (
+    moduleOrKey: ModuleKey | string,
+    optionalItemKey?: string,
+  ): GranularPermissionValue => {
+    if (isAdmin) {
+      return { granted: true, level: 'configure' }
+    }
+
+    let fullKey = ''
+    let modKey: ModuleKey | undefined
+
+    if (optionalItemKey) {
+      modKey = moduleOrKey as ModuleKey
+      fullKey = `${moduleOrKey}.${optionalItemKey}`
+    } else if (moduleOrKey.includes('.')) {
+      fullKey = moduleOrKey
+      modKey = moduleOrKey.split('.')[0] as ModuleKey
+    } else {
+      // Pode ser apenas item_key ou apenas moduleKey
+      // 1. Procurar no catálogo por item.key
+      let foundMod: ModuleKey | undefined
+      for (const m of GRANULAR_SYSTEM_MODULES) {
+        if (m.key === moduleOrKey) {
+          foundMod = m.key
+          break
+        }
+        const it = m.items.find((i) => i.key === moduleOrKey)
+        if (it) {
+          foundMod = m.key
+          fullKey = `${m.key}.${it.key}`
+          break
+        }
+      }
+      if (!fullKey && foundMod) {
+        // Foi passado module_key
+        modKey = foundMod
+      }
+    }
+
+    // Se o módulo pai está oculto via legado, não tem acesso
+    if (modKey && isModuleHidden(modKey)) {
+      return { granted: false, level: 'view' }
+    }
+
+    // Se temos na matriz granular
+    if (fullKey && fullKey in granularPermissions) {
+      const entry = granularPermissions[fullKey]
+      if (entry) {
+        return entry
+      }
+    }
+
+    // Se passou apenas moduleKey (sem item), mapeia do legado
+    if (modKey && !fullKey) {
+      const p = getModulePermission(modKey)
+      if (p.hidden || (!p.read && !p.write)) {
+        return { granted: false, level: 'view' }
+      }
+      return {
+        granted: true,
+        level: p.write ? 'edit' : 'view',
+      }
+    }
+
+    // Fallback seguro: se ainda não chegou da collection ou é item novo do catálogo,
+    // nasce concedido com nível 'edit' (ou 'view' se o módulo só for leitura)
+    const canRead = modKey ? canReadModule(modKey) : true
+    const canWrite = modKey ? canWriteModule(modKey) : false
+    return {
+      granted: canRead,
+      level: canWrite ? 'edit' : 'view',
+    }
+  }
+
+  /**
    * Checagem granular: verifica se um item específico dentro de um módulo está concedido.
    * Regra 3: Administrador tem SEMPRE acesso total (retorna true).
    * Se o módulo pai estiver oculto, o item também fica inacessível.
    */
-  const canAccessItem = (moduleKey: ModuleKey, itemKey: string): boolean => {
+  const canAccessItem = (
+    moduleOrKey: ModuleKey | string,
+    optionalItemKeyOrMinLevel?: string | PermissionLevel,
+    optionalMinLevel?: PermissionLevel,
+  ): boolean => {
     if (isAdmin) return true
 
-    // Se o módulo todo está oculto para o perfil, nenhum item é acessível
-    if (isModuleHidden(moduleKey)) return false
+    let itemPerm: GranularPermissionValue
+    let minLevel: PermissionLevel = 'view'
 
-    // Se temos permissão granular cadastrada na collection, ela prevalece
-    const fullKey = `${moduleKey}.${itemKey}`
-    if (fullKey in granularPermissions) {
-      return granularPermissions[fullKey] === true
+    if (
+      optionalItemKeyOrMinLevel === 'view' ||
+      optionalItemKeyOrMinLevel === 'edit' ||
+      optionalItemKeyOrMinLevel === 'configure'
+    ) {
+      itemPerm = getItemPermission(moduleOrKey)
+      minLevel = optionalItemKeyOrMinLevel
+    } else if (typeof optionalItemKeyOrMinLevel === 'string') {
+      itemPerm = getItemPermission(moduleOrKey, optionalItemKeyOrMinLevel)
+      if (optionalMinLevel) minLevel = optionalMinLevel
+    } else {
+      itemPerm = getItemPermission(moduleOrKey)
     }
 
-    // Caso o registro ainda não tenha chegado ou o perfil tenha nascido recentemente:
-    // por padrão é concedido se o módulo puder ser lido
-    return canReadModule(moduleKey)
+    if (!itemPerm.granted) return false
+
+    if (minLevel === 'view') return true
+    if (minLevel === 'edit') return itemPerm.level === 'edit' || itemPerm.level === 'configure'
+    if (minLevel === 'configure') return itemPerm.level === 'configure'
+    return true
+  }
+
+  /**
+   * Verbo canView(key): consegue visualizar/consultar o item ou módulo.
+   * key pode ser 'tickets_fila', 'tickets.tickets_fila' ou 'tickets'
+   */
+  const canView = (key: string): boolean => {
+    return canAccessItem(key, 'view')
+  }
+
+  /**
+   * Verbo canEdit(key): consegue ver E editar/criar, mas não necessariamente excluir.
+   * Atende 'edit' ou 'configure'.
+   */
+  const canEdit = (key: string): boolean => {
+    return canAccessItem(key, 'edit')
+  }
+
+  /**
+   * Verbo canDelete(key): acesso total que inclui excluir (nível 'configure').
+   */
+  const canDelete = (key: string): boolean => {
+    return canAccessItem(key, 'configure')
+  }
+
+  /**
+   * Verbo canConfigure(key): sinônimo de canDelete/acesso total de configuração.
+   */
+  const canConfigure = (key: string): boolean => {
+    return canAccessItem(key, 'configure')
   }
 
   /**
@@ -256,8 +394,13 @@ export function usePermissions() {
     canReadModule,
     canWriteModule,
     isModuleHidden,
+    getItemPermission,
     canAccessItem,
     canAccessPath,
+    canView,
+    canEdit,
+    canDelete,
+    canConfigure,
     canManageProfiles,
     canManageOperators,
     canManageClients,

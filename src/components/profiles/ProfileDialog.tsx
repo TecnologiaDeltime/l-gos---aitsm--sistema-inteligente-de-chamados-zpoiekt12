@@ -1,10 +1,13 @@
 import { useState, useEffect } from 'react'
-import { ProfileRecord, PermissionsMap, GRANULAR_SYSTEM_MODULES } from '@/types/profiles'
+import {
+  ProfileRecord,
+  PermissionsMap,
+  GRANULAR_SYSTEM_MODULES,
+  ProfilePermissionMap,
+} from '@/types/profiles'
 import {
   createProfile,
   updateProfile,
-  getDefaultPermissions,
-  getProfilePermissions,
   saveProfileGranularPermissions,
   initializeProfilePermissions,
 } from '@/services/profiles'
@@ -38,7 +41,7 @@ export function ProfileDialog({ open, onOpenChange, profile, onSuccess }: Profil
 
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
-  const [granularPermissions, setGranularPermissions] = useState<Record<string, boolean>>({})
+  const [granularPermissions, setGranularPermissions] = useState<ProfilePermissionMap>({})
   const [loading, setLoading] = useState(false)
   const [loadingPerms, setLoadingPerms] = useState(false)
   const [activeTab, setActiveTab] = useState('permissions')
@@ -69,11 +72,14 @@ export function ProfileDialog({ open, onOpenChange, profile, onSuccess }: Profil
         setDescription('')
         setActiveTab('info')
 
-        // Novo perfil nasce com tudo concedido por padrão
-        const initialMap: Record<string, boolean> = {}
+        // Novo perfil nasce com tudo concedido por padrão em nível 'edit'
+        const initialMap: ProfilePermissionMap = {}
         GRANULAR_SYSTEM_MODULES.forEach((mod) => {
           mod.items.forEach((item) => {
-            initialMap[`${mod.key}.${item.key}`] = true
+            initialMap[`${mod.key}.${item.key}`] = {
+              granted: true,
+              level: 'edit',
+            }
           })
         })
         setGranularPermissions(initialMap)
@@ -99,12 +105,19 @@ export function ProfileDialog({ open, onOpenChange, profile, onSuccess }: Profil
       // Montar mapa legado de módulos para manter compatibilidade com views antigas
       const legacyPerms: PermissionsMap = {}
       GRANULAR_SYSTEM_MODULES.forEach((mod) => {
-        const hasAnyGranted = mod.items.some(
-          (item) => granularPermissions[`${mod.key}.${item.key}`] !== false,
-        )
+        const hasAnyGranted = mod.items.some((item) => {
+          const val = granularPermissions[`${mod.key}.${item.key}`]
+          return val ? val.granted : true
+        })
+        const hasAnyWrite = mod.items.some((item) => {
+          const val = granularPermissions[`${mod.key}.${item.key}`]
+          if (!val) return true
+          return val.granted && (val.level === 'edit' || val.level === 'configure')
+        })
+
         legacyPerms[mod.key] = {
           read: hasAnyGranted,
-          write: hasAnyGranted,
+          write: hasAnyWrite,
           hidden: !hasAnyGranted,
         }
       })

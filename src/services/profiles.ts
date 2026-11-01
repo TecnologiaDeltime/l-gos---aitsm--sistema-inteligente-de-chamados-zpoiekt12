@@ -4,6 +4,9 @@ import {
   PermissionsMap,
   GRANULAR_SYSTEM_MODULES,
   ProfilePermissionRecord,
+  PermissionLevel,
+  GranularPermissionValue,
+  ProfilePermissionMap,
 } from '@/types/profiles'
 
 export const getDefaultPermissions = (allGranted = false): PermissionsMap => {
@@ -68,18 +71,41 @@ export const getProfilePermissions = async (
  * Garante que todas as chaves do catálogo existam na collection para o perfil.
  * Caso falte alguma chave, ela é inserida com `defaultGranted` (true por padrão para não quebrar acesso).
  */
+/**
+ * Normaliza o nível de permissão vindo do banco ou padrão
+ */
+export const normalizePermissionLevel = (
+  level?: string | null,
+  granted = true,
+): PermissionLevel => {
+  if (level === 'configure' || level === 'edit' || level === 'view') {
+    return level
+  }
+  return granted ? 'edit' : 'view'
+}
+
+/**
+ * Garante que todas as chaves do catálogo existam na collection para o perfil.
+ * Caso falte alguma chave, ela é inserida com `defaultGranted` e nível padrão.
+ * Retorna o mapa completo: chave -> { granted, level }
+ */
 export const initializeProfilePermissions = async (
   profileId: string,
   defaultGranted = true,
-): Promise<Record<string, boolean>> => {
+  defaultLevel: PermissionLevel = 'edit',
+): Promise<ProfilePermissionMap> => {
   const existing = await getProfilePermissions(profileId)
-  const map: Record<string, boolean> = {}
+  const map: ProfilePermissionMap = {}
   const existingKeys = new Set<string>()
 
   existing.forEach((r) => {
     const fullKey = `${r.module_key}.${r.item_key}`
     existingKeys.add(fullKey)
-    map[fullKey] = !!r.granted
+    const level = normalizePermissionLevel(r.level, !!r.granted)
+    map[fullKey] = {
+      granted: !!r.granted,
+      level,
+    }
   })
 
   // Criar registros faltantes
@@ -88,7 +114,11 @@ export const initializeProfilePermissions = async (
     for (const item of mod.items) {
       const fullKey = `${mod.key}.${item.key}`
       if (!existingKeys.has(fullKey)) {
-        map[fullKey] = defaultGranted
+        const itemLevel = item.defaultLevel || defaultLevel
+        map[fullKey] = {
+          granted: defaultGranted,
+          level: itemLevel,
+        }
         promises.push(
           pb
             .collection('profile_permissions')
@@ -97,6 +127,7 @@ export const initializeProfilePermissions = async (
               module_key: mod.key,
               item_key: item.key,
               granted: defaultGranted,
+              level: itemLevel,
             })
             .catch(() => {}),
         )
@@ -112,11 +143,11 @@ export const initializeProfilePermissions = async (
 }
 
 /**
- * Salva a matriz granular completa para um perfil.
+ * Salva a matriz granular completa com níveis (view | edit | configure + sem acesso).
  */
 export const saveProfileGranularPermissions = async (
   profileId: string,
-  granularMap: Record<string, boolean>,
+  granularMap: ProfilePermissionMap | Record<string, boolean | GranularPermissionValue>,
 ): Promise<void> => {
   const existing = await getProfilePermissions(profileId)
   const existingByKey: Record<string, ProfilePermissionRecord> = {}
@@ -129,14 +160,26 @@ export const saveProfileGranularPermissions = async (
   for (const mod of GRANULAR_SYSTEM_MODULES) {
     for (const item of mod.items) {
       const fullKey = `${mod.key}.${item.key}`
-      const isGranted = granularMap[fullKey] ?? true
+      const val = granularMap[fullKey]
+      let isGranted = true
+      let level: PermissionLevel = 'edit'
+
+      if (typeof val === 'boolean') {
+        isGranted = val
+        level = val ? 'edit' : 'view'
+      } else if (val && typeof val === 'object') {
+        isGranted = !!val.granted
+        level = normalizePermissionLevel(val.level, isGranted)
+      }
+
       const existingRec = existingByKey[fullKey]
 
       if (existingRec) {
-        if (existingRec.granted !== isGranted) {
+        if (existingRec.granted !== isGranted || existingRec.level !== level) {
           promises.push(
             pb.collection('profile_permissions').update(existingRec.id, {
               granted: isGranted,
+              level,
             }),
           )
         }
@@ -147,6 +190,7 @@ export const saveProfileGranularPermissions = async (
             module_key: mod.key,
             item_key: item.key,
             granted: isGranted,
+            level,
           }),
         )
       }

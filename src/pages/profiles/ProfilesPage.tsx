@@ -50,7 +50,9 @@ interface ProfilesPageProps {
 export default function ProfilesPage({ embeddedTab = false }: ProfilesPageProps) {
   const { toast } = useToast()
   const permissions = usePermissions()
-  const canManage = permissions.canManageProfiles
+  const canManage =
+    permissions.canEdit('profiles') || permissions.canManageProfiles || permissions.isAdmin
+  const canDeleteProfilePerm = permissions.canDelete('profiles') || permissions.isAdmin
 
   const [profiles, setProfiles] = useState<ProfileRecord[]>([])
   const [operatorCounts, setOperatorCounts] = useState<Record<string, number>>({})
@@ -408,7 +410,7 @@ export default function ProfilesPage({ embeddedTab = false }: ProfilesPageProps)
                             <Edit2 className="h-4 w-4 text-muted-foreground hover:text-foreground" />
                           </Button>
 
-                          {!p.is_system && canManage && (
+                          {!p.is_system && canDeleteProfilePerm && (
                             <Button
                               variant="ghost"
                               size="sm"
@@ -513,7 +515,7 @@ export default function ProfilesPage({ embeddedTab = false }: ProfilesPageProps)
                       {p.is_system ? 'Visualizar' : 'Editar'}
                     </Button>
 
-                    {!p.is_system && canManage && (
+                    {!p.is_system && canDeleteProfilePerm && (
                       <Button
                         variant="ghost"
                         size="sm"
