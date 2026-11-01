@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { PlusCircle, Search } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { usePermissions } from '@/hooks/use-permissions'
 import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
 import {
@@ -34,6 +35,8 @@ export default function ProblemList({
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
   const [priorityFilter, setPriorityFilter] = useState('all')
+  const { canEdit } = usePermissions()
+  const canEditProblems = canEdit('problems_lista') || canEdit('problems')
 
   const loadData = async () => {
     try {
@@ -72,9 +75,9 @@ export default function ProblemList({
     <div className="space-y-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h2 className="text-lg font-bold">{title}</h2>
-        {showCreate && (
+        {showCreate && canEditProblems && (
           <Link to="/problems/new">
-            <Button className="bg-primary hover:bg-primary/90">
+            <Button className="bg-primary hover:bg-primary/90 text-primary-foreground">
               <PlusCircle className="mr-2 h-4 w-4" /> Novo Problema
             </Button>
           </Link>

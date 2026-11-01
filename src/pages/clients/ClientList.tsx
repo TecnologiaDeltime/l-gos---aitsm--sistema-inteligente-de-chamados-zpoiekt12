@@ -21,6 +21,7 @@ import { getAllCompanyUnits } from '@/services/company-units'
 import { useRealtime } from '@/hooks/use-realtime'
 import { useToast } from '@/hooks/use-toast'
 import { getErrorMessage } from '@/lib/pocketbase/errors'
+import { usePermissions } from '@/hooks/use-permissions'
 
 export default function ClientList() {
   const [companies, setCompanies] = useState<CompanyRecord[]>([])
@@ -30,6 +31,10 @@ export default function ClientList() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [deleting, setDeleting] = useState(false)
+
+  const { canEdit, canDelete, canManageClients } = usePermissions()
+  const canEditClients = canEdit('clients_cadastro') || canEdit('clients') || canManageClients
+  const canDeleteClients = canDelete('clients_cadastro') || canDelete('clients')
   const { toast } = useToast()
 
   const [loadError, setLoadError] = useState<string | null>(null)
@@ -146,7 +151,7 @@ export default function ClientList() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          {selectedIds.size > 0 && (
+          {canDeleteClients && selectedIds.size > 0 && (
             <Button
               variant="destructive"
               onClick={() => setShowDeleteDialog(true)}
@@ -155,11 +160,13 @@ export default function ClientList() {
               <Trash2 className="mr-2 h-4 w-4" /> Excluir Selecionados ({selectedIds.size})
             </Button>
           )}
-          <Link to="/clients/new">
-            <Button className="bg-primary text-primary-foreground hover:brightness-110 shadow-md shadow-primary/20">
-              <PlusCircle className="mr-2 h-4 w-4" /> Novo Cliente
-            </Button>
-          </Link>
+          {canEditClients && (
+            <Link to="/clients/new">
+              <Button className="bg-primary text-primary-foreground hover:brightness-110 shadow-md shadow-primary/20">
+                <PlusCircle className="mr-2 h-4 w-4" /> Novo Cliente
+              </Button>
+            </Link>
+          )}
         </div>
       </div>
 
@@ -235,15 +242,18 @@ export default function ClientList() {
                       </p>
                     </div>
                   </div>
-                  <Link to={`/clients/${c.id}/edit`}>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 text-muted-foreground hover:text-primary hover:bg-secondary/60"
-                    >
-                      <Pencil className="h-4 w-4" />
-                    </Button>
-                  </Link>
+                  {canEditClients && (
+                    <Link to={`/clients/${c.id}/edit`}>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-muted-foreground hover:text-primary hover:bg-secondary/60"
+                        title="Editar cliente"
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                    </Link>
+                  )}
                 </div>
 
                 <div className="text-xs text-muted-foreground space-y-1 pt-2.5 border-t border-border/70">

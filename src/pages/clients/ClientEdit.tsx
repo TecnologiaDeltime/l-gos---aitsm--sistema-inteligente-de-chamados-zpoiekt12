@@ -53,7 +53,8 @@ export default function ClientEdit() {
   const navigate = useNavigate()
   const { toast } = useToast()
   const { user } = useAuth()
-  const { canManageClients } = usePermissions()
+  const { canManageClients, canEdit } = usePermissions()
+  const canEditClients = canEdit('clients_cadastro') || canEdit('clients') || canManageClients
 
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -477,17 +478,19 @@ export default function ClientEdit() {
           >
             Cancelar
           </Button>
-          <Button type="submit" disabled={saving} className="bg-blue-600 hover:bg-blue-700">
-            {saving ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Salvando...
-              </>
-            ) : (
-              <>
-                <Save className="mr-2 h-4 w-4" /> Salvar Alterações
-              </>
-            )}
-          </Button>
+          {canEditClients && (
+            <Button type="submit" disabled={saving} className="bg-blue-600 hover:bg-blue-700">
+              {saving ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Salvando...
+                </>
+              ) : (
+                <>
+                  <Save className="mr-2 h-4 w-4" /> Salvar Alterações
+                </>
+              )}
+            </Button>
+          )}
         </div>
       </form>
       <SectorSection clientId={id} />

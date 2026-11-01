@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { PlusCircle, Search, Send, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { usePermissions } from '@/hooks/use-permissions'
 import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
 import {
@@ -40,6 +41,8 @@ export default function ChangeList() {
   const [typeFilter, setTypeFilter] = useState('all')
   const [submitTarget, setSubmitTarget] = useState<ChangeRecord | null>(null)
   const [submitting, setSubmitting] = useState(false)
+  const { canEdit } = usePermissions()
+  const canEditChanges = canEdit('changes_lista') || canEdit('changes')
 
   const loadData = async () => {
     try {
@@ -135,11 +138,13 @@ export default function ChangeList() {
             </SelectContent>
           </Select>
         </div>
-        <Link to="/changes/new">
-          <Button className="bg-primary hover:bg-primary/90">
-            <PlusCircle className="mr-2 h-4 w-4" /> Nova Requisição de Mudança (RDM)
-          </Button>
-        </Link>
+        {canEditChanges && (
+          <Link to="/changes/new">
+            <Button className="bg-primary hover:bg-primary/90 text-primary-foreground">
+              <PlusCircle className="mr-2 h-4 w-4" /> Nova RDM
+            </Button>
+          </Link>
+        )}{' '}
       </div>
       <div className="itsm-table-container shadow-sm">
         <div className="overflow-x-auto">

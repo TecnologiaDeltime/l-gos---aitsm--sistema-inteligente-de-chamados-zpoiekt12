@@ -26,6 +26,7 @@ import {
   UserCheck,
   Search,
 } from 'lucide-react'
+import { usePermissions } from '@/hooks/use-permissions'
 import {
   getClientContacts,
   deleteClientContact,
@@ -55,6 +56,9 @@ export function CollaboratorSection({ clientId }: { clientId?: string }) {
   const [editing, setEditing] = useState<ClientContactRecord | null>(null)
   const [deleteId, setDeleteId] = useState<string | null>(null)
   const [search, setSearch] = useState('')
+  const { canEdit, canDelete, canManageClients } = usePermissions()
+  const canEditClients = canEdit('clients_cadastro') || canEdit('clients') || canManageClients
+  const canDeleteClients = canDelete('clients_cadastro') || canDelete('clients')
 
   const loadData = useCallback(async () => {
     if (!clientId) return
@@ -146,16 +150,18 @@ export function CollaboratorSection({ clientId }: { clientId?: string }) {
             </Badge>
           )}
         </div>
-        <Button
-          size="sm"
-          variant="outline"
-          onClick={() => {
-            setEditing(null)
-            setDialogOpen(true)
-          }}
-        >
-          <Plus className="mr-1 h-4 w-4" /> Adicionar Colaborador
-        </Button>
+        {canEditClients && (
+          <Button
+            size="sm"
+            className="bg-blue-600 hover:bg-blue-700 h-8"
+            onClick={() => {
+              setEditing(null)
+              setDialogOpen(true)
+            }}
+          >
+            <Plus className="h-4 w-4 mr-1" /> Novo Colaborador
+          </Button>
+        )}{' '}
       </div>
 
       {loading ? (
@@ -225,25 +231,31 @@ export function CollaboratorSection({ clientId }: { clientId?: string }) {
                     )}
                   </div>
                   <div className="flex items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100 shrink-0">
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      className="h-6 w-6"
-                      onClick={() => {
-                        setEditing(c)
-                        setDialogOpen(true)
-                      }}
-                    >
-                      <Pencil className="h-3 w-3" />
-                    </Button>
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      className="h-6 w-6 text-red-500"
-                      onClick={() => setDeleteId(c.id)}
-                    >
-                      <Trash2 className="h-3 w-3" />
-                    </Button>
+                    {canEditClients && (
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-6 w-6"
+                        onClick={() => {
+                          setEditing(c)
+                          setDialogOpen(true)
+                        }}
+                        title="Editar colaborador"
+                      >
+                        <Pencil className="h-3 w-3" />
+                      </Button>
+                    )}
+                    {canDeleteClients && (
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-6 w-6 text-red-500"
+                        onClick={() => setDeleteId(c.id)}
+                        title="Excluir colaborador"
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
+                    )}
                   </div>
                 </div>
               ))}

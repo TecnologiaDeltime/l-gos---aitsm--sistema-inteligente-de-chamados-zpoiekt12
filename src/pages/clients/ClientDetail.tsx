@@ -14,6 +14,7 @@ import { BranchSection } from '@/components/clients/BranchSection'
 import { SectorSection } from '@/components/clients/SectorSection'
 import { EmailDomainSection } from '@/components/clients/EmailDomainSection'
 import { useToast } from '@/hooks/use-toast'
+import { usePermissions } from '@/hooks/use-permissions'
 
 export default function ClientDetail() {
   const [form, setForm] = useState({
@@ -40,6 +41,8 @@ export default function ClientDetail() {
 
   const navigate = useNavigate()
   const { toast } = useToast()
+  const { canEdit, canManageClients } = usePermissions()
+  const canEditClients = canEdit('clients_cadastro') || canEdit('clients') || canManageClients
 
   const set = (key: string, value: string) => {
     setForm((prev) => ({ ...prev, [key]: value }))
@@ -246,15 +249,21 @@ export default function ClientDetail() {
               onChange={(e) => set('address_state', e.target.value)}
             />
           </div>
-          <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-700" disabled={saving}>
-            {saving ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Salvando...
-              </>
-            ) : (
-              'Salvar Cliente'
-            )}
-          </Button>
+          {canEditClients && (
+            <Button
+              type="submit"
+              className="w-full bg-blue-600 hover:bg-blue-700"
+              disabled={saving}
+            >
+              {saving ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Salvando...
+                </>
+              ) : (
+                'Salvar Cliente'
+              )}
+            </Button>
+          )}
         </form>
       </div>
       <BranchSection />

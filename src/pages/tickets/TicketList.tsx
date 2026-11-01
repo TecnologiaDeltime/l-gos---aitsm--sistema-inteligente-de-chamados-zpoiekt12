@@ -162,7 +162,9 @@ export default function TicketList() {
   // "Agora" em epoch ms — atualizado a cada minuto para manter o tempo sem
   // atualização fresco sem recarregar a lista.
   const [now, setNow] = useState(() => Date.now())
-  const { canResolveTicket } = usePermissions()
+  const { canResolveTicket, canEdit, canDelete } = usePermissions()
+  const canEditTickets = canEdit('tickets_fila') || canEdit('tickets')
+  const canCreateTickets = canEdit('tickets_novo') || canEdit('tickets')
   const { toast } = useToast()
   const pbConnected = usePbHealth()
   const isMobile = useIsMobile()
@@ -544,11 +546,13 @@ export default function TicketList() {
               </PopoverContent>{' '}
             </Popover>
           )}
-          <Link to="/tickets/new">
-            <Button className="bg-primary hover:bg-primary/90 text-primary-foreground w-full sm:w-auto">
-              <PlusCircle className="mr-2 h-4 w-4" /> Abrir Chamado
-            </Button>
-          </Link>
+          {canCreateTickets && (
+            <Link to="/tickets/new">
+              <Button className="bg-primary hover:bg-primary/90 text-primary-foreground w-full sm:w-auto">
+                <PlusCircle className="mr-2 h-4 w-4" /> Abrir Chamado
+              </Button>
+            </Link>
+          )}
         </div>
       </div>
 
@@ -573,7 +577,7 @@ export default function TicketList() {
       {view === 'kanban' ? (
         <KanbanBoard
           tickets={filtered}
-          canEdit={canResolveTicket}
+          canEdit={canResolveTicket && canEditTickets}
           onStatusChange={handleKanbanStatusChange}
           hiddenColumns={hiddenColumns}
         />

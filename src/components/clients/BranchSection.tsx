@@ -12,6 +12,7 @@ import {
   AlertDialogCancel,
   AlertDialogAction,
 } from '@/components/ui/alert-dialog'
+import { usePermissions } from '@/hooks/use-permissions'
 import { Plus, Pencil, Trash2, MapPin, Phone, User, Building2 } from 'lucide-react'
 import {
   getCompanyUnitsByCompany,
@@ -27,6 +28,9 @@ import { BranchDialog } from '@/components/clients/BranchDialog'
 export function BranchSection({ clientId }: { clientId?: string }) {
   const { user } = useAuth()
   const { toast } = useToast()
+  const { canEdit, canDelete, canManageClients } = usePermissions()
+  const canEditClients = canEdit('clients_cadastro') || canEdit('clients') || canManageClients
+  const canDeleteClients = canDelete('clients_cadastro') || canDelete('clients')
   const [branches, setBranches] = useState<CompanyUnitRecord[]>([])
   const [loading, setLoading] = useState(false)
   const [dialogOpen, setDialogOpen] = useState(false)
@@ -107,16 +111,18 @@ export function BranchSection({ clientId }: { clientId?: string }) {
             </Badge>
           )}
         </div>
-        <Button
-          size="sm"
-          variant="outline"
-          onClick={() => {
-            setEditing(null)
-            setDialogOpen(true)
-          }}
-        >
-          <Plus className="mr-1 h-4 w-4" /> Adicionar Filial
-        </Button>
+        {canEditClients && (
+          <Button
+            size="sm"
+            className="bg-blue-600 hover:bg-blue-700 h-8"
+            onClick={() => {
+              setEditing(null)
+              setDialogOpen(true)
+            }}
+          >
+            <Plus className="h-4 w-4 mr-1" /> Nova Filial
+          </Button>
+        )}{' '}
       </div>
 
       {loading ? (
@@ -157,25 +163,31 @@ export function BranchSection({ clientId }: { clientId?: string }) {
                   )}
                 </div>
                 <div className="flex items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100 shrink-0">
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    className="h-6 w-6"
-                    onClick={() => {
-                      setEditing(b)
-                      setDialogOpen(true)
-                    }}
-                  >
-                    <Pencil className="h-3 w-3" />
-                  </Button>
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    className="h-6 w-6 text-red-500"
-                    onClick={() => setDeleteId(b.id)}
-                  >
-                    <Trash2 className="h-3 w-3" />
-                  </Button>
+                  {canEditClients && (
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-6 w-6"
+                      onClick={() => {
+                        setEditing(b)
+                        setDialogOpen(true)
+                      }}
+                      title="Editar filial"
+                    >
+                      <Pencil className="h-3 w-3" />
+                    </Button>
+                  )}
+                  {canDeleteClients && (
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-6 w-6 text-red-500"
+                      onClick={() => setDeleteId(b.id)}
+                      title="Excluir filial"
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
+                  )}
                 </div>
               </div>
             )

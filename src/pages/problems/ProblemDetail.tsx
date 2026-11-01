@@ -55,11 +55,15 @@ import { ProblemStatusBadge, ProblemPriorityBadge } from '@/components/ProblemSt
 import { useAuth } from '@/hooks/use-auth'
 import { useRealtime } from '@/hooks/use-realtime'
 import { useToast } from '@/hooks/use-toast'
+import { usePermissions } from '@/hooks/use-permissions'
 
 export default function ProblemDetail() {
   const { id } = useParams<{ id: string }>()
   const { user } = useAuth()
   const { toast } = useToast()
+  const { canEdit, canDelete } = usePermissions()
+  const canEditProblems = canEdit('problems_lista') || canEdit('problems')
+  const canDeleteProblems = canDelete('problems_lista') || canDelete('problems')
   const [problem, setProblem] = useState<ProblemRecord | null>(null)
   const [incidents, setIncidents] = useState<any[]>([])
   const [hypotheses, setHypotheses] = useState<any[]>([])
@@ -297,39 +301,41 @@ export default function ProblemDetail() {
             <span className="font-semibold">Sintoma:</span> {problem.symptom}
           </p>
         )}
-        <div className="flex flex-wrap items-center gap-2 pt-2 border-t">
-          <Select value={problem.status} onValueChange={handleStatusChange}>
-            <SelectTrigger className="w-56 h-8 text-xs">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {PROBLEM_STATUSES.map((s) => (
-                <SelectItem key={s} value={s}>
-                  {s}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          {problem.status === 'Encerrado' && (
-            <Select value={reopenReason} onValueChange={setReopenReason}>
-              <SelectTrigger className="w-48 h-8 text-xs">
-                <SelectValue placeholder="Motivo reabertura" />
+        {canEditProblems && (
+          <div className="flex flex-wrap items-center gap-2 pt-2 border-t">
+            <Select value={problem.status} onValueChange={handleStatusChange}>
+              <SelectTrigger className="w-56 h-8 text-xs">
+                <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {REOPEN_REASONS.map((r) => (
-                  <SelectItem key={r} value={r}>
-                    {r}
+                {PROBLEM_STATUSES.map((s) => (
+                  <SelectItem key={s} value={s}>
+                    {s}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
-          )}
-          {reopenReason && (
-            <Button size="sm" variant="destructive" onClick={handleReopen}>
-              Reabrir
-            </Button>
-          )}
-        </div>
+            {problem.status === 'Encerrado' && (
+              <Select value={reopenReason} onValueChange={setReopenReason}>
+                <SelectTrigger className="w-48 h-8 text-xs">
+                  <SelectValue placeholder="Motivo reabertura" />
+                </SelectTrigger>
+                <SelectContent>
+                  {REOPEN_REASONS.map((r) => (
+                    <SelectItem key={r} value={r}>
+                      {r}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+            {reopenReason && (
+              <Button size="sm" variant="destructive" onClick={handleReopen}>
+                Reabrir
+              </Button>
+            )}
+          </div>
+        )}
       </div>
       <Tabs defaultValue="overview">
         <TabsList className="flex-wrap">
@@ -398,23 +404,25 @@ export default function ProblemDetail() {
           )}
         </TabsContent>
         <TabsContent value="incidents" className="pt-4 space-y-3">
-          <div className="flex gap-2">
-            <Select value={selectedTicket} onValueChange={setSelectedTicket}>
-              <SelectTrigger className="flex-1 h-8 text-xs">
-                <SelectValue placeholder="Selecionar incidente para relacionar" />
-              </SelectTrigger>
-              <SelectContent>
-                {tickets.map((t) => (
-                  <SelectItem key={t.id} value={t.id}>
-                    #{t.number} - {t.title}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Button size="sm" onClick={handleAddIncident} disabled={!selectedTicket}>
-              <Plus className="h-4 w-4" />
-            </Button>
-          </div>
+          {canEditProblems && (
+            <div className="flex gap-2">
+              <Select value={selectedTicket} onValueChange={setSelectedTicket}>
+                <SelectTrigger className="flex-1 h-8 text-xs">
+                  <SelectValue placeholder="Selecionar incidente para relacionar" />
+                </SelectTrigger>
+                <SelectContent>
+                  {tickets.map((t) => (
+                    <SelectItem key={t.id} value={t.id}>
+                      #{t.number} - {t.title}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button size="sm" onClick={handleAddIncident} disabled={!selectedTicket}>
+                <Plus className="h-4 w-4" />
+              </Button>
+            </div>
+          )}
           {incidents.length === 0 ? (
             <p className="text-center text-sm text-slate-500 p-4">Nenhum incidente relacionado.</p>
           ) : (
@@ -427,9 +435,16 @@ export default function ProblemDetail() {
                   >
                     #{inc.expand?.ticket?.number || 'N/A'}
                   </Link>
-                  <Button size="sm" variant="ghost" onClick={() => handleRemoveIncident(inc.id)}>
-                    <Trash2 className="h-3.5 w-3.5 text-red-500" />
-                  </Button>
+                  {canDeleteProblems && (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => handleRemoveIncident(inc.id)}
+                      title="Desvincular incidente"
+                    >
+                      <Trash2 className="h-3.5 w-3.5 text-red-500" />
+                    </Button>
+                  )}
                 </div>
                 <p className="text-muted-foreground">{inc.expand?.ticket?.title}</p>
                 <div className="flex flex-wrap gap-2 text-[10px] text-slate-500">

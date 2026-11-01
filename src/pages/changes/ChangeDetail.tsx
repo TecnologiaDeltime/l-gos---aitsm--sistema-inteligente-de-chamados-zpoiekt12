@@ -61,6 +61,9 @@ export default function ChangeDetail() {
   const { id } = useParams<{ id: string }>()
   const { user } = useAuth()
   const { toast } = useToast()
+  const { canEdit, canDelete } = usePermissions()
+  const canEditChanges = canEdit('changes_lista') || canEdit('changes')
+  const canDeleteChanges = canDelete('changes_lista') || canDelete('changes')
   const [change, setChange] = useState<ChangeRecord | null>(null)
   const [auditLogs, setAuditLogs] = useState<any[]>([])
   const [approvals, setApprovals] = useState<any[]>([])
@@ -265,20 +268,22 @@ export default function ChangeDetail() {
             </p>
           </div>
         )}
-        <div className="flex flex-wrap items-center gap-2 pt-2 border-t">
-          <Select value={change.status} onValueChange={handleStatusChange}>
-            <SelectTrigger className="w-48 h-8 text-xs">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {CHANGE_STATUSES.map((s) => (
-                <SelectItem key={s} value={s}>
-                  {s}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+        {canEditChanges && (
+          <div className="flex flex-wrap items-center gap-2 pt-2 border-t">
+            <Select value={change.status} onValueChange={handleStatusChange}>
+              <SelectTrigger className="w-48 h-8 text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {CHANGE_STATUSES.map((s) => (
+                  <SelectItem key={s} value={s}>
+                    {s}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
       </div>
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="space-y-6 lg:col-span-2">

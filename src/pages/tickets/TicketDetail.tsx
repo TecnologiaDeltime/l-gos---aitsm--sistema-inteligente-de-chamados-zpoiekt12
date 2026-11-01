@@ -141,6 +141,8 @@ export default function TicketDetail({
   const id = propTicketId || params.id
   const { user } = useAuth()
   const perms = usePermissions()
+  const canEditTicket = perms.canEdit('tickets_fila') || perms.canEdit('tickets')
+  const canDeleteTicket = perms.canDelete('tickets_fila') || perms.canDelete('tickets')
   const { toast } = useToast()
   const [ticket, setTicket] = useState<TicketRecord | null>(null)
   const [interactions, setInteractions] = useState<any[]>([])
@@ -969,7 +971,8 @@ export default function TicketDetail({
             </div>
           )}
           <div className="flex flex-wrap items-center gap-2 pt-2 border-t">
-            {!ticket.sla_response_start &&
+            {canEditTicket &&
+              !ticket.sla_response_start &&
               ticket.status !== 'Resolvido' &&
               ticket.status !== 'Encerrado' &&
               ticket.status !== 'Cancelado' && (
@@ -981,16 +984,17 @@ export default function TicketDetail({
                   <PlayCircle className="mr-1.5 h-4 w-4" /> Iniciar Atendimento
                 </Button>
               )}
-            {ticket.sla_paused ? (
-              <Button size="sm" variant="outline" onClick={handleResumeSla}>
-                <PlayCircle className="mr-1.5 h-4 w-4 text-green-600" /> Retomar SLA
-              </Button>
-            ) : (
-              <Button size="sm" variant="outline" onClick={() => setShowSlaPause(true)}>
-                <PauseCircle className="mr-1.5 h-4 w-4 text-amber-600" /> Pausar SLA
-              </Button>
-            )}
-            {ticket.status !== 'Resolvido' && (
+            {canEditTicket &&
+              (ticket.sla_paused ? (
+                <Button size="sm" variant="outline" onClick={handleResumeSla}>
+                  <PlayCircle className="mr-1.5 h-4 w-4 text-green-600" /> Retomar SLA
+                </Button>
+              ) : (
+                <Button size="sm" variant="outline" onClick={() => setShowSlaPause(true)}>
+                  <PauseCircle className="mr-1.5 h-4 w-4 text-amber-600" /> Pausar SLA
+                </Button>
+              ))}
+            {canEditTicket && ticket.status !== 'Resolvido' && (
               <Button
                 size="sm"
                 className="bg-emerald-600 hover:bg-emerald-700"
@@ -999,10 +1003,13 @@ export default function TicketDetail({
                 <CheckCircle2 className="mr-1.5 h-4 w-4" /> Resolver
               </Button>
             )}
-            <Button size="sm" variant="outline" onClick={() => setShowDelegate(true)}>
-              <Forward className="mr-1.5 h-4 w-4" /> Delegar
-            </Button>
-            {ticket.status !== 'Resolvido' &&
+            {canEditTicket && (
+              <Button size="sm" variant="outline" onClick={() => setShowDelegate(true)}>
+                <Forward className="mr-1.5 h-4 w-4" /> Delegar
+              </Button>
+            )}
+            {canEditTicket &&
+              ticket.status !== 'Resolvido' &&
               ticket.status !== 'Encerrado' &&
               ticket.status !== 'Cancelado' &&
               !ticket.parent_ticket_id && (
@@ -1015,7 +1022,8 @@ export default function TicketDetail({
                   <GitBranch className="mr-1.5 h-4 w-4 text-blue-600" /> Abrir Ticket Filho
                 </Button>
               )}
-            {ticket.status !== 'Resolvido' &&
+            {canEditTicket &&
+              ticket.status !== 'Resolvido' &&
               ticket.status !== 'Encerrado' &&
               ticket.status !== 'Cancelado' &&
               !ticket.parent_ticket_id && (
@@ -1028,7 +1036,7 @@ export default function TicketDetail({
                   <Link2 className="mr-1.5 h-4 w-4 text-blue-600" /> Associar Chamados
                 </Button>
               )}
-            {(perms.isAdmin || perms.isGestor || perms.isClienteGestor) && (
+            {canEditTicket && (perms.isAdmin || perms.isGestor || perms.isClienteGestor) && (
               <Button size="sm" variant="outline" onClick={() => setShowVisit(true)}>
                 <MapPin className="mr-1.5 h-4 w-4" /> Agendar Visita
               </Button>
@@ -1089,7 +1097,7 @@ export default function TicketDetail({
                       </span>{' '}
                       {(perms.isTecnico || perms.isAdmin || perms.isGestor) && (
                         <>
-                          {i.origin !== 'Cronômetro' && (
+                          {canEditTicket && i.origin !== 'Cronômetro' && (
                             <button
                               onClick={() => handleEditInteraction(i)}
                               className="text-slate-400 hover:text-blue-600 transition-colors"
@@ -1098,13 +1106,15 @@ export default function TicketDetail({
                               <Pencil className="h-3.5 w-3.5" />
                             </button>
                           )}
-                          <button
-                            onClick={() => setDeleteTarget(i)}
-                            className="text-slate-400 hover:text-red-600 transition-colors"
-                            title="Excluir interação"
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </button>
+                          {canDeleteTicket && (
+                            <button
+                              onClick={() => setDeleteTarget(i)}
+                              className="text-slate-400 hover:text-red-600 transition-colors"
+                              title="Excluir interação"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
+                          )}
                         </>
                       )}
                     </div>
@@ -1144,130 +1154,132 @@ export default function TicketDetail({
                 </div>
               ))}
             </div>
-            <div className="rounded-lg border border-border bg-card p-4 space-y-3">
-              <Textarea
-                placeholder="Escreva uma resposta ou nota interna..."
-                value={comment}
-                onChange={(e) => setComment(e.target.value)}
-              />
-              <div className="grid gap-3 sm:grid-cols-3">
-                <div className="space-y-1">
-                  <Label className="text-xs text-muted-foreground">Tempo Gasto</Label>
-                  <div className="flex gap-2">
-                    <Input
-                      placeholder="hh:mm"
-                      value={timeSpent}
-                      onChange={(e) => {
-                        setTimeSpent(e.target.value)
-                        setTimeError(validateTimeSpent(e.target.value))
-                      }}
-                      className="h-8 text-sm"
-                    />
-                    {timerRunning ? (
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="destructive"
-                        className="h-8 shrink-0 whitespace-nowrap"
-                        onClick={handleStopTimer}
-                      >
-                        <Timer className="mr-1 h-3.5 w-3.5" />
-                        Parar {timerDisplay}
-                      </Button>
-                    ) : (
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="outline"
-                        className="h-8 shrink-0"
-                        onClick={handleStartTimer}
-                      >
-                        <Timer className="mr-1 h-3.5 w-3.5" />
-                        Iniciar
-                      </Button>
-                    )}
+            {canEditTicket && (
+              <div className="rounded-lg border border-border bg-card p-4 space-y-3">
+                <Textarea
+                  placeholder="Escreva uma resposta ou nota interna..."
+                  value={comment}
+                  onChange={(e) => setComment(e.target.value)}
+                />
+                <div className="grid gap-3 sm:grid-cols-3">
+                  <div className="space-y-1">
+                    <Label className="text-xs text-muted-foreground">Tempo Gasto</Label>
+                    <div className="flex gap-2">
+                      <Input
+                        placeholder="hh:mm"
+                        value={timeSpent}
+                        onChange={(e) => {
+                          setTimeSpent(e.target.value)
+                          setTimeError(validateTimeSpent(e.target.value))
+                        }}
+                        className="h-8 text-sm"
+                      />
+                      {timerRunning ? (
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="destructive"
+                          className="h-8 shrink-0 whitespace-nowrap"
+                          onClick={handleStopTimer}
+                        >
+                          <Timer className="mr-1 h-3.5 w-3.5" />
+                          Parar {timerDisplay}
+                        </Button>
+                      ) : (
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          className="h-8 shrink-0"
+                          onClick={handleStartTimer}
+                        >
+                          <Timer className="mr-1 h-3.5 w-3.5" />
+                          Iniciar
+                        </Button>
+                      )}
+                    </div>
+                    {timeError && <p className="text-xs text-red-500">{timeError}</p>}
                   </div>
-                  {timeError && <p className="text-xs text-red-500">{timeError}</p>}
+                  <div className="space-y-1">
+                    <Label className="text-xs text-muted-foreground">Tipo de Hora</Label>
+                    <Select value={hourType} onValueChange={setHourType}>
+                      <SelectTrigger className="h-8 text-sm">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {HOUR_TYPES.map((t) => (
+                          <SelectItem key={t} value={t}>
+                            {t}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs text-muted-foreground">Faturamento</Label>
+                    <Select value={billingStatus} onValueChange={setBillingStatus}>
+                      <SelectTrigger className="h-8 text-sm">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {BILLING_STATUSES.map((s) => (
+                          <SelectItem key={s} value={s}>
+                            {s}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
-                <div className="space-y-1">
-                  <Label className="text-xs text-muted-foreground">Tipo de Hora</Label>
-                  <Select value={hourType} onValueChange={setHourType}>
-                    <SelectTrigger className="h-8 text-sm">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {HOUR_TYPES.map((t) => (
-                        <SelectItem key={t} value={t}>
-                          {t}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                <div className="flex items-center gap-2">
+                  <FileText className="h-3.5 w-3.5 text-slate-400" />
+                  {commentTemplates.length > 0 ? (
+                    <Select
+                      onValueChange={(val) => {
+                        const tmpl = commentTemplates.find((t) => t.id === val)
+                        if (tmpl) {
+                          setSelectedCommentTemplate(tmpl)
+                          setComment(tmpl.content)
+                        }
+                      }}
+                    >
+                      <SelectTrigger className="h-7 text-xs w-auto">
+                        <SelectValue placeholder="Usar modelo..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {commentTemplates.map((t) => (
+                          <SelectItem key={t.id} value={t.id}>
+                            {t.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <span className="text-xs text-slate-400">
+                      Nenhum modelo disponível. Crie um em Configurações de Modelos.
+                    </span>
+                  )}
                 </div>
-                <div className="space-y-1">
-                  <Label className="text-xs text-muted-foreground">Faturamento</Label>
-                  <Select value={billingStatus} onValueChange={setBillingStatus}>
-                    <SelectTrigger className="h-8 text-sm">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {BILLING_STATUSES.map((s) => (
-                        <SelectItem key={s} value={s}>
-                          {s}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <FileText className="h-3.5 w-3.5 text-slate-400" />
-                {commentTemplates.length > 0 ? (
-                  <Select
-                    onValueChange={(val) => {
-                      const tmpl = commentTemplates.find((t) => t.id === val)
-                      if (tmpl) {
-                        setSelectedCommentTemplate(tmpl)
-                        setComment(tmpl.content)
-                      }
-                    }}
+                <div className="flex justify-between items-center">
+                  <label className="text-xs text-muted-foreground flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={isInternal}
+                      onChange={(e) => setIsInternal(e.target.checked)}
+                    />{' '}
+                    Nota interna (visível apenas para a equipe)
+                  </label>
+                  <Button
+                    onClick={handleSendComment}
+                    className="bg-blue-600 hover:bg-blue-700"
+                    size="sm"
+                    disabled={sending}
                   >
-                    <SelectTrigger className="h-7 text-xs w-auto">
-                      <SelectValue placeholder="Usar modelo..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {commentTemplates.map((t) => (
-                        <SelectItem key={t.id} value={t.id}>
-                          {t.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                ) : (
-                  <span className="text-xs text-slate-400">
-                    Nenhum modelo disponível. Crie um em Configurações de Modelos.
-                  </span>
-                )}
+                    <Send className="mr-1.5 h-3.5 w-3.5" /> Enviar
+                  </Button>
+                </div>
               </div>
-              <div className="flex justify-between items-center">
-                <label className="text-xs text-muted-foreground flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={isInternal}
-                    onChange={(e) => setIsInternal(e.target.checked)}
-                  />{' '}
-                  Nota interna (visível apenas para a equipe)
-                </label>
-                <Button
-                  onClick={handleSendComment}
-                  className="bg-blue-600 hover:bg-blue-700"
-                  size="sm"
-                  disabled={sending}
-                >
-                  <Send className="mr-1.5 h-3.5 w-3.5" /> Enviar
-                </Button>
-              </div>
-            </div>
+            )}
           </TabsContent>
           <TabsContent value="attachments" className="pt-4 space-y-4">
             <div className="flex items-center justify-between rounded-lg border border-border bg-card p-4">
@@ -1277,29 +1289,31 @@ export default function TicketDetail({
                   Anexos vinculados ao chamado ou recebidos via e-mail.
                 </p>
               </div>
-              <div>
-                <input
-                  type="file"
-                  id="ticket-file-upload"
-                  className="hidden"
-                  onChange={handleFileUpload}
-                  disabled={uploadingAttachment}
-                />
-                <Button
-                  size="sm"
-                  variant="outline"
-                  disabled={uploadingAttachment}
-                  onClick={() => document.getElementById('ticket-file-upload')?.click()}
-                  className="text-xs"
-                >
-                  {uploadingAttachment ? (
-                    <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
-                  ) : (
-                    <UploadCloud className="mr-1.5 h-3.5 w-3.5 text-blue-600" />
-                  )}
-                  {uploadingAttachment ? 'Enviando...' : 'Anexar arquivo'}
-                </Button>
-              </div>
+              {canEditTicket && (
+                <div>
+                  <input
+                    type="file"
+                    id="ticket-file-upload"
+                    className="hidden"
+                    onChange={handleFileUpload}
+                    disabled={uploadingAttachment}
+                  />
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={uploadingAttachment}
+                    onClick={() => document.getElementById('ticket-file-upload')?.click()}
+                    className="text-xs"
+                  >
+                    {uploadingAttachment ? (
+                      <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <UploadCloud className="mr-1.5 h-3.5 w-3.5 text-blue-600" />
+                    )}
+                    {uploadingAttachment ? 'Enviando...' : 'Anexar arquivo'}
+                  </Button>
+                </div>
+              )}
             </div>
 
             {attachments.length === 0 ? (
@@ -1365,24 +1379,25 @@ export default function TicketDetail({
                           <span className="text-slate-400 text-[11px]">Arquivo indisponível</span>
                         )}
 
-                        {(perms.isAdmin ||
-                          perms.isGestor ||
-                          perms.isTecnico ||
-                          att.uploaded_by === user?.id) && (
-                          <button
-                            type="button"
-                            onClick={() => handleDeleteAttachment(att.id)}
-                            disabled={deletingAttachmentId === att.id}
-                            className="text-slate-400 hover:text-red-600 transition-colors p-1"
-                            title="Remover anexo"
-                          >
-                            {deletingAttachmentId === att.id ? (
-                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                            ) : (
-                              <Trash2 className="h-3.5 w-3.5" />
-                            )}
-                          </button>
-                        )}
+                        {canDeleteTicket &&
+                          (perms.isAdmin ||
+                            perms.isGestor ||
+                            perms.isTecnico ||
+                            att.uploaded_by === user?.id) && (
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteAttachment(att.id)}
+                              disabled={deletingAttachmentId === att.id}
+                              className="text-slate-400 hover:text-red-600 transition-colors p-1"
+                              title="Remover anexo"
+                            >
+                              {deletingAttachmentId === att.id ? (
+                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                              ) : (
+                                <Trash2 className="h-3.5 w-3.5" />
+                              )}
+                            </button>
+                          )}
                       </div>
                     </div>
                   )
