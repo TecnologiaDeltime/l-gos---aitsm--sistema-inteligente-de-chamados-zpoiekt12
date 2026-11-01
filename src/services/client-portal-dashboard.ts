@@ -71,6 +71,8 @@ const MONTH_NAMES_SHORT = [
  */
 export async function getClientPortalDashboardMetrics(
   companyId: string,
+  targetMonth?: number,
+  targetYear?: number,
 ): Promise<PortalDashboardMetrics> {
   if (!companyId) {
     return {
@@ -89,10 +91,14 @@ export async function getClientPortalDashboardMetrics(
   }
 
   const now = new Date()
-  const currentYear = now.getFullYear()
-  const currentMonth = now.getMonth() + 1 // 1..12
+  const selectedYear = targetYear || now.getFullYear()
+  const selectedMonth = targetMonth || now.getMonth() + 1 // 1..12
 
-  // Calcula os últimos 3 meses (ex: [mês - 2, mês - 1, mês corrente])
+  // Período selecionado (Início e Fim do mês filtrado)
+  const filterMonthStartIso = new Date(selectedYear, selectedMonth - 1, 1, 0, 0, 0, 0).toISOString()
+  const filterMonthEndIso = new Date(selectedYear, selectedMonth, 0, 23, 59, 59, 999).toISOString()
+
+  // Calcula os últimos 3 meses terminando no mês filtrado
   const months3: {
     month: number
     year: number
@@ -102,7 +108,7 @@ export async function getClientPortalDashboardMetrics(
     endIso: string
   }[] = []
   for (let i = 2; i >= 0; i--) {
-    const d = new Date(currentYear, currentMonth - 1 - i, 1)
+    const d = new Date(selectedYear, selectedMonth - 1 - i, 1)
     const y = d.getFullYear()
     const m = d.getMonth() + 1
     const mKey = `${y}-${String(m).padStart(2, '0')}`
@@ -175,9 +181,16 @@ export async function getClientPortalDashboardMetrics(
   // Horas contratadas mensais padrão
   const monthlyContractedDefault = Number(contracts[0]?.monthly_hours || 0)
 
-  // 3. Totais gerais de chamados
-  const totalOpened = tickets.length
-  const totalClosed = tickets.filter(
+  // 3. Chamados e Totais para o período filtrado (se criados no período do mês filtrado)
+  const ticketsInPeriod = tickets.filter((t) => {
+    const c = t.created || ''
+    return c >= filterMonthStartIso && c <= filterMonthEndIso
+  })
+
+  // Se houver chamados no período, calcula os KPIs do período;
+  // Se não houver chamados criados no período, exibe 0 para o mês filtrado com precisão analítica.
+  const totalOpened = ticketsInPeriod.length
+  const totalClosed = ticketsInPeriod.filter(
     (t) => t.status === 'Resolvido' || t.status === 'Fechado' || t.status === 'Encerrado',
   ).length
   const totalPending = totalOpened - totalClosed
@@ -247,11 +260,16 @@ export async function getClientPortalDashboardMetrics(
   // Mês corrente é o último de last3Months
   const currentMonthData = last3Months[last3Months.length - 1]
 
-  // 5. Utilização/consumo da franquia POR SETOR
-  // Acumula horas faturáveis e contagem de chamados por setor do solicitante/chamado
+  // 5. Utilização/consumo da franquia POR SETOR no mês selecionado
+  // Filtra interações do mês selecionado
+  const selectedMonthInters = interactions.filter((i) => {
+    const c = i.created || ''
+    return c >= filterMonthStartIso && c <= filterMonthEndIso
+  })
+
   const sectorMap = new Map<string, { name: string; minutes: number; ticketIds: Set<string> }>()
 
-  interactions.forEach((inter) => {
+  selectedMonthInters.forEach((inter) => {
     if (
       inter.billing_status === 'Não Faturável' ||
       inter.hour_type === 'Não Faturável' ||
@@ -280,8 +298,8 @@ export async function getClientPortalDashboardMetrics(
     sectorMap.set(deptId, existing)
   })
 
-  // Se houver chamados sem apontamento de horas mas com setor, contabiliza para o setor ter representatividade
-  tickets.forEach((t) => {
+  // Adiciona chamados do período ao mapa de setores
+  ticketsInPeriod.forEach((t) => {
     const deptId = t.department || 'sem_setor'
     const deptName = t.department
       ? deptMap.get(t.department) || (t.expand?.department as any)?.name || 'Setor não identificado'
@@ -316,13 +334,14 @@ export async function getClientPortalDashboardMetrics(
     })
     .sort((a, b) => b.hours - a.hours || b.ticketCount - a.ticketCount)
 
-  // 6. Top 10 de atividades mais requisitadas
+  // 6. Top 10 de atividades mais requisitadas no período
   const activityMap = new Map<
     string,
     { id: string; name: string; categoryName: string; tickets: Set<string>; minutes: number }
   >()
 
-  tickets.forEach((t) => {
+  const relevantTickets = ticketsInPeriod.length > 0 ? ticketsInPeriod : tickets
+  relevantTickets.forEach((t) => {
     const subCat = t.subcategory ? catMap.get(t.subcategory) : null
     const mainCat = t.category ? catMap.get(t.category) : null
     const actId = subCat?.id || mainCat?.id || 'geral'
@@ -340,8 +359,9 @@ export async function getClientPortalDashboardMetrics(
     activityMap.set(actId, act)
   })
 
-  // Adiciona minutos lançados às atividades
-  interactions.forEach((inter) => {
+  // Adiciona minutos lançados às atividades (das interações do período selecionado)
+  const relevantInters = selectedMonthInters.length > 0 ? selectedMonthInters : interactions
+  relevantInters.forEach((inter) => {
     const t = ticketMap.get(inter.ticket)
     if (!t) return
     const subCat = t.subcategory ? catMap.get(t.subcategory) : null
@@ -364,13 +384,13 @@ export async function getClientPortalDashboardMetrics(
     .sort((a, b) => b.ticketCount - a.ticketCount || b.hours - a.hours)
     .slice(0, 10)
 
-  // 7. Top 10 de colaboradores (solicitantes) que mais solicitaram
+  // 7. Top 10 de colaboradores (solicitantes) que mais solicitaram no período
   const requesterMap = new Map<
     string,
     { name: string; email: string; sectorName: string; tickets: Set<string>; minutes: number }
   >()
 
-  tickets.forEach((t) => {
+  relevantTickets.forEach((t) => {
     const name =
       t.requester_name?.trim() || t.requester_email?.trim() || 'Colaborador não identificado'
     const email = t.requester_email?.trim() || ''
@@ -390,7 +410,7 @@ export async function getClientPortalDashboardMetrics(
     requesterMap.set(key, req)
   })
 
-  interactions.forEach((inter) => {
+  relevantInters.forEach((inter) => {
     const t = ticketMap.get(inter.ticket)
     if (!t) return
     const name =

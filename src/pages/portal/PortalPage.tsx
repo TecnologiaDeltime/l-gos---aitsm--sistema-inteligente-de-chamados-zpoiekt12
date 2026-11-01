@@ -106,10 +106,12 @@ export default function PortalPage() {
   const [releasedReports, setReleasedReports] = useState<ClientMonthlyReportRecord[]>([])
   const [reportsLoading, setReportsLoading] = useState(false)
 
-  // Período de horas
+  // Período de horas e Dashboard
   const now = new Date()
   const [selectedMonth, setSelectedMonth] = useState(now.getMonth() + 1)
   const [selectedYear, setSelectedYear] = useState(now.getFullYear())
+  const [dashboardMonth, setDashboardMonth] = useState(now.getMonth() + 1)
+  const [dashboardYear, setDashboardYear] = useState(now.getFullYear())
   const [hoursData, setHoursData] = useState({
     contractedHours: 0,
     consumedHours: 0,
@@ -196,7 +198,7 @@ export default function PortalPage() {
           .finally(() => setHoursLoading(false))
 
         // Busca métricas do Dashboard
-        getClientPortalDashboardMetrics(companyId)
+        getClientPortalDashboardMetrics(companyId, dashboardMonth, dashboardYear)
           .then((metrics) => setDashboardMetrics(metrics))
           .catch((e) => console.warn('Erro ao carregar métricas do dashboard:', e))
           .finally(() => setDashboardLoading(false))
@@ -235,6 +237,23 @@ export default function PortalPage() {
       console.error('Erro ao atualizar período de horas:', err)
     } finally {
       setHoursLoading(false)
+    }
+  }
+
+  // Recarregar métricas do dashboard quando o mês/ano muda
+  const handleChangeDashboardPeriod = async (month: number, year: number) => {
+    setDashboardMonth(month)
+    setDashboardYear(year)
+    if (!data?.company?.id) return
+
+    try {
+      setDashboardLoading(true)
+      const metrics = await getClientPortalDashboardMetrics(data.company.id, month, year)
+      setDashboardMetrics(metrics)
+    } catch (err) {
+      console.error('Erro ao atualizar período do dashboard:', err)
+    } finally {
+      setDashboardLoading(false)
     }
   }
 
@@ -577,7 +596,7 @@ export default function PortalPage() {
                 className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-amber-500 data-[state=active]:text-amber-600 dark:data-[state=active]:text-amber-400 rounded-none px-3 py-2.5 text-xs sm:text-sm font-semibold gap-2"
               >
                 <LifeBuoy className="h-4 w-4" />
-                Meus Chamados ({tickets.length})
+                Chamados da organização ({tickets.length})
               </TabsTrigger>
 
               <TabsTrigger
@@ -598,7 +617,7 @@ export default function PortalPage() {
                 className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-amber-500 data-[state=active]:text-amber-600 dark:data-[state=active]:text-amber-400 rounded-none px-3 py-2.5 text-xs sm:text-sm font-semibold gap-2"
               >
                 <Server className="h-4 w-4" />
-                Meus Ativos (CMDB) ({data?.configurationItems?.length || 0})
+                Inventário de TI ({data?.configurationItems?.length || 0})
               </TabsTrigger>
 
               <TabsTrigger
@@ -614,7 +633,7 @@ export default function PortalPage() {
                 className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-amber-500 data-[state=active]:text-amber-600 dark:data-[state=active]:text-amber-400 rounded-none px-3 py-2.5 text-xs sm:text-sm font-semibold gap-2"
               >
                 <Clock className="h-4 w-4" />
-                Horas e Franquia ({hoursData.periodName})
+                Horas e Franquia
               </TabsTrigger>
 
               <TabsTrigger
@@ -640,6 +659,9 @@ export default function PortalPage() {
               metrics={dashboardMetrics}
               loading={dashboardLoading}
               companyName={companyName}
+              selectedMonth={dashboardMonth}
+              selectedYear={dashboardYear}
+              onChangePeriod={handleChangeDashboardPeriod}
               onOpenTicketsTab={() => setActiveTab('tickets')}
               onOpenHoursTab={() => setActiveTab('hours')}
               onOpenReportsTab={() => setActiveTab('reports')}
@@ -883,12 +905,14 @@ export default function PortalPage() {
         <TicketPublicDetailDialog
           ticket={selectedTicket}
           open={!!selectedTicket}
+          currentUserId={user?.id}
           onOpenChange={(open) => {
             if (!open) {
               setSelectedTicket(null)
               loadPortalData(true)
             }
           }}
+          onTicketUpdated={() => loadPortalData(true)}
         />
       )}
 
@@ -905,7 +929,6 @@ export default function PortalPage() {
           unit: user?.unit,
           phone: user?.phone,
         }}
-        categories={data?.categories || []}
         assets={data?.configurationItems || []}
         onSuccess={() => loadPortalData(true)}
       />

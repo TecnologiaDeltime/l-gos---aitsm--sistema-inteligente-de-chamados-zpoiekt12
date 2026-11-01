@@ -24,11 +24,19 @@ import {
   Legend,
   ResponsiveContainer,
   Cell,
+  LabelList,
 } from 'recharts'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import {
   PortalDashboardMetrics,
   PortalSectorConsumption,
@@ -41,6 +49,9 @@ interface PortalDashboardTabProps {
   metrics: PortalDashboardMetrics | null
   loading: boolean
   companyName: string
+  selectedMonth: number
+  selectedYear: number
+  onChangePeriod: (month: number, year: number) => void
   onOpenTicketsTab?: () => void
   onOpenHoursTab?: () => void
   onOpenReportsTab?: () => void
@@ -63,10 +74,31 @@ export default function PortalDashboardTab({
   metrics,
   loading,
   companyName,
+  selectedMonth,
+  selectedYear,
+  onChangePeriod,
   onOpenTicketsTab,
   onOpenHoursTab,
   onOpenReportsTab,
 }: PortalDashboardTabProps) {
+  const months = [
+    { value: 1, label: 'Janeiro' },
+    { value: 2, label: 'Fevereiro' },
+    { value: 3, label: 'Março' },
+    { value: 4, label: 'Abril' },
+    { value: 5, label: 'Maio' },
+    { value: 6, label: 'Junho' },
+    { value: 7, label: 'Julho' },
+    { value: 8, label: 'Agosto' },
+    { value: 9, label: 'Setembro' },
+    { value: 10, label: 'Outubro' },
+    { value: 11, label: 'Novembro' },
+    { value: 12, label: 'Dezembro' },
+  ]
+
+  const currentYear = new Date().getFullYear()
+  const years = [currentYear - 2, currentYear - 1, currentYear, currentYear + 1]
+  const isCurrentMonth = selectedMonth === new Date().getMonth() + 1 && selectedYear === currentYear
   if (loading) {
     return (
       <div className="space-y-6">
@@ -116,6 +148,85 @@ export default function PortalDashboardTab({
 
   return (
     <div className="space-y-6">
+      {/* =========================================================================
+          BARRA DE FILTRO DE MÊS/ANO DO DASHBOARD
+          ========================================================================= */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-card border rounded-xl p-4 shadow-2xs">
+        <div>
+          <div className="flex items-center gap-2">
+            <BarChart3 className="h-5 w-5 text-amber-500" />
+            <h3 className="font-bold text-base text-foreground">Dashboard Analítico do Cliente</h3>
+            {isCurrentMonth ? (
+              <Badge
+                variant="outline"
+                className="border-amber-500/40 text-amber-600 dark:text-amber-400 text-xs"
+              >
+                Mês Atual (Padrão)
+              </Badge>
+            ) : (
+              <Badge
+                variant="outline"
+                className="border-blue-500/40 text-blue-600 dark:text-blue-400 text-xs"
+              >
+                Período Filtrado: {String(selectedMonth).padStart(2, '0')}/{selectedYear}
+              </Badge>
+            )}
+          </div>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Selecione o mês/ano para recalcular gráficos, consumo de horas e KPIs do período.
+          </p>
+        </div>
+
+        {/* Seletor de Mês e Ano */}
+        <div className="flex items-center gap-2 self-start sm:self-auto">
+          <Select
+            value={String(selectedMonth)}
+            onValueChange={(val) => onChangePeriod(Number(val), selectedYear)}
+          >
+            <SelectTrigger className="w-[130px] text-xs h-9">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {months.map((m) => (
+                <SelectItem key={m.value} value={String(m.value)}>
+                  {m.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <Select
+            value={String(selectedYear)}
+            onValueChange={(val) => onChangePeriod(selectedMonth, Number(val))}
+          >
+            <SelectTrigger className="w-[90px] text-xs h-9">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {years.map((y) => (
+                <SelectItem key={y} value={String(y)}>
+                  {y}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          {!isCurrentMonth && (
+            <Button
+              size="sm"
+              variant="outline"
+              className="text-xs h-9"
+              onClick={() => {
+                const now = new Date()
+                onChangePeriod(now.getMonth() + 1, now.getFullYear())
+              }}
+            >
+              Mês Atual
+            </Button>
+          )}
+        </div>
+      </div>
+
       {/* =========================================================================
           INDICADORES PRINCIPAIS (KPIS)
           ========================================================================= */}
@@ -322,6 +433,12 @@ export default function PortalDashboardTab({
                       radius={[4, 4, 0, 0]}
                       fill="#d97706"
                     >
+                      <LabelList
+                        dataKey="Horas"
+                        position="top"
+                        formatter={(val: any) => (val > 0 ? `${val}h` : '')}
+                        style={{ fontSize: '10px', fill: 'currentColor', fontWeight: 600 }}
+                      />
                       {sectorChartData.map((_, idx) => (
                         <Cell key={idx} fill={SECTOR_COLORS[idx % SECTOR_COLORS.length]} />
                       ))}
@@ -408,13 +525,27 @@ export default function PortalDashboardTab({
                       name="Franquia Contratada"
                       fill="#3b82f6"
                       radius={[4, 4, 0, 0]}
-                    />
+                    >
+                      <LabelList
+                        dataKey="Contratadas"
+                        position="top"
+                        formatter={(val: any) => (val > 0 ? `${val}h` : '')}
+                        style={{ fontSize: '10px', fill: '#3b82f6', fontWeight: 600 }}
+                      />
+                    </Bar>
                     <Bar
                       dataKey="Consumidas"
                       name="Horas Consumidas"
                       fill="#d97706"
                       radius={[4, 4, 0, 0]}
-                    />
+                    >
+                      <LabelList
+                        dataKey="Consumidas"
+                        position="top"
+                        formatter={(val: any) => (val > 0 ? `${val}h` : '')}
+                        style={{ fontSize: '10px', fill: '#d97706', fontWeight: 600 }}
+                      />
+                    </Bar>
                   </BarChart>
                 </ResponsiveContainer>
               </div>
