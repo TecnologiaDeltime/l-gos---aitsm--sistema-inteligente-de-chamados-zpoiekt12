@@ -115,10 +115,13 @@ import TicketApprovalsPage from '@/pages/tickets/TicketApprovalsPage'
 import ApprovalPublic from '@/pages/tickets/ApprovalPublic'
 import { useAuth } from '@/hooks/use-auth'
 
+import { usePermissions } from '@/hooks/use-permissions'
+
 function RootRedirect() {
   const { user } = useAuth()
+  const { defaultLandingRoute } = usePermissions()
   const isClient = user?.role === 'cliente_solicitante' || user?.role === 'cliente_gestor'
-  const target = isClient ? '/portal' : '/dashboard'
+  const target = isClient ? '/portal' : defaultLandingRoute
   return <Navigate to={target} replace />
 }
 

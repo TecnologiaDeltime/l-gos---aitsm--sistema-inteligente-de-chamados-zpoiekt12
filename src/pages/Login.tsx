@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import pb from '@/lib/pocketbase/client'
 import { useAuth } from '@/hooks/use-auth'
+import { resolvePostLoginDestination } from '@/lib/post-login-destination'
 import { securityService, TwoFactorSetupResponse } from '@/services/security'
 import { getDesignSettings } from '@/services/design-settings'
 import { QrCodeDisplay } from '@/components/QrCodeDisplay'
@@ -53,19 +54,28 @@ export default function Login() {
   const [infoMessage, setInfoMessage] = useState<string | null>(null)
 
   const navigate = useNavigate()
+  const location = useLocation()
   const { login, isAuthenticated, user } = useAuth()
   const { toast } = useToast()
+
+  // Determina o destino efetivo levando em conta redirecionamentos prévios (state.from)
+  // Se o usuário tentou acessar '/', ou não veio de rota específica, aplica a regra de destino por perfil.
+  const getEffectiveDestination = async (authRecord?: any): Promise<string> => {
+    const fromPath = (location.state as any)?.from?.pathname as string | undefined
+    if (fromPath && fromPath !== '/' && fromPath !== '/login') {
+      return fromPath
+    }
+    return await resolvePostLoginDestination(authRecord || user)
+  }
 
   // Se já autenticado e sem etapas intermediárias pendentes, direcionar
   useEffect(() => {
     if (isAuthenticated && step === 'credentials') {
-      if (user?.role === 'cliente_solicitante' || user?.role === 'cliente_gestor') {
-        navigate('/portal')
-      } else {
-        navigate('/dashboard')
-      }
+      getEffectiveDestination(user).then((target) => {
+        navigate(target, { replace: true })
+      })
     }
-  }, [isAuthenticated, user, navigate, step])
+  }, [isAuthenticated, user, navigate, step, location.state])
 
   // Checar se há mensagem de sessão expirada e carregar logotipo dinâmico
   useEffect(() => {
@@ -121,12 +131,8 @@ export default function Login() {
       } else {
         // Não requer 2FA: concluir login imediatamente
         login(authData.token, authData.record)
-        const role = authData.record?.role
-        if (role === 'cliente_solicitante' || role === 'cliente_gestor') {
-          navigate('/portal')
-        } else {
-          navigate('/dashboard')
-        }
+        const target = await getEffectiveDestination(authData.record)
+        navigate(target, { replace: true })
       }
     } catch (err: any) {
       console.error('Login error:', err)
@@ -161,12 +167,14 @@ export default function Login() {
           title: 'Autenticação concluída',
           description: 'Login seguro realizado com sucesso.',
         })
-        navigate('/dashboard')
+        const target = await getEffectiveDestination(tempAuth.record)
+        navigate(target, { replace: true })
       } else {
         // Fallback: refazer auth se tempAuth expirou
         const authData = await pb.collection('users').authWithPassword(email, password)
         login(authData.token, authData.record)
-        navigate('/dashboard')
+        const target = await getEffectiveDestination(authData.record)
+        navigate(target, { replace: true })
       }
     } catch (err: any) {
       const msg =
@@ -201,11 +209,13 @@ export default function Login() {
       // Concluir login
       if (tempAuth) {
         login(tempAuth.token, tempAuth.record)
-        navigate('/dashboard')
+        const target = await getEffectiveDestination(tempAuth.record)
+        navigate(target, { replace: true })
       } else {
         const authData = await pb.collection('users').authWithPassword(email, password)
         login(authData.token, authData.record)
-        navigate('/dashboard')
+        const target = await getEffectiveDestination(authData.record)
+        navigate(target, { replace: true })
       }
     } catch (err: any) {
       const msg =

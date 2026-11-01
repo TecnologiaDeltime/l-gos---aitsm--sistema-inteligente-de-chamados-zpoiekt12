@@ -355,6 +355,29 @@ export function usePermissions() {
     return true
   }
 
+  /**
+   * Determina se o usuário atual é de operação (qualquer perfil EXCETO Administrador e Clientes)
+   */
+  const isOperational = useMemo(() => {
+    if (isAdmin || isCliente) return false
+    const profName = profile?.name || ''
+    if (profName.trim().toLowerCase() === 'administrador') return false
+    return true
+  }, [isAdmin, isCliente, profile])
+
+  /**
+   * Destino padrão pós-login calculado com base nas permissões ativas:
+   * - Clientes -> /portal
+   * - Administrador -> /dashboard
+   * - Operação com meu_painel concedido -> /operator-dashboard
+   * - Operação com meu_painel retirado -> /dashboard
+   */
+  const defaultLandingRoute = useMemo(() => {
+    if (isCliente) return '/portal'
+    if (!isOperational) return '/dashboard'
+    return canAccessItem('dashboard', 'meu_painel') ? '/operator-dashboard' : '/dashboard'
+  }, [isCliente, isOperational, canAccessItem])
+
   // Specific module checks for fast access
   const canManageProfiles = canWriteModule('profiles') || isAdmin
   const canManageOperators = isAdmin
@@ -423,6 +446,8 @@ export function usePermissions() {
     canTestAutomations,
     canAccessVault,
     canManageVault,
+    isOperational,
+    defaultLandingRoute,
     reloadPermissions: loadGranular,
   }
 }

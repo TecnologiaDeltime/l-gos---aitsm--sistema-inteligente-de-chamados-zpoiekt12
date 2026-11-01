@@ -37,27 +37,31 @@ export function ProtectedRoute({
 
   // Se for admin, acesso total garantido (Regra 3 - Administrador é imune)
   if (!isAdmin) {
+    // Fallback padrão se a rota atual for bloqueada:
+    // Se a rota bloqueada for o próprio /operator-dashboard, cai no /dashboard
+    const fallbackTarget = location.pathname === '/operator-dashboard' ? '/dashboard' : '/dashboard'
+
     // 1. Checagem por requiredModule
     if (requiredModule) {
       if (isModuleHidden(requiredModule)) {
-        return <Navigate to="/dashboard" replace />
+        return <Navigate to={fallbackTarget} replace />
       }
       if (requireWrite && !canWriteModule(requiredModule)) {
-        return <Navigate to="/dashboard" replace />
+        return <Navigate to={fallbackTarget} replace />
       }
       if (!requireWrite && !canReadModule(requiredModule)) {
-        return <Navigate to="/dashboard" replace />
+        return <Navigate to={fallbackTarget} replace />
       }
 
       // Se há um requiredItem explícito
       if (requiredItem && !canAccessItem(requiredModule, requiredItem)) {
-        return <Navigate to="/dashboard" replace />
+        return <Navigate to={fallbackTarget} replace />
       }
     }
 
     // 2. Checagem granular automática pelo caminho da URL (ex.: /reports/monthly-client, /atendimento, /settings/ticket-templates)
     if (!canAccessPath(location.pathname)) {
-      return <Navigate to="/dashboard" replace />
+      return <Navigate to={fallbackTarget} replace />
     }
   }
 
