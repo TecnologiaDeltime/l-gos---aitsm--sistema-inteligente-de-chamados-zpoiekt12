@@ -462,7 +462,7 @@ const BASE_SYSTEM_MODULES: GranularModuleDefinition[] = [
   {
     key: 'knowledge',
     label: 'Base de Conhecimento',
-    description: 'Artigos técnicos, procedimentos de suporte e manuais',
+    description: 'Artigos técnicos, procedimentos de suporte, geração e cura com IA',
     category: 'Operações & Gestão',
     items: [
       {
@@ -470,6 +470,20 @@ const BASE_SYSTEM_MODULES: GranularModuleDefinition[] = [
         label: 'Artigos da Base de Conhecimento',
         description: 'Consulta, criação e edição de artigos técnicos',
         path: '/knowledge-base',
+      },
+      {
+        key: 'knowledge_drafts',
+        label: 'Geração de Artigos por IA (Rascunhos)',
+        description:
+          'Geração e revisão de rascunhos criados por IA a partir de notas de encerramento de técnicos seniores',
+        path: '/knowledge-base?tab=drafts',
+      },
+      {
+        key: 'knowledge_curation',
+        label: 'Cura e Atualização de Artigos (IA)',
+        description:
+          'Monitoramento algorítmico e sugestões de IA para artigos desatualizados, incompletos ou ineficazes',
+        path: '/knowledge-base?tab=curation',
       },
     ],
   },

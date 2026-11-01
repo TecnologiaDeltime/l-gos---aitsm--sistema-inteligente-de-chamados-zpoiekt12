@@ -89,3 +89,8 @@ Os guardas dos 3 níveis estão aplicados de forma consistente nas seguintes ár
    - _Visualizar_: consulta das categorias e perfis.
    - _Editar_: criação e edição de categorias e subcategorias.
    - _Configurar_: exclusão de categorias e alteração da matriz de permissões.
+
+8. **Base de Conhecimento e IA (Geração de Rascunhos & Cura)** (`KnowledgeBase.tsx`, `DraftsReviewPanel.tsx`, `KnowledgeCurationPanel.tsx`):
+   - _Visualizar_ (`knowledge_base`, `knowledge_drafts`, `knowledge_curation`): consulta aos artigos publicados, acompanhamento da fila de rascunhos de IA e leitura dos diagnósticos de cura e sugestões algorítmicas sem permissão de mutação.
+   - _Editar_: criação e edição de artigos, solicitação de geração de rascunho de IA via agente nativo Skip Cloud (`kb-curator-agent`), aprovação/edição/descarte de rascunhos, publicação de rascunhos na KB oficial, execução do diagnóstico de integridade de artigos e aplicação ou recusa das recomendações de melhoria.
+   - _Configurar_: exclusão permanente de artigos oficiais, exclusão de registros de rascunhos e parametrizações avançadas de conhecimento.

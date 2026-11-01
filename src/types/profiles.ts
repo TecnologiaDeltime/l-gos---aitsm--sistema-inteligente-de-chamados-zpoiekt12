@@ -149,6 +149,20 @@ export const PROFILE_LANDING_OPTIONS: ProfileLandingOption[] = [
     itemKey: 'knowledge_base',
   },
   {
+    route: '/knowledge-base?tab=drafts',
+    label: 'Geração de Artigos por IA',
+    description: 'Rascunhos de artigos gerados por IA para revisão',
+    moduleKey: 'knowledge',
+    itemKey: 'knowledge_drafts',
+  },
+  {
+    route: '/knowledge-base?tab=curation',
+    label: 'Cura e Atualização de Dados (IA)',
+    description: 'Painel de artigos desatualizados e sugestões de IA',
+    moduleKey: 'knowledge',
+    itemKey: 'knowledge_curation',
+  },
+  {
     route: '/reports/implemented-features',
     label: 'Relatórios',
     description: 'Central de relatórios e auditorias',

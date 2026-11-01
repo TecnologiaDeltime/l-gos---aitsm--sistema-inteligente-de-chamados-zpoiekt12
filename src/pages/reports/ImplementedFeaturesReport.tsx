@@ -476,6 +476,37 @@ const FEATURE_CATEGORIES: FeatureCategory[] = [
     ],
   },
   {
+    id: 'knowledge-ai',
+    title: 'Base de Conhecimento com Inteligência Artificial',
+    icon: Sparkles,
+    color: 'text-amber-500 dark:text-amber-400',
+    bgLight: 'bg-amber-500/10 dark:bg-amber-500/15',
+    borderColor: 'border-amber-500/30 dark:border-amber-500/30',
+    items: [
+      {
+        id: 'kb-ai-1',
+        title: 'Geração Automática de Artigos a partir de Soluções Seniores',
+        description:
+          'O agente nativo Skip Cloud analisa chamados encerrados com sucesso, priorizando notas e soluções de técnicos seniores, e gera rascunhos completos com título, descrição do problema, passos de resolução e tags. Os rascunhos nunca são publicados de forma automática: são direcionados para uma fila de revisão onde a equipe técnica aprova, ajusta e publica oficialmente.',
+        tag: 'IA Nativa / ITIL',
+      },
+      {
+        id: 'kb-ai-2',
+        title: 'Cura e Atualização Contínua de Artigos com IA',
+        description:
+          'Monitoramento algorítmico da integridade da base de conhecimento que detecta artigos desatualizados (> 60 dias sem alteração), incompletos (sem resumo, passos rasos ou sem tags) ou ineficazes. Para cada caso sinalizado, a IA propõe diagnósticos e melhorias concretas que a equipe pode aprovar ou recusar com um clique, refletindo a ação no histórico do artigo.',
+        tag: 'Curadoria de Dados',
+      },
+      {
+        id: 'kb-ai-3',
+        title: 'Fila de Revisão e Governança de Conhecimento',
+        description:
+          'Painel de controle com abas unificadas para Artigos Oficiais, Fila de Rascunhos de IA e Diagnósticos de Cura, garantindo governança ITIL de qualidade antes da publicação e rastreabilidade total do chamado de origem.',
+        tag: 'Governança & Qualidade',
+      },
+    ],
+  },
+  {
     id: 'profiles',
     title: 'Perfis, Permissões e Operadores',
     icon: Shield,

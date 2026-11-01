@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-01T22:42:37.906Z",
+  "generatedAt": "2026-11-01T22:54:43.248Z",
   "collections": [
     {
       "name": "users",
@@ -11198,6 +11198,269 @@
         "CREATE UNIQUE INDEX idx_profile_perm_unique ON profile_permissions (profile, module_key, item_key)",
         "CREATE INDEX idx_profile_perm_profile ON profile_permissions (profile)",
         "CREATE INDEX idx_profile_perm_module ON profile_permissions (module_key)"
+      ]
+    },
+    {
+      "name": "knowledge_drafts",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != ''",
+        "view": "@request.auth.id != ''",
+        "create": "@request.auth.id != ''",
+        "update": "@request.auth.id != ''",
+        "delete": "@request.auth.id != ''"
+      },
+      "fields": [
+        {
+          "name": "title",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "problem_description",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "resolution_steps",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "content",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "content_html",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "summary",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "tags",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "tokens",
+          "type": "json",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "category",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "tkt_categories"
+        },
+        {
+          "name": "activity",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "tkt_categories"
+        },
+        {
+          "name": "source_ticket",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "tickets"
+        },
+        {
+          "name": "source_ticket_number",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "source_technician_name",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "source_technician_seniority",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "status",
+          "type": "select",
+          "required": true,
+          "system": false,
+          "selectValues": ["Pendente de Revisão", "Aprovado", "Publicado", "Descartado"]
+        },
+        {
+          "name": "published_article",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "knowledge_articles"
+        },
+        {
+          "name": "reviewed_by",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "reviewed_at",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "review_notes",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": [
+        "CREATE INDEX idx_kb_drafts_status ON knowledge_drafts (status)",
+        "CREATE INDEX idx_kb_drafts_ticket ON knowledge_drafts (source_ticket)"
+      ]
+    },
+    {
+      "name": "knowledge_curations",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != ''",
+        "view": "@request.auth.id != ''",
+        "create": "@request.auth.id != ''",
+        "update": "@request.auth.id != ''",
+        "delete": "@request.auth.id != ''"
+      },
+      "fields": [
+        {
+          "name": "article",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "knowledge_articles"
+        },
+        {
+          "name": "article_title",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "flag_reason",
+          "type": "select",
+          "required": true,
+          "system": false,
+          "selectValues": [
+            "Desatualizado",
+            "Incompleto",
+            "Falhando em Resolver",
+            "Múltiplos Fatores"
+          ]
+        },
+        {
+          "name": "diagnostic_details",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "suggested_improvements",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "suggested_content",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "suggested_summary",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "suggested_tags",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "status",
+          "type": "select",
+          "required": true,
+          "system": false,
+          "selectValues": ["Pendente", "Aplicada", "Recusada"]
+        },
+        {
+          "name": "action_by",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "action_at",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "action_notes",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": [
+        "CREATE INDEX idx_kb_curations_status ON knowledge_curations (status)",
+        "CREATE INDEX idx_kb_curations_article ON knowledge_curations (article)"
       ]
     }
   ]

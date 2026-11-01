@@ -103,6 +103,7 @@ export default function Layout() {
   const [relatoriosMenuOpen, setRelatoriosMenuOpen] = useState(false)
   const [cmdbMenuOpen, setCmdbMenuOpen] = useState(false)
   const [adminMenuOpen, setAdminMenuOpen] = useState(false)
+  const [knowledgeMenuOpen, setKnowledgeMenuOpen] = useState(false)
 
   useEffect(() => {
     if (user) {
@@ -120,18 +121,36 @@ export default function Layout() {
     })
   }
 
+  const knowledgeSubmenuItems = [
+    {
+      label: 'Artigos da Base',
+      path: '/knowledge-base',
+      icon: BookOpen,
+      show: permissions.canAccessItem('knowledge', 'knowledge_base'),
+    },
+    {
+      label: 'Rascunhos de IA',
+      path: '/knowledge-base?tab=drafts',
+      icon: Sparkles,
+      show: permissions.canAccessItem('knowledge', 'knowledge_drafts'),
+    },
+    {
+      label: 'Cura e Atualização (IA)',
+      path: '/knowledge-base?tab=curation',
+      icon: RefreshCw,
+      show: permissions.canAccessItem('knowledge', 'knowledge_curation'),
+    },
+  ]
+
+  const knowledgeGroupVisible =
+    !permissions.isModuleHidden('knowledge') && knowledgeSubmenuItems.some((i) => i.show)
+
   const navItems = [
     {
       label: 'Pesquisa de Satisfação',
       path: '/satisfaction',
       icon: Star,
       show: permissions.canAccessItem('visits', 'visits_satisfaction'),
-    },
-    {
-      label: 'Base de Conhecimento',
-      path: '/knowledge-base',
-      icon: BookOpen,
-      show: permissions.canAccessItem('knowledge', 'knowledge_base'),
     },
   ]
 
@@ -669,6 +688,7 @@ export default function Layout() {
   autoRegisterMenuItems('changes', 'Operações & Gestão', changesSubmenuItems)
   autoRegisterMenuItems('problems', 'Operações & Gestão', problemsSubmenuItems)
   autoRegisterMenuItems('visits', 'Operações & Gestão', visitsN2SubmenuItems)
+  autoRegisterMenuItems('knowledge', 'Operações & Gestão', knowledgeSubmenuItems)
   autoRegisterMenuItems('reports', 'Relatórios & Qualidade', relatoriosSubmenuItems)
   autoRegisterMenuItems('admin', 'Administração', adminSubmenuItems)
   autoRegisterMenuItems('settings', 'Administração', configuracoesSubmenuItems)
@@ -1231,6 +1251,88 @@ export default function Layout() {
             )}
           </div>
         )}
+        {knowledgeGroupVisible && (
+          <div key="knowledge-group" className="my-0.5">
+            <div className="flex items-center px-2">
+              <button
+                onClick={() => setKnowledgeMenuOpen(!knowledgeMenuOpen)}
+                data-nav-active={
+                  knowledgeSubmenuItems.some(
+                    (i) =>
+                      i.show &&
+                      (location.pathname === i.path ||
+                        (i.path.includes('?') &&
+                          `${location.pathname}${location.search}` === i.path)),
+                  )
+                    ? 'true'
+                    : undefined
+                }
+                style={
+                  knowledgeSubmenuItems.some(
+                    (i) =>
+                      i.show &&
+                      (location.pathname === i.path ||
+                        (i.path.includes('?') &&
+                          `${location.pathname}${location.search}` === i.path)),
+                  )
+                    ? {
+                        color: activeItemColor,
+                        backgroundColor: 'rgba(217, 119, 6, 0.14)',
+                      }
+                    : {
+                        color: customSidebarText,
+                      }
+                }
+                className={`flex flex-1 items-center gap-3 px-3 py-2 text-[13px] font-medium rounded-lg transition-all duration-200 ${
+                  knowledgeSubmenuItems.some(
+                    (i) =>
+                      i.show &&
+                      (location.pathname === i.path ||
+                        (i.path.includes('?') &&
+                          `${location.pathname}${location.search}` === i.path)),
+                  )
+                    ? 'text-primary bg-primary/10 font-semibold'
+                    : 'text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground'
+                }`}
+              >
+                <BookOpen
+                  className="h-4 w-4 shrink-0 text-primary"
+                  style={{
+                    color: knowledgeSubmenuItems.some((i) => location.pathname === i.path)
+                      ? activeItemColor
+                      : customSidebarText || undefined,
+                  }}
+                />
+                <span className="truncate">Base de Conhecimento</span>
+                {knowledgeMenuOpen ? (
+                  <ChevronDown
+                    className="ml-auto h-3.5 w-3.5 opacity-75"
+                    style={{
+                      color: knowledgeSubmenuItems.some((i) => location.pathname === i.path)
+                        ? activeItemColor
+                        : customSidebarText || undefined,
+                    }}
+                  />
+                ) : (
+                  <ChevronRight
+                    className="ml-auto h-3.5 w-3.5 opacity-75"
+                    style={{
+                      color: knowledgeSubmenuItems.some((i) => location.pathname === i.path)
+                        ? activeItemColor
+                        : customSidebarText || undefined,
+                    }}
+                  />
+                )}
+              </button>
+            </div>
+            {knowledgeMenuOpen && (
+              <div className="ml-4 pl-2 my-1 border-l border-sidebar-border/70 space-y-0.5">
+                {knowledgeSubmenuItems.filter((i) => i.show).map((sub) => renderSubItem(sub))}
+              </div>
+            )}
+          </div>
+        )}
+
         {visitsN2GroupVisible && (
           <div key="visits-n2-group" className="my-0.5">
             <div className="flex items-center px-2">
@@ -1574,6 +1676,7 @@ export default function Layout() {
                   ...chamadosSubmenuItems,
                   ...changesSubmenuItems,
                   ...problemsSubmenuItems,
+                  ...knowledgeSubmenuItems,
                   ...visitsN2SubmenuItems,
                   ...relatoriosSubmenuItems,
                   ...adminSubmenuItems,
@@ -1587,6 +1690,7 @@ export default function Layout() {
                     ...chamadosSubmenuItems,
                     ...changesSubmenuItems,
                     ...problemsSubmenuItems,
+                    ...knowledgeSubmenuItems,
                     ...visitsN2SubmenuItems,
                     ...relatoriosSubmenuItems,
                     ...adminSubmenuItems,
