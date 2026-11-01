@@ -373,30 +373,6 @@ const BASE_SYSTEM_MODULES: GranularModuleDefinition[] = [
     category: 'Operações & Gestão',
     items: [
       {
-        key: 'visits_agenda',
-        label: 'Agenda de Operadores',
-        description: 'Grade horária de técnicos e alocação de chamados',
-        path: '/agenda-tecnica',
-      },
-      {
-        key: 'visits_list',
-        label: 'Visitas Técnicas',
-        description: 'Histórico e status de atendimentos presenciais',
-        path: '/visits',
-      },
-      {
-        key: 'visits_dashboard',
-        label: 'Dashboard de Visitas',
-        description: 'Métricas gerais de deslocamento e atendimento em campo',
-        path: '/visits/dashboard',
-      },
-      {
-        key: 'visits_tech_dashboard',
-        label: 'Painel do Operador de Campo',
-        description: 'Visão do técnico com check-in, check-out e rotas',
-        path: '/visits/technician-dashboard',
-      },
-      {
         key: 'visits_satisfaction',
         label: 'Pesquisa de Satisfação',
         description: 'Resultados de NPS e avaliação de visitas',
@@ -505,12 +481,6 @@ const BASE_SYSTEM_MODULES: GranularModuleDefinition[] = [
     category: 'Relatórios & Qualidade',
     items: [
       {
-        key: 'rep_gerenciais',
-        label: 'Relatórios Gerenciais (Horas por Cronômetro)',
-        description: 'Apuração principal de horas de atendimento e exportação CSV',
-        path: '/reports',
-      },
-      {
         key: 'rep_implemented_features',
         label: 'Funcionalidades Implantadas',
         description: 'Inventário executivo de entregas e recursos do sistema',
@@ -523,34 +493,10 @@ const BASE_SYSTEM_MODULES: GranularModuleDefinition[] = [
         path: '/reports/alert-audit',
       },
       {
-        key: 'rep_unit',
-        label: 'Relatórios por Filial',
-        description: 'Métricas de atendimento segmentadas por unidade física',
-        path: '/reports/unit',
-      },
-      {
-        key: 'rep_sla_dashboard',
-        label: 'Dashboard de SLA',
-        description: 'Painel visual de cumprimento de prazos de resposta e solução',
-        path: '/sla-dashboard',
-      },
-      {
-        key: 'rep_sla_goals',
-        label: 'Metas de SLA',
-        description: 'Acompanhamento de metas contratuais e individuais',
-        path: '/sla-goals',
-      },
-      {
         key: 'rep_recurrent_activities',
         label: 'Atividades Recorrentes',
         description: 'Volume histórico por subatividade e demanda',
         path: '/recurrent-activities',
-      },
-      {
-        key: 'rep_scheduled_reports',
-        label: 'Relatórios Agendados',
-        description: 'Envio automático periódico por e-mail',
-        path: '/scheduled-reports',
       },
       {
         key: 'rep_monthly_client',

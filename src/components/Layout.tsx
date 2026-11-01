@@ -135,30 +135,6 @@ export default function Layout() {
       show: permissions.canAccessItem('dashboard', 'painel_gerencial'),
     },
     {
-      label: 'Agenda de Operadores',
-      path: '/agenda-tecnica',
-      icon: CalendarClock,
-      show: permissions.canAccessItem('visits', 'visits_agenda'),
-    },
-    {
-      label: 'Visitas Técnicas',
-      path: '/visits',
-      icon: MapPin,
-      show: permissions.canAccessItem('visits', 'visits_list'),
-    },
-    {
-      label: 'Dashboard de Visitas',
-      path: '/visits/dashboard',
-      icon: MapPin,
-      show: permissions.canAccessItem('visits', 'visits_dashboard'),
-    },
-    {
-      label: 'Painel do Operador',
-      path: '/visits/technician-dashboard',
-      icon: Gauge,
-      show: permissions.canAccessItem('visits', 'visits_tech_dashboard'),
-    },
-    {
       label: 'Pesquisa de Satisfação',
       path: '/satisfaction',
       icon: Star,
@@ -652,12 +628,6 @@ export default function Layout() {
   ]
   const relatoriosSubmenuItems = [
     {
-      label: 'Relatórios Gerenciais',
-      path: '/reports',
-      icon: BarChart3,
-      show: permissions.canAccessItem('reports', 'rep_gerenciais'),
-    },
-    {
       label: 'Funcionalidades Implantadas',
       path: '/reports/implemented-features',
       icon: FileText,
@@ -670,34 +640,10 @@ export default function Layout() {
       show: permissions.canAccessItem('reports', 'rep_alert_audit'),
     },
     {
-      label: 'Relatórios por Filial',
-      path: '/reports/unit',
-      icon: BarChart3,
-      show: permissions.canAccessItem('reports', 'rep_unit'),
-    },
-    {
-      label: 'Dashboard de SLA',
-      path: '/sla-dashboard',
-      icon: BarChart3,
-      show: permissions.canAccessItem('reports', 'rep_sla_dashboard'),
-    },
-    {
-      label: 'Metas de SLA',
-      path: '/sla-goals',
-      icon: BarChart3,
-      show: permissions.canAccessItem('reports', 'rep_sla_goals'),
-    },
-    {
       label: 'Atividades Recorrentes',
       path: '/recurrent-activities',
       icon: BarChart3,
       show: permissions.canAccessItem('reports', 'rep_recurrent_activities'),
-    },
-    {
-      label: 'Relatórios Agendados',
-      path: '/scheduled-reports',
-      icon: BarChart3,
-      show: permissions.canAccessItem('reports', 'rep_scheduled_reports'),
     },
     {
       label: 'Relatório Mensal do Cliente',

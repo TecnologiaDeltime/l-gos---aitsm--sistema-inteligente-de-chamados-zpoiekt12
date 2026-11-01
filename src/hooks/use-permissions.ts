@@ -374,7 +374,7 @@ export function usePermissions() {
   const canManageCmdb = canWriteModule('cmdb')
   const canManageCiTypes = canWriteModule('cmdb') && isAdmin
   const isClienteSolicitante = role === 'cliente_solicitante'
-  const canAccessUnitReports = canAccessItem('reports', 'rep_unit') && canReadModule('reports')
+  const canAccessUnitReports = false
   const canManageAutomations = isAdmin || isGestor
   const canPublishAutomations = isAdmin
   const canViewAutomations = isAdmin || isGestor || role === 'auditor'

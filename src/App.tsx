@@ -29,11 +29,7 @@ import TeamDetail from '@/pages/team/TeamDetail'
 import QueueManagement from '@/pages/queues/QueueManagement'
 import CategoryManagement from '@/pages/categories/CategoryManagement'
 import ActivityCatalog from '@/pages/ActivityCatalog'
-import ReportsPage from '@/pages/reports/ReportsPage'
-import SlaDashboard from '@/pages/reports/SlaDashboard'
 import RecurrentActivities from '@/pages/reports/RecurrentActivities'
-import SlaGoalsPage from '@/pages/reports/SlaGoalsPage'
-import ScheduledReportsPage from '@/pages/reports/ScheduledReportsPage'
 import KnowledgeBase from '@/pages/knowledge/KnowledgeBase'
 import ProfilesPage from '@/pages/profiles/ProfilesPage'
 import OperatorsPage from '@/pages/operators/OperatorsPage'
@@ -64,14 +60,12 @@ import BlockingManagement from '@/pages/blocking/BlockingManagement'
 import NotFound from '@/pages/NotFound'
 import PortalPage from '@/pages/portal/PortalPage'
 import PortalLogin from '@/pages/portal/PortalLogin'
-import UnitReportsPage from '@/pages/reports/UnitReportsPage'
 import ClientExtractionPage from '@/pages/reports/ClientExtractionPage'
 import MonthlyClientReportPage from '@/pages/reports/MonthlyClientReportPage'
 import AutomationList from '@/pages/automations/AutomationList'
 import AutomationEditor from '@/pages/automations/AutomationEditor'
 import TechnicalAgenda from '@/pages/visits/TechnicalAgenda'
 import VisitManagerDashboard from '@/pages/visits/VisitManagerDashboard'
-import TechnicianDashboardPage from '@/pages/visits/TechnicianDashboardPage'
 import ChangeDashboard from '@/pages/changes/ChangeDashboard'
 import ChangeList from '@/pages/changes/ChangeList'
 import MyChanges from '@/pages/changes/MyChanges'
@@ -218,17 +212,12 @@ const App = () => (
                 <Route path="/queues" element={<QueueManagement />} />
                 <Route path="/categories" element={<CategoryManagement />} />
                 <Route path="/activity-catalog" element={<ActivityCatalog />} />
-                <Route path="/sla-dashboard" element={<SlaDashboard />} />
                 <Route path="/recurrent-activities" element={<RecurrentActivities />} />
-                <Route path="/reports" element={<ReportsPage />} />
                 <Route
                   path="/reports/implemented-features"
                   element={<ImplementedFeaturesReport />}
                 />
                 <Route path="/reports/alert-audit" element={<AlertAuditPage />} />
-                <Route path="/sla-goals" element={<SlaGoalsPage />} />
-                <Route path="/scheduled-reports" element={<ScheduledReportsPage />} />
-                <Route path="/reports/unit" element={<UnitReportsPage />} />
                 <Route path="/reports/clients" element={<ClientExtractionPage />} />
                 <Route path="/reports/monthly-client" element={<MonthlyClientReportPage />} />
                 <Route path="/knowledge-base" element={<KnowledgeBase />} />
@@ -245,7 +234,6 @@ const App = () => (
                 />
                 <Route path="/cmdb/import" element={<CiImport />} />
                 <Route path="/cmdb/types" element={<CiTypes />} />
-                <Route path="/visits" element={<VisitList />} />
                 <Route path="/satisfaction" element={<SatisfactionDashboard />} />
                 <Route path="/settings" element={<SettingsPage />} />
                 <Route path="/settings/sla" element={<SlaSettings />} />
@@ -268,9 +256,6 @@ const App = () => (
                 <Route path="/blocking" element={<BlockingManagement />} />
                 <Route path="/automations" element={<AutomationList />} />
                 <Route path="/automations/:id/edit" element={<AutomationEditor />} />
-                <Route path="/agenda-tecnica" element={<TechnicalAgenda />} />
-                <Route path="/visits/dashboard" element={<VisitManagerDashboard />} />
-                <Route path="/visits/technician-dashboard" element={<TechnicianDashboardPage />} />
                 <Route path="/changes" element={<ChangeDashboard />} />
                 <Route path="/changes/list" element={<ChangeList />} />
                 <Route path="/changes/new" element={<ChangeCreate />} />

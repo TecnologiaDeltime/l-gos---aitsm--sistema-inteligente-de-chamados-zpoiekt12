@@ -223,11 +223,6 @@ export default function VisitManagerDashboard() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <h2 className="text-xl font-bold">Dashboard de Gestão de Visitas</h2>
-        <Link to="/sla-goals">
-          <Button size="sm" variant="outline" className="text-xs">
-            <Target className="h-4 w-4 mr-1.5 text-blue-600" /> Gerenciar Metas dos Operadores
-          </Button>
-        </Link>
       </div>
       <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
         {kpis.map((k, i) => {
@@ -298,12 +293,6 @@ export default function VisitManagerDashboard() {
               Comparativo de atingimento dos 3 percentuais (SLA Resposta, SLA Solução, Efetividade)
             </p>
           </div>
-          <Link
-            to="/sla-goals"
-            className="text-xs text-blue-600 hover:underline flex items-center gap-1"
-          >
-            Ver todas metas <ArrowRight className="h-3 w-3" />
-          </Link>
         </CardHeader>
         <CardContent className="p-0">
           <div className="overflow-x-auto">

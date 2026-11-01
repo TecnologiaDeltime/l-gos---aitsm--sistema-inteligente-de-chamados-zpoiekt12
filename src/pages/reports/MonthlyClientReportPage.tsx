@@ -536,11 +536,6 @@ export default function MonthlyClientReportPage() {
       <div className="print:hidden space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2">
-            <Button variant="ghost" size="icon" asChild>
-              <Link to="/reports">
-                <ChevronLeft className="h-4 w-4" />
-              </Link>
-            </Button>
             <div>
               <h1 className="text-xl font-bold flex items-center gap-2 text-slate-900 dark:text-slate-100">
                 <FileText className="h-5 w-5 text-blue-600" /> Relatório Mensal do Cliente

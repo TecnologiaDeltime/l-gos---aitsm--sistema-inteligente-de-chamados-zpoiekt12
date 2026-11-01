@@ -79,10 +79,11 @@ Os guardas dos 3 níveis estão aplicados de forma consistente nas seguintes ár
    - _Editar_: cadastro e edição de itens de configuração.
    - _Configurar_: exclusão de itens de infraestrutura e tipos de CI.
 
-6. **Relatórios e Visitas** (`ScheduledReportsPage.tsx`, `VisitList.tsx`):
-   - _Visualizar_: consulta de agendamentos e agenda técnica.
-   - _Editar_: agendamento de relatórios/visitas, check-in, check-out e geração de OS.
-   - _Configurar_: exclusão de agendamentos e metas.
+6. **Relatórios e Gestão de Visitas** (`MonthlyClientReportPage.tsx`, `Visitas N2 / Gestão de Visitas`):
+   - _Visualizar_: consulta de relatórios consolidados e atendimentos presenciais.
+   - _Editar_: gerenciamento de visitas, despesas, reembolsos e relatórios mensais.
+   - _Configurar_: parâmetros avançados e exclusão.
+   - _Observação_: Funcionalidades descontinuadas/removidas temporariamente para futura reconstrução: Agenda de Operadores, Visitas Técnicas legadas fora de Gestão de Visitas, Dashboard de Visitas, Relatórios Gerenciais, Relatório por Filial, Dashboard de SLA, Metas de SLA e Relatórios Agendados.
 
 7. **Configurações Gerais e Categorias** (`CategoryManagement.tsx`, `ProfilesPage.tsx`):
    - _Visualizar_: consulta das categorias e perfis.
