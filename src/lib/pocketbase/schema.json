@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-01T03:59:08.358Z",
+  "generatedAt": "2026-11-01T14:08:12.769Z",
   "collections": [
     {
       "name": "users",
@@ -11121,6 +11121,63 @@
         "CREATE INDEX idx_cmr_month ON client_monthly_reports (month_key)",
         "CREATE INDEX idx_cmr_released ON client_monthly_reports (released_to_client)",
         "CREATE UNIQUE INDEX idx_cmr_company_month ON client_monthly_reports (company, month_key)"
+      ]
+    },
+    {
+      "name": "profile_permissions",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != \"\"",
+        "view": "@request.auth.id != \"\"",
+        "create": "@request.auth.id != \"\" && (@request.auth.role = \"admin\" || @request.auth.role = \"gestor\")",
+        "update": "@request.auth.id != \"\" && (@request.auth.role = \"admin\" || @request.auth.role = \"gestor\")",
+        "delete": "@request.auth.id != \"\" && (@request.auth.role = \"admin\" || @request.auth.role = \"gestor\")"
+      },
+      "fields": [
+        {
+          "name": "profile",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "profiles"
+        },
+        {
+          "name": "module_key",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "item_key",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "granted",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": [
+        "CREATE UNIQUE INDEX idx_profile_perm_unique ON profile_permissions (profile, module_key, item_key)",
+        "CREATE INDEX idx_profile_perm_profile ON profile_permissions (profile)",
+        "CREATE INDEX idx_profile_perm_module ON profile_permissions (module_key)"
       ]
     }
   ]

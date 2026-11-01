@@ -24,6 +24,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Badge } from '@/components/ui/badge'
 import { useToast } from '@/hooks/use-toast'
 import { useTheme } from '@/hooks/use-theme'
+import { usePermissions } from '@/hooks/use-permissions'
 import { getErrorMessage } from '@/lib/pocketbase/errors'
 import { getCompanies, type CompanyRecord } from '@/services/companies'
 import { exportToCsv } from '@/lib/export-utils'
@@ -72,23 +73,28 @@ const OTHER_REPORTS = [
     path: '/sla-dashboard',
   },
   {
-    title: 'Atividades Recorrentes',
-    desc: 'Volume de abertura e solução ao longo do tempo por subatividade.',
-    path: '/recurrent-activities',
+    title: 'Relatórios Agendados',
+    desc: 'Disparo periódico automático de relatórios por e-mail.',
+    path: '/scheduled-reports',
+    itemKey: 'rep_scheduled_reports',
   },
   {
     title: 'Apuração de Horas de Contrato',
     desc: 'Consumo de horas contratadas vs excedentes por cliente.',
     path: '/horas-clientes',
+    itemKey: 'clients_horas',
+    moduleKey: 'clients' as const,
   },
   {
     title: 'Relatórios por Filial',
     desc: 'Indicadores de chamados segmentados por unidade/filial.',
     path: '/reports/unit',
+    itemKey: 'rep_unit',
   },
 ]
 
 export default function ReportsPage() {
+  const permissions = usePermissions()
   const { toast } = useToast()
   const { designSettings } = useTheme()
 
@@ -380,7 +386,15 @@ export default function ReportsPage() {
           Outros relatórios disponíveis
         </h3>
         <div className="grid gap-4 md:grid-cols-2">
-          {OTHER_REPORTS.map((r) => (
+          {OTHER_REPORTS.filter((r) => {
+            if ((r as any).moduleKey) {
+              return permissions.canAccessItem((r as any).moduleKey, (r as any).itemKey)
+            }
+            if ((r as any).itemKey) {
+              return permissions.canAccessItem('reports', (r as any).itemKey)
+            }
+            return true
+          }).map((r) => (
             <Card key={r.path} className="itsm-card itsm-card-hover border-border/80 bg-card/90">
               <CardHeader className="flex flex-row items-center justify-between pb-2 border-b border-border/60 bg-secondary/10">
                 <CardTitle className="text-sm font-semibold text-foreground">{r.title}</CardTitle>

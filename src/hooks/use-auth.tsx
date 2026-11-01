@@ -42,6 +42,7 @@ export interface UserRecord {
   must_change_password?: boolean
   created?: string
   updated?: string
+  profile_id?: string
   expand?: any
 }
 
@@ -98,6 +99,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       must_change_password: !!record.must_change_password,
       created: record.created,
       updated: record.updated,
+      profile_id: record.profile_id,
       expand: record.expand,
     }
   }

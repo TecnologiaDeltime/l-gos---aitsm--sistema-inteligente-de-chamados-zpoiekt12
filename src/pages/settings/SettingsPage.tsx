@@ -18,10 +18,11 @@ import {
 import { ImapEmailSettings } from '@/components/settings/ImapEmailSettings'
 import VaultPage from '@/pages/vault/VaultPage'
 import { SecuritySettingsTab } from '@/components/settings/SecuritySettingsTab'
+import ProfilesPage from '@/pages/profiles/ProfilesPage'
 import { ClientNotificationSettingsTab } from '@/components/settings/ClientNotificationSettingsTab'
 import { DesignSettingsTab } from '@/components/settings/DesignSettingsTab'
 import ClientPortalSettingsTab from '@/components/settings/ClientPortalSettingsTab'
-import { ShieldCheck, Globe } from 'lucide-react'
+import { ShieldCheck, Globe, Shield } from 'lucide-react'
 import {
   getVoiceAlertsEnabled,
   setVoiceAlertsEnabled,
@@ -69,11 +70,19 @@ export default function SettingsPage() {
                 ? 'security'
                 : 'general'
   const [mainTab, setMainTab] = useState<
-    'general' | 'portal' | 'design' | 'client_notif' | 'email' | 'vault' | 'security'
-  >(initialTab)
+    'general' | 'portal' | 'design' | 'client_notif' | 'email' | 'vault' | 'security' | 'profiles'
+  >(initialTab as any)
 
   const handleTabChange = (
-    tab: 'general' | 'portal' | 'design' | 'client_notif' | 'email' | 'vault' | 'security',
+    tab:
+      | 'general'
+      | 'portal'
+      | 'design'
+      | 'client_notif'
+      | 'email'
+      | 'vault'
+      | 'security'
+      | 'profiles',
   ) => {
     setMainTab(tab)
     setSearchParams(
@@ -89,7 +98,9 @@ export default function SettingsPage() {
                 ? { tab: 'vault' }
                 : tab === 'security'
                   ? { tab: 'security' }
-                  : {},
+                  : tab === 'profiles'
+                    ? { tab: 'profiles' }
+                    : {},
     )
   }
 
@@ -108,6 +119,8 @@ export default function SettingsPage() {
       setMainTab('vault')
     } else if (tabFromUrl === 'security' && mainTab !== 'security') {
       setMainTab('security')
+    } else if (tabFromUrl === 'profiles' && mainTab !== 'profiles') {
+      setMainTab('profiles')
     }
   }, [searchParams])
 
@@ -417,8 +430,32 @@ export default function SettingsPage() {
             <Mail className="h-3.5 w-3.5 mr-1.5 text-primary" />
             IMAP & E-mail
           </Button>
+
+          {permissions.canManageProfiles && (
+            <Button
+              type="button"
+              size="sm"
+              variant={mainTab === 'profiles' ? 'default' : 'ghost'}
+              onClick={() => handleTabChange('profiles')}
+              className={`h-8 text-xs font-semibold rounded-lg transition-all ${
+                mainTab === 'profiles'
+                  ? 'bg-amber-500/20 text-amber-500 border border-amber-500/30'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              <Shield className="h-3.5 w-3.5 mr-1.5 text-amber-500" />
+              Perfis de Acesso
+            </Button>
+          )}
         </div>
       </div>
+
+      {/* SEÇÃO PERFIS DE ACESSO */}
+      {mainTab === 'profiles' && (
+        <div className="space-y-6">
+          <ProfilesPage embeddedTab />
+        </div>
+      )}
 
       {/* SEÇÃO PORTAL DO CLIENTE */}
       {mainTab === 'portal' && <ClientPortalSettingsTab />}

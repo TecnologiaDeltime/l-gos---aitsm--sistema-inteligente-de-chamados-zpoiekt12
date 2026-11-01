@@ -43,7 +43,11 @@ import { getOperators } from '@/services/operators'
 import { ProfileRecord, SYSTEM_MODULES, ModuleKey } from '@/types/profiles'
 import { useRealtime } from '@/hooks/use-realtime'
 
-export default function ProfilesPage() {
+interface ProfilesPageProps {
+  embeddedTab?: boolean
+}
+
+export default function ProfilesPage({ embeddedTab = false }: ProfilesPageProps) {
   const { toast } = useToast()
   const permissions = usePermissions()
   const canManage = permissions.canManageProfiles
@@ -533,7 +537,7 @@ export default function ProfilesPage() {
         open={dialogOpen}
         onOpenChange={setDialogOpen}
         profile={editingProfile}
-        onSave={handleSaveProfile}
+        onSuccess={loadData}
       />
 
       {/* Delete Confirmation Alert */}

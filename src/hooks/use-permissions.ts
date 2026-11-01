@@ -1,5 +1,8 @@
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useAuth } from '@/hooks/use-auth'
-import { ModuleKey, ProfileRecord } from '@/types/profiles'
+import { ModuleKey, ProfileRecord, GRANULAR_SYSTEM_MODULES } from '@/types/profiles'
+import { getProfilePermissions } from '@/services/profiles'
+import pb from '@/lib/pocketbase/client'
 
 export function usePermissions() {
   const { user } = useAuth()
@@ -12,10 +15,61 @@ export function usePermissions() {
   const isClienteGestor = role === 'cliente_gestor'
   const isCliente = role === 'cliente_solicitante' || isClienteGestor
 
+  // Mapa de permissões granulares carregadas da collection profile_permissions
+  const [granularPermissions, setGranularPermissions] = useState<Record<string, boolean>>({})
+  const [loadingGranular, setLoadingGranular] = useState(false)
+
+  const profileId = profile?.id || user?.profile_id
+
+  const loadGranular = useCallback(async () => {
+    if (!profileId || isAdmin) {
+      setGranularPermissions({})
+      return
+    }
+
+    try {
+      setLoadingGranular(true)
+      const list = await getProfilePermissions(profileId)
+      const map: Record<string, boolean> = {}
+      list.forEach((r) => {
+        map[`${r.module_key}.${r.item_key}`] = !!r.granted
+      })
+      setGranularPermissions(map)
+    } catch (err) {
+      console.error('Erro ao carregar permissões granulares:', err)
+    } finally {
+      setLoadingGranular(false)
+    }
+  }, [profileId, isAdmin])
+
+  useEffect(() => {
+    loadGranular()
+  }, [loadGranular])
+
+  // Realtime subscription para atualizar permissões caso o Admin altere
+  useEffect(() => {
+    if (!profileId || isAdmin) return
+
+    let unsubscribe: (() => void) | undefined
+    pb.collection('profile_permissions')
+      .subscribe('*', (e) => {
+        if (e.record && (e.record as any).profile === profileId) {
+          loadGranular()
+        }
+      })
+      .then((unsub) => {
+        unsubscribe = unsub
+      })
+      .catch(() => {})
+
+    return () => {
+      if (unsubscribe) unsubscribe()
+    }
+  }, [profileId, isAdmin, loadGranular])
+
   /**
-   * Helper to check granular module permissions
-   * If profile is present and contains permissions, we use that.
-   * If user is admin, they always have read=true, write=true, hidden=false.
+   * Helper to check granular module permissions (leitura/escrita/oculto)
+   * Administrador tem SEMPRE acesso total (ignora a matriz).
    */
   const getModulePermission = (
     moduleKey: ModuleKey,
@@ -52,6 +106,12 @@ export function usePermissions() {
         return { read: isTecnico, write: isGestor, hidden: !isTecnico }
       case 'changes':
         return { read: true, write: isTecnico, hidden: false }
+      case 'problems':
+        return { read: true, write: isTecnico, hidden: false }
+      case 'visits':
+        return { read: true, write: isTecnico, hidden: false }
+      case 'atendimento':
+        return { read: true, write: true, hidden: false }
       case 'reports':
         return {
           read: isTecnico || isClienteGestor,
@@ -82,6 +142,10 @@ export function usePermissions() {
         return { read: true, write: true, hidden: false }
       case 'time_tracking':
         return { read: isTecnico, write: isTecnico, hidden: !isTecnico }
+      case 'knowledge':
+        return { read: true, write: isTecnico, hidden: false }
+      case 'admin':
+        return { read: isAdmin, write: isAdmin, hidden: !isAdmin }
       default:
         return { read: true, write: false, hidden: false }
     }
@@ -102,11 +166,51 @@ export function usePermissions() {
     return perm.hidden
   }
 
+  /**
+   * Checagem granular: verifica se um item específico dentro de um módulo está concedido.
+   * Regra 3: Administrador tem SEMPRE acesso total (retorna true).
+   * Se o módulo pai estiver oculto, o item também fica inacessível.
+   */
+  const canAccessItem = (moduleKey: ModuleKey, itemKey: string): boolean => {
+    if (isAdmin) return true
+
+    // Se o módulo todo está oculto para o perfil, nenhum item é acessível
+    if (isModuleHidden(moduleKey)) return false
+
+    // Se temos permissão granular cadastrada na collection, ela prevalece
+    const fullKey = `${moduleKey}.${itemKey}`
+    if (fullKey in granularPermissions) {
+      return granularPermissions[fullKey] === true
+    }
+
+    // Caso o registro ainda não tenha chegado ou o perfil tenha nascido recentemente:
+    // por padrão é concedido se o módulo puder ser lido
+    return canReadModule(moduleKey)
+  }
+
+  /**
+   * Checagem granular por rota: verifica se a rota dada tem restrição granular no perfil.
+   */
+  const canAccessPath = (pathname: string): boolean => {
+    if (isAdmin) return true
+
+    // Procurar item do catálogo que casa com esta rota
+    for (const mod of GRANULAR_SYSTEM_MODULES) {
+      for (const item of mod.items) {
+        if (item.path && (item.path === pathname || pathname.startsWith(item.path + '/'))) {
+          return canAccessItem(mod.key, item.key)
+        }
+      }
+    }
+
+    return true
+  }
+
   // Specific module checks for fast access
   const canManageProfiles = canWriteModule('profiles') || isAdmin
-  // Somente administradores podem incluir e excluir operadores
   const canManageOperators = isAdmin
-  const canAccessVault = canReadModule('vault') || isAdmin || isGestor
+  const canAccessVault =
+    canAccessItem('vault', 'vault_cofre') && (canReadModule('vault') || isAdmin || isGestor)
   const canManageVault = canWriteModule('vault') || isAdmin
   const canManageClients = canWriteModule('clients')
   const canManageContracts = canWriteModule('clients')
@@ -121,7 +225,7 @@ export function usePermissions() {
   const canManageCmdb = canWriteModule('cmdb')
   const canManageCiTypes = canWriteModule('cmdb') && isAdmin
   const isClienteSolicitante = role === 'cliente_solicitante'
-  const canAccessUnitReports = canReadModule('reports')
+  const canAccessUnitReports = canAccessItem('reports', 'rep_unit') && canReadModule('reports')
   const canManageAutomations = isAdmin || isGestor
   const canPublishAutomations = isAdmin
   const canViewAutomations = isAdmin || isGestor || role === 'auditor'
@@ -135,10 +239,14 @@ export function usePermissions() {
     isTecnico,
     isClienteGestor,
     isCliente,
+    granularPermissions,
+    loadingGranular,
     getModulePermission,
     canReadModule,
     canWriteModule,
     isModuleHidden,
+    canAccessItem,
+    canAccessPath,
     canManageProfiles,
     canManageOperators,
     canManageClients,
@@ -161,5 +269,6 @@ export function usePermissions() {
     canTestAutomations,
     canAccessVault,
     canManageVault,
+    reloadPermissions: loadGranular,
   }
 }

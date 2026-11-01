@@ -8,16 +8,19 @@ import { ModuleKey } from '@/types/profiles'
 interface ProtectedRouteProps {
   children: ReactNode
   requiredModule?: ModuleKey
+  requiredItem?: string
   requireWrite?: boolean
 }
 
 export function ProtectedRoute({
   children,
   requiredModule,
+  requiredItem,
   requireWrite = false,
 }: ProtectedRouteProps) {
   const { isAuthenticated, user, loading } = useAuth()
-  const { canReadModule, canWriteModule, isModuleHidden } = usePermissions()
+  const { canReadModule, canWriteModule, isModuleHidden, canAccessItem, canAccessPath, isAdmin } =
+    usePermissions()
   const location = useLocation()
 
   if (loading) {
@@ -32,14 +35,28 @@ export function ProtectedRoute({
     return <Navigate to="/login" state={{ from: location }} replace />
   }
 
-  if (requiredModule) {
-    if (isModuleHidden(requiredModule)) {
-      return <Navigate to="/dashboard" replace />
+  // Se for admin, acesso total garantido (Regra 3)
+  if (!isAdmin) {
+    // 1. Checagem por requiredModule
+    if (requiredModule) {
+      if (isModuleHidden(requiredModule)) {
+        return <Navigate to="/dashboard" replace />
+      }
+      if (requireWrite && !canWriteModule(requiredModule)) {
+        return <Navigate to="/dashboard" replace />
+      }
+      if (!requireWrite && !canReadModule(requiredModule)) {
+        return <Navigate to="/dashboard" replace />
+      }
+
+      // Se há um requiredItem explícito
+      if (requiredItem && !canAccessItem(requiredModule, requiredItem)) {
+        return <Navigate to="/dashboard" replace />
+      }
     }
-    if (requireWrite && !canWriteModule(requiredModule)) {
-      return <Navigate to="/dashboard" replace />
-    }
-    if (!requireWrite && !canReadModule(requiredModule)) {
+
+    // 2. Checagem granular automática pelo caminho da URL (ex.: /reports/monthly-client, /atendimento)
+    if (!canAccessPath(location.pathname)) {
       return <Navigate to="/dashboard" replace />
     }
   }
