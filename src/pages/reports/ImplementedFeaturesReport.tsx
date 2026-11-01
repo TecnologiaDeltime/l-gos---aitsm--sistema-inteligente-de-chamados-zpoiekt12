@@ -19,6 +19,9 @@ import {
   Calendar,
   Building,
   Check,
+  Globe,
+  Star,
+  LayoutDashboard,
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -53,6 +56,13 @@ const FEATURE_CATEGORIES: FeatureCategory[] = [
     bgLight: 'bg-amber-50/70 dark:bg-amber-950/20',
     borderColor: 'border-amber-200 dark:border-amber-900',
     items: [
+      {
+        id: 'tk-reopen',
+        title: 'Reabertura de chamados com prazo configurável e motivo obrigatório',
+        description:
+          'Mecanismo de reabertura para chamados resolvidos com prazo limite parametrizável em Configurações (padrão de 2 dias), histórico de reaberturas e justificativa/motivo obrigatório.',
+        tag: 'Ciclo de Vida / SLA',
+      },
       {
         id: 'tk-1',
         title: 'Abertura de chamados estruturada',
@@ -140,6 +150,131 @@ const FEATURE_CATEGORIES: FeatureCategory[] = [
         description:
           'Impedimento de edição manual indevida, remoção de botão editar e campos desabilitados em apontamentos de timer.',
         tag: 'Segurança / Fraude',
+      },
+      {
+        id: 'tk-hours-rule',
+        title: 'Regra de apuração e débito de horas (Franquia vs Operador)',
+        description:
+          'Horas de acompanhamento manual (logs) debitam da franquia contratual do cliente; tempo de play/pause do cronômetro acumula na produtividade/horas de trabalho do operador, com registro automático do cumprimento do SLA de Resposta no primeiro play.',
+        tag: 'Regra de Horas / SLA',
+      },
+    ],
+  },
+  {
+    id: 'portal',
+    title: 'Portal do Cliente e Autoatendimento',
+    icon: Globe,
+    color: 'text-amber-500 dark:text-amber-400',
+    bgLight: 'bg-amber-500/10 dark:bg-amber-500/15',
+    borderColor: 'border-amber-500/30 dark:border-amber-500/30',
+    items: [
+      {
+        id: 'portal-1',
+        title: 'Portal do Cliente completo (/portal)',
+        description:
+          'Ambiente dedicado e intuitivo para solicitantes e gestores das empresas clientes, com login exclusivo em /portal/login.',
+        tag: 'Autoatendimento',
+      },
+      {
+        id: 'portal-2',
+        title: 'Dashboard do Portal com gráficos e filtro de mês',
+        description:
+          'Métricas visuais de chamados abertos, em andamento, resolvidos, taxa de SLA e filtros interativos por competência mensal.',
+        tag: 'Indicadores / Portal',
+      },
+      {
+        id: 'portal-3',
+        title: 'Chamados da organização e pesquisa de satisfação por estrelas',
+        description:
+          'Visualização completa dos chamados da organização com timeline de interações públicas e avaliação de satisfação (1 a 5 estrelas com comentários) diretamente no chamado.',
+        tag: 'Chamados & CSAT',
+      },
+      {
+        id: 'portal-4',
+        title: 'Abertura rápida de chamados no Portal',
+        description:
+          'Formulário simplificado com seleção em cascata de setor, contato por setor, categoria, assunto, descrição e upload de anexos.',
+        tag: 'Self-Service',
+      },
+      {
+        id: 'portal-5',
+        title: 'Central de Aprovações no Portal',
+        description:
+          'Aprovação ou reprovação ágil de solicitações de mudanças, orçamentos e serviços adicionais com registro de parecer.',
+        tag: 'Workflow / Aprovações',
+      },
+      {
+        id: 'portal-6',
+        title: 'Inventário de TI (CMDB do Cliente)',
+        description:
+          'Consulta detalhada aos ativos e itens de configuração cadastrados para a empresa com status, especificações e histórico de incidentes.',
+        tag: 'Ativos / CMDB',
+      },
+      {
+        id: 'portal-7',
+        title: 'Visitas Técnicas no Portal',
+        description:
+          'Acompanhamento do agendamento, check-in, check-out e relatórios de atendimentos presenciais efetuados pelos técnicos de campo.',
+        tag: 'Field Service',
+      },
+      {
+        id: 'portal-8',
+        title: 'Extrato de Horas e Saldo de Franquia',
+        description:
+          'Transparência total no consumo de horas contratadas, franquia disponível, horas excedentes e histórico consolidado.',
+        tag: 'Gestão de Franquia',
+      },
+      {
+        id: 'portal-9',
+        title: 'Relatórios Mensais liberados com avaliação',
+        description:
+          'Acesso a relatórios executivos mensais disponibilizados pela equipe técnica, com download em PDF e avaliação obrigatória por popup de pendência.',
+        tag: 'Transparência & ABNT',
+      },
+      {
+        id: 'portal-10',
+        title: 'Modo Suporte do Administrador (Masquerade)',
+        description:
+          'Acesso administrativo ao Portal do Cliente sem necessidade de senha, permitindo alternar e simular a experiência de qualquer empresa cliente em tempo real.',
+        tag: 'Administração / Suporte',
+      },
+    ],
+  },
+  {
+    id: 'satisfaction',
+    title: 'Satisfação do Cliente (CSAT)',
+    icon: Star,
+    color: 'text-amber-600 dark:text-amber-400',
+    bgLight: 'bg-amber-100/60 dark:bg-amber-950/25',
+    borderColor: 'border-amber-300 dark:border-amber-800',
+    items: [
+      {
+        id: 'sat-1',
+        title: 'Pesquisa de satisfação por chamado (1 a 5 estrelas)',
+        description:
+          'Avaliação imediata da qualidade do atendimento ao resolver o chamado, com classificação em estrelas (1 a 5) e feedback textual do cliente.',
+        tag: 'CSAT / Qualidade',
+      },
+      {
+        id: 'sat-2',
+        title: 'Avaliação de relatório mensal liberado',
+        description:
+          'Módulo de avaliação de relatórios mensais homologados, coletando notas e sugestões dos gestores de TI dos clientes.',
+        tag: 'Auditoria Mensal',
+      },
+      {
+        id: 'sat-3',
+        title: 'Popups proativos de pendência de avaliação',
+        description:
+          'Alertas automáticos no Portal notificando o cliente sobre chamados concluídos ou relatórios pendentes de validação e nota.',
+        tag: 'Engajamento',
+      },
+      {
+        id: 'sat-4',
+        title: 'Dashboard executivo de satisfação (/satisfaction)',
+        description:
+          'Métricas consolidadas de NPS/CSAT, distribuição de estrelas, índice de aprovação por operador e listagem de comentários.',
+        tag: 'BI & Gestão',
       },
     ],
   },
@@ -300,6 +435,37 @@ const FEATURE_CATEGORIES: FeatureCategory[] = [
           'Distribuição e apuração de franquias em /horas-clientes segmentadas por equipe e complexidade.',
         tag: 'Gestão de Contratos',
       },
+      {
+        id: 'rep-5',
+        title: 'Relatório de Horas por Operador (/reports/operator-hours)',
+        description:
+          'Acompanhamento detalhado de produtividade individual e coletiva com horas de cronômetro (trabalho) e horas de acompanhamento (logs), totalizadores, filtros por período e operador.',
+        tag: 'Produtividade / Equipe',
+      },
+    ],
+  },
+  {
+    id: 'operator-panel',
+    title: 'Painel do Operador',
+    icon: LayoutDashboard,
+    color: 'text-amber-600 dark:text-amber-400',
+    bgLight: 'bg-amber-500/10 dark:bg-amber-500/15',
+    borderColor: 'border-amber-500/30 dark:border-amber-500/30',
+    items: [
+      {
+        id: 'op-1',
+        title: 'Painel do Operador centralizado (/operator-dashboard)',
+        description:
+          'Visão operacional ágil com fila de chamados atribuídos, alertas em contagem regressiva, chamados aguardando primeira resposta e controle de status em tempo real.',
+        tag: 'Mesa de Operação',
+      },
+      {
+        id: 'op-2',
+        title: 'Cronômetro e ações rápidas integradas',
+        description:
+          'Acionamento de cronômetro direto pelo painel com registro de pausas, justificativas, troca rápida de chamados e atalhos de resolução.',
+        tag: 'Produtividade',
+      },
     ],
   },
   {
@@ -311,10 +477,17 @@ const FEATURE_CATEGORIES: FeatureCategory[] = [
     borderColor: 'border-purple-200 dark:border-purple-900',
     items: [
       {
+        id: 'prf-levels',
+        title: 'Perfis de Acesso com níveis Visualizar / Editar / Configurar',
+        description:
+          'Matriz refinada de autorização com níveis explícitos (Nenhum, Visualizar, Editar, Configurar) por item, catálogo auto-registrável dinâmico e campo "Tela inicial" personalizada por perfil (versão 0.0.280).',
+        tag: 'RBAC Avançado',
+      },
+      {
         id: 'prf-1',
         title: 'Matriz de permissões granular',
         description:
-          'Controle por módulo com níveis: Leitura, Escrita ou Oculto para cada perfil de usuário.',
+          'Controle por módulo e submódulo com bloqueio de menu, ações e proteção de rotas via guard centralizado.',
         tag: 'Segurança RBAC',
       },
       {
