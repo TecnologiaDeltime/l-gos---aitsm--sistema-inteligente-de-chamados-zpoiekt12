@@ -644,6 +644,12 @@ export default function Layout() {
       icon: BarChart3,
       show: permissions.canAccessItem('reports', 'rep_client_extraction'),
     },
+    {
+      label: 'Horas por Operador',
+      path: '/reports/operator-hours',
+      icon: BarChart3,
+      show: permissions.canAccessItem('reports', 'rep_operator_hours'),
+    },
   ]
   const relatoriosGroupVisible =
     !permissions.isModuleHidden('reports') && relatoriosSubmenuItems.some((i) => i.show)

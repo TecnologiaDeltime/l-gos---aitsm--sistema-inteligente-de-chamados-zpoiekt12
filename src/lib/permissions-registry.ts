@@ -498,6 +498,13 @@ const BASE_SYSTEM_MODULES: GranularModuleDefinition[] = [
         description: 'Extração flexível de colunas cadastrais e contratos',
         path: '/reports/clients',
       },
+      {
+        key: 'rep_operator_hours',
+        label: 'Relatório de Horas por Operador',
+        description:
+          'Horas trabalhadas (play/pause) e acompanhamento (logs) por operador e período',
+        path: '/reports/operator-hours',
+      },
     ],
   },
 

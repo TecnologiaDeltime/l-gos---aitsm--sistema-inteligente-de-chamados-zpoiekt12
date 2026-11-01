@@ -91,6 +91,12 @@ const OTHER_REPORTS = [
     path: '/reports/unit',
     itemKey: 'rep_unit',
   },
+  {
+    title: 'Relatório de Horas por Operador',
+    desc: 'Horas trabalhadas (play/pause) e de acompanhamento (logs) apuradas por operador e período.',
+    path: '/reports/operator-hours',
+    itemKey: 'rep_operator_hours',
+  },
 ]
 
 export default function ReportsPage() {
