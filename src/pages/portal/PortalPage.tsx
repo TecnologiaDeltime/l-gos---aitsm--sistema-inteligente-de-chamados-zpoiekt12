@@ -127,6 +127,7 @@ export default function PortalPage() {
   // Modais
   const [selectedTicket, setSelectedTicket] = useState<TicketRecord | null>(null)
   const [newTicketOpen, setNewTicketOpen] = useState(false)
+  const [ticketInitialAssetId, setTicketInitialAssetId] = useState<string>('')
 
   // Filtros de chamados
   const [ticketSearch, setTicketSearch] = useState('')
@@ -914,10 +915,17 @@ export default function PortalPage() {
           </TabsContent>
 
           {/* =========================================================================
-              ABA 3: MEUS ATIVOS (CMDB)
+              ABA 3: INVENTÁRIO DE TI (CMDB)
               ========================================================================= */}
           <TabsContent value="assets" className="mt-0">
-            <PortalAssetsTab assets={data?.configurationItems || []} loading={loading} />
+            <PortalAssetsTab
+              assets={data?.configurationItems || []}
+              loading={loading}
+              onOpenTicketWithAsset={(asset) => {
+                setTicketInitialAssetId(asset.id)
+                setNewTicketOpen(true)
+              }}
+            />
           </TabsContent>
 
           {/* =========================================================================
@@ -1002,7 +1010,12 @@ export default function PortalPage() {
       {/* Modal de Novo Chamado Amarrado à Empresa */}
       <PortalNewTicketDialog
         open={newTicketOpen}
-        onOpenChange={setNewTicketOpen}
+        onOpenChange={(open) => {
+          setNewTicketOpen(open)
+          if (!open) {
+            setTicketInitialAssetId('')
+          }
+        }}
         companyId={effectiveCompanyId}
         companyName={companyName}
         user={{
@@ -1013,7 +1026,11 @@ export default function PortalPage() {
           phone: user?.phone,
         }}
         assets={data?.configurationItems || []}
-        onSuccess={() => loadPortalData(true)}
+        initialAssetId={ticketInitialAssetId}
+        onSuccess={() => {
+          setTicketInitialAssetId('')
+          loadPortalData(true)
+        }}
       />
     </div>
   )

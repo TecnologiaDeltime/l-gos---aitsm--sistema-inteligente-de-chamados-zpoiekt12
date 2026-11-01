@@ -207,7 +207,7 @@ const FEATURE_CATEGORIES: FeatureCategory[] = [
         id: 'portal-6',
         title: 'Inventário de TI (CMDB do Cliente)',
         description:
-          'Consulta detalhada aos ativos e itens de configuração cadastrados para a empresa com status, especificações e histórico de incidentes.',
+          'Consulta detalhada aos ativos e itens de configuração cadastrados para a empresa, com busca textual instantânea, filtros múltiplos por tipo, status e localização, totalizadores de resumo no topo, alternância entre visualização em cards e tabela, além de modal com ficha técnica completa e atalho para abertura de chamado vinculado.',
         tag: 'Ativos / CMDB',
       },
       {

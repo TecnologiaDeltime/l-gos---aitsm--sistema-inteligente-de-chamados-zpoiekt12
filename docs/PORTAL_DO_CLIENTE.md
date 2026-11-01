@@ -98,11 +98,23 @@ _Observação:_ No Modo Suporte do Administrador, ao alternar a empresa no selet
   - O status do chamado: avança para `Novo` ao ser aprovado ou para `Cancelado` ao ser reprovado.
   - Registra o parecer do ponto focal e notifica os envolvidos.
 
-### Módulo D: Meus Ativos (CMDB)
+### Módulo D: Inventário de TI (CMDB do Cliente)
 
-- Lista de todos os itens de configuração da coleção `configuration_items` cuja empresa seja a do cliente.
-- Filtros por busca textual, tipo de ativo (Servidor, Desktop, Notebook, Roteador, etc.) e status.
-- Exibição de número de série, marca, modelo, localização e filial.
+- Lista de todos os itens de configuração e equipamentos da coleção `configuration_items` vinculados à empresa do cliente selecionada.
+- **Resumo no Topo:** Indicadores interativos com contagem total de ativos, quantidade e percentual em operação, ativos em manutenção e sobressalentes/reserva. O clique nos cards de resumo aplica filtro imediato.
+- **Filtros e Busca Textual:**
+  - Busca em tempo real por nome do equipamento, número de série, marca, modelo e localização.
+  - Filtro por Tipo de Ativo com contagem por tipo.
+  - Filtro por Status do Ativo (Ativo, Em Manutenção, Reserva, Inativo, Descartado).
+  - Filtro por Localização física (sala, andar ou departamento).
+  - Tag visual com os filtros ativos e botão rápido para limpeza de filtros.
+- **Visualização Flexível (Cards e Tabela):**
+  - **Modo Cards:** Cartões responsivos com tipografia tema oficial, badge de status e tipo, metadados de série, filial, localização e observações.
+  - **Modo Tabela:** Listagem tabular corporativa para auditoria rápida de parque computacional, com colunas de Equipamento, Tipo, Status, Nº de Série, Localização, Filial e Ação.
+- **Modal de Detalhes do Ativo (`AssetDetailModal`):**
+  - Acesso ao clicar no card ou na linha da tabela, sem sair do Portal do Cliente.
+  - Apresenta especificações técnicas completas, fabricante, modelo, número de série, empresa, filial, sala/andar, notas de configuração e datas de criação/atualização.
+  - **Ação Rápida Integrada:** Botão _"Abrir Chamado para este Ativo"_ que aciona diretamente o modal de novo chamado com o IC já pré-selecionado.
 
 ### Módulo E: Visitas Técnicas
 

@@ -38,6 +38,7 @@ interface PortalNewTicketDialogProps {
     phone?: string
   }
   assets: ConfigurationItemRecord[]
+  initialAssetId?: string
   onSuccess: () => void
 }
 
@@ -48,6 +49,7 @@ export default function PortalNewTicketDialog({
   companyName,
   user,
   assets,
+  initialAssetId,
   onSuccess,
 }: PortalNewTicketDialogProps) {
   const { toast } = useToast()
@@ -56,7 +58,17 @@ export default function PortalNewTicketDialog({
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [type, setType] = useState('Incidente')
-  const [selectedAsset, setSelectedAsset] = useState<string>('')
+  const [selectedAsset, setSelectedAsset] = useState<string>(initialAssetId || '')
+
+  useEffect(() => {
+    if (open) {
+      if (initialAssetId) {
+        setSelectedAsset(initialAssetId)
+      } else {
+        setSelectedAsset('none')
+      }
+    }
+  }, [open, initialAssetId])
 
   // Setores e Contatos da empresa
   const [departments, setDepartments] = useState<CompanyDepartmentRecord[]>([])
