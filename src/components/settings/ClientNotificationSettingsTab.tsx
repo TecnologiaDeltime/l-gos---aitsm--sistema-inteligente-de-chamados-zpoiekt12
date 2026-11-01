@@ -16,8 +16,10 @@ import {
   getClientNotificationSettings,
   saveClientNotificationSettings,
   ClientNotificationSettings,
+  DEFAULT_REOPEN_WINDOW_DAYS,
 } from '@/services/client-notification-settings'
 import { getCompanies, CompanyRecord } from '@/services/companies'
+import { Input } from '@/components/ui/input'
 import {
   Mail,
   CheckCircle2,
@@ -28,6 +30,7 @@ import {
   Globe,
   Loader2,
   Info,
+  RotateCcw,
 } from 'lucide-react'
 
 interface ClientNotificationSettingsTabProps {
@@ -82,6 +85,10 @@ export function ClientNotificationSettingsTab({
           notify_ticket_created: settings.notify_ticket_created,
           notify_ticket_resolved: settings.notify_ticket_resolved,
           notify_focal_points: settings.notify_focal_points,
+          reopen_window_days:
+            settings.reopen_window_days !== undefined
+              ? Number(settings.reopen_window_days)
+              : DEFAULT_REOPEN_WINDOW_DAYS,
         },
         companyId,
       )
@@ -266,6 +273,55 @@ export function ClientNotificationSettingsTab({
                     disabled={!isAdminOrGestor}
                     className="data-[state=checked]:bg-indigo-600"
                   />
+                </div>
+
+                {/* 4. PRAZO DE REABERTURA DE CHAMADOS (DIAS) */}
+                <div className="p-4 rounded-xl border border-amber-500/20 bg-amber-500/5 dark:bg-amber-950/20 space-y-3">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div className="space-y-1 pr-2">
+                      <div className="flex items-center gap-2">
+                        <RotateCcw className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                        <Label className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                          Prazo de Reabertura de Chamados pelo Portal (dias)
+                        </Label>
+                        <Badge className="bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 text-[10px] h-5">
+                          reopen_window_days
+                        </Badge>
+                      </div>
+                      <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed max-w-xl">
+                        Define por quantos <strong>DIAS</strong> após a resolução o botão de
+                        reabertura permanecerá ativo no Portal do Cliente. Encerrado esse prazo, o
+                        botão de reabertura é automaticamente desabilitado (com aviso de prazo
+                        expirado). Padrão do sistema:{' '}
+                        <strong>{DEFAULT_REOPEN_WINDOW_DAYS} dias</strong>.
+                      </p>
+                    </div>
+
+                    <div className="flex items-center gap-2 w-full sm:w-auto">
+                      <Input
+                        type="number"
+                        min={0}
+                        max={365}
+                        value={
+                          settings.reopen_window_days !== undefined
+                            ? settings.reopen_window_days
+                            : DEFAULT_REOPEN_WINDOW_DAYS
+                        }
+                        onChange={(e) => {
+                          const val = parseInt(e.target.value, 10)
+                          setSettings({
+                            ...settings,
+                            reopen_window_days: isNaN(val) ? 0 : Math.max(0, val),
+                          })
+                        }}
+                        disabled={!isAdminOrGestor}
+                        className="w-24 text-center font-mono font-bold text-sm h-9"
+                      />
+                      <span className="text-xs font-semibold text-slate-600 dark:text-slate-400">
+                        dia(s)
+                      </span>
+                    </div>
+                  </div>
                 </div>
               </div>
 

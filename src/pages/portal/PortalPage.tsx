@@ -60,6 +60,7 @@ import PortalApprovalsTab from '@/components/portal/PortalApprovalsTab'
 import PortalAssetsTab from '@/components/portal/PortalAssetsTab'
 import PortalVisitsTab from '@/components/portal/PortalVisitsTab'
 import PortalHoursTab from '@/components/portal/PortalHoursTab'
+import PendingReportEvaluationNotification from '@/components/portal/PendingReportEvaluationNotification'
 import {
   getClientPortalDashboardMetrics,
   PortalDashboardMetrics,
@@ -303,6 +304,11 @@ export default function PortalPage() {
     (t) => t.status !== 'Resolvido' && t.status !== 'Fechado' && t.status !== 'Cancelado',
   ).length
 
+  // Relatórios liberados que ainda NÃO foram avaliados pelo cliente
+  const unreviewedReports = releasedReports.filter(
+    (r) => !r.satisfaction_score || r.satisfaction_score < 1,
+  )
+
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col">
       {/* =========================================================================
@@ -459,6 +465,36 @@ export default function PortalPage() {
           CORPO PRINCIPAL: Abas dos 6 Módulos do Usuário
           ========================================================================= */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+        {/* Aviso no topo se houver relatórios pendentes de avaliação */}
+        {unreviewedReports.length > 0 && (
+          <div className="p-3.5 rounded-xl border border-amber-500/40 bg-amber-500/10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs animate-in fade-in">
+            <div className="flex items-center gap-2.5">
+              <div className="p-1.5 rounded-lg bg-amber-500/20 text-amber-500">
+                <Star className="h-4 w-4 fill-amber-500 text-amber-500" />
+              </div>
+              <div>
+                <p className="font-bold text-foreground">
+                  Você possui {unreviewedReports.length} relatório(s) mensal(is) liberado(s)
+                  pendente(s) de avaliação.
+                </p>
+                <p className="text-muted-foreground text-[11px]">
+                  Acesse o relatório mensal e avalie o atendimento para nos ajudar a aprimorar os
+                  serviços prestados.
+                </p>
+              </div>
+            </div>
+
+            <Button
+              size="sm"
+              onClick={() => setActiveTab('reports')}
+              className="bg-amber-600 hover:bg-amber-700 text-white text-xs font-semibold gap-1.5 h-8 shrink-0"
+            >
+              <FileText className="h-3.5 w-3.5" />
+              Avaliar Relatórios ({unreviewedReports.length})
+            </Button>
+          </div>
+        )}
+
         {/* Banner de Boas-vindas com Resumo Rápido */}
         <div className="bg-card border rounded-2xl p-4 sm:p-5 shadow-2xs space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
@@ -956,6 +992,12 @@ export default function PortalPage() {
           onTicketUpdated={() => loadPortalData(true)}
         />
       )}
+
+      {/* Popup / Notificação de Avaliação de Relatório Pendente */}
+      <PendingReportEvaluationNotification
+        unreviewedReports={unreviewedReports}
+        onOpenReportTab={() => setActiveTab('reports')}
+      />
 
       {/* Modal de Novo Chamado Amarrado à Empresa */}
       <PortalNewTicketDialog

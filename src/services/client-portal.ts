@@ -88,6 +88,66 @@ export async function addTicketPublicComment(ticketId: string, authorId: string,
 }
 
 /**
+ * Reabre um chamado que estava Resolvido, voltando-o para a fila ('Em Atendimento' ou 'Reaberto'),
+ * registrando o motivo na timeline como log público e no histórico do ticket.
+ */
+export async function reopenTicketFromPortal(params: {
+  ticketId: string
+  reason: string
+  userId?: string
+}): Promise<TicketRecord> {
+  const trimmedReason = params.reason.trim()
+  if (!trimmedReason) {
+    throw new Error('O motivo da reabertura é obrigatório.')
+  }
+
+  const nowIso = new Date().toISOString()
+  const authorId = params.userId || pb.authStore.record?.id || (pb.authStore.model as any)?.id
+
+  // 1. Atualiza status do chamado para Reaberto (ou Em Atendimento)
+  // O hook on_ticket_resolve_consume_hours reage ao status 'Reaberto' para limpar timestamps
+  // de resolução e recalcular/retomar a contagem do SLA de solução.
+  const updatedTicket = await pb.collection('tickets').update<TicketRecord>(params.ticketId, {
+    status: 'Reaberto',
+    sla_solution_at: null,
+    resolution_date: null,
+    closure_date: null,
+    sla_paused: false,
+  })
+
+  // 2. Registra o motivo como log PÚBLICO na timeline para que o cliente e a equipe vejam
+  if (authorId) {
+    try {
+      await pb.collection('ticket_interactions').create({
+        ticket: params.ticketId,
+        author: authorId,
+        type: 'Público',
+        content: `Chamado Reaberto pelo Cliente.\nMotivo da Reabertura: ${trimmedReason}`,
+        origin: 'Manual',
+      })
+    } catch (interErr) {
+      console.warn('Erro ao criar interação pública de reabertura:', interErr)
+    }
+  }
+
+  // 3. Registra no histórico do ticket (auditoria)
+  try {
+    await pb.collection('ticket_history').create({
+      ticket: params.ticketId,
+      user: authorId || undefined,
+      action: 'Reabertura pelo Portal do Cliente',
+      field: 'status',
+      old_value: 'Resolvido',
+      new_value: `Reaberto — Motivo: ${trimmedReason}`,
+    })
+  } catch (histErr) {
+    console.warn('Erro ao criar histórico de reabertura:', histErr)
+  }
+
+  return updatedTicket
+}
+
+/**
  * Busca aprovações da empresa do cliente.
  */
 export async function getClientPortalApprovals(companyId: string): Promise<ApprovalRecord[]> {

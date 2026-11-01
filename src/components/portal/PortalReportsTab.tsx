@@ -24,7 +24,10 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { formatDateTime } from '@/lib/date-format'
-import { ClientMonthlyReportRecord } from '@/services/client-monthly-reports'
+import { ClientMonthlyReportRecord, evaluateMonthlyReport } from '@/services/client-monthly-reports'
+import { Textarea } from '@/components/ui/textarea'
+import { useToast } from '@/hooks/use-toast'
+import { Star, ThumbsUp } from 'lucide-react'
 
 interface PortalReportsTabProps {
   reports: ClientMonthlyReportRecord[]
@@ -33,9 +36,77 @@ interface PortalReportsTabProps {
   onRefresh?: () => void
 }
 
-export default function PortalReportsTab({ reports, loading, companyName }: PortalReportsTabProps) {
+export default function PortalReportsTab({
+  reports,
+  loading,
+  companyName,
+  onRefresh,
+}: PortalReportsTabProps) {
+  const { toast } = useToast()
   const [searchTerm, setSearchTerm] = useState('')
   const [viewingReport, setViewingReport] = useState<ClientMonthlyReportRecord | null>(null)
+
+  // Estados da avaliação no modal do relatório
+  const [reportScore, setReportScore] = useState<number>(0)
+  const [hoverScore, setHoverScore] = useState<number>(0)
+  const [reportComment, setReportComment] = useState<string>('')
+  const [savingEvaluation, setSavingEvaluation] = useState(false)
+
+  // Quando abre um relatório, carrega a avaliação existente
+  const handleOpenReport = (report: ClientMonthlyReportRecord) => {
+    setViewingReport(report)
+    setReportScore(report.satisfaction_score || 0)
+    setReportComment(report.satisfaction_comment || '')
+    setHoverScore(0)
+  }
+
+  const starLabels: Record<number, string> = {
+    1: '1 - Muito Ruim',
+    2: '2 - Ruim',
+    3: '3 - Regular',
+    4: '4 - Bom',
+    5: '5 - Excelente',
+  }
+
+  const handleSaveEvaluation = async () => {
+    if (!viewingReport) return
+    if (reportScore < 1 || reportScore > 5) {
+      toast({
+        title: 'Selecione uma nota',
+        description: 'Clique nas estrelas de 1 a 5 para avaliar o serviço prestado no período.',
+        variant: 'destructive',
+      })
+      return
+    }
+
+    try {
+      setSavingEvaluation(true)
+      const updated = await evaluateMonthlyReport({
+        reportId: viewingReport.id,
+        score: reportScore,
+        comment: reportComment,
+      })
+
+      setViewingReport(updated)
+      toast({
+        title: 'Avaliação registrada com sucesso!',
+        description: 'Sua avaliação referente aos serviços prestados no período foi gravada.',
+      })
+
+      if (onRefresh) {
+        onRefresh()
+      }
+    } catch (err: any) {
+      console.error('Erro ao salvar avaliação do relatório mensal:', err)
+      toast({
+        title: 'Erro ao salvar avaliação',
+        description: err.message || 'Não foi possível gravar sua avaliação.',
+        variant: 'destructive',
+      })
+    } finally {
+      setSavingEvaluation(false)
+    }
+  }
 
   const filteredReports = reports.filter((r) => {
     const term = searchTerm.toLowerCase()
@@ -183,10 +254,36 @@ export default function PortalReportsTab({ reports, loading, companyName }: Port
                     )}
                   </div>
 
+                  {/* Indicador de Avaliação no Card */}
+                  {report.satisfaction_score ? (
+                    <div className="flex items-center justify-between text-[11px] p-2 rounded-lg bg-amber-500/10 border border-amber-500/20">
+                      <span className="text-muted-foreground flex items-center gap-1 font-medium">
+                        <Star className="h-3.5 w-3.5 text-amber-500 fill-amber-500" />
+                        Avaliado:
+                      </span>
+                      <span className="font-bold text-amber-600 dark:text-amber-400">
+                        {report.satisfaction_score} estrela(s)
+                      </span>
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-between text-[11px] p-2 rounded-lg bg-amber-500/5 border border-dashed border-amber-500/30 text-amber-700 dark:text-amber-300">
+                      <span className="flex items-center gap-1">
+                        <AlertCircle className="h-3.5 w-3.5 text-amber-500" />
+                        Avaliação pendente
+                      </span>
+                      <span
+                        className="text-[10px] font-semibold underline cursor-pointer"
+                        onClick={() => handleOpenReport(report)}
+                      >
+                        Avaliar agora
+                      </span>
+                    </div>
+                  )}
+
                   {/* Ação de Visualização */}
                   <Button
                     size="sm"
-                    onClick={() => setViewingReport(report)}
+                    onClick={() => handleOpenReport(report)}
                     className="w-full bg-amber-600 hover:bg-amber-700 text-white font-semibold text-xs gap-1.5 mt-2"
                   >
                     <Eye className="h-3.5 w-3.5" />
@@ -222,6 +319,119 @@ export default function PortalReportsTab({ reports, loading, companyName }: Port
             </DialogHeader>
 
             <div className="space-y-6 pt-2 text-xs">
+              {/* =========================================================================
+                  SEÇÃO DE AVALIAÇÃO DE SATISFAÇÃO DO RELATÓRIO MENSAL (1-5 Estrelas)
+                  ========================================================================= */}
+              <div className="p-4 rounded-xl border border-amber-500/30 bg-card space-y-3 shadow-2xs">
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <div className="flex items-center gap-2">
+                    <Star className="h-4 w-4 text-amber-500 fill-amber-500" />
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-foreground">
+                      Avaliação dos Serviços Prestados no Período ({viewingReport.period_label})
+                    </h4>
+                  </div>
+                  {viewingReport.satisfaction_score ? (
+                    <Badge className="bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border-emerald-500/30 text-[10px] gap-1">
+                      <CheckCircle2 className="h-3 w-3" /> Avaliação Gravada
+                    </Badge>
+                  ) : (
+                    <Badge className="bg-amber-500/20 text-amber-700 dark:text-amber-300 border-amber-500/30 text-[10px] gap-1">
+                      <AlertCircle className="h-3 w-3" /> Aguardando Avaliação
+                    </Badge>
+                  )}
+                </div>
+
+                <p className="text-xs text-muted-foreground">
+                  Como você avalia os serviços prestados pela equipe de atendimento neste mês de{' '}
+                  <strong>{viewingReport.period_label}</strong>? (1 = muito ruim, 5 = excelente)
+                </p>
+
+                {/* Se já foi avaliado anteriormente, exibe as estrelas e o comentário */}
+                <div className="flex items-center gap-1.5 pt-1">
+                  {[1, 2, 3, 4, 5].map((star) => {
+                    const filled = star <= (hoverScore || reportScore)
+                    return (
+                      <button
+                        key={star}
+                        type="button"
+                        onClick={() => setReportScore(star)}
+                        onMouseEnter={() => setHoverScore(star)}
+                        onMouseLeave={() => setHoverScore(0)}
+                        className="p-1 rounded-md transition-transform hover:scale-110 focus:outline-hidden"
+                        title={starLabels[star]}
+                      >
+                        <Star
+                          className={`h-6 w-6 transition-colors ${
+                            filled
+                              ? 'text-amber-500 fill-amber-500 drop-shadow-xs'
+                              : 'text-zinc-400 dark:text-zinc-600 hover:text-amber-400'
+                          }`}
+                        />
+                      </button>
+                    )
+                  })}
+                  {(hoverScore || reportScore) > 0 && (
+                    <span className="text-xs font-semibold text-amber-600 dark:text-amber-400 ml-2">
+                      {starLabels[hoverScore || reportScore]}
+                    </span>
+                  )}
+                </div>
+
+                {/* Campo de comentário */}
+                <div className="space-y-1.5 pt-1">
+                  <label className="text-xs font-semibold text-foreground flex items-center justify-between">
+                    <span>O que achou dos serviços prestados naquele período?</span>
+                    <span className="text-[10px] text-muted-foreground font-normal">
+                      Comentário opcional
+                    </span>
+                  </label>
+                  <Textarea
+                    rows={2}
+                    placeholder="Deixe seu parecer ou comentários sobre as entregas, prazos e atendimento do mês..."
+                    value={reportComment}
+                    onChange={(e) => setReportComment(e.target.value)}
+                    className="text-xs resize-none"
+                  />
+                </div>
+
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-1 border-t border-border/50">
+                  <div className="text-[11px] text-muted-foreground">
+                    {viewingReport.satisfaction_score ? (
+                      <span>
+                        Avaliado em{' '}
+                        {viewingReport.satisfaction_responded_at
+                          ? formatDateTime(viewingReport.satisfaction_responded_at)
+                          : 'recente'}
+                        {viewingReport.expand?.satisfaction_responded_by?.name && (
+                          <span> por {viewingReport.expand.satisfaction_responded_by.name}</span>
+                        )}
+                        . Você pode atualizar a nota e comentário se desejar.
+                      </span>
+                    ) : (
+                      <span>
+                        Sua avaliação é fundamental para a governança e melhoria contínua do
+                        contrato.
+                      </span>
+                    )}
+                  </div>
+
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={handleSaveEvaluation}
+                    disabled={savingEvaluation || reportScore === 0}
+                    className="bg-amber-600 hover:bg-amber-700 text-white text-xs gap-1.5 h-8 shrink-0"
+                  >
+                    <ThumbsUp className="h-3.5 w-3.5" />
+                    {savingEvaluation
+                      ? 'Salvando...'
+                      : viewingReport.satisfaction_score
+                        ? 'Atualizar Avaliação'
+                        : 'Gravar Avaliação'}
+                  </Button>
+                </div>
+              </div>
+
               {/* Box de Observações / Parecer da Qualidade */}
               {viewingReport.summary_notes && (
                 <div className="p-3.5 rounded-xl border border-amber-500/30 bg-amber-500/10 space-y-1">

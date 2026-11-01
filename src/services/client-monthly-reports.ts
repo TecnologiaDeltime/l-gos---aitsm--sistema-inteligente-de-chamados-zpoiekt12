@@ -15,6 +15,10 @@ export interface ClientMonthlyReportRecord {
   report_data?: MonthlyClientReportData | any
   created: string
   updated: string
+  satisfaction_score?: number
+  satisfaction_comment?: string
+  satisfaction_responded_at?: string
+  satisfaction_responded_by?: string
   expand?: {
     company?: {
       id: string
@@ -27,6 +31,11 @@ export interface ClientMonthlyReportRecord {
       email?: string
     }
     generated_by?: {
+      id: string
+      name?: string
+      email?: string
+    }
+    satisfaction_responded_by?: {
       id: string
       name?: string
       email?: string
@@ -46,7 +55,7 @@ export async function getReleasedMonthlyReportsForCompany(
     return await pb.collection('client_monthly_reports').getFullList<ClientMonthlyReportRecord>({
       filter: `company = "${companyId}" && released_to_client = true`,
       sort: '-month_key',
-      expand: 'company,released_by,generated_by',
+      expand: 'company,released_by,generated_by,satisfaction_responded_by',
     })
   } catch (err) {
     console.warn('Erro ao carregar relatórios mensais liberados:', err)
@@ -164,4 +173,29 @@ export async function unreleaseMonthlyReportFromClient(
     status: 'rascunho',
     released_to_client: false,
   })
+}
+
+/**
+ * Salva a avaliação de satisfação (1 a 5 estrelas + comentário) no relatório mensal liberado.
+ */
+export async function evaluateMonthlyReport(params: {
+  reportId: string
+  score: number
+  comment?: string
+  userId?: string
+}): Promise<ClientMonthlyReportRecord> {
+  const payload: any = {
+    satisfaction_score: params.score,
+    satisfaction_comment: params.comment ? params.comment.trim() : '',
+    satisfaction_responded_at: new Date().toISOString(),
+  }
+  if (params.userId) {
+    payload.satisfaction_responded_by = params.userId
+  }
+
+  return pb
+    .collection('client_monthly_reports')
+    .update<ClientMonthlyReportRecord>(params.reportId, payload, {
+      expand: 'company,released_by,generated_by,satisfaction_responded_by',
+    })
 }

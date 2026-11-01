@@ -6,16 +6,20 @@ export interface ClientNotificationSettings {
   notify_ticket_created: boolean
   notify_ticket_resolved: boolean
   notify_focal_points: boolean
+  reopen_window_days?: number
   scope: 'global' | 'company'
   created: string
   updated: string
 }
+
+export const DEFAULT_REOPEN_WINDOW_DAYS = 2
 
 const DEFAULTS: Omit<ClientNotificationSettings, 'id' | 'created' | 'updated'> = {
   company: '',
   notify_ticket_created: true,
   notify_ticket_resolved: true,
   notify_focal_points: false,
+  reopen_window_days: DEFAULT_REOPEN_WINDOW_DAYS,
   scope: 'global',
 }
 
@@ -31,7 +35,13 @@ export async function getClientNotificationSettings(
           filter: `company = "${companyId}"`,
           sort: '-created',
         })
-      if (companyRecords.length > 0) return companyRecords[0]
+      if (companyRecords.length > 0) {
+        const item = companyRecords[0]
+        if (item.reopen_window_days === undefined || item.reopen_window_days === null) {
+          item.reopen_window_days = DEFAULT_REOPEN_WINDOW_DAYS
+        }
+        return item
+      }
     }
 
     const globalRecords = await pb
@@ -40,11 +50,29 @@ export async function getClientNotificationSettings(
         filter: 'scope = "global"',
         sort: '-created',
       })
-    if (globalRecords.length > 0) return globalRecords[0]
+    if (globalRecords.length > 0) {
+      const item = globalRecords[0]
+      if (item.reopen_window_days === undefined || item.reopen_window_days === null) {
+        item.reopen_window_days = DEFAULT_REOPEN_WINDOW_DAYS
+      }
+      return item
+    }
   } catch (_) {
     // collection pode não existir ou estar indisponível temporariamente
   }
   return { ...DEFAULTS, id: '', created: '', updated: '' } as ClientNotificationSettings
+}
+
+/**
+ * Retorna os dias configurados para prazo de reabertura após resolução.
+ * Padrão sensato: 2 dias.
+ */
+export async function getReopenWindowDays(companyId?: string): Promise<number> {
+  const settings = await getClientNotificationSettings(companyId)
+  if (typeof settings.reopen_window_days === 'number' && settings.reopen_window_days >= 0) {
+    return settings.reopen_window_days
+  }
+  return DEFAULT_REOPEN_WINDOW_DAYS
 }
 
 /** Salva (cria ou atualiza) a configuração de notificações do cliente */

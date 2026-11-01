@@ -9,6 +9,8 @@ import {
   Star,
   AlertCircle,
   ThumbsUp,
+  RotateCcw,
+  AlertTriangle,
 } from 'lucide-react'
 import {
   Dialog,
@@ -26,8 +28,13 @@ import { TicketRecord, updateTicket } from '@/services/tickets'
 import {
   getTicketPublicLogs,
   addTicketPublicComment,
+  reopenTicketFromPortal,
   PublicLogRecord,
 } from '@/services/client-portal'
+import {
+  getReopenWindowDays,
+  DEFAULT_REOPEN_WINDOW_DAYS,
+} from '@/services/client-notification-settings'
 import pb from '@/lib/pocketbase/client'
 import { formatDateTime } from '@/lib/date-format'
 import { useToast } from '@/hooks/use-toast'
@@ -59,6 +66,39 @@ export default function TicketPublicDetailDialog({
   const [satisfactionComment, setSatisfactionComment] = useState<string>('')
   const [savingSatisfaction, setSavingSatisfaction] = useState(false)
   const [satisfactionSaved, setSatisfactionSaved] = useState(false)
+
+  // Configuração e Estado de Reabertura
+  const [reopenDays, setReopenDays] = useState<number>(DEFAULT_REOPEN_WINDOW_DAYS)
+  const [reopenModalOpen, setReopenModalOpen] = useState(false)
+  const [reopenReason, setReopenReason] = useState('')
+  const [reopening, setReopening] = useState(false)
+
+  // Carrega a configuração de dias para reabertura da empresa do chamado
+  useEffect(() => {
+    if (ticket?.company) {
+      getReopenWindowDays(ticket.company)
+        .then((days) => setReopenDays(days))
+        .catch(() => setReopenDays(DEFAULT_REOPEN_WINDOW_DAYS))
+    }
+  }, [ticket?.company])
+
+  // Cálculo de prazo de reabertura
+  // O chamado deve estar com status 'Resolvido'
+  const isResolved = ticket?.status === 'Resolvido'
+
+  // Data de referência de resolução: resolution_date ou updated
+  const resolvedDateStr = ticket?.resolution_date || ticket?.updated
+  const resolvedDate = resolvedDateStr ? new Date(resolvedDateStr) : null
+
+  // Prazo em milissegundos
+  const deadlineDate =
+    resolvedDate && !isNaN(resolvedDate.getTime())
+      ? new Date(resolvedDate.getTime() + reopenDays * 24 * 60 * 60 * 1000)
+      : null
+
+  const now = new Date()
+  const isWithinReopenWindow = !!(deadlineDate && now <= deadlineDate)
+  const hasReopenExpired = !!(deadlineDate && now > deadlineDate)
 
   // Carrega e inicializa dados
   const loadLogs = async () => {
@@ -201,6 +241,51 @@ export default function TicketPublicDetailDialog({
     }
   }
 
+  // Ação de Reabertura do Chamado
+  const handleConfirmReopen = async () => {
+    if (!ticket) return
+    const trimmed = reopenReason.trim()
+    if (!trimmed) {
+      toast({
+        title: 'Motivo obrigatório',
+        description: 'É obrigatório informar o motivo para reabrir este chamado.',
+        variant: 'destructive',
+      })
+      return
+    }
+
+    try {
+      setReopening(true)
+      const authorId = currentUserId || pb.authStore.record?.id || (pb.authStore.model as any)?.id
+
+      await reopenTicketFromPortal({
+        ticketId: ticket.id,
+        reason: trimmed,
+        userId: authorId,
+      })
+
+      toast({
+        title: 'Chamado reaberto com sucesso!',
+        description:
+          'O chamado retornou para a fila de atendimento da equipe de suporte com o motivo registrado.',
+      })
+
+      setReopenModalOpen(false)
+      setReopenReason('')
+      await loadLogs()
+      if (onTicketUpdated) onTicketUpdated()
+    } catch (err: any) {
+      console.error('Erro ao reabrir chamado:', err)
+      toast({
+        title: 'Erro ao reabrir chamado',
+        description: err.message || 'Não foi possível reabrir o chamado.',
+        variant: 'destructive',
+      })
+    } finally {
+      setReopening(false)
+    }
+  }
+
   if (!ticket) return null
 
   const starLabels: Record<number, string> = {
@@ -225,9 +310,37 @@ export default function TicketPublicDetailDialog({
               <StatusBadge status={ticket.status} />
               <PriorityBadge priority={ticket.priority} />
             </div>
-            <Badge variant="outline" className="text-xs">
-              SLA: {ticket.sla_status || 'Dentro do Prazo'}
-            </Badge>
+            <div className="flex items-center gap-2">
+              <Badge variant="outline" className="text-xs">
+                SLA: {ticket.sla_status || 'Dentro do Prazo'}
+              </Badge>
+
+              {/* Botão de Reabertura no Topo se Resolvido */}
+              {isResolved && (
+                <Button
+                  size="sm"
+                  variant={isWithinReopenWindow ? 'default' : 'outline'}
+                  disabled={!isWithinReopenWindow}
+                  onClick={() => {
+                    setReopenReason('')
+                    setReopenModalOpen(true)
+                  }}
+                  className={`text-xs gap-1.5 h-7 px-2.5 font-semibold ${
+                    isWithinReopenWindow
+                      ? 'bg-amber-600 hover:bg-amber-700 text-white shadow-xs'
+                      : 'opacity-60 cursor-not-allowed text-muted-foreground border-dashed'
+                  }`}
+                  title={
+                    isWithinReopenWindow
+                      ? `Reabrir chamado (prazo de ${reopenDays} dia(s) até ${deadlineDate ? formatDateTime(deadlineDate.toISOString()) : ''})`
+                      : `Prazo de reabertura expirado (${reopenDays} dia(s) após a resolução)`
+                  }
+                >
+                  <RotateCcw className="h-3.5 w-3.5" />
+                  {isWithinReopenWindow ? 'Reabrir Chamado' : 'Prazo de Reabertura Expirado'}
+                </Button>
+              )}
+            </div>
           </div>
           <DialogTitle className="text-lg font-bold text-foreground mt-2 line-clamp-2">
             {ticket.title}
@@ -241,6 +354,60 @@ export default function TicketPublicDetailDialog({
         </DialogHeader>
 
         <div className="flex-1 overflow-y-auto p-6 space-y-6">
+          {/* Banner de Status Resolvido e Opção de Reabertura */}
+          {isResolved && (
+            <div
+              className={`p-3.5 rounded-xl border flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs ${
+                isWithinReopenWindow
+                  ? 'bg-amber-500/10 border-amber-500/30'
+                  : 'bg-muted/40 border-border/80 text-muted-foreground'
+              }`}
+            >
+              <div className="space-y-0.5">
+                <div className="flex items-center gap-1.5 font-bold text-foreground">
+                  <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                  <span>Chamado marcado como Resolvido pela equipe</span>
+                </div>
+                <p className="text-muted-foreground text-[11px] leading-relaxed">
+                  {isWithinReopenWindow ? (
+                    <span>
+                      Caso o problema persista ou você precise de continuidade, a reabertura está{' '}
+                      <strong>
+                        disponível até{' '}
+                        {deadlineDate ? formatDateTime(deadlineDate.toISOString()) : ''}
+                      </strong>{' '}
+                      (prazo configurado de {reopenDays} dia{reopenDays === 1 ? '' : 's'}).
+                    </span>
+                  ) : (
+                    <span>
+                      O prazo de reabertura para este chamado ({reopenDays} dia
+                      {reopenDays === 1 ? '' : 's'}) foi <strong>encerrado</strong> em{' '}
+                      {deadlineDate ? formatDateTime(deadlineDate.toISOString()) : 'data anterior'}.
+                      Se precisar de novo suporte, por favor abra um novo chamado.
+                    </span>
+                  )}
+                </p>
+              </div>
+
+              <Button
+                size="sm"
+                disabled={!isWithinReopenWindow}
+                onClick={() => {
+                  setReopenReason('')
+                  setReopenModalOpen(true)
+                }}
+                className={`text-xs gap-1.5 shrink-0 ${
+                  isWithinReopenWindow
+                    ? 'bg-amber-600 hover:bg-amber-700 text-white font-semibold'
+                    : 'opacity-50 cursor-not-allowed bg-muted text-muted-foreground'
+                }`}
+              >
+                <RotateCcw className="h-3.5 w-3.5" />
+                {isWithinReopenWindow ? 'Reabrir Chamado' : 'Prazo Expirado'}
+              </Button>
+            </div>
+          )}
+
           {/* Descrição Inicial do Chamado */}
           <div className="p-4 rounded-lg bg-muted/40 border space-y-1.5">
             <div className="flex items-center justify-between text-xs text-muted-foreground font-semibold">
@@ -475,6 +642,78 @@ export default function TicketPublicDetailDialog({
           </form>
         </div>
       </DialogContent>
+
+      {/* =========================================================================
+          MODAL DE CONFIRMAÇÃO DE REABERTURA (MOTIVO OBRIGATÓRIO)
+          ========================================================================= */}
+      <Dialog open={reopenModalOpen} onOpenChange={setReopenModalOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-base font-bold text-foreground flex items-center gap-2">
+              <RotateCcw className="h-5 w-5 text-amber-500" />
+              Reabrir Chamado #{ticket.number}
+            </DialogTitle>
+            <DialogDescription className="text-xs text-muted-foreground">
+              O chamado voltará imediatamente para a fila de atendimento da equipe técnica e o SLA
+              de solução será retomado.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 pt-2 text-xs">
+            <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-800 dark:text-amber-300 flex items-start gap-2">
+              <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5 text-amber-500" />
+              <span>
+                <strong>Importante:</strong> Descreva detalhadamente o que ainda não foi solucionado
+                ou o que voltou a apresentar falha. O motivo será visível na timeline pública do
+                chamado.
+              </span>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-foreground flex items-center justify-between">
+                <span>Motivo da Reabertura</span>
+                <span className="text-[10px] text-rose-500 font-bold uppercase tracking-wider">
+                  * Obrigatório
+                </span>
+              </label>
+              <Textarea
+                rows={3}
+                placeholder="Explique obrigatoriamente por que o chamado precisa ser reaberto..."
+                value={reopenReason}
+                onChange={(e) => setReopenReason(e.target.value)}
+                className={`text-xs resize-none ${
+                  !reopenReason.trim() ? 'border-amber-500/50' : 'border-emerald-500'
+                }`}
+                autoFocus
+              />
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2 border-t">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setReopenModalOpen(false)}
+                disabled={reopening}
+                className="text-xs"
+              >
+                Cancelar
+              </Button>
+
+              <Button
+                type="button"
+                size="sm"
+                onClick={handleConfirmReopen}
+                disabled={reopening || !reopenReason.trim()}
+                className="bg-amber-600 hover:bg-amber-700 text-white text-xs font-semibold gap-1.5"
+              >
+                <RotateCcw className="h-3.5 w-3.5" />
+                {reopening ? 'Reabrindo...' : 'Confirmar Reabertura'}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </Dialog>
   )
 }
