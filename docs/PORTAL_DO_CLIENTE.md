@@ -54,7 +54,20 @@ A convenção de acesso foi estabelecida no hook `pocketbase/hooks/client_portal
 
 ---
 
-## 3. Os 6 Módulos do Portal do Cliente
+## 3. Os Módulos do Portal do Cliente (v0.0.256)
+
+### Módulo 0: Dashboard Analítico do Cliente (Nova Primeira Aba)
+
+A primeira aba padrão ao entrar no portal agora é o **Dashboard Analítico**, fornecendo visibilidade executiva em tempo real sobre a operação da empresa selecionada:
+
+1. **Utilização / Consumo da Franquia por Setor da Empresa:** gráfico em barras horizontais/verticais categorizado por departamento do solicitante, permitindo identificar qual setor da empresa consome mais horas de suporte.
+2. **Consumo de Horas nos Últimos 3 Meses:** gráfico comparativo mensal (série temporal do trimestre) entre franquia contratada e horas efetivamente consumidas.
+3. **Total de Chamados Abertos:** métrica consolidada de chamados históricos da empresa e chamados ativos em andamento.
+4. **Total de Chamados Fechados:** métrica de chamados concluídos/resolvidos com taxa percentual de resolução.
+5. **Top 10 de Atividades Mais Requisitadas:** ranking ordenado das 10 atividades/serviços mais demandados pela empresa, com contagem de chamados e volume de horas.
+6. **Top 10 de Colaboradores Solicitantes:** ranking ordenado dos 10 colaboradores que mais abriram chamados na central de suporte, exibindo nome, e-mail, setor e horas consumidas.
+
+_Observação:_ No Modo Suporte do Administrador, ao alternar a empresa no seletor do topo, todos os indicadores e gráficos do Dashboard são recalculados instantaneamente para a empresa selecionada.
 
 ### Módulo A: Meus Chamados
 
@@ -103,6 +116,15 @@ A convenção de acesso foi estabelecida no hook `pocketbase/hooks/client_portal
 - **Padrão:** visualização do mês atual.
 - **Seletor de Período:** seletor interativo de Mês e Ano, com botão para retornar rapidamente ao mês vigente.
 - Alertas visuais quando o saldo atinge 80% do consumo ou quando a franquia é excedida.
+
+### Módulo G: Relatórios Mensais de Atendimento Liberados
+
+Nova aba **Relatórios** no Portal do Cliente com fluxo de liberação corporativa:
+
+- **Fluxo de Governança e Qualidade:** Quando fecha o mês, a equipe responsável (geralmente Qualidade e Governança) gera e analisa o relatório mensal em `/reports/monthly-client` (Normas ABNT).
+- **Ação de Liberação:** Na tela interna do relatório mensal, a equipe possui o botão **"Liberar ao Cliente"** (ou revogar).
+- **Visibilidade Estrita:** No Portal do Cliente, aparecem **apenas os relatórios mensais liberados** (`released_to_client: true`) vinculados à empresa do cliente.
+- **Visualização do Conteúdo:** O cliente visualiza o parecer técnico da Qualidade, resumo de horas contratadas e consumidas, saldo contratual, consumo por setor, atividades mais requisitadas e recomendações técnicas.
 
 ---
 

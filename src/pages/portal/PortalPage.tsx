@@ -27,6 +27,7 @@ import {
   ArrowLeft,
   Building,
   AlertTriangle,
+  BarChart3,
 } from 'lucide-react'
 import pb from '@/lib/pocketbase/client'
 import { useAuth } from '@/hooks/use-auth'
@@ -52,10 +53,20 @@ import { formatDateTime } from '@/lib/date-format'
 // Sub-componentes
 import TicketPublicDetailDialog from '@/components/portal/TicketPublicDetailDialog'
 import PortalNewTicketDialog from '@/components/portal/PortalNewTicketDialog'
+import PortalDashboardTab from '@/components/portal/PortalDashboardTab'
+import PortalReportsTab from '@/components/portal/PortalReportsTab'
 import PortalApprovalsTab from '@/components/portal/PortalApprovalsTab'
 import PortalAssetsTab from '@/components/portal/PortalAssetsTab'
 import PortalVisitsTab from '@/components/portal/PortalVisitsTab'
 import PortalHoursTab from '@/components/portal/PortalHoursTab'
+import {
+  getClientPortalDashboardMetrics,
+  PortalDashboardMetrics,
+} from '@/services/client-portal-dashboard'
+import {
+  getReleasedMonthlyReportsForCompany,
+  ClientMonthlyReportRecord,
+} from '@/services/client-monthly-reports'
 
 export default function PortalPage() {
   const navigate = useNavigate()
@@ -79,15 +90,21 @@ export default function PortalPage() {
     isAdmin ? initialCompanyFromUrl || initialCompanyFromStorage || '' : '',
   )
 
-  // Tabs
+  // Tabs: 'dashboard' é a primeira aba padrão do Portal do Cliente
   const [activeTab, setActiveTab] = useState<
-    'tickets' | 'approvals' | 'assets' | 'visits' | 'hours'
-  >('tickets')
+    'dashboard' | 'tickets' | 'approvals' | 'assets' | 'visits' | 'hours' | 'reports'
+  >('dashboard')
 
   // Dados do portal
   const [data, setData] = useState<PortalData | null>(null)
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
+
+  // Métricas do Dashboard e Relatórios Mensais Liberados
+  const [dashboardMetrics, setDashboardMetrics] = useState<PortalDashboardMetrics | null>(null)
+  const [dashboardLoading, setDashboardLoading] = useState(false)
+  const [releasedReports, setReleasedReports] = useState<ClientMonthlyReportRecord[]>([])
+  const [reportsLoading, setReportsLoading] = useState(false)
 
   // Período de horas
   const now = new Date()
@@ -165,16 +182,30 @@ export default function PortalPage() {
         sessionStorage.setItem('itsm_portal_support_company', portalResult.company.id)
       }
 
-      // Se temos empresa, busca dados de horas para o período selecionado
+      // Se temos empresa, busca dados de horas, métricas do dashboard e relatórios liberados
       if (portalResult.company?.id) {
+        const companyId = portalResult.company.id
         setHoursLoading(true)
-        const balance = await getClientHoursBalance(
-          portalResult.company.id,
-          selectedMonth,
-          selectedYear,
-        )
-        setHoursData(balance)
-        setHoursLoading(false)
+        setDashboardLoading(true)
+        setReportsLoading(true)
+
+        // Busca saldo de horas
+        getClientHoursBalance(companyId, selectedMonth, selectedYear)
+          .then((balance) => setHoursData(balance))
+          .catch((e) => console.warn('Erro ao carregar saldo de horas:', e))
+          .finally(() => setHoursLoading(false))
+
+        // Busca métricas do Dashboard
+        getClientPortalDashboardMetrics(companyId)
+          .then((metrics) => setDashboardMetrics(metrics))
+          .catch((e) => console.warn('Erro ao carregar métricas do dashboard:', e))
+          .finally(() => setDashboardLoading(false))
+
+        // Busca relatórios mensais liberados
+        getReleasedMonthlyReportsForCompany(companyId)
+          .then((reps) => setReleasedReports(reps))
+          .catch((e) => console.warn('Erro ao carregar relatórios mensais:', e))
+          .finally(() => setReportsLoading(false))
       }
     } catch (err: any) {
       console.error('Erro ao carregar dados do portal:', err)
@@ -430,7 +461,27 @@ export default function PortalPage() {
           </div>
 
           {/* Cards de atalho e contadores rápidos */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2 border-t border-border/50">
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 pt-2 border-t border-border/50">
+            <button
+              onClick={() => setActiveTab('dashboard')}
+              className={`p-3 rounded-xl border text-left transition-all ${
+                activeTab === 'dashboard'
+                  ? 'border-amber-500 bg-amber-500/10'
+                  : 'bg-muted/30 hover:bg-muted/60'
+              }`}
+            >
+              <div className="flex items-center justify-between text-muted-foreground text-xs mb-1">
+                <span>Dashboard</span>
+                <BarChart3 className="h-4 w-4 text-amber-500" />
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="text-xl font-bold text-foreground">
+                  {dashboardMetrics?.resolutionRate || 0}%
+                </span>
+                <span className="text-[10px] text-muted-foreground">resolução</span>
+              </div>
+            </button>
+
             <button
               onClick={() => setActiveTab('tickets')}
               className={`p-3 rounded-xl border text-left transition-all ${
@@ -514,6 +565,14 @@ export default function PortalPage() {
           <div className="border-b border-border/80 overflow-x-auto">
             <TabsList className="bg-transparent h-auto p-0 gap-2 sm:gap-4 flex justify-start">
               <TabsTrigger
+                value="dashboard"
+                className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-amber-500 data-[state=active]:text-amber-600 dark:data-[state=active]:text-amber-400 rounded-none px-3 py-2.5 text-xs sm:text-sm font-semibold gap-2"
+              >
+                <BarChart3 className="h-4 w-4" />
+                Dashboard
+              </TabsTrigger>
+
+              <TabsTrigger
                 value="tickets"
                 className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-amber-500 data-[state=active]:text-amber-600 dark:data-[state=active]:text-amber-400 rounded-none px-3 py-2.5 text-xs sm:text-sm font-semibold gap-2"
               >
@@ -557,8 +616,35 @@ export default function PortalPage() {
                 <Clock className="h-4 w-4" />
                 Horas e Franquia ({hoursData.periodName})
               </TabsTrigger>
+
+              <TabsTrigger
+                value="reports"
+                className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-amber-500 data-[state=active]:text-amber-600 dark:data-[state=active]:text-amber-400 rounded-none px-3 py-2.5 text-xs sm:text-sm font-semibold gap-2"
+              >
+                <FileText className="h-4 w-4" />
+                Relatórios
+                {releasedReports.length > 0 && (
+                  <Badge className="bg-emerald-500 text-slate-900 text-[10px] px-1.5 py-0 font-bold ml-1">
+                    {releasedReports.length}
+                  </Badge>
+                )}
+              </TabsTrigger>
             </TabsList>
           </div>
+
+          {/* =========================================================================
+              ABA 0: DASHBOARD ANALÍTICO DO CLIENTE
+              ========================================================================= */}
+          <TabsContent value="dashboard" className="space-y-4 mt-0">
+            <PortalDashboardTab
+              metrics={dashboardMetrics}
+              loading={dashboardLoading}
+              companyName={companyName}
+              onOpenTicketsTab={() => setActiveTab('tickets')}
+              onOpenHoursTab={() => setActiveTab('hours')}
+              onOpenReportsTab={() => setActiveTab('reports')}
+            />
+          </TabsContent>
 
           {/* =========================================================================
               ABA 1: MEUS CHAMADOS (Lista + Andamento + Logs Públicos)
@@ -756,6 +842,25 @@ export default function PortalPage() {
               selectedMonth={selectedMonth}
               selectedYear={selectedYear}
               onChangePeriod={handleChangePeriod}
+            />
+          </TabsContent>
+
+          {/* =========================================================================
+              ABA 6: RELATÓRIOS MENSAIS LIBERADOS AO CLIENTE
+              ========================================================================= */}
+          <TabsContent value="reports" className="mt-0">
+            <PortalReportsTab
+              reports={releasedReports}
+              loading={reportsLoading}
+              companyName={companyName}
+              onRefresh={() => {
+                if (effectiveCompanyId) {
+                  setReportsLoading(true)
+                  getReleasedMonthlyReportsForCompany(effectiveCompanyId)
+                    .then((reps) => setReleasedReports(reps))
+                    .finally(() => setReportsLoading(false))
+                }
+              }}
             />
           </TabsContent>
         </Tabs>

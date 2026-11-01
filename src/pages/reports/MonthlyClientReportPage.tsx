@@ -23,6 +23,9 @@ import {
   Minus,
   LineChart as LineChartIcon,
   Mail,
+  Send,
+  Lock,
+  Globe,
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -52,6 +55,13 @@ import {
   fetchMonthlyClientReportData,
   type MonthlyClientReportData,
 } from '@/services/monthly-client-report'
+import {
+  getClientMonthlyReportRecord,
+  releaseMonthlyReportToClient,
+  unreleaseMonthlyReportFromClient,
+  ClientMonthlyReportRecord,
+} from '@/services/client-monthly-reports'
+import { useAuth } from '@/hooks/use-auth'
 import {
   BarChart,
   Bar,
@@ -141,6 +151,11 @@ export default function MonthlyClientReportPage() {
   const [loadingReport, setLoadingReport] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [scheduleDialogOpen, setScheduleDialogOpen] = useState(false)
+  const { user } = useAuth()
+  const [clientReportRecord, setClientReportRecord] = useState<ClientMonthlyReportRecord | null>(
+    null,
+  )
+  const [releasingLoading, setReleasingLoading] = useState(false)
 
   // Carrega empresas
   useEffect(() => {
@@ -179,6 +194,14 @@ export default function MonthlyClientReportPage() {
     try {
       const data = await fetchMonthlyClientReportData(companyId, monthKey)
       setReportData(data)
+
+      // Carrega status de liberação ao cliente no portal
+      try {
+        const record = await getClientMonthlyReportRecord(companyId, monthKey)
+        setClientReportRecord(record)
+      } catch (recErr) {
+        console.warn('Erro ao carregar status de liberação do relatório:', recErr)
+      }
     } catch (err: any) {
       const msg = err?.message || 'Erro ao gerar o relatório mensal.'
       setError(msg)
@@ -201,6 +224,49 @@ export default function MonthlyClientReportPage() {
 
   const handlePrint = () => {
     window.print()
+  }
+
+  // Ação de liberação do relatório mensal ao Portal do Cliente
+  const handleToggleReleaseToClient = async () => {
+    if (!companyId || !reportData) return
+    setReleasingLoading(true)
+
+    try {
+      if (clientReportRecord?.released_to_client) {
+        // Revoga liberação
+        const updated = await unreleaseMonthlyReportFromClient(clientReportRecord.id)
+        setClientReportRecord(updated)
+        toast({
+          title: 'Liberação revogada',
+          description: 'O relatório mensal não está mais visível no Portal do Cliente.',
+        })
+      } else {
+        // Libera para o cliente
+        const updated = await releaseMonthlyReportToClient(
+          companyId,
+          monthKey,
+          reportData.periodLabel,
+          user?.id || '',
+          reportData,
+          reportData.study?.analysisText ||
+            'Relatório mensal analisado e liberado pela equipe de Qualidade e Governança.',
+        )
+        setClientReportRecord(updated)
+        toast({
+          title: 'Relatório liberado para o cliente!',
+          description: `Disponível agora para visualização no Portal do Cliente (${reportData.periodLabel}).`,
+        })
+      }
+    } catch (err: any) {
+      console.error('Erro ao alternar liberação do relatório:', err)
+      toast({
+        title: 'Erro ao liberar relatório',
+        description: err?.message || 'Falha ao atualizar status de liberação.',
+        variant: 'destructive',
+      })
+    } finally {
+      setReleasingLoading(false)
+    }
   }
 
   // Prepara dados para os gráficos de recharts
@@ -512,8 +578,56 @@ export default function MonthlyClientReportPage() {
               <RefreshCw className={`h-4 w-4 mr-1.5 ${loadingReport ? 'animate-spin' : ''}`} />
               Gerar Relatório
             </Button>
+
+            {/* Botão de Liberação para o Portal do Cliente */}
+            <Button
+              size="sm"
+              onClick={handleToggleReleaseToClient}
+              disabled={loadingReport || !reportData || releasingLoading}
+              variant={clientReportRecord?.released_to_client ? 'outline' : 'default'}
+              className={
+                clientReportRecord?.released_to_client
+                  ? 'border-emerald-600 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/40'
+                  : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm'
+              }
+              title={
+                clientReportRecord?.released_to_client
+                  ? 'Clique para recolher o relatório de volta para rascunho/interno'
+                  : 'Libera o relatório mensal consolidado para visualização no Portal do Cliente'
+              }
+            >
+              {clientReportRecord?.released_to_client ? (
+                <>
+                  <CheckCircle2 className="h-4 w-4 mr-1.5 text-emerald-600" />
+                  Liberado ao Cliente (Revogar)
+                </>
+              ) : (
+                <>
+                  <Globe className="h-4 w-4 mr-1.5" />
+                  Liberar ao Cliente
+                </>
+              )}
+            </Button>
           </div>
         </div>
+
+        {/* Faixa de Status de Liberação */}
+        {clientReportRecord?.released_to_client && (
+          <div className="bg-emerald-500/10 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300 rounded-lg p-3 text-xs flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
+              <span>
+                Este relatório de <strong>{formatMonthLabel(monthKey)}</strong> está{' '}
+                <strong>LIBERADO</strong> e visível no Portal do Cliente.
+              </span>
+            </div>
+            {clientReportRecord.released_at && (
+              <span className="text-[11px] text-muted-foreground font-mono">
+                Liberado em: {new Date(clientReportRecord.released_at).toLocaleDateString('pt-BR')}
+              </span>
+            )}
+          </div>
+        )}
 
         {/* Card de Filtros */}
         <Card className="shadow-xs">

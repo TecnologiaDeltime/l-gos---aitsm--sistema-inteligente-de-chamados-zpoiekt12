@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-01T02:17:02.334Z",
+  "generatedAt": "2026-11-01T02:36:33.956Z",
   "collections": [
     {
       "name": "users",
@@ -10982,6 +10982,103 @@
         }
       ],
       "indexes": ["CREATE INDEX idx_atend_dossie_conv ON atendimento_dossies (conversa)"]
+    },
+    {
+      "name": "client_monthly_reports",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != ''",
+        "view": "@request.auth.id != ''",
+        "create": "@request.auth.role = 'admin' || @request.auth.role = 'gestor'",
+        "update": "@request.auth.role = 'admin' || @request.auth.role = 'gestor'",
+        "delete": "@request.auth.role = 'admin' || @request.auth.role = 'gestor'"
+      },
+      "fields": [
+        {
+          "name": "company",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "companies"
+        },
+        {
+          "name": "month_key",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "period_label",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "status",
+          "type": "select",
+          "required": true,
+          "system": false,
+          "selectValues": ["rascunho", "liberado", "arquivado"]
+        },
+        {
+          "name": "released_to_client",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "released_at",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "released_by",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "generated_by",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "summary_notes",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "report_data",
+          "type": "json",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": [
+        "CREATE INDEX idx_cmr_company ON client_monthly_reports (company)",
+        "CREATE INDEX idx_cmr_month ON client_monthly_reports (month_key)",
+        "CREATE INDEX idx_cmr_released ON client_monthly_reports (released_to_client)",
+        "CREATE UNIQUE INDEX idx_cmr_company_month ON client_monthly_reports (company, month_key)"
+      ]
     }
   ]
 }
