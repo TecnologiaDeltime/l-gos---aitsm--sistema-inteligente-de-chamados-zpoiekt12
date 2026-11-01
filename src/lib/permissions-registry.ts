@@ -532,6 +532,27 @@ const BASE_SYSTEM_MODULES: GranularModuleDefinition[] = [
           'Horas trabalhadas (play/pause) e acompanhamento (logs) por operador e período',
         path: '/reports/operator-hours',
       },
+      {
+        key: 'rep_tickets',
+        label: 'Relatório de Chamados',
+        description:
+          'Chamados linha a linha com Ticket, Cliente, Filial, Setor, Datas, Atividade, Status, Horas de Acompanhamento, Ativo, Operador e Solução',
+        path: '/reports/tickets',
+      },
+      {
+        key: 'rep_ticket_interactions',
+        label: 'Relatório de Interações nos Chamados',
+        description:
+          'Logs de acompanhamento linha a linha com tempo lançado em cada interação para auditoria e controle',
+        path: '/reports/ticket-interactions',
+      },
+      {
+        key: 'rep_worked_hours',
+        label: 'Relatório de Interações Horas Trabalhadas',
+        description:
+          'Tempo de trabalho efetivo apurado via play/pause do cronômetro por chamado linha a linha',
+        path: '/reports/worked-hours',
+      },
     ],
   },
 

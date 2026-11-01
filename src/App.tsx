@@ -62,6 +62,9 @@ import PortalLogin from '@/pages/portal/PortalLogin'
 import ClientExtractionPage from '@/pages/reports/ClientExtractionPage'
 import MonthlyClientReportPage from '@/pages/reports/MonthlyClientReportPage'
 import OperatorHoursPage from '@/pages/reports/OperatorHoursPage'
+import TicketsReportPage from '@/pages/reports/TicketsReportPage'
+import TicketInteractionsReportPage from '@/pages/reports/TicketInteractionsReportPage'
+import WorkedHoursReportPage from '@/pages/reports/WorkedHoursReportPage'
 import AutomationList from '@/pages/automations/AutomationList'
 import AutomationEditor from '@/pages/automations/AutomationEditor'
 import TechnicalAgenda from '@/pages/visits/TechnicalAgenda'
@@ -206,6 +209,30 @@ const App = () => (
                   element={
                     <ProtectedRoute requiredModule="reports" requiredItem="rep_operator_hours">
                       <OperatorHoursPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/reports/tickets"
+                  element={
+                    <ProtectedRoute requiredModule="reports" requiredItem="rep_tickets">
+                      <TicketsReportPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/reports/ticket-interactions"
+                  element={
+                    <ProtectedRoute requiredModule="reports" requiredItem="rep_ticket_interactions">
+                      <TicketInteractionsReportPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/reports/worked-hours"
+                  element={
+                    <ProtectedRoute requiredModule="reports" requiredItem="rep_worked_hours">
+                      <WorkedHoursReportPage />
                     </ProtectedRoute>
                   }
                 />

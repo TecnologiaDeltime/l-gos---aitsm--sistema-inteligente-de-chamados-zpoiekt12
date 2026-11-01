@@ -35,6 +35,7 @@ import {
   ListTree,
   Clock,
   Hourglass,
+  Timer,
   ChevronDown,
   ChevronRight,
   GitBranch,
@@ -674,6 +675,24 @@ export default function Layout() {
       path: '/reports/operator-hours',
       icon: BarChart3,
       show: permissions.canAccessItem('reports', 'rep_operator_hours'),
+    },
+    {
+      label: 'Relatório de Chamados',
+      path: '/reports/tickets',
+      icon: Ticket,
+      show: permissions.canAccessItem('reports', 'rep_tickets'),
+    },
+    {
+      label: 'Interações nos Chamados',
+      path: '/reports/ticket-interactions',
+      icon: FileText,
+      show: permissions.canAccessItem('reports', 'rep_ticket_interactions'),
+    },
+    {
+      label: 'Horas Trabalhadas',
+      path: '/reports/worked-hours',
+      icon: Timer,
+      show: permissions.canAccessItem('reports', 'rep_worked_hours'),
     },
   ]
   const relatoriosGroupVisible =

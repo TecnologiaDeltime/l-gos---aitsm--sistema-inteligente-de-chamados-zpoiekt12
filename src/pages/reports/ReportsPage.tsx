@@ -97,6 +97,24 @@ const OTHER_REPORTS = [
     path: '/reports/operator-hours',
     itemKey: 'rep_operator_hours',
   },
+  {
+    title: 'Relatório de Chamados',
+    desc: 'Visualização linha a linha com Ticket, Cliente, Filial, Setor, Datas, Atividade, Status, Horas de Acompanhamento, Ativo, Operador e Solução.',
+    path: '/reports/tickets',
+    itemKey: 'rep_tickets',
+  },
+  {
+    title: 'Relatório de Interações nos Chamados (Logs)',
+    desc: 'Linha a linha com todas as interações e logs lançados com tempo discriminado para auditoria e controle de débito de franquia.',
+    path: '/reports/ticket-interactions',
+    itemKey: 'rep_ticket_interactions',
+  },
+  {
+    title: 'Relatório de Interações Horas Trabalhadas',
+    desc: 'Controle por chamado do tempo efetivo de trabalho utilizando o play e pause do cronômetro (não debita franquia).',
+    path: '/reports/worked-hours',
+    itemKey: 'rep_worked_hours',
+  },
 ]
 
 export default function ReportsPage() {
