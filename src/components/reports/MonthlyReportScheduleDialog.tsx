@@ -222,12 +222,12 @@ export function MonthlyReportScheduleDialog({
           {/* ABA 1: CONFIGURAÇÃO DO AGENDAMENTO */}
           <TabsContent value="config" className="space-y-4">
             {/* Status Ativo/Inativo */}
-            <div className="flex items-center justify-between p-3.5 rounded-lg border bg-slate-50 dark:bg-slate-900/50">
+            <div className="flex items-center justify-between p-3.5 rounded-lg border bg-muted/20">
               <div className="space-y-0.5">
-                <Label className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                <Label className="text-sm font-semibold text-foreground">
                   Envio Automático Todo Mês
                 </Label>
-                <p className="text-xs text-slate-500">
+                <p className="text-xs text-muted-foreground">
                   Quando ativo, o servidor gera e dispara o relatório no dia agendado (06:00).
                 </p>
               </div>
@@ -250,7 +250,7 @@ export function MonthlyReportScheduleDialog({
                     onChange={(e) => setSendDay(Number(e.target.value))}
                     className="w-24 text-center font-bold text-sm"
                   />
-                  <span className="text-xs text-slate-500">
+                  <span className="text-xs text-muted-foreground">
                     de cada mês (ex: dia 5 para enviar o mês anterior)
                   </span>
                 </div>
@@ -258,7 +258,7 @@ export function MonthlyReportScheduleDialog({
 
               <div className="space-y-1.5">
                 <Label className="text-xs font-semibold">Último Envio Automático</Label>
-                <div className="h-9 px-3 rounded-md border flex items-center text-xs text-slate-600 dark:text-slate-400 bg-slate-50 dark:bg-slate-900/30">
+                <div className="h-9 px-3 rounded-md border flex items-center text-xs text-muted-foreground bg-muted/20">
                   {scheduleData?.last_sent_at ? (
                     <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-medium">
                       <CheckCircle2 className="h-3.5 w-3.5" />
@@ -266,7 +266,7 @@ export function MonthlyReportScheduleDialog({
                       {scheduleData.last_sent_month || '—'})
                     </span>
                   ) : (
-                    <span className="text-slate-400">Nenhum envio registrado</span>
+                    <span className="text-muted-foreground">Nenhum envio registrado</span>
                   )}
                 </div>
               </div>
@@ -280,7 +280,7 @@ export function MonthlyReportScheduleDialog({
                     <Users className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" /> Incluir
                     Pontos Focais do Cliente
                   </Label>
-                  <p className="text-[11px] text-slate-500">
+                  <p className="text-[11px] text-muted-foreground">
                     Dispara automaticamente para os contatos marcados como &quot;Ponto Focal&quot;
                     no cadastro do cliente.
                   </p>
@@ -290,7 +290,7 @@ export function MonthlyReportScheduleDialog({
 
               {useFocalPoints && (
                 <div className="pt-2 border-t text-xs">
-                  <p className="font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+                  <p className="font-medium text-foreground mb-1.5">
                     Pontos focais cadastrados ({focalPoints.length}):
                   </p>
                   {focalPoints.length === 0 ? (
@@ -324,7 +324,7 @@ export function MonthlyReportScheduleDialog({
                 rows={3}
                 className="text-xs"
               />
-              <p className="text-[10px] text-slate-500">
+              <p className="text-[10px] text-muted-foreground">
                 Estes e-mails sempre receberão o relatório além dos pontos focais.
               </p>
             </div>
@@ -346,7 +346,7 @@ export function MonthlyReportScheduleDialog({
 
           {/* ABA 2: DISPARAR AGORA */}
           <TabsContent value="send_now" className="space-y-4">
-            <div className="p-3 rounded-lg border bg-amber-50/50 dark:bg-amber-950/20 text-xs space-y-1 text-slate-700 dark:text-slate-300">
+            <div className="p-3 rounded-lg border bg-amber-50/50 dark:bg-amber-950/20 text-xs space-y-1 text-foreground">
               <p className="font-semibold text-amber-800 dark:text-amber-300 flex items-center gap-1.5">
                 <Send className="h-3.5 w-3.5" /> Envio Imediato de Teste / Produção
               </p>
@@ -377,14 +377,14 @@ export function MonthlyReportScheduleDialog({
                 rows={2}
                 className="text-xs"
               />
-              <p className="text-[10px] text-slate-500">
+              <p className="text-[10px] text-muted-foreground">
                 Se quiser testar em seu próprio e-mail antes de enviar aos pontos focais.
               </p>
             </div>
 
-            <div className="p-3 rounded-md border text-xs bg-slate-50 dark:bg-slate-900/40">
+            <div className="p-3 rounded-md border text-xs bg-muted/20">
               <p className="font-semibold mb-1">Destinatários que serão acionados:</p>
-              <ul className="list-disc pl-4 space-y-0.5 text-slate-600 dark:text-slate-400">
+              <ul className="list-disc pl-4 space-y-0.5 text-muted-foreground">
                 {useFocalPoints && focalPoints.length > 0 && (
                   <li>Pontos focais: {focalPoints.map((f) => f.email).join(', ')}</li>
                 )}
@@ -423,7 +423,7 @@ export function MonthlyReportScheduleDialog({
           {/* ABA 3: AUDITORIA / LOGS */}
           <TabsContent value="history" className="space-y-4">
             <div className="flex items-center justify-between">
-              <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+              <p className="text-xs font-semibold text-foreground">
                 Histórico de Disparos Realizados ({logs.length})
               </p>
               <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={loadAll}>
@@ -432,13 +432,13 @@ export function MonthlyReportScheduleDialog({
             </div>
 
             {logs.length === 0 ? (
-              <div className="p-8 text-center border rounded-lg text-xs text-slate-500">
+              <div className="p-8 text-center border rounded-lg text-xs text-muted-foreground">
                 Nenhum log de envio registrado para este cliente.
               </div>
             ) : (
               <div className="border rounded-lg overflow-hidden max-h-72 overflow-y-auto">
                 <table className="w-full text-left text-xs">
-                  <thead className="bg-slate-50 dark:bg-slate-800/60 border-b text-[11px] text-slate-500">
+                  <thead className="bg-muted/60 border-b text-[11px] text-muted-foreground">
                     <tr>
                       <th className="p-2.5">Data / Hora</th>
                       <th className="p-2.5">Mês Ref.</th>
@@ -449,7 +449,7 @@ export function MonthlyReportScheduleDialog({
                   </thead>
                   <tbody className="divide-y">
                     {logs.map((log) => (
-                      <tr key={log.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30">
+                      <tr key={log.id} className="hover:bg-muted/30">
                         <td className="p-2.5 whitespace-nowrap font-mono text-[11px]">
                           {new Date(log.sent_at || log.created).toLocaleString('pt-BR')}
                         </td>
@@ -465,10 +465,10 @@ export function MonthlyReportScheduleDialog({
                             </Badge>
                           )}
                         </td>
-                        <td className="p-2.5 capitalize text-[11px] text-slate-600">
+                        <td className="p-2.5 capitalize text-[11px] text-muted-foreground">
                           {log.triggered_by || 'cron'}
                         </td>
-                        <td className="p-2.5 text-[11px] text-slate-600 dark:text-slate-400 max-w-[200px] truncate">
+                        <td className="p-2.5 text-[11px] text-muted-foreground max-w-[200px] truncate">
                           {log.status === 'sucesso'
                             ? log.recipients
                             : log.error_message || log.recipients}

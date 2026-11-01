@@ -85,9 +85,9 @@ const CHART_COLORS = [
   '#dc2626', // red-600
   '#ea580c', // orange-600
   '#059669', // emerald-600
-  '#64748b', // slate-500
+  '#17181c', // grafite oficial
   '#fcd34d', // amber-300
-  '#334155', // slate-700
+  '#71717a', // zinc-500 neutro
 ]
 
 const MONTH_NAMES_FULL = [
@@ -537,11 +537,11 @@ export default function MonthlyClientReportPage() {
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <div>
-              <h1 className="text-xl font-bold flex items-center gap-2 text-slate-900 dark:text-slate-100">
+              <h1 className="text-xl font-bold flex items-center gap-2 text-foreground">
                 <FileText className="h-5 w-5 text-amber-600 dark:text-amber-400" /> Relatório Mensal
                 do Cliente
               </h1>
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-muted-foreground">
                 Extração gráfica mensal com consolidação de acordos, setores, solicitantes e ativos
                 (Normas ABNT).
               </p>
@@ -724,7 +724,7 @@ export default function MonthlyClientReportPage() {
         <Card className="print:hidden">
           <CardContent className="flex flex-col items-center justify-center py-12 text-center">
             <AlertCircle className="h-10 w-10 text-red-500 mb-3" />
-            <p className="text-base font-semibold text-slate-800 dark:text-slate-200">{error}</p>
+            <p className="text-base font-semibold text-foreground">{error}</p>
             <p className="text-xs text-muted-foreground mt-1 max-w-md">
               Verifique a conexão ou selecione outro cliente para gerar o relatório.
             </p>
@@ -745,7 +745,7 @@ export default function MonthlyClientReportPage() {
           {/* ============================================================== */}
           {/* CAPA DO RELATÓRIO (Normas ABNT NBR 10719 / 14724)            */}
           {/* ============================================================== */}
-          <div className="abnt-cover bg-white dark:bg-slate-900 border rounded-xl p-8 shadow-xs print:border-none print:shadow-none print:rounded-none">
+          <div className="abnt-cover bg-card border rounded-xl p-8 shadow-xs print:border-none print:shadow-none print:rounded-none">
             <div className="abnt-cover-header flex flex-col items-center">
               {designSettings?.report_logo_url || designSettings?.logo_url ? (
                 <div className="mb-4 max-h-20 flex items-center justify-center">
@@ -756,33 +756,31 @@ export default function MonthlyClientReportPage() {
                   />
                 </div>
               ) : null}
-              <p className="font-bold text-slate-700 dark:text-slate-300">
-                ITSM DESK — GOVERNANÇA E OPERAÇÃO TÉCNICA
-              </p>
-              <p className="text-xs font-normal text-slate-500 mt-1">
+              <p className="font-bold text-foreground">ITSM DESK — GOVERNANÇA E OPERAÇÃO TÉCNICA</p>
+              <p className="text-xs font-normal text-muted-foreground mt-1">
                 GESTÃO DA OPERAÇÃO TÉCNICA E GOVERNANÇA DE TI
               </p>
             </div>
 
-            <div className="abnt-cover-title-box my-10 py-6 text-center border-y print:border-y-2 border-slate-200 dark:border-slate-800">
-              <h2 className="abnt-cover-title text-2xl font-extrabold tracking-tight text-slate-900 dark:text-slate-100">
+            <div className="abnt-cover-title-box my-10 py-6 text-center border-y print:border-y-2 border-border">
+              <h2 className="abnt-cover-title text-2xl font-extrabold tracking-tight text-foreground">
                 RELATÓRIO MENSAL DE ATENDIMENTO TÉCNICO
               </h2>
-              <p className="abnt-cover-subtitle text-lg font-medium text-amber-700 dark:text-amber-400 mt-2">
+              <p className="abnt-cover-subtitle text-lg font-medium text-amber-600 dark:text-amber-400 mt-2">
                 {reportData.company.trade_name || reportData.company.legal_name}
               </p>
-              <p className="text-sm text-slate-600 dark:text-slate-400 mt-1 font-serif">
+              <p className="text-sm text-muted-foreground mt-1 font-serif">
                 Período de Referência: {reportData.periodLabel}
               </p>
               {reportData.contract && (
-                <p className="text-xs text-slate-500 mt-2">
+                <p className="text-xs text-muted-foreground mt-2">
                   Contrato de Prestação de Serviços: nº {reportData.contract.number}
                 </p>
               )}
             </div>
 
-            <div className="abnt-cover-footer text-center text-xs text-slate-500">
-              <p className="font-semibold text-slate-700 dark:text-slate-300">
+            <div className="abnt-cover-footer text-center text-xs text-muted-foreground">
+              <p className="font-semibold text-foreground">
                 {reportData.company.address_city || 'São Paulo'} —{' '}
                 {reportData.company.address_state || 'SP'}
               </p>
@@ -806,7 +804,7 @@ export default function MonthlyClientReportPage() {
             <Card className="shadow-xs">
               <CardContent className="p-4">
                 <p className="text-xs font-medium text-muted-foreground">Horas Contratadas</p>
-                <p className="text-2xl font-bold font-mono text-slate-800 dark:text-slate-100 mt-1">
+                <p className="text-2xl font-bold font-mono text-foreground mt-1">
                   {reportData.totalContractedHours.toFixed(1)}h
                 </p>
                 <p className="text-[11px] text-muted-foreground mt-0.5">Franquia do mês</p>
@@ -858,13 +856,13 @@ export default function MonthlyClientReportPage() {
           {/* ============================================================== */}
           {/* SEÇÃO 1: HORAS POR ACORDO DE ATENDIMENTO                       */}
           {/* ============================================================== */}
-          <section className="abnt-section bg-white dark:bg-slate-900 border rounded-xl p-6 shadow-xs print:border-none print:shadow-none print:p-0">
-            <h3 className="abnt-section-title text-lg font-bold flex items-center gap-2 mb-4 text-slate-900 dark:text-slate-100">
+          <section className="abnt-section bg-card border rounded-xl p-6 shadow-xs print:border-none print:shadow-none print:p-0">
+            <h3 className="abnt-section-title text-lg font-bold flex items-center gap-2 mb-4 text-foreground">
               <Clock className="h-5 w-5 text-amber-600 dark:text-amber-400 print:hidden" />
               1. Horas por Acordo de Atendimento
             </h3>
 
-            <p className="abnt-paragraph text-sm text-slate-700 dark:text-slate-300 leading-relaxed mb-4">
+            <p className="abnt-paragraph text-sm text-foreground/90 leading-relaxed mb-4">
               Apresenta a comparação entre as horas contratadas na distribuição formal do acordo de
               atendimento (Nível 1, Nível 2, Nível 3, Consultoria, Backoffice, Administrativo e
               acordos personalizados) e as horas efetivamente utilizadas pela equipe técnica no mês
@@ -877,29 +875,45 @@ export default function MonthlyClientReportPage() {
                 Figura 1 – Comparativo de Horas Contratadas versus Horas Utilizadas por Acordo de
                 Atendimento
               </p>
-              <div className="abnt-chart-box w-full rounded-lg bg-slate-50/50 dark:bg-slate-800/30 p-2">
+              <div className="abnt-chart-box w-full rounded-lg bg-muted/20 p-2 border border-border/50">
                 <PrintChartContainer screenHeight={320} printHeight={300} landscape={false}>
                   <BarChart
                     data={agreementsChartData}
                     margin={{ top: 32, right: 24, left: 14, bottom: 45 }}
                   >
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                    <CartesianGrid
+                      strokeDasharray="3 3"
+                      vertical={false}
+                      stroke="currentColor"
+                      strokeOpacity={0.12}
+                    />
                     <XAxis
                       dataKey="name"
-                      tick={{ fontSize: 10 }}
+                      tick={{ fontSize: 10, fill: 'currentColor' }}
                       interval={0}
                       angle={-15}
                       textAnchor="end"
                       height={40}
                     />
                     <YAxis
-                      tick={{ fontSize: 10 }}
+                      tick={{ fontSize: 10, fill: 'currentColor' }}
                       unit="h"
-                      label={{ value: 'Horas', angle: -90, position: 'insideLeft', fontSize: 10 }}
+                      label={{
+                        value: 'Horas',
+                        angle: -90,
+                        position: 'insideLeft',
+                        fontSize: 10,
+                        fill: 'currentColor',
+                      }}
                     />
                     <Tooltip
                       formatter={(v: any) => [`${Number(v).toFixed(2)}h`, '']}
-                      contentStyle={{ fontSize: 12 }}
+                      contentStyle={{
+                        fontSize: 12,
+                        backgroundColor: '#17181C',
+                        borderColor: '#31333A',
+                        color: '#F5F3EF',
+                      }}
                     />
                     <Legend wrapperStyle={{ fontSize: 11, paddingTop: 4 }} />
                     <Bar
@@ -912,7 +926,7 @@ export default function MonthlyClientReportPage() {
                         dataKey="Contratado"
                         position="top"
                         formatter={formatHoursLabel}
-                        style={{ fontSize: 10, fontWeight: 600, fill: '#1e293b' }}
+                        style={{ fontSize: 10, fontWeight: 600, fill: '#d97706' }}
                       />
                     </Bar>
                     <Bar
@@ -925,7 +939,7 @@ export default function MonthlyClientReportPage() {
                         dataKey="Utilizado"
                         position="top"
                         formatter={formatHoursLabel}
-                        style={{ fontSize: 10, fontWeight: 600, fill: '#1e293b' }}
+                        style={{ fontSize: 10, fontWeight: 600, fill: '#10b981' }}
                       />
                     </Bar>
                   </BarChart>
@@ -944,7 +958,7 @@ export default function MonthlyClientReportPage() {
               </p>
               <div className="border rounded-lg overflow-hidden">
                 <Table>
-                  <TableHeader className="bg-slate-100 dark:bg-slate-800">
+                  <TableHeader className="bg-muted/60">
                     <TableRow>
                       <TableHead className="text-xs font-bold">Acordo / Nível</TableHead>
                       <TableHead className="text-xs font-bold text-right">Contratado</TableHead>
@@ -960,7 +974,7 @@ export default function MonthlyClientReportPage() {
                         <TableCell className="text-xs text-right font-mono">
                           {ag.contractedHours.toFixed(2)}h
                         </TableCell>
-                        <TableCell className="text-xs text-right font-mono font-semibold text-amber-700 dark:text-amber-400">
+                        <TableCell className="text-xs text-right font-mono font-semibold text-amber-600 dark:text-amber-400">
                           {ag.usedHours.toFixed(2)}h
                         </TableCell>
                         <TableCell
@@ -979,7 +993,7 @@ export default function MonthlyClientReportPage() {
                                 ? 'font-bold text-red-600'
                                 : ag.percentUsed > 80
                                   ? 'font-semibold text-amber-600'
-                                  : 'text-slate-700 dark:text-slate-300'
+                                  : 'text-muted-foreground'
                             }
                           >
                             {ag.contractedHours > 0 ? `${ag.percentUsed.toFixed(1)}%` : '—'}
@@ -988,12 +1002,12 @@ export default function MonthlyClientReportPage() {
                       </TableRow>
                     ))}
                     {/* Linha de Total */}
-                    <TableRow className="bg-slate-50 dark:bg-slate-800/60 font-bold border-t-2">
+                    <TableRow className="bg-muted/40 font-bold border-t-2">
                       <TableCell className="text-xs">TOTAL CONSOLIDADO</TableCell>
                       <TableCell className="text-xs text-right font-mono">
                         {reportData.totalContractedHours.toFixed(2)}h
                       </TableCell>
-                      <TableCell className="text-xs text-right font-mono text-amber-700 dark:text-amber-400">
+                      <TableCell className="text-xs text-right font-mono text-amber-600 dark:text-amber-400">
                         {reportData.totalUsedHours.toFixed(2)}h
                       </TableCell>
                       <TableCell
@@ -1003,7 +1017,7 @@ export default function MonthlyClientReportPage() {
                       >
                         {reportData.totalBalanceHours.toFixed(2)}h
                       </TableCell>
-                      <TableCell className="text-xs text-right font-mono text-primary">
+                      <TableCell className="text-xs text-right font-mono text-amber-600 dark:text-amber-400 font-bold">
                         {reportData.totalContractedHours > 0
                           ? `${reportData.totalUtilizationPercent.toFixed(1)}%`
                           : '—'}
@@ -1021,13 +1035,13 @@ export default function MonthlyClientReportPage() {
           {/* ============================================================== */}
           {/* SEÇÃO 2: HORAS UTILIZADAS POR SETOR                            */}
           {/* ============================================================== */}
-          <section className="abnt-section bg-white dark:bg-slate-900 border rounded-xl p-6 shadow-xs print:border-none print:shadow-none print:p-0">
-            <h3 className="abnt-section-title text-lg font-bold flex items-center gap-2 mb-4 text-slate-900 dark:text-slate-100">
+          <section className="abnt-section bg-card border rounded-xl p-6 shadow-xs print:border-none print:shadow-none print:p-0">
+            <h3 className="abnt-section-title text-lg font-bold flex items-center gap-2 mb-4 text-foreground">
               <Layers className="h-5 w-5 text-amber-600 dark:text-amber-400 print:hidden" />
               2. Horas Utilizadas por Setor
             </h3>
 
-            <p className="abnt-paragraph text-sm text-slate-700 dark:text-slate-300 leading-relaxed mb-4">
+            <p className="abnt-paragraph text-sm text-foreground/90 leading-relaxed mb-4">
               Demonstra a distribuição da carga de suporte técnico entre as diferentes áreas e
               departamentos da organização no período apurado, identificando setores com maior
               consumo de esforço técnico e chamados gerados.
@@ -1044,22 +1058,41 @@ export default function MonthlyClientReportPage() {
                   <p className="abnt-caption-top">
                     Figura 2 – Distribuição das Horas de Atendimento por Departamento da Empresa
                   </p>
-                  <div className="abnt-chart-box w-full rounded-lg bg-slate-50/50 dark:bg-slate-800/30 p-2">
+                  <div className="abnt-chart-box w-full rounded-lg bg-muted/20 p-2 border border-border/50">
                     <PrintChartContainer screenHeight={320} printHeight={300} landscape={false}>
                       <BarChart
                         layout="vertical"
                         data={sectorsChartData}
                         margin={{ top: 12, right: 75, left: 120, bottom: 10 }}
                       >
-                        <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#e2e8f0" />
-                        <XAxis type="number" unit="h" tick={{ fontSize: 10 }} />
-                        <YAxis type="category" dataKey="name" tick={{ fontSize: 10 }} width={115} />
+                        <CartesianGrid
+                          strokeDasharray="3 3"
+                          horizontal={false}
+                          stroke="currentColor"
+                          strokeOpacity={0.12}
+                        />
+                        <XAxis
+                          type="number"
+                          unit="h"
+                          tick={{ fontSize: 10, fill: 'currentColor' }}
+                        />
+                        <YAxis
+                          type="category"
+                          dataKey="name"
+                          tick={{ fontSize: 10, fill: 'currentColor' }}
+                          width={115}
+                        />
                         <Tooltip
                           formatter={(v: any, name: any) => [
                             name === 'Horas' ? `${Number(v).toFixed(2)}h` : v,
                             name,
                           ]}
-                          contentStyle={{ fontSize: 12 }}
+                          contentStyle={{
+                            fontSize: 12,
+                            backgroundColor: '#17181C',
+                            borderColor: '#31333A',
+                            color: '#F5F3EF',
+                          }}
                         />
                         <Legend wrapperStyle={{ fontSize: 11 }} />
                         <Bar
@@ -1072,7 +1105,7 @@ export default function MonthlyClientReportPage() {
                             dataKey="Horas"
                             position="right"
                             formatter={formatHoursLabel}
-                            style={{ fontSize: 10, fontWeight: 600, fill: '#1e293b' }}
+                            style={{ fontSize: 10, fontWeight: 600, fill: '#d97706' }}
                           />
                         </Bar>
                       </BarChart>
@@ -1089,7 +1122,7 @@ export default function MonthlyClientReportPage() {
                   </p>
                   <div className="border rounded-lg overflow-hidden">
                     <Table>
-                      <TableHeader className="bg-slate-100 dark:bg-slate-800">
+                      <TableHeader className="bg-muted/60">
                         <TableRow>
                           <TableHead className="text-xs font-bold">Departamento / Setor</TableHead>
                           <TableHead className="text-xs font-bold text-center">
@@ -1128,13 +1161,13 @@ export default function MonthlyClientReportPage() {
           {/* ============================================================== */}
           {/* SEÇÃO 3: HORAS POR USUÁRIO SOLICITANTE                         */}
           {/* ============================================================== */}
-          <section className="abnt-section bg-white dark:bg-slate-900 border rounded-xl p-6 shadow-xs print:border-none print:shadow-none print:p-0">
-            <h3 className="abnt-section-title text-lg font-bold flex items-center gap-2 mb-4 text-slate-900 dark:text-slate-100">
+          <section className="abnt-section bg-card border rounded-xl p-6 shadow-xs print:border-none print:shadow-none print:p-0">
+            <h3 className="abnt-section-title text-lg font-bold flex items-center gap-2 mb-4 text-foreground">
               <Users className="h-5 w-5 text-amber-600 dark:text-amber-400 print:hidden" />
               3. Horas Utilizadas por Usuário Solicitante
             </h3>
 
-            <p className="abnt-paragraph text-sm text-slate-700 dark:text-slate-300 leading-relaxed mb-4">
+            <p className="abnt-paragraph text-sm text-foreground/90 leading-relaxed mb-4">
               Identifica os colaboradores que mais demandaram suporte no mês, permitindo avaliar
               necessidades de capacitação individual, troca de equipamentos com incidentes
               recorrentes ou suporte a projetos específicos.
@@ -1151,34 +1184,45 @@ export default function MonthlyClientReportPage() {
                   <p className="abnt-caption-top">
                     Figura 3 – Ranking dos Maiores Solicitantes por Volume de Horas de Suporte
                   </p>
-                  <div className="abnt-chart-box w-full rounded-lg bg-slate-50/50 dark:bg-slate-800/30 p-2">
+                  <div className="abnt-chart-box w-full rounded-lg bg-muted/20 p-2 border border-border/50">
                     <PrintChartContainer screenHeight={320} printHeight={300} landscape={false}>
                       <BarChart
                         data={requestersChartData}
                         margin={{ top: 32, right: 24, left: 14, bottom: 45 }}
                       >
-                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                        <CartesianGrid
+                          strokeDasharray="3 3"
+                          vertical={false}
+                          stroke="currentColor"
+                          strokeOpacity={0.12}
+                        />
                         <XAxis
                           dataKey="name"
-                          tick={{ fontSize: 10 }}
+                          tick={{ fontSize: 10, fill: 'currentColor' }}
                           interval={0}
                           angle={-15}
                           textAnchor="end"
                           height={40}
                         />
                         <YAxis
-                          tick={{ fontSize: 10 }}
+                          tick={{ fontSize: 10, fill: 'currentColor' }}
                           unit="h"
                           label={{
                             value: 'Horas',
                             angle: -90,
                             position: 'insideLeft',
                             fontSize: 10,
+                            fill: 'currentColor',
                           }}
                         />
                         <Tooltip
                           formatter={(v: any) => [`${Number(v).toFixed(2)}h`, 'Horas Consumidas']}
-                          contentStyle={{ fontSize: 12 }}
+                          contentStyle={{
+                            fontSize: 12,
+                            backgroundColor: '#17181C',
+                            borderColor: '#31333A',
+                            color: '#F5F3EF',
+                          }}
                         />
                         <Legend wrapperStyle={{ fontSize: 11, paddingTop: 4 }} />
                         <Bar
@@ -1191,7 +1235,7 @@ export default function MonthlyClientReportPage() {
                             dataKey="Horas"
                             position="top"
                             formatter={formatHoursLabel}
-                            style={{ fontSize: 10, fontWeight: 600, fill: '#1e293b' }}
+                            style={{ fontSize: 10, fontWeight: 600, fill: '#d97706' }}
                           />
                         </Bar>
                       </BarChart>
@@ -1208,7 +1252,7 @@ export default function MonthlyClientReportPage() {
                   </p>
                   <div className="border rounded-lg overflow-hidden">
                     <Table>
-                      <TableHeader className="bg-slate-100 dark:bg-slate-800">
+                      <TableHeader className="bg-muted/60">
                         <TableRow>
                           <TableHead className="text-xs font-bold">Nome do Solicitante</TableHead>
                           <TableHead className="text-xs font-bold">Setor</TableHead>
@@ -1251,13 +1295,13 @@ export default function MonthlyClientReportPage() {
           {/* ============================================================== */}
           {/* SEÇÃO 4: ATIVIDADES MAIS REQUISITADAS NO MÊS                   */}
           {/* ============================================================== */}
-          <section className="abnt-section bg-white dark:bg-slate-900 border rounded-xl p-6 shadow-xs print:border-none print:shadow-none print:p-0">
-            <h3 className="abnt-section-title text-lg font-bold flex items-center gap-2 mb-4 text-slate-900 dark:text-slate-100">
+          <section className="abnt-section bg-card border rounded-xl p-6 shadow-xs print:border-none print:shadow-none print:p-0">
+            <h3 className="abnt-section-title text-lg font-bold flex items-center gap-2 mb-4 text-foreground">
               <BarChart3 className="h-5 w-5 text-amber-600 dark:text-amber-400 print:hidden" />
               4. Atividades Mais Requisitadas no Mês
             </h3>
 
-            <p className="abnt-paragraph text-sm text-slate-700 dark:text-slate-300 leading-relaxed mb-4">
+            <p className="abnt-paragraph text-sm text-foreground/90 leading-relaxed mb-4">
               Mapeia os tipos de serviços e incidentes mais frequentes do catálogo de atividades de
               TIC, classificando o volume de aberturas e o tempo dedicado para resolução de cada
               natureza de demanda técnica.
@@ -1274,33 +1318,43 @@ export default function MonthlyClientReportPage() {
                   <p className="abnt-caption-top">
                     Figura 4 – Volume de Chamados por Categoria de Atividade Técnica
                   </p>
-                  <div className="abnt-chart-box w-full rounded-lg bg-slate-50/50 dark:bg-slate-800/30 p-2">
+                  <div className="abnt-chart-box w-full rounded-lg bg-muted/20 p-2 border border-border/50">
                     <PrintChartContainer screenHeight={320} printHeight={300} landscape={false}>
                       <BarChart
                         data={activitiesChartData}
                         margin={{ top: 32, right: 24, left: 14, bottom: 45 }}
                       >
-                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                        <CartesianGrid
+                          strokeDasharray="3 3"
+                          vertical={false}
+                          stroke="currentColor"
+                          strokeOpacity={0.12}
+                        />
                         <XAxis
                           dataKey="name"
-                          tick={{ fontSize: 10 }}
+                          tick={{ fontSize: 10, fill: 'currentColor' }}
                           interval={0}
                           angle={-15}
                           textAnchor="end"
                           height={40}
                         />
-                        <YAxis tick={{ fontSize: 10 }} />
+                        <YAxis tick={{ fontSize: 10, fill: 'currentColor' }} />
                         <Tooltip
                           formatter={(v: any, name: any) => [
                             name === 'Horas' ? `${Number(v).toFixed(2)}h` : v,
                             name === 'Horas' ? 'Horas Gastas' : 'Qtd. Chamados',
                           ]}
-                          contentStyle={{ fontSize: 12 }}
+                          contentStyle={{
+                            fontSize: 12,
+                            backgroundColor: '#17181C',
+                            borderColor: '#31333A',
+                            color: '#F5F3EF',
+                          }}
                         />
                         <Legend wrapperStyle={{ fontSize: 11, paddingTop: 4 }} />
                         <Bar
                           dataKey="Chamados"
-                          fill="#8b5cf6"
+                          fill="#d97706"
                           name="Qtd. Chamados"
                           radius={[4, 4, 0, 0]}
                         >
@@ -1308,7 +1362,7 @@ export default function MonthlyClientReportPage() {
                             dataKey="Chamados"
                             position="top"
                             formatter={formatCountLabel}
-                            style={{ fontSize: 10, fontWeight: 600, fill: '#1e293b' }}
+                            style={{ fontSize: 10, fontWeight: 600, fill: '#d97706' }}
                           />
                         </Bar>
                         <Bar
@@ -1321,7 +1375,7 @@ export default function MonthlyClientReportPage() {
                             dataKey="Horas"
                             position="top"
                             formatter={formatHoursLabel}
-                            style={{ fontSize: 10, fontWeight: 600, fill: '#1e293b' }}
+                            style={{ fontSize: 10, fontWeight: 600, fill: '#f59e0b' }}
                           />
                         </Bar>
                       </BarChart>
@@ -1338,7 +1392,7 @@ export default function MonthlyClientReportPage() {
                   </p>
                   <div className="border rounded-lg overflow-hidden">
                     <Table>
-                      <TableHeader className="bg-slate-100 dark:bg-slate-800">
+                      <TableHeader className="bg-muted/60">
                         <TableRow>
                           <TableHead className="text-xs font-bold">
                             Atividade / Subcategoria
@@ -1385,64 +1439,64 @@ export default function MonthlyClientReportPage() {
           {/* ============================================================== */}
           {/* SEÇÃO 5: ESTUDO DE ONDE MAIS SE REQUER ATENDIMENTO TÉCNICO     */}
           {/* ============================================================== */}
-          <section className="abnt-section bg-white dark:bg-slate-900 border rounded-xl p-6 shadow-xs print:border-none print:shadow-none print:p-0">
-            <h3 className="abnt-section-title text-lg font-bold flex items-center gap-2 mb-4 text-slate-900 dark:text-slate-100">
+          <section className="abnt-section bg-card border rounded-xl p-6 shadow-xs print:border-none print:shadow-none print:p-0">
+            <h3 className="abnt-section-title text-lg font-bold flex items-center gap-2 mb-4 text-foreground">
               <Lightbulb className="h-5 w-5 text-amber-500 print:hidden" />
               5. Estudo e Diagnóstico: Onde Mais se Requer Atendimento Técnico
             </h3>
 
-            <p className="abnt-paragraph text-sm text-slate-700 dark:text-slate-300 leading-relaxed mb-4">
+            <p className="abnt-paragraph text-sm text-foreground/90 leading-relaxed mb-4">
               {reportData.study.analysisText}
             </p>
 
             {/* Painel com Indicadores de Destaque da Análise */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 my-4 abnt-avoid-break">
-              <div className="border rounded-lg p-3 bg-slate-50 dark:bg-slate-800/40">
-                <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">
+              <div className="border rounded-lg p-3 bg-muted/20">
+                <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider block">
                   Maior Ponto de Concentração
                 </span>
-                <p className="text-sm font-semibold text-slate-800 dark:text-slate-200 mt-1 truncate">
+                <p className="text-sm font-semibold text-foreground mt-1 truncate">
                   {reportData.study.topSector?.name || 'N/A'}
                 </p>
-                <p className="text-xs text-slate-500 mt-0.5">
+                <p className="text-xs text-muted-foreground mt-0.5">
                   {reportData.study.topSector?.hours.toFixed(1)}h (
                   {reportData.study.topSector?.pct.toFixed(1)}% do esforço)
                 </p>
               </div>
 
-              <div className="border rounded-lg p-3 bg-slate-50 dark:bg-slate-800/40">
-                <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">
+              <div className="border rounded-lg p-3 bg-muted/20">
+                <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider block">
                   Maior Solicitante
                 </span>
-                <p className="text-sm font-semibold text-slate-800 dark:text-slate-200 mt-1 truncate">
+                <p className="text-sm font-semibold text-foreground mt-1 truncate">
                   {reportData.study.topRequester?.name || 'N/A'}
                 </p>
-                <p className="text-xs text-slate-500 mt-0.5">
+                <p className="text-xs text-muted-foreground mt-0.5">
                   {reportData.study.topRequester?.hours.toFixed(1)}h em{' '}
                   {reportData.study.topRequester?.ticketCount} chamados
                 </p>
               </div>
 
-              <div className="border rounded-lg p-3 bg-slate-50 dark:bg-slate-800/40">
-                <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">
+              <div className="border rounded-lg p-3 bg-muted/20">
+                <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider block">
                   Nível Mais Acionado
                 </span>
-                <p className="text-sm font-semibold text-slate-800 dark:text-slate-200 mt-1 truncate">
+                <p className="text-sm font-semibold text-foreground mt-1 truncate">
                   {reportData.study.topAgreement?.name || 'N/A'}
                 </p>
-                <p className="text-xs text-slate-500 mt-0.5">
+                <p className="text-xs text-muted-foreground mt-0.5">
                   {reportData.study.topAgreement?.hours.toFixed(1)}h consumidas
                 </p>
               </div>
 
-              <div className="border rounded-lg p-3 bg-slate-50 dark:bg-slate-800/40">
-                <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">
+              <div className="border rounded-lg p-3 bg-muted/20">
+                <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider block">
                   Média de Horas por Chamado
                 </span>
-                <p className="text-sm font-semibold text-slate-800 dark:text-slate-200 mt-1">
+                <p className="text-sm font-semibold text-foreground mt-1">
                   {reportData.study.avgTicketHours.toFixed(2)}h / ticket
                 </p>
-                <p className="text-xs text-slate-500 mt-0.5">
+                <p className="text-xs text-muted-foreground mt-0.5">
                   {reportData.study.totalTickets} chamado(s) no mês
                 </p>
               </div>
@@ -1450,12 +1504,12 @@ export default function MonthlyClientReportPage() {
 
             {/* Recomendações e Plano de Ação */}
             <div className="abnt-avoid-break mt-6">
-              <h4 className="abnt-section-subtitle text-sm font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+              <h4 className="abnt-section-subtitle text-sm font-bold text-foreground flex items-center gap-1.5">
                 <CheckCircle2 className="h-4 w-4 text-emerald-600 print:hidden" />
                 5.1. Recomendações Técnicas e Plano de Melhoria
               </h4>
-              <div className="border rounded-lg p-4 bg-slate-50/70 dark:bg-slate-800/30">
-                <ul className="list-disc list-inside space-y-2 text-xs text-slate-700 dark:text-slate-300">
+              <div className="border rounded-lg p-4 bg-muted/20">
+                <ul className="list-disc list-inside space-y-2 text-xs text-foreground/90">
                   {reportData.study.recommendations.map((rec, i) => (
                     <li key={i} className="leading-relaxed">
                       {rec}
@@ -1469,13 +1523,13 @@ export default function MonthlyClientReportPage() {
           {/* ============================================================== */}
           {/* SEÇÃO 6: MOVIMENTAÇÃO DE ATIVOS NO PERÍODO                     */}
           {/* ============================================================== */}
-          <section className="abnt-section bg-white dark:bg-slate-900 border rounded-xl p-6 shadow-xs print:border-none print:shadow-none print:p-0">
-            <h3 className="abnt-section-title text-lg font-bold flex items-center gap-2 mb-4 text-slate-900 dark:text-slate-100">
+          <section className="abnt-section bg-card border rounded-xl p-6 shadow-xs print:border-none print:shadow-none print:p-0">
+            <h3 className="abnt-section-title text-lg font-bold flex items-center gap-2 mb-4 text-foreground">
               <HardDrive className="h-5 w-5 text-amber-600 dark:text-amber-400 print:hidden" />
               6. Movimentação de Ativos no Período (Entradas e Saídas)
             </h3>
 
-            <p className="abnt-paragraph text-sm text-slate-700 dark:text-slate-300 leading-relaxed mb-4">
+            <p className="abnt-paragraph text-sm text-foreground/90 leading-relaxed mb-4">
               Registra o fluxo de equipamentos computacionais (desktops, notebooks, tablets e
               celulares) que foram integrados ao parque da empresa (entradas por aquisição ou nova
               atribuição) e os que foram desativados, descartados ou encaminhados para manutenção
@@ -1516,11 +1570,11 @@ export default function MonthlyClientReportPage() {
                 <p className="text-[11px] text-muted-foreground mt-0.5">Em uso no cliente</p>
               </div>
 
-              <div className="border rounded-lg p-3 bg-slate-50 dark:bg-slate-800/40">
-                <span className="text-[11px] font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider block">
+              <div className="border rounded-lg p-3 bg-muted/20">
+                <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider block">
                   Total Cadastrado
                 </span>
-                <p className="text-2xl font-bold font-mono text-slate-800 dark:text-slate-200 mt-1">
+                <p className="text-2xl font-bold font-mono text-foreground mt-1">
                   {reportData.assets.totalInScope}
                 </p>
                 <p className="text-[11px] text-muted-foreground mt-0.5">Base histórica CMDB</p>
@@ -1533,16 +1587,28 @@ export default function MonthlyClientReportPage() {
                 <p className="abnt-caption-top">
                   Figura 5 – Composição do Parque de Ativos e Movimentações por Categoria
                 </p>
-                <div className="abnt-chart-box w-full rounded-lg bg-slate-50/50 dark:bg-slate-800/30 p-2">
+                <div className="abnt-chart-box w-full rounded-lg bg-muted/20 p-2 border border-border/50">
                   <PrintChartContainer screenHeight={288} printHeight={280} landscape={false}>
                     <BarChart
                       data={reportData.assets.byType}
                       margin={{ top: 32, right: 24, left: 14, bottom: 25 }}
                     >
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-                      <XAxis dataKey="type" tick={{ fontSize: 10 }} />
-                      <YAxis tick={{ fontSize: 10 }} />
-                      <Tooltip contentStyle={{ fontSize: 12 }} />
+                      <CartesianGrid
+                        strokeDasharray="3 3"
+                        vertical={false}
+                        stroke="currentColor"
+                        strokeOpacity={0.12}
+                      />
+                      <XAxis dataKey="type" tick={{ fontSize: 10, fill: 'currentColor' }} />
+                      <YAxis tick={{ fontSize: 10, fill: 'currentColor' }} />
+                      <Tooltip
+                        contentStyle={{
+                          fontSize: 12,
+                          backgroundColor: '#17181C',
+                          borderColor: '#31333A',
+                          color: '#F5F3EF',
+                        }}
+                      />
                       <Legend wrapperStyle={{ fontSize: 11, paddingTop: 4 }} />
                       <Bar
                         dataKey="total"
@@ -1554,7 +1620,7 @@ export default function MonthlyClientReportPage() {
                           dataKey="total"
                           position="top"
                           formatter={formatCountLabel}
-                          style={{ fontSize: 10, fontWeight: 600, fill: '#1e293b' }}
+                          style={{ fontSize: 10, fontWeight: 600, fill: '#d97706' }}
                         />
                       </Bar>
                       <Bar
@@ -1567,7 +1633,7 @@ export default function MonthlyClientReportPage() {
                           dataKey="entered"
                           position="top"
                           formatter={formatCountLabel}
-                          style={{ fontSize: 10, fontWeight: 600, fill: '#1e293b' }}
+                          style={{ fontSize: 10, fontWeight: 600, fill: '#10b981' }}
                         />
                       </Bar>
                       <Bar
@@ -1580,7 +1646,7 @@ export default function MonthlyClientReportPage() {
                           dataKey="exited"
                           position="top"
                           formatter={formatCountLabel}
-                          style={{ fontSize: 10, fontWeight: 600, fill: '#1e293b' }}
+                          style={{ fontSize: 10, fontWeight: 600, fill: '#ef4444' }}
                         />
                       </Bar>
                     </BarChart>
@@ -1599,13 +1665,13 @@ export default function MonthlyClientReportPage() {
                   Quadro 5 – Lista de Ativos com Entrada Registrada no Mês
                 </p>
                 {reportData.assets.enteredList.length === 0 ? (
-                  <p className="text-xs text-muted-foreground py-3 border rounded-lg text-center bg-slate-50/50">
+                  <p className="text-xs text-muted-foreground py-3 border rounded-lg text-center bg-muted/10">
                     Nenhum novo ativo cadastrado ou incorporado no mês de {reportData.periodLabel}.
                   </p>
                 ) : (
                   <div className="border rounded-lg overflow-hidden">
                     <Table>
-                      <TableHeader className="bg-slate-100 dark:bg-slate-800">
+                      <TableHeader className="bg-muted/60">
                         <TableRow>
                           <TableHead className="text-xs font-bold">
                             Identificação / Hostname
@@ -1657,7 +1723,7 @@ export default function MonthlyClientReportPage() {
                   </p>
                   <div className="border rounded-lg overflow-hidden">
                     <Table>
-                      <TableHeader className="bg-slate-100 dark:bg-slate-800">
+                      <TableHeader className="bg-muted/60">
                         <TableRow>
                           <TableHead className="text-xs font-bold">
                             Identificação / Hostname
@@ -1707,13 +1773,13 @@ export default function MonthlyClientReportPage() {
           {/* ============================================================== */}
           {/* SEÇÃO 7: COMPARATIVO COM MESES ANTERIORES (PÁGINA PAISAGEM)     */}
           {/* ============================================================== */}
-          <section className="abnt-section abnt-section-landscape bg-white dark:bg-slate-900 border rounded-xl p-6 shadow-xs print:border-none print:shadow-none print:p-0">
-            <h3 className="abnt-section-title text-lg font-bold flex items-center gap-2 mb-4 text-slate-900 dark:text-slate-100">
+          <section className="abnt-section abnt-section-landscape bg-card border rounded-xl p-6 shadow-xs print:border-none print:shadow-none print:p-0">
+            <h3 className="abnt-section-title text-lg font-bold flex items-center gap-2 mb-4 text-foreground">
               <TrendingUp className="h-5 w-5 text-amber-600 dark:text-amber-400 print:hidden" />
               7. Comparativo com Meses Anteriores
             </h3>
 
-            <p className="abnt-paragraph text-sm text-slate-700 dark:text-slate-300 leading-relaxed mb-4">
+            <p className="abnt-paragraph text-sm text-foreground/90 leading-relaxed mb-4">
               Apresenta a análise evolutiva do consumo de horas técnicas e do fluxo de abertura e
               resolução de chamados ao longo dos últimos 6 (seis) meses, permitindo diagnosticar a
               tendência de demanda, a estabilidade das operações e os períodos de pico técnico da
@@ -1722,13 +1788,13 @@ export default function MonthlyClientReportPage() {
 
             {/* Texto analítico ABNT gerado dos dados */}
             {reportData.comparison?.summaryText && (
-              <p className="abnt-paragraph text-sm text-slate-700 dark:text-slate-300 leading-relaxed mb-6 font-serif">
+              <p className="abnt-paragraph text-sm text-muted-foreground leading-relaxed mb-6 font-serif">
                 {reportData.comparison.summaryText}
               </p>
             )}
 
             {!reportData.comparison || !reportData.comparison.hasData ? (
-              <div className="border rounded-lg p-6 text-center bg-slate-50/50 dark:bg-slate-800/30 text-xs text-muted-foreground my-4">
+              <div className="border rounded-lg p-6 text-center bg-muted/20 text-xs text-muted-foreground my-4">
                 Sem dados de consumo nos últimos 6 meses para este cliente.
               </div>
             ) : (
@@ -1738,7 +1804,7 @@ export default function MonthlyClientReportPage() {
                   <p className="abnt-caption-top">
                     Figura 6 – Evolução do consumo de horas nos últimos 6 meses
                   </p>
-                  <div className="abnt-chart-box w-full rounded-lg bg-slate-50/50 dark:bg-slate-800/30 p-2">
+                  <div className="abnt-chart-box w-full rounded-lg bg-muted/20 p-2 border border-border/50">
                     <PrintChartContainer
                       screenHeight={320}
                       printHeight={290}
@@ -1755,16 +1821,21 @@ export default function MonthlyClientReportPage() {
                             <stop offset="95%" stopColor="#d97706" stopOpacity={0.02} />
                           </linearGradient>
                         </defs>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                        <XAxis dataKey="name" tick={{ fontSize: 10 }} />
+                        <CartesianGrid
+                          strokeDasharray="3 3"
+                          stroke="currentColor"
+                          strokeOpacity={0.12}
+                        />
+                        <XAxis dataKey="name" tick={{ fontSize: 10, fill: 'currentColor' }} />
                         <YAxis
-                          tick={{ fontSize: 10 }}
+                          tick={{ fontSize: 10, fill: 'currentColor' }}
                           unit="h"
                           label={{
                             value: 'Horas',
                             angle: -90,
                             position: 'insideLeft',
                             fontSize: 10,
+                            fill: 'currentColor',
                           }}
                         />
                         <Tooltip
@@ -1772,7 +1843,12 @@ export default function MonthlyClientReportPage() {
                             name === 'Horas Utilizadas' ? `${Number(v).toFixed(2)}h` : v,
                             name,
                           ]}
-                          contentStyle={{ fontSize: 12 }}
+                          contentStyle={{
+                            fontSize: 12,
+                            backgroundColor: '#17181C',
+                            borderColor: '#31333A',
+                            color: '#F5F3EF',
+                          }}
                         />
                         <Legend wrapperStyle={{ fontSize: 11, paddingTop: 4 }} />
                         <Area
@@ -1791,7 +1867,7 @@ export default function MonthlyClientReportPage() {
                             position="top"
                             offset={10}
                             formatter={formatHoursLabel}
-                            style={{ fontSize: 10, fontWeight: 600, fill: '#1e293b' }}
+                            style={{ fontSize: 10, fontWeight: 600, fill: '#d97706' }}
                           />
                         </Area>
                       </AreaChart>
@@ -1806,7 +1882,7 @@ export default function MonthlyClientReportPage() {
                   <p className="abnt-caption-top">Quadro 7 – Comparativo mensal de consumo</p>
                   <div className="border rounded-lg overflow-hidden">
                     <Table>
-                      <TableHeader className="bg-slate-100 dark:bg-slate-800">
+                      <TableHeader className="bg-muted/60">
                         <TableRow>
                           <TableHead className="text-xs font-bold">Mês</TableHead>
                           <TableHead className="text-xs font-bold text-right">
@@ -1838,7 +1914,7 @@ export default function MonthlyClientReportPage() {
                               key={row.monthKey}
                               className={
                                 isSelected
-                                  ? 'bg-amber-500/10 dark:bg-amber-500/15 font-semibold border-l-4 border-l-primary print:bg-slate-100'
+                                  ? 'bg-amber-500/10 dark:bg-amber-500/15 font-semibold border-l-4 border-l-primary print:bg-muted/30'
                                   : undefined
                               }
                             >
@@ -1877,7 +1953,7 @@ export default function MonthlyClientReportPage() {
                                         ? 'text-red-600 dark:text-red-400'
                                         : isNegative
                                           ? 'text-emerald-600 dark:text-emerald-400'
-                                          : 'text-slate-600 dark:text-slate-400'
+                                          : 'text-muted-foreground'
                                     }`}
                                     style={{
                                       WebkitPrintColorAdjust: 'exact',
@@ -1891,7 +1967,7 @@ export default function MonthlyClientReportPage() {
                                       <span className="text-emerald-600 font-bold">▼</span>
                                     )}
                                     {!isPositive && !isNegative && (
-                                      <span className="text-slate-500 font-bold">―</span>
+                                      <span className="text-muted-foreground font-bold">―</span>
                                     )}
                                     {Math.abs(variacao).toFixed(1)}%
                                   </span>
@@ -1902,7 +1978,7 @@ export default function MonthlyClientReportPage() {
                         })}
 
                         {/* Linha Consolidada do Semestre */}
-                        <TableRow className="bg-slate-100/70 dark:bg-slate-800/80 font-bold border-t-2">
+                        <TableRow className="bg-muted/40 font-bold border-t-2">
                           <TableCell className="text-xs">TOTAL DO SEMESTRE</TableCell>
                           <TableCell className="text-xs text-right font-mono">
                             {formatHours(reportData.comparison.totalHours6Months)}
@@ -1936,17 +2012,17 @@ export default function MonthlyClientReportPage() {
               <div>
                 <div className="border-b border-black w-48 mx-auto mb-2" />
                 <p className="font-bold">Responsável Técnico Deltime</p>
-                <p className="text-slate-500">ServiceOne ITSM</p>
+                <p className="text-muted-foreground">ServiceOne ITSM</p>
               </div>
               <div>
                 <div className="border-b border-black w-48 mx-auto mb-2" />
                 <p className="font-bold">Gestor Responsável no Cliente</p>
-                <p className="text-slate-500">
+                <p className="text-muted-foreground">
                   {reportData.company.trade_name || reportData.company.legal_name}
                 </p>
               </div>
             </div>
-            <p className="text-center text-[10px] text-slate-400 mt-6">
+            <p className="text-center text-[10px] text-muted-foreground mt-6">
               Relatório emitido automaticamente pelo ServiceOne ITSM em{' '}
               {new Date().toLocaleString('pt-BR')}. Documento em conformidade com normas ABNT NBR
               10719.
