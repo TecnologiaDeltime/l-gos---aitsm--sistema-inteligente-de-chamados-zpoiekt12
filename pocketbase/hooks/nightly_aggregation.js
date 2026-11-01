@@ -39,9 +39,19 @@ cronAdd('operator_daily_aggregation', '0 2 * * *', () => {
         0,
         0,
       )
-      var interactions = $app.findRecordsByFilter(
+      // Regra de negócio ITSM:
+      // "Horas de acompanhamento são debitadas da franquia do cliente; horas trabalhadas são acrescidas nas horas de trabalho dos operadores."
+      // As horas de trabalho do operador são originadas estritamente de play/pause (origin = 'Cronômetro').
+      // Logs de acompanhamento (origin != 'Cronômetro') NÃO somam nas horas de trabalho do operador.
+      var cronoInteractions = $app.findRecordsByFilter(
         'ticket_interactions',
-        'author = "' + op.id + '" && created >= "' + yStart + '" && created <= "' + yEnd + '"',
+        'author = "' +
+          op.id +
+          '" && origin = "Cronômetro" && created >= "' +
+          yStart +
+          '" && created <= "' +
+          yEnd +
+          '"',
         '',
         0,
         0,
@@ -70,8 +80,8 @@ cronAdd('operator_daily_aggregation', '0 2 * * *', () => {
       )
 
       var totalHours = 0
-      for (var j = 0; j < interactions.length; j++) {
-        totalHours += (interactions[j].getInt('duration_minutes') || 0) / 60
+      for (var j = 0; j < cronoInteractions.length; j++) {
+        totalHours += (cronoInteractions[j].getFloat('duration_minutes') || 0) / 60
       }
 
       try {

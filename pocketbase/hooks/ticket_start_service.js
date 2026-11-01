@@ -733,7 +733,7 @@ routerAdd(
     ticket.set('accompaniment_seconds', newAccSec)
 
     var currentWorkedSec = ticket.getInt('operator_worked_seconds') || 0
-    var newWorkedSec = currentWorkedSec // não soma em operator_worked_seconds para manter separadas as duas acumulações
+    var newWorkedSec = currentWorkedSec // NÃO soma em operator_worked_seconds: horas de acompanhamento debitam apenas da franquia
     ticket.set('operator_worked_seconds', newWorkedSec)
     ticket.set('work_hours', Number((newWorkedSec / 3600).toFixed(4)))
     $app.save(ticket)

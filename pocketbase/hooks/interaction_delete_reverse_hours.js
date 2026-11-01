@@ -13,10 +13,13 @@ routerAdd(
     }
 
     var hourType = interaction.getString('hour_type')
-    var duration = interaction.getInt('duration_minutes') || 0
+    var duration = interaction.getFloat('duration_minutes') || 0
+    var origin = interaction.getString('origin')
     var ticketId = interaction.getString('ticket')
 
-    if (hourType === 'Contratada' && duration > 0 && ticketId) {
+    // Regra de negócio: interações de 'Cronômetro' não foram debitadas da franquia.
+    // Somente interações de acompanhamento (origin != 'Cronômetro') debitaram e devem ser estornadas da franquia.
+    if (origin !== 'Cronômetro' && hourType === 'Contratada' && duration > 0 && ticketId) {
       try {
         var ticket = $app.findRecordById('tickets', ticketId)
         var contractId = ticket.getString('contract')
@@ -32,7 +35,7 @@ routerAdd(
             var period = periods[0]
             var consumed = period.getFloat('consumed_hours') || 0
             var hoursToReverse = duration / 60
-            var newConsumed = consumed - hoursToReverse
+            var newConsumed = Number((consumed - hoursToReverse).toFixed(4))
             if (newConsumed < 0) newConsumed = 0
             period.set('consumed_hours', newConsumed)
             $app.save(period)
@@ -55,6 +58,14 @@ routerAdd(
             $app.save(audit)
           }
         }
+
+        // Subtrai de accompaniment_seconds no ticket
+        try {
+          var currentAcc = ticket.getInt('accompaniment_seconds') || 0
+          var durationSec = Math.round(duration * 60)
+          ticket.set('accompaniment_seconds', Math.max(0, currentAcc - durationSec))
+          $app.save(ticket)
+        } catch (_) {}
       } catch (err) {
         $app.logger().error('Error reversing hours on interaction delete', 'error', err.message)
       }

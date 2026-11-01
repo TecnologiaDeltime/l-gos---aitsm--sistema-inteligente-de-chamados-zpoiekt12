@@ -127,29 +127,10 @@ onRecordAfterUpdateSuccess((e) => {
     } catch (_) {}
   }
 
-  if (newStatus !== 'Resolvido' && newStatus !== 'Encerrado') return e.next()
-  if (oldStatus === 'Resolvido' || oldStatus === 'Encerrado') return e.next()
-
-  var contractId = record.getString('contract')
-  if (!contractId) return e.next()
-
-  var workHours = record.getInt('work_hours') || 0
-  if (workHours <= 0) return e.next()
-
-  try {
-    var contract = $app.findRecordById('contracts', contractId)
-    var contractType = contract.getString('type')
-    var hourBasedTypes = ['Pacote Mensal', 'Pacote de Horas', 'Sustentação Mensal', 'Híbrido']
-    if (hourBasedTypes.indexOf(contractType) === -1) return e.next()
-
-    var currentHours = contract.getInt('monthly_hours') || 0
-    var newHours = currentHours - workHours
-    if (newHours < 0) newHours = 0
-    contract.set('monthly_hours', newHours)
-    $app.save(contract)
-  } catch (err) {
-    $app.logger().error('Error consuming contract hours', 'error', err.message)
-  }
+  // Regra de horas ITSM:
+  // - Horas de acompanhamento já foram debitadas da franquia no ato da criação/edição do log (on_interaction_consume).
+  // - Horas trabalhadas (play/pause, acumuladas em operator_worked_seconds e work_hours) pertencem aos operadores e NÃO debitam da franquia.
+  // Portanto, ao resolver o chamado, NÃO subtraímos work_hours de monthly_hours do contrato, evitando dupla contagem e violação da regra de negócio.
 
   return e.next()
 }, 'tickets')

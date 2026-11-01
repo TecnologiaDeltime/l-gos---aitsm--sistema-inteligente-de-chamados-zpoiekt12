@@ -65,15 +65,17 @@ routerAdd(
       return e.notFoundError('Interação não encontrada')
     }
 
-    var oldDuration = interaction.getInt('duration_minutes') || 0
+    var oldDuration = interaction.getFloat('duration_minutes') || 0
     var oldHourType = interaction.getString('hour_type')
+    var origin = interaction.getString('origin')
     var ticketId = interaction.getString('ticket')
 
     var contractId = ''
     var contractPeriod = null
+    var ticket = null
     if (ticketId) {
       try {
-        var ticket = $app.findRecordById('tickets', ticketId)
+        ticket = $app.findRecordById('tickets', ticketId)
         contractId = ticket.getString('contract')
         if (contractId) {
           var periods = $app.findRecordsByFilter(
@@ -96,7 +98,9 @@ routerAdd(
         : oldHourType
     var effectiveNewDuration = newDuration !== undefined ? newDuration : oldDuration
 
-    if (contractPeriod) {
+    // Regra de negócio: interações de 'Cronômetro' pertencem exclusivamente às horas do operador.
+    // Somente interações de acompanhamento (origin != 'Cronômetro') debitam da franquia e afetam accompaniment_seconds.
+    if (origin !== 'Cronômetro' && contractPeriod) {
       var consumed = contractPeriod.getFloat('consumed_hours') || 0
 
       if (oldHourType === 'Contratada' && oldDuration > 0) {
@@ -110,8 +114,24 @@ routerAdd(
         consumed = consumed + hoursToAdd
       }
 
-      contractPeriod.set('consumed_hours', consumed)
+      contractPeriod.set('consumed_hours', Number(consumed.toFixed(4)))
       $app.save(contractPeriod)
+    }
+
+    // Ajusta accompaniment_seconds no ticket caso tenha sido alterada a duração
+    if (
+      origin !== 'Cronômetro' &&
+      ticket &&
+      newDuration !== undefined &&
+      newDuration !== oldDuration
+    ) {
+      try {
+        var currentAcc = ticket.getInt('accompaniment_seconds') || 0
+        var diffSec = Math.round((effectiveNewDuration - oldDuration) * 60)
+        var newAcc = Math.max(0, currentAcc + diffSec)
+        ticket.set('accompaniment_seconds', newAcc)
+        $app.save(ticket)
+      } catch (_) {}
     }
 
     if (newContent !== undefined) interaction.set('content', newContent)
