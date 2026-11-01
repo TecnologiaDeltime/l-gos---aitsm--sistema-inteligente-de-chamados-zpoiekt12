@@ -149,7 +149,7 @@ export default function PortalHoursTab({
           <CardHeader className="p-4 pb-2">
             <CardDescription className="text-xs font-semibold text-muted-foreground flex items-center justify-between">
               <span>Franquia Contratada</span>
-              <Layers className="h-4 w-4 text-blue-500" />
+              <Layers className="h-4 w-4 text-amber-500" />
             </CardDescription>
             <CardTitle className="text-2xl font-bold text-foreground pt-1">
               {loading ? '...' : `${hoursData.contractedHours}h`}

@@ -83,7 +83,7 @@ export function RequesterHistoryDialog({ email, currentTicketId, open, onOpenCha
                 key={t.id}
                 className={`rounded-lg border p-3 text-xs flex items-center justify-between gap-2 ${
                   t.id === currentTicketId
-                    ? 'border-blue-400 bg-blue-50 dark:bg-blue-950/30'
+                    ? 'border-amber-400 bg-amber-50 dark:bg-amber-950/30'
                     : 'bg-white dark:bg-slate-900'
                 }`}
               >
@@ -91,7 +91,7 @@ export function RequesterHistoryDialog({ email, currentTicketId, open, onOpenCha
                   <div className="flex items-center gap-2 mb-1">
                     <Link
                       to={`/tickets/${t.id}`}
-                      className="font-bold text-blue-600 hover:underline"
+                      className="font-bold text-primary hover:underline"
                     >
                       #{t.number}
                     </Link>

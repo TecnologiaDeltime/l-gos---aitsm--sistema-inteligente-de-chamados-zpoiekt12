@@ -298,7 +298,7 @@ export default function PortalNewTicketDialog({
             <div className="space-y-1.5">
               <label className="text-xs font-semibold text-foreground flex items-center justify-between">
                 <span className="flex items-center gap-1.5">
-                  <User className="h-3.5 w-3.5 text-blue-500" />
+                  <User className="h-3.5 w-3.5 text-amber-500" />
                   Nome do contato
                 </span>
                 <span className="text-[10px] text-muted-foreground font-normal">

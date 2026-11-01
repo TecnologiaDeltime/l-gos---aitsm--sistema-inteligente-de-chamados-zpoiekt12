@@ -75,7 +75,7 @@ export function NewTicketToast() {
         >
           <div className="flex-1 space-y-1">
             <div className="flex items-center gap-2">
-              <span className="text-sm font-bold text-blue-600">{ticket.number}</span>
+              <span className="text-sm font-bold text-primary">{ticket.number}</span>
               <PriorityBadge priority={ticket.priority} />
             </div>
             <p className="text-sm font-medium text-slate-900 dark:text-slate-100">{ticket.title}</p>
@@ -84,7 +84,7 @@ export function NewTicketToast() {
               <div className="flex items-center gap-1.5 pt-0.5">
                 <Avatar className="h-5 w-5">
                   {operatorAvatar && <AvatarImage src={operatorAvatar} />}
-                  <AvatarFallback className="bg-blue-600 text-[8px] text-white">
+                  <AvatarFallback className="bg-primary text-[8px] text-primary-foreground font-bold">
                     {operator.name?.substring(0, 2).toUpperCase() || '?'}
                   </AvatarFallback>
                 </Avatar>

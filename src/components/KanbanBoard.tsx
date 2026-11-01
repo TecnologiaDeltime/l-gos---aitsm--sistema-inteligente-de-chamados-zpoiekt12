@@ -145,7 +145,7 @@ export function KanbanBoard({
             className={cn(
               'flex-shrink-0 w-72 rounded-xl border bg-slate-50/50 dark:bg-slate-900/50',
               isMobile && 'w-full',
-              isOver && 'ring-2 ring-blue-400 bg-blue-50/50 dark:bg-blue-950/30',
+              isOver && 'ring-2 ring-primary bg-primary/5',
             )}
           >
             <div className="flex items-center justify-between px-3 py-2.5 border-b">

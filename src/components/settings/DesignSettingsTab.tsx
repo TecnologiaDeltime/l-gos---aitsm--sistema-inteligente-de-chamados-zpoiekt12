@@ -849,8 +849,8 @@ export function DesignSettingsTab({ isAdminOrGestor }: DesignSettingsTabProps) {
             SLA estourado, <span className="text-amber-500 font-semibold">Laranja</span> para
             atenção/risco,{' '}
             <span className="text-emerald-600 dark:text-emerald-400 font-semibold">Verde</span> para
-            resoluções concluídas e <span className="text-blue-500 font-semibold">Azul</span> para
-            tickets em aberto.
+            resoluções concluídas e <span className="text-amber-500 font-semibold">Âmbar</span> para
+            tickets em aberto ou novos.
           </div>
         </CardContent>
       </Card>

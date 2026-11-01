@@ -57,13 +57,13 @@ interface PortalDashboardTabProps {
 
 const SECTOR_COLORS = [
   '#f59e0b', // amber-500
-  '#3b82f6', // blue-500
+  '#d97706', // amber-600
   '#10b981', // emerald-500
   '#8b5cf6', // purple-500
   '#ec4899', // pink-500
-  '#06b6d4', // cyan-500
+  '#78716c', // stone-500
   '#f97316', // orange-500
-  '#6366f1', // indigo-500
+  '#b45309', // amber-700
   '#14b8a6', // teal-500
   '#64748b', // slate-500
 ]
@@ -175,7 +175,7 @@ export default function PortalDashboardTab({
             ) : (
               <Badge
                 variant="outline"
-                className="border-blue-500/40 text-blue-600 dark:text-blue-400 text-xs"
+                className="border-amber-500/40 text-amber-600 dark:text-amber-400 text-xs"
               >
                 Período Filtrado: {String(selectedMonth).padStart(2, '0')}/{selectedYear}
               </Badge>
@@ -410,17 +410,17 @@ export default function PortalDashboardTab({
         {/* Consumo do Mês Corrente */}
         <Card
           onClick={onOpenHoursTab}
-          className="cursor-pointer bg-card border hover:border-blue-500/50 transition-all shadow-2xs group"
+          className="cursor-pointer bg-card border hover:border-amber-500/50 transition-all shadow-2xs group"
         >
           <CardHeader className="p-4 pb-2">
             <div className="flex items-center justify-between text-xs text-muted-foreground">
               <span className="font-medium">Consumo do Mês Corrente</span>
-              <div className="p-1.5 rounded-lg bg-blue-500/10 text-blue-500 group-hover:scale-110 transition-transform">
+              <div className="p-1.5 rounded-lg bg-amber-500/10 text-amber-500 group-hover:scale-110 transition-transform">
                 <Clock className="h-4 w-4" />
               </div>
             </div>
             <div className="flex items-baseline justify-between mt-1">
-              <span className="text-2xl sm:text-3xl font-extrabold font-mono text-blue-600 dark:text-blue-400">
+              <span className="text-2xl sm:text-3xl font-extrabold font-mono text-amber-600 dark:text-amber-400">
                 {metrics?.currentMonthConsumedHours || 0}h
               </span>
               <span className="text-xs text-muted-foreground">
@@ -430,7 +430,7 @@ export default function PortalDashboardTab({
           </CardHeader>
           <CardContent className="p-4 pt-0 text-[11px] text-muted-foreground flex items-center justify-between border-t border-border/40 mt-2">
             <span>Saldo: {metrics?.currentMonthBalanceHours || 0}h</span>
-            <span className="text-blue-500 flex items-center font-semibold gap-0.5">
+            <span className="text-amber-500 flex items-center font-semibold gap-0.5">
               Extrato <ArrowUpRight className="h-3 w-3" />
             </span>
           </CardContent>
@@ -585,7 +585,7 @@ export default function PortalDashboardTab({
             <div className="flex items-center justify-between gap-2">
               <div>
                 <CardTitle className="text-base font-bold text-foreground flex items-center gap-2">
-                  <Calendar className="h-4 w-4 text-blue-500" />
+                  <Calendar className="h-4 w-4 text-amber-500" />
                   Consumo de Horas nos Últimos 3 Meses
                 </CardTitle>
                 <CardDescription className="text-xs text-muted-foreground mt-0.5">
@@ -627,7 +627,7 @@ export default function PortalDashboardTab({
                             <p className="text-amber-500 font-semibold font-mono">
                               Consumidas: {d.Consumidas}h
                             </p>
-                            <p className="text-blue-500 font-semibold font-mono">
+                            <p className="text-stone-400 font-semibold font-mono">
                               Contratadas: {d.Contratadas}h
                             </p>
                             <p className="text-emerald-500 font-mono">Saldo: {d.Saldo}h</p>
@@ -642,7 +642,7 @@ export default function PortalDashboardTab({
                     <Bar
                       dataKey="Contratadas"
                       name="Franquia Contratada"
-                      fill="#3b82f6"
+                      fill="#78716c"
                       radius={[4, 4, 0, 0]}
                       isAnimationActive={false}
                     >
@@ -650,7 +650,7 @@ export default function PortalDashboardTab({
                         dataKey="Contratadas"
                         position="top"
                         formatter={(val: any) => (val > 0 ? `${val}h` : '')}
-                        style={{ fontSize: '10px', fill: '#3b82f6', fontWeight: 600 }}
+                        style={{ fontSize: '10px', fill: '#78716c', fontWeight: 600 }}
                       />
                     </Bar>
                     <Bar
@@ -759,7 +759,7 @@ export default function PortalDashboardTab({
             <div className="flex items-center justify-between gap-2">
               <div>
                 <CardTitle className="text-base font-bold text-foreground flex items-center gap-2">
-                  <Users className="h-4 w-4 text-blue-500" />
+                  <Users className="h-4 w-4 text-amber-500" />
                   Top 10 de Colaboradores Solicitantes
                 </CardTitle>
                 <CardDescription className="text-xs text-muted-foreground mt-0.5">
@@ -791,7 +791,7 @@ export default function PortalDashboardTab({
                   <tbody className="divide-y divide-border/60">
                     {top10Requesters.map((req, idx) => (
                       <tr key={idx} className="hover:bg-muted/20 transition-colors">
-                        <td className="p-2.5 text-center font-bold text-blue-600 dark:text-blue-400 font-mono">
+                        <td className="p-2.5 text-center font-bold text-amber-600 dark:text-amber-400 font-mono">
                           {idx + 1}º
                         </td>
                         <td className="p-2.5 font-medium text-foreground">

@@ -283,7 +283,11 @@ export function CategoryEditDialog({
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancelar
           </Button>
-          <Button onClick={handleSave} disabled={saving} className="bg-blue-600 hover:bg-blue-700">
+          <Button
+            onClick={handleSave}
+            disabled={saving}
+            className="bg-primary text-primary-foreground hover:bg-primary/90"
+          >
             {saving ? 'Salvando...' : 'Salvar'}
           </Button>
         </DialogFooter>

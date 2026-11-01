@@ -118,8 +118,8 @@ export default function Dashboard() {
       label: 'Chamados Novos',
       value: totalNovos,
       icon: Inbox,
-      color: 'text-slate-600 dark:text-amber-400',
-      bg: 'bg-slate-500/10 dark:bg-amber-500/10',
+      color: 'text-amber-600 dark:text-amber-400',
+      bg: 'bg-amber-500/10 dark:bg-amber-500/10',
       filterKey: 'novos',
     },
     {
@@ -134,8 +134,8 @@ export default function Dashboard() {
       label: 'Aguardando Cliente',
       value: totalAguardando,
       icon: PauseCircle,
-      color: 'text-slate-600 dark:text-yellow-400',
-      bg: 'bg-slate-500/10 dark:bg-yellow-500/10',
+      color: 'text-amber-600 dark:text-amber-300',
+      bg: 'bg-amber-500/10 dark:bg-amber-500/10',
       filterKey: 'aguardandoCliente',
     },
     {
@@ -158,8 +158,8 @@ export default function Dashboard() {
       label: 'SLA em Risco',
       value: totalEmRisco,
       icon: AlertCircle,
-      color: 'text-slate-600 dark:text-amber-500',
-      bg: 'bg-slate-500/15 dark:bg-amber-500/15',
+      color: 'text-orange-600 dark:text-orange-400',
+      bg: 'bg-orange-500/15 dark:bg-orange-500/15',
       filterKey: 'slaRisco',
     },
     {

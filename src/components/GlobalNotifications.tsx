@@ -56,7 +56,9 @@ export function GlobalNotifications() {
           }}
         >
           <div className="flex-1 space-y-1">
-            <p className="text-sm font-semibold text-blue-600">Chamado Delegado</p>
+            <p className="text-sm font-semibold text-amber-600 dark:text-amber-400">
+              Chamado Delegado
+            </p>
             <p className="text-sm text-slate-700 dark:text-slate-300">{message}</p>
           </div>
           <button

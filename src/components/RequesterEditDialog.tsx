@@ -182,7 +182,7 @@ export function RequesterEditDialog({ ticket, open, onOpenChange, onSaved }: Pro
           <Button
             onClick={handleSubmit}
             disabled={saving || !name.trim()}
-            className="bg-blue-600 hover:bg-blue-700"
+            className="bg-primary text-primary-foreground hover:bg-primary/90"
           >
             {saving ? (
               <>

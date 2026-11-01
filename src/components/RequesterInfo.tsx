@@ -38,10 +38,7 @@ function InfoRow({
       <div className="min-w-0">
         <span className="text-slate-400 block">{label}</span>
         {href && value ? (
-          <a
-            href={href}
-            className="text-blue-600 hover:underline dark:text-blue-400 font-medium break-words"
-          >
+          <a href={href} className="text-primary hover:underline font-medium break-words">
             {value}
           </a>
         ) : (

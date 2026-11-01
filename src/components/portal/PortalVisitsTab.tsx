@@ -145,7 +145,7 @@ export default function PortalVisitsTab({ visits, loading, onOpenTicket }: Porta
                             : isScheduled
                               ? 'bg-amber-500/15 text-amber-600 border-amber-500/30'
                               : isCompleted
-                                ? 'bg-blue-500/15 text-blue-600 border-blue-500/30'
+                                ? 'bg-stone-500/15 text-stone-600 dark:text-stone-300 border-stone-500/30'
                                 : 'bg-muted text-muted-foreground'
                         }
                       >

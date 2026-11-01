@@ -159,8 +159,8 @@ export default function PortalApprovalsTab({
       </div>
 
       {!isFocalPoint && pendingApprovals.length > 0 && (
-        <div className="rounded-lg bg-blue-500/10 border border-blue-500/20 p-3 text-xs text-blue-900 dark:text-blue-200 flex items-start gap-2.5">
-          <AlertCircle className="h-4 w-4 text-blue-600 flex-shrink-0 mt-0.5" />
+        <div className="rounded-lg bg-amber-500/10 border border-amber-500/20 p-3 text-xs text-amber-900 dark:text-amber-200 flex items-start gap-2.5">
+          <AlertCircle className="h-4 w-4 text-amber-600 flex-shrink-0 mt-0.5" />
           <span>
             Seu perfil atual é <strong>Solicitante</strong>. As ações de aprovação/reprovação são
             reservadas aos <strong>Pontos Focais</strong> cadastrados. Se você é gestor da conta,

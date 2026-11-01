@@ -97,7 +97,7 @@ export function HourReviewDialog({
       <DialogContent className="sm:max-w-[760px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Clock className="h-5 w-5 text-blue-600" />
+            <Clock className="h-5 w-5 text-amber-600" />
             Revisão de Horas do Chamado
           </DialogTitle>
         </DialogHeader>

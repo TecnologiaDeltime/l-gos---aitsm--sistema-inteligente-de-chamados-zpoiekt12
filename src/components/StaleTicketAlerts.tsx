@@ -162,7 +162,7 @@ export function StaleTicketAlerts() {
         toast.warning('Chamado sem atualização', {
           description: 'Ticket #' + a.number + ': ' + a.title,
           duration: 10000,
-          icon: <Hourglass className="h-5 w-5 text-blue-500" />,
+          icon: <Hourglass className="h-5 w-5 text-amber-500" />,
         })
       }
     },
@@ -176,7 +176,7 @@ export function StaleTicketAlerts() {
   return (
     <div className="fixed bottom-4 right-4 z-[100] flex w-full max-w-sm flex-col gap-2">
       {pendingCount > 1 && (
-        <div className="pointer-events-none self-end rounded-full bg-blue-600 px-3 py-1 text-xs font-bold text-white shadow-lg">
+        <div className="pointer-events-none self-end rounded-full bg-amber-600 px-3 py-1 text-xs font-bold text-white shadow-lg">
           {pendingCount} chamados sem atualização
         </div>
       )}

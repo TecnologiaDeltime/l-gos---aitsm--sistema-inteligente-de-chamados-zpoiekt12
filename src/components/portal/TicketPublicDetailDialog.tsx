@@ -587,9 +587,7 @@ export default function TicketPublicDetailDialog({
                         <div className="flex items-center gap-1.5 font-semibold">
                           <span
                             className={
-                              isStaff
-                                ? 'text-amber-600 dark:text-amber-400'
-                                : 'text-blue-600 dark:text-blue-400'
+                              isStaff ? 'text-amber-600 dark:text-amber-400' : 'text-foreground'
                             }
                           >
                             {log.expand?.author?.name || 'Participante'}

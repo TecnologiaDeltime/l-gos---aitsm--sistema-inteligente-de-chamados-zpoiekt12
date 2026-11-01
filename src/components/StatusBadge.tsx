@@ -21,14 +21,14 @@ const STATUS_CONFIG: Record<string, { dot: string; className: string }> = {
       'bg-amber-500/10 text-amber-700 border-amber-300 dark:bg-amber-500/15 dark:text-amber-300 dark:border-amber-500/40',
   },
   Atribuído: {
-    dot: 'bg-blue-400 shadow-[0_0_6px_rgba(96,165,250,0.8)]',
+    dot: 'bg-amber-400 shadow-[0_0_6px_rgba(251,191,36,0.8)]',
     className:
-      'bg-blue-500/10 text-blue-700 border-blue-300 dark:bg-blue-500/15 dark:text-blue-300 dark:border-blue-500/40',
+      'bg-amber-500/10 text-amber-700 border-amber-300 dark:bg-amber-500/15 dark:text-amber-300 dark:border-amber-500/40',
   },
   'Em aberto': {
-    dot: 'bg-blue-400 shadow-[0_0_6px_rgba(96,165,250,0.8)]',
+    dot: 'bg-amber-400 shadow-[0_0_6px_rgba(251,191,36,0.8)]',
     className:
-      'bg-blue-500/10 text-blue-700 border-blue-300 dark:bg-blue-500/15 dark:text-blue-300 dark:border-blue-500/40',
+      'bg-amber-500/10 text-amber-700 border-amber-300 dark:bg-amber-500/15 dark:text-amber-300 dark:border-amber-500/40',
   },
   'Em Atendimento': {
     dot: 'bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]',

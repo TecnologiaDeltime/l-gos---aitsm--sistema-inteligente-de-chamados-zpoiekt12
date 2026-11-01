@@ -36,10 +36,7 @@ function ProfileRow({
       <div className="min-w-0">
         <span className="text-xs text-slate-400 block">{label}</span>
         {href && value ? (
-          <a
-            href={href}
-            className="text-sm text-blue-600 hover:underline dark:text-blue-400 font-medium break-words"
-          >
+          <a href={href} className="text-sm text-primary hover:underline font-medium break-words">
             {value}
           </a>
         ) : (

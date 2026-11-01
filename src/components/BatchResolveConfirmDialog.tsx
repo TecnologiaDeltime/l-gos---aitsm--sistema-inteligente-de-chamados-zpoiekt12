@@ -132,13 +132,13 @@ export function BatchResolveConfirmDialog({
         </DialogHeader>
 
         <div className="space-y-4 py-2 max-h-[60vh] overflow-y-auto pr-1">
-          <div className="rounded-md border border-blue-200 bg-blue-50 p-3 dark:bg-blue-950/40 dark:border-blue-900">
-            <div className="mb-2 flex items-center gap-1.5 text-xs font-semibold text-blue-800 dark:text-blue-200">
+          <div className="rounded-md border border-amber-200 bg-amber-50 p-3 dark:bg-amber-950/40 dark:border-amber-900">
+            <div className="mb-2 flex items-center gap-1.5 text-xs font-semibold text-amber-800 dark:text-amber-200">
               <Link2 className="h-3.5 w-3.5" />
               Chamados que serão resolvidos ({openCount + 1}):
             </div>
             <ul className="space-y-1 text-xs">
-              <li className="flex items-center justify-between gap-2 rounded border border-blue-300 bg-white px-2 py-1 dark:bg-slate-900 dark:border-blue-800">
+              <li className="flex items-center justify-between gap-2 rounded border border-amber-300 bg-white px-2 py-1 dark:bg-slate-900 dark:border-amber-800">
                 <span className="font-bold text-primary">{ticket.number}</span>
                 <span className="truncate font-medium text-foreground flex-1 mx-2">
                   {ticket.title}

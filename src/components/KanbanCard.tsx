@@ -40,7 +40,7 @@ export function KanbanCard({
       <div className="flex items-center justify-between mb-1.5">
         <Link
           to={`/tickets/${ticket.id}`}
-          className="text-xs font-bold text-blue-600 hover:underline"
+          className="text-xs font-bold text-primary hover:underline"
         >
           {ticket.number}
         </Link>

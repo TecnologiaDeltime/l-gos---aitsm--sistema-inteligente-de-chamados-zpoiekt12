@@ -161,7 +161,7 @@ export function ChildTicketDialog({
       <DialogContent className="sm:max-w-[640px]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <GitBranch className="h-5 w-5 text-blue-600" />
+            <GitBranch className="h-5 w-5 text-amber-600" />
             Abrir Ticket Filho
           </DialogTitle>
           <DialogDescription>
@@ -306,7 +306,7 @@ export function ChildTicketDialog({
             </Select>
           </div>
 
-          <div className="rounded-md border border-blue-200 bg-blue-50 p-3 text-xs text-blue-800 dark:bg-blue-950/40 dark:border-blue-900 dark:text-blue-200">
+          <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800 dark:bg-amber-950/40 dark:border-amber-900 dark:text-amber-200">
             <p>
               <span className="font-semibold">Empresa:</span>{' '}
               {parent.expand?.company?.trade_name || 'N/A'}
@@ -325,7 +325,7 @@ export function ChildTicketDialog({
           <Button
             onClick={handleSubmit}
             disabled={submitting || !title.trim() || !description.trim()}
-            className="bg-blue-600 hover:bg-blue-700"
+            className="bg-primary text-primary-foreground hover:bg-primary/90"
           >
             {submitting && <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />}
             Criar Ticket Filho

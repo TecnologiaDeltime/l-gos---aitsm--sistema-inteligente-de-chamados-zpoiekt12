@@ -46,7 +46,7 @@ export function PendingChildrenAlert({ pending, open, onOpenChange }: PendingChi
         <AlertDialogFooter>
           <AlertDialogCancel>Entendi</AlertDialogCancel>
           <AlertDialogAction
-            className="bg-blue-600 hover:bg-blue-700"
+            className="bg-primary text-primary-foreground hover:bg-primary/90"
             onClick={() => onOpenChange(false)}
           >
             OK
