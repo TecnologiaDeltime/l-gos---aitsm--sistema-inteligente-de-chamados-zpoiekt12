@@ -650,7 +650,7 @@ export default function PortalDashboardTab({
                         dataKey="Contratadas"
                         position="top"
                         formatter={(val: any) => (val > 0 ? `${val}h` : '')}
-                        style={{ fontSize: '10px', fill: '#78716c', fontWeight: 600 }}
+                        style={{ fontSize: '10px', fill: 'currentColor', fontWeight: 600 }}
                       />
                     </Bar>
                     <Bar
@@ -664,7 +664,7 @@ export default function PortalDashboardTab({
                         dataKey="Consumidas"
                         position="top"
                         formatter={(val: any) => (val > 0 ? `${val}h` : '')}
-                        style={{ fontSize: '10px', fill: '#d97706', fontWeight: 600 }}
+                        style={{ fontSize: '10px', fill: 'currentColor', fontWeight: 600 }}
                       />
                     </Bar>
                   </BarChart>

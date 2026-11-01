@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import { CalendarClock, FileText, TrendingDown } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { ChartContainer, type ChartConfig } from '@/components/ui/chart'
-import { BarChart, Bar, XAxis, YAxis, Tooltip, Legend } from 'recharts'
+import { BarChart, Bar, XAxis, YAxis, Tooltip, Legend, LabelList } from 'recharts'
 import { getContracts, ContractRecord } from '@/services/contracts'
 import { getTickets, TicketRecord } from '@/services/tickets'
 import { PeriodFilter, usePeriodFilter } from '@/components/contracts/PeriodFilter'
@@ -151,7 +151,13 @@ export default function ContractsDashboard() {
     Consumido: { label: 'Consumido', color: 'hsl(var(--chart-1))' },
   }
   const kpis = [
-    { l: 'Contratos Ativos', v: active.length, i: FileText, c: 'text-blue-600', b: 'bg-blue-50' },
+    {
+      l: 'Contratos Ativos',
+      v: active.length,
+      i: FileText,
+      c: 'text-amber-600 dark:text-amber-400',
+      b: 'bg-amber-50 dark:bg-amber-950/40',
+    },
     {
       l: 'Expiram este mês',
       v: expiringThisMonth,
@@ -222,7 +228,7 @@ export default function ContractsDashboard() {
                   <div className="flex-1 min-w-0">
                     <Link
                       to={`/contracts/${c.id}`}
-                      className="text-xs font-semibold text-blue-600 hover:underline"
+                      className="text-xs font-semibold text-amber-600 dark:text-amber-400 hover:underline"
                     >
                       {c.number}
                     </Link>
@@ -246,7 +252,7 @@ export default function ContractsDashboard() {
                 Período: {periodFilter.formattedLabel}
               </p>
             </div>
-            <span className="text-[10px] rounded-full border border-blue-200 bg-blue-50 px-2 py-0.5 font-medium text-blue-700 dark:border-blue-900 dark:bg-blue-950 dark:text-blue-300">
+            <span className="text-[10px] rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 font-medium text-amber-700 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-300">
               {periodFilter.mode === 'current_month' ? 'Mensal' : 'Customizado'}
             </span>
           </CardHeader>
@@ -260,8 +266,32 @@ export default function ContractsDashboard() {
                   <YAxis tick={{ fontSize: 10 }} />
                   <Tooltip />
                   <Legend />
-                  <Bar dataKey="Total" fill="hsl(var(--chart-2))" radius={4} />
-                  <Bar dataKey="Consumido" fill="hsl(var(--chart-1))" radius={4} />
+                  <Bar
+                    dataKey="Total"
+                    fill="hsl(var(--chart-2))"
+                    radius={4}
+                    isAnimationActive={false}
+                  >
+                    <LabelList
+                      dataKey="Total"
+                      position="top"
+                      formatter={(val: any) => (val > 0 ? `${val}h` : '')}
+                      style={{ fontSize: '10px', fill: 'currentColor', fontWeight: 600 }}
+                    />
+                  </Bar>
+                  <Bar
+                    dataKey="Consumido"
+                    fill="hsl(var(--chart-1))"
+                    radius={4}
+                    isAnimationActive={false}
+                  >
+                    <LabelList
+                      dataKey="Consumido"
+                      position="top"
+                      formatter={(val: any) => (val > 0 ? `${val}h` : '')}
+                      style={{ fontSize: '10px', fill: 'currentColor', fontWeight: 600 }}
+                    />
+                  </Bar>
                 </BarChart>
               </ChartContainer>
             )}
@@ -294,7 +324,10 @@ export default function ContractsDashboard() {
                   recentlyExpired.map((c) => (
                     <tr key={c.id} className="hover:bg-slate-50">
                       <td className="p-3">
-                        <Link to={`/contracts/${c.id}`} className="font-semibold text-blue-600">
+                        <Link
+                          to={`/contracts/${c.id}`}
+                          className="font-semibold text-amber-600 dark:text-amber-400 hover:underline"
+                        >
                           {c.number}
                         </Link>
                       </td>

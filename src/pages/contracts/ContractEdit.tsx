@@ -592,7 +592,7 @@ export default function ContractEdit() {
                 {customAgreements.map((ag, idx) => (
                   <div
                     key={ag.slug}
-                    className="flex items-center gap-2 rounded-lg border border-blue-200 bg-blue-50/40 p-3 dark:border-blue-900 dark:bg-blue-950/30"
+                    className="flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50/40 p-3 dark:border-amber-900 dark:bg-amber-950/30"
                   >
                     <Checkbox
                       id={`dist-custom-${ag.slug}`}
@@ -705,7 +705,11 @@ export default function ContractEdit() {
           <Button type="button" variant="outline" onClick={() => navigate(-1)} disabled={saving}>
             Cancelar
           </Button>
-          <Button type="submit" disabled={saving} className="bg-blue-600 hover:bg-blue-700">
+          <Button
+            type="submit"
+            disabled={saving}
+            className="bg-primary hover:bg-primary/90 text-primary-foreground"
+          >
             {saving ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Salvando...

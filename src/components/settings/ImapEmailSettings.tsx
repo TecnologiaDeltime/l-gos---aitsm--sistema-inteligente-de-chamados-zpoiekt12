@@ -621,11 +621,11 @@ export function ImapEmailSettings({
   }
 
   return (
-    <Card className="itsm-card border-blue-200 dark:border-blue-900 shadow-sm">
+    <Card className="itsm-card border-amber-200 dark:border-amber-900 shadow-sm">
       <CardHeader className="border-b border-slate-200 dark:border-slate-800">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-center gap-2.5">
-            <div className="p-2 rounded-lg bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400">
+            <div className="p-2 rounded-lg bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400">
               <Mail className="h-5 w-5" />
             </div>
             <div>
@@ -660,7 +660,7 @@ export function ImapEmailSettings({
             type="button"
             size="sm"
             variant={activeTab === 'config' ? 'default' : 'ghost'}
-            className={`h-8 text-xs ${activeTab === 'config' ? 'bg-blue-600 text-white' : ''}`}
+            className={`h-8 text-xs ${activeTab === 'config' ? 'bg-primary text-primary-foreground font-semibold' : ''}`}
             onClick={() => setActiveTab('config')}
           >
             <Server className="h-3.5 w-3.5 mr-1.5" />
@@ -680,7 +680,7 @@ export function ImapEmailSettings({
             type="button"
             size="sm"
             variant={activeTab === 'smtptest' ? 'default' : 'ghost'}
-            className={`h-8 text-xs ${activeTab === 'smtptest' ? 'bg-blue-600 text-white' : ''}`}
+            className={`h-8 text-xs ${activeTab === 'smtptest' ? 'bg-primary text-primary-foreground font-semibold' : ''}`}
             onClick={() => setActiveTab('smtptest')}
           >
             <Send className="h-3.5 w-3.5 mr-1.5" />
@@ -690,7 +690,7 @@ export function ImapEmailSettings({
             type="button"
             size="sm"
             variant={activeTab === 'test' ? 'default' : 'ghost'}
-            className={`h-8 text-xs ${activeTab === 'test' ? 'bg-blue-600 text-white' : ''}`}
+            className={`h-8 text-xs ${activeTab === 'test' ? 'bg-primary text-primary-foreground font-semibold' : ''}`}
             onClick={() => setActiveTab('test')}
           >
             <ShieldCheck className="h-3.5 w-3.5 mr-1.5" />
@@ -702,7 +702,7 @@ export function ImapEmailSettings({
             type="button"
             size="sm"
             variant={activeTab === 'sendtest' ? 'default' : 'ghost'}
-            className={`h-8 text-xs ${activeTab === 'sendtest' ? 'bg-blue-600 text-white' : ''}`}
+            className={`h-8 text-xs ${activeTab === 'sendtest' ? 'bg-primary text-primary-foreground font-semibold' : ''}`}
             onClick={() => setActiveTab('sendtest')}
           >
             <Mail className="h-3.5 w-3.5 mr-1.5" />
@@ -712,7 +712,7 @@ export function ImapEmailSettings({
             type="button"
             size="sm"
             variant={activeTab === 'dryrun' ? 'default' : 'ghost'}
-            className={`h-8 text-xs ${activeTab === 'dryrun' ? 'bg-blue-600 text-white' : ''}`}
+            className={`h-8 text-xs ${activeTab === 'dryrun' ? 'bg-primary text-primary-foreground font-semibold' : ''}`}
             onClick={() => setActiveTab('dryrun')}
           >
             <Play className="h-3.5 w-3.5 mr-1.5" />
@@ -722,7 +722,7 @@ export function ImapEmailSettings({
             type="button"
             size="sm"
             variant={activeTab === 'audit' ? 'default' : 'ghost'}
-            className={`h-8 text-xs ${activeTab === 'audit' ? 'bg-blue-600 text-white' : ''}`}
+            className={`h-8 text-xs ${activeTab === 'audit' ? 'bg-primary text-primary-foreground font-semibold' : ''}`}
             onClick={() => {
               setActiveTab('audit')
               if (auditLogs.length === 0) loadAuditHistory()
@@ -742,10 +742,10 @@ export function ImapEmailSettings({
         {activeTab === 'config' && (
           <div className="space-y-6">
             {/* Painel de Status do Último Ciclo da Rotina Automática */}
-            <div className="rounded-xl p-4 border bg-gradient-to-r from-slate-50 to-blue-50/40 dark:from-slate-900/60 dark:to-blue-950/20 border-slate-200 dark:border-slate-800 space-y-3">
+            <div className="rounded-xl p-4 border bg-gradient-to-r from-slate-50 to-amber-50/40 dark:from-slate-900/60 dark:to-amber-950/20 border-slate-200 dark:border-slate-800 space-y-3">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-200/80 dark:border-slate-800 pb-3">
                 <div className="flex items-center gap-2">
-                  <span className="flex h-2.5 w-2.5 rounded-full bg-blue-600 animate-ping" />
+                  <span className="flex h-2.5 w-2.5 rounded-full bg-amber-600 animate-ping" />
                   <span className="text-xs font-bold uppercase tracking-wider text-slate-800 dark:text-slate-200">
                     Status da Ingestão Automática (Ciclos de 2 min)
                   </span>
@@ -834,7 +834,7 @@ export function ImapEmailSettings({
             <div className="space-y-5">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-slate-200 dark:border-slate-800">
                 <div className="flex items-center gap-2">
-                  <div className="p-1.5 rounded-md bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300">
+                  <div className="p-1.5 rounded-md bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-300">
                     <Inbox className="h-4 w-4" />
                   </div>
                   <div>
@@ -867,7 +867,7 @@ export function ImapEmailSettings({
                     }
                     className={`p-3.5 rounded-xl border text-left transition-all relative flex flex-col gap-1.5 ${
                       (emailConfig.reception_mode || 'graph') === 'graph'
-                        ? 'border-blue-600 bg-blue-50/70 dark:bg-blue-950/40 text-blue-950 dark:text-blue-100 shadow-sm ring-1 ring-blue-600'
+                        ? 'border-amber-600 bg-amber-50/70 dark:bg-amber-950/40 text-amber-950 dark:text-amber-100 shadow-sm ring-1 ring-amber-600'
                         : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 hover:border-slate-300'
                     }`}
                   >
@@ -876,13 +876,13 @@ export function ImapEmailSettings({
                         <CheckCircle2
                           className={`h-4 w-4 ${
                             (emailConfig.reception_mode || 'graph') === 'graph'
-                              ? 'text-blue-600 dark:text-blue-400'
+                              ? 'text-amber-600 dark:text-amber-400'
                               : 'text-slate-300'
                           }`}
                         />
                         Microsoft Graph API (HTTPS)
                       </span>
-                      <Badge className="bg-blue-600 text-white text-[10px] font-semibold">
+                      <Badge className="bg-amber-600 text-white text-[10px] font-semibold">
                         Recomendado para Office 365
                       </Badge>
                     </div>
@@ -903,7 +903,7 @@ export function ImapEmailSettings({
                     }
                     className={`p-3.5 rounded-xl border text-left transition-all relative flex flex-col gap-1.5 ${
                       emailConfig.reception_mode === 'imap'
-                        ? 'border-blue-600 bg-blue-50/70 dark:bg-blue-950/40 text-blue-950 dark:text-blue-100 shadow-sm ring-1 ring-blue-600'
+                        ? 'border-amber-600 bg-amber-50/70 dark:bg-amber-950/40 text-amber-950 dark:text-amber-100 shadow-sm ring-1 ring-amber-600'
                         : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 hover:border-slate-300'
                     }`}
                   >
@@ -912,7 +912,7 @@ export function ImapEmailSettings({
                         <CheckCircle2
                           className={`h-4 w-4 ${
                             emailConfig.reception_mode === 'imap'
-                              ? 'text-blue-600 dark:text-blue-400'
+                              ? 'text-amber-600 dark:text-amber-400'
                               : 'text-slate-300'
                           }`}
                         />
@@ -934,10 +934,10 @@ export function ImapEmailSettings({
               {(emailConfig.reception_mode || 'graph') === 'graph' && (
                 <div className="space-y-4">
                   {/* Card de Passo a Passo Microsoft Entra ID */}
-                  <div className="p-4 rounded-xl border border-blue-200 dark:border-blue-900 bg-gradient-to-r from-blue-50/70 to-indigo-50/50 dark:from-blue-950/40 dark:to-indigo-950/30 space-y-3 text-xs">
+                  <div className="p-4 rounded-xl border border-amber-200 dark:border-amber-900 bg-gradient-to-r from-amber-50/70 to-orange-50/50 dark:from-amber-950/40 dark:to-orange-950/30 space-y-3 text-xs">
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2 text-blue-950 dark:text-blue-100 font-bold">
-                        <Server className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                      <div className="flex items-center gap-2 text-amber-950 dark:text-amber-100 font-bold">
+                        <Server className="h-4 w-4 text-amber-600 dark:text-amber-400" />
                         <span>
                           Passo a Passo: Como Configurar o Aplicativo no Microsoft Entra ID (Azure)
                         </span>
@@ -946,7 +946,7 @@ export function ImapEmailSettings({
                         href="https://portal.azure.com/#view/Microsoft_AAD_IAM/ActiveDirectoryMenuBlade/~/RegisteredApps"
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-[11px] text-blue-700 dark:text-blue-300 hover:underline flex items-center gap-1 font-semibold"
+                        className="text-[11px] text-amber-700 dark:text-amber-300 hover:underline flex items-center gap-1 font-semibold"
                       >
                         Abrir Portal Azure / Entra <ExternalLink className="h-3 w-3" />
                       </a>
@@ -981,7 +981,7 @@ export function ImapEmailSettings({
                       <li>
                         <strong>ESSENCIAL:</strong> Na mesma tela de Permissões de API, clique no
                         botão{' '}
-                        <strong className="text-blue-700 dark:text-blue-300">
+                        <strong className="text-amber-700 dark:text-amber-300">
                           "Conceder consentimento do administrador para [Sua Empresa]"
                         </strong>{' '}
                         para que o status mude para verde (Concedido).
@@ -1000,7 +1000,7 @@ export function ImapEmailSettings({
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-1.5">
                       <Label className="text-xs font-medium text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
-                        <Server className="h-3.5 w-3.5 text-blue-500" />
+                        <Server className="h-3.5 w-3.5 text-amber-500" />
                         ID do Locatário (Tenant ID)
                       </Label>
                       <Input
@@ -1020,7 +1020,7 @@ export function ImapEmailSettings({
 
                     <div className="space-y-1.5">
                       <Label className="text-xs font-medium text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
-                        <Key className="h-3.5 w-3.5 text-blue-500" />
+                        <Key className="h-3.5 w-3.5 text-amber-500" />
                         ID do Aplicativo (Client ID)
                       </Label>
                       <Input
@@ -1047,7 +1047,7 @@ export function ImapEmailSettings({
                         <button
                           type="button"
                           onClick={() => setShowGraphSecret(!showGraphSecret)}
-                          className="text-[11px] text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1"
+                          className="text-[11px] text-amber-600 dark:text-amber-400 hover:underline flex items-center gap-1"
                         >
                           {showGraphSecret ? (
                             <>
@@ -1114,7 +1114,7 @@ export function ImapEmailSettings({
 
                     <div className="space-y-1.5">
                       <Label className="text-xs font-medium text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
-                        <Mail className="h-3.5 w-3.5 text-blue-500" />
+                        <Mail className="h-3.5 w-3.5 text-amber-500" />
                         Caixa / E-mail Monitorado (Mailbox)
                       </Label>
                       <Input
@@ -1280,7 +1280,7 @@ export function ImapEmailSettings({
                         <button
                           type="button"
                           onClick={() => setShowPassword(!showPassword)}
-                          className="text-[11px] text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1"
+                          className="text-[11px] text-amber-600 dark:text-amber-400 hover:underline flex items-center gap-1"
                         >
                           {showPassword ? (
                             <>

@@ -149,7 +149,7 @@ export default function ScheduledReportsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-bold flex items-center gap-2">
-          <Mail className="h-5 w-5 text-blue-600" /> Relatórios Agendados
+          <Mail className="h-5 w-5 text-amber-600 dark:text-amber-400" /> Relatórios Agendados
         </h2>
         <Button size="sm" onClick={openCreate}>
           <Plus className="h-4 w-4 mr-1.5" /> Novo Relatório

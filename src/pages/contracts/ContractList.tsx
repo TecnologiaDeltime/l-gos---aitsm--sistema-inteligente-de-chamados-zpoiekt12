@@ -59,7 +59,7 @@ export default function ContractList() {
             </Button>
           </Link>
           <Link to="/contracts/new">
-            <Button className="bg-blue-600 hover:bg-blue-700">
+            <Button className="bg-primary hover:bg-primary/90 text-primary-foreground">
               <PlusCircle className="mr-2 h-4 w-4" /> Novo Contrato
             </Button>
           </Link>
@@ -80,7 +80,7 @@ export default function ContractList() {
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="flex items-center gap-3">
-                  <div className="p-2.5 rounded-lg bg-blue-50 text-blue-600">
+                  <div className="p-2.5 rounded-lg bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400">
                     <FileText className="h-5 w-5" />
                   </div>
                   <div>
@@ -132,7 +132,11 @@ export default function ContractList() {
                   </Button>
                 </Link>
                 <Link to={`/contracts/${ct.id}/edit`}>
-                  <Button variant="outline" size="sm" className="text-blue-600 hover:text-blue-700">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-amber-600 dark:text-amber-400 hover:text-amber-700"
+                  >
                     <Pencil className="mr-1.5 h-3.5 w-3.5" /> Editar
                   </Button>
                 </Link>

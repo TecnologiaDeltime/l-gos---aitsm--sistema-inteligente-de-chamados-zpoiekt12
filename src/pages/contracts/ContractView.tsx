@@ -170,7 +170,7 @@ export default function ContractView() {
           </Button>
           <Button
             size="sm"
-            className="bg-blue-600 hover:bg-blue-700"
+            className="bg-primary hover:bg-primary/90 text-primary-foreground"
             onClick={() => navigate(`/contracts/${contract.id}/edit`)}
           >
             <Pencil className="mr-1.5 h-4 w-4" /> Editar
@@ -203,7 +203,7 @@ export default function ContractView() {
       <div className="rounded-xl border bg-white p-6 dark:bg-slate-900 space-y-4">
         <div className="flex items-center justify-between">
           <h3 className="text-sm font-semibold">Consumo de Horas no Período</h3>
-          <span className="text-xs text-blue-600 dark:text-blue-400 font-medium">
+          <span className="text-xs text-amber-600 dark:text-amber-400 font-medium">
             {periodFilter.formattedLabel}
           </span>
         </div>
@@ -230,9 +230,9 @@ export default function ContractView() {
               {formatHours(periodBalance)}
             </p>
           </div>
-          <div className="p-3 rounded-lg bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900">
-            <p className="text-xs text-blue-600 dark:text-blue-400">Interações Registradas</p>
-            <p className="text-lg font-bold text-blue-700 dark:text-blue-300">
+          <div className="p-3 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900">
+            <p className="text-xs text-amber-600 dark:text-amber-400">Interações Registradas</p>
+            <p className="text-lg font-bold text-amber-700 dark:text-amber-300">
               {periodInteractions.length} ({formatSeconds(totalPeriodMinutes * 60)})
             </p>
           </div>
@@ -287,7 +287,10 @@ export default function ContractView() {
                 {tickets.map((t) => (
                   <tr key={t.id} className="hover:bg-slate-50">
                     <td className="p-2.5">
-                      <Link to={`/tickets/${t.id}`} className="font-semibold text-blue-600">
+                      <Link
+                        to={`/tickets/${t.id}`}
+                        className="font-semibold text-amber-600 dark:text-amber-400 hover:underline"
+                      >
                         #{t.number}
                       </Link>
                     </td>

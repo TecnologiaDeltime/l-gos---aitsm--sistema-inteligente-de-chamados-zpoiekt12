@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react'
 import { ChartCard } from '@/components/dashboard/ChartCard'
 import { ChartContainer, type ChartConfig } from '@/components/ui/chart'
-import { LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid, Legend } from 'recharts'
+import { LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid, Legend, LabelList } from 'recharts'
 import {
   Select,
   SelectContent,
@@ -111,7 +111,15 @@ export function OperatorPerformanceSection({ data }: OperatorPerformanceSectionP
                 dataKey={name}
                 stroke={`hsl(var(--chart-${(i % 5) + 1}))`}
                 strokeWidth={2}
-              />
+                isAnimationActive={false}
+              >
+                <LabelList
+                  dataKey={name}
+                  position="top"
+                  formatter={(val: any) => (val > 0 ? String(val) : '')}
+                  style={{ fontSize: '10px', fill: 'currentColor', fontWeight: 600 }}
+                />
+              </Line>
             ))}
           </LineChart>
         </ChartContainer>

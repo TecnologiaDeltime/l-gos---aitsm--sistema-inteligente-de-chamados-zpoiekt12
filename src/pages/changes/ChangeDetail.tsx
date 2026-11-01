@@ -54,6 +54,7 @@ import {
   ChangePriorityBadge,
 } from '@/components/ChangeStatusBadge'
 import { useAuth } from '@/hooks/use-auth'
+import { usePermissions } from '@/hooks/use-permissions'
 import { useRealtime } from '@/hooks/use-realtime'
 import { useToast } from '@/hooks/use-toast'
 

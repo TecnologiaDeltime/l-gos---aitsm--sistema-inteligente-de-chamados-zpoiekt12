@@ -117,7 +117,7 @@ export default function SlaDashboard() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-bold flex items-center gap-2">
-          <Timer className="h-5 w-5 text-blue-600" /> Dashboard SLA
+          <Timer className="h-5 w-5 text-amber-600 dark:text-amber-400" /> Dashboard SLA
         </h2>
         <div className="flex items-center gap-2">
           <Link to="/sla-goals">

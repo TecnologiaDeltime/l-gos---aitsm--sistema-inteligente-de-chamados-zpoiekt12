@@ -284,7 +284,8 @@ export default function SlaGoalsPage() {
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div>
           <h2 className="text-xl font-bold flex items-center gap-2">
-            <Target className="h-5 w-5 text-blue-600" /> Gestão de Metas por Operador
+            <Target className="h-5 w-5 text-amber-600 dark:text-amber-400" /> Gestão de Metas por
+            Operador
           </h2>
           <p className="text-xs text-slate-500">
             Defina e ajuste as metas individuais de SLA de Resposta, SLA de Solução e Efetividade de
@@ -314,7 +315,7 @@ export default function SlaGoalsPage() {
               <p className="text-xs text-slate-500 font-medium">Operadores Elegíveis</p>
               <p className="text-2xl font-bold">{technicians.length}</p>
             </div>
-            <div className="p-2.5 rounded-lg bg-blue-50 dark:bg-blue-950/40 text-blue-600">
+            <div className="p-2.5 rounded-lg bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400">
               <Target className="h-5 w-5" />
             </div>
           </CardContent>
@@ -403,13 +404,13 @@ export default function SlaGoalsPage() {
                           <span className="text-slate-400 text-xs">Padrão (90/85/80)</span>
                         )}
                       </TableCell>
-                      <TableCell className="text-xs text-center font-bold text-blue-600">
+                      <TableCell className="text-xs text-center font-bold text-amber-600 dark:text-amber-400">
                         {generalGoal ? `${generalGoal.response_sla_target}%` : '90%'}
                       </TableCell>
                       <TableCell className="text-xs text-center font-bold text-emerald-600">
                         {generalGoal ? `${generalGoal.solution_sla_target}%` : '85%'}
                       </TableCell>
-                      <TableCell className="text-xs text-center font-bold text-indigo-600">
+                      <TableCell className="text-xs text-center font-bold text-primary">
                         {generalGoal ? `${generalGoal.resolution_effectiveness_target}%` : '80%'}
                       </TableCell>
                       <TableCell className="text-xs text-center">
@@ -449,7 +450,7 @@ export default function SlaGoalsPage() {
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div>
               <CardTitle className="text-sm font-semibold flex items-center gap-2">
-                <Filter className="h-4 w-4 text-blue-600" />
+                <Filter className="h-4 w-4 text-amber-600 dark:text-amber-400" />
                 Registros de Metas Cadastradas
               </CardTitle>
               <CardDescription className="text-xs">
@@ -524,7 +525,7 @@ export default function SlaGoalsPage() {
                           ) : (
                             <Badge
                               variant="outline"
-                              className="text-[10px] text-blue-700 border-blue-300"
+                              className="text-[10px] text-amber-700 border-amber-300 dark:text-amber-400 dark:border-amber-700"
                             >
                               Mês Específico
                             </Badge>
@@ -535,13 +536,13 @@ export default function SlaGoalsPage() {
                             ? 'Contínua / Geral'
                             : formatPeriodMonth(g.period_month)}
                         </TableCell>
-                        <TableCell className="text-xs text-center font-bold text-blue-600">
+                        <TableCell className="text-xs text-center font-bold text-amber-600 dark:text-amber-400">
                           {g.response_sla_target}%
                         </TableCell>
                         <TableCell className="text-xs text-center font-bold text-emerald-600">
                           {g.solution_sla_target}%
                         </TableCell>
-                        <TableCell className="text-xs text-center font-bold text-indigo-600">
+                        <TableCell className="text-xs text-center font-bold text-primary">
                           {g.resolution_effectiveness_target}%
                         </TableCell>
                         <TableCell className="text-xs text-slate-500 max-w-[150px] truncate">
@@ -556,7 +557,7 @@ export default function SlaGoalsPage() {
                               onClick={() => openEditGoalModal(g)}
                               title="Editar meta"
                             >
-                              <Save className="h-3.5 w-3.5 text-blue-600" />
+                              <Save className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" />
                             </Button>
                             <Button
                               size="sm"
@@ -584,7 +585,7 @@ export default function SlaGoalsPage() {
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Target className="h-5 w-5 text-blue-600" />
+              <Target className="h-5 w-5 text-amber-600 dark:text-amber-400" />
               {editingGoal ? 'Editar Meta do Operador' : 'Definir Meta do Operador'}
             </DialogTitle>
             <DialogDescription className="text-xs">
@@ -649,7 +650,7 @@ export default function SlaGoalsPage() {
             {/* Metas: 3 percentuais */}
             <div className="grid grid-cols-3 gap-2.5 pt-2">
               <div className="space-y-1.5">
-                <Label className="text-[11px] font-semibold text-blue-700 dark:text-blue-400">
+                <Label className="text-[11px] font-semibold text-amber-700 dark:text-amber-400">
                   SLA Resposta (%)
                 </Label>
                 <Input
@@ -679,9 +680,7 @@ export default function SlaGoalsPage() {
               </div>
 
               <div className="space-y-1.5">
-                <Label className="text-[11px] font-semibold text-indigo-700 dark:text-indigo-400">
-                  Efetividade (%)
-                </Label>
+                <Label className="text-[11px] font-semibold text-primary">Efetividade (%)</Label>
                 <Input
                   type="number"
                   min={0}

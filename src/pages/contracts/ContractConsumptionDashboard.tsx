@@ -10,7 +10,7 @@ import {
 } from '@/components/ui/table'
 import { Button } from '@/components/ui/button'
 import { ChartContainer, type ChartConfig } from '@/components/ui/chart'
-import { BarChart, Bar, XAxis, YAxis, Tooltip } from 'recharts'
+import { BarChart, Bar, XAxis, YAxis, Tooltip, LabelList } from 'recharts'
 import { getContracts, ContractRecord, CONTRACT_HOURS_LEVELS } from '@/services/contracts'
 import { getContractPeriods, ContractPeriodRecord } from '@/services/contract-periods'
 import { getQueues, QueueRecord } from '@/services/queues'
@@ -185,15 +185,15 @@ export default function ContractConsumptionDashboard() {
       label: 'Clientes Ativos',
       value: contracts.filter((c) => c.status === 'Ativo').length,
       icon: Clock,
-      color: 'text-blue-600',
-      bg: 'bg-blue-50',
+      color: 'text-amber-600 dark:text-amber-400',
+      bg: 'bg-amber-50 dark:bg-amber-950/40',
     },
     {
       label: 'Horas Contratadas',
       value: formatHours(totalContracted),
       icon: Clock,
-      color: 'text-indigo-600',
-      bg: 'bg-indigo-50',
+      color: 'text-primary',
+      bg: 'bg-primary/10',
     },
     {
       label: 'Horas Consumidas',
@@ -233,7 +233,7 @@ export default function ContractConsumptionDashboard() {
         : 'bg-green-100 text-green-700'
 
   const levelBarColor = (pct: number) =>
-    pct >= 100 ? 'bg-red-500' : pct >= 80 ? 'bg-amber-500' : 'bg-blue-500'
+    pct >= 100 ? 'bg-red-500' : pct >= 80 ? 'bg-amber-500' : 'bg-emerald-500'
 
   const chartData = data
     .filter((d) => d.contracted > 0)
@@ -321,8 +321,32 @@ export default function ContractConsumptionDashboard() {
                 <XAxis dataKey="name" tick={{ fontSize: 9 }} />
                 <YAxis tick={{ fontSize: 10 }} />
                 <Tooltip />
-                <Bar dataKey="Contratado" fill="hsl(var(--chart-2))" radius={4} />
-                <Bar dataKey="Consumido" fill="hsl(var(--chart-1))" radius={4} />
+                <Bar
+                  dataKey="Contratado"
+                  fill="hsl(var(--chart-2))"
+                  radius={4}
+                  isAnimationActive={false}
+                >
+                  <LabelList
+                    dataKey="Contratado"
+                    position="top"
+                    formatter={(val: any) => (val > 0 ? `${val}h` : '')}
+                    style={{ fontSize: '10px', fill: 'currentColor', fontWeight: 600 }}
+                  />
+                </Bar>
+                <Bar
+                  dataKey="Consumido"
+                  fill="hsl(var(--chart-1))"
+                  radius={4}
+                  isAnimationActive={false}
+                >
+                  <LabelList
+                    dataKey="Consumido"
+                    position="top"
+                    formatter={(val: any) => (val > 0 ? `${val}h` : '')}
+                    style={{ fontSize: '10px', fill: 'currentColor', fontWeight: 600 }}
+                  />
+                </Bar>
               </BarChart>
             </ChartContainer>
           </CardContent>
@@ -353,7 +377,7 @@ export default function ContractConsumptionDashboard() {
                   .filter((lvl) => lvl.contractedSeconds > 0 || lvl.consumedSeconds > 0)
                   .map((lvl) => (
                     <TableRow key={d.contract.id + '_' + lvl.key}>
-                      <TableCell className="text-xs font-semibold text-blue-600">
+                      <TableCell className="text-xs font-semibold text-amber-600 dark:text-amber-400">
                         {d.contract.number}
                       </TableCell>
                       <TableCell className="text-xs">
@@ -425,7 +449,7 @@ export default function ContractConsumptionDashboard() {
             <TableBody>
               {data.map((d) => (
                 <TableRow key={d.contract.id}>
-                  <TableCell className="text-xs font-semibold text-blue-600">
+                  <TableCell className="text-xs font-semibold text-amber-600 dark:text-amber-400">
                     {d.contract.number}
                   </TableCell>
                   <TableCell className="text-xs">

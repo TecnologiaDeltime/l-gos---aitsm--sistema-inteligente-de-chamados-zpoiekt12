@@ -169,9 +169,9 @@ export default function AlertAuditPage() {
         return (
           <Badge
             variant="outline"
-            className="bg-blue-100 text-blue-800 border-blue-300 dark:bg-blue-950 dark:text-blue-300 dark:border-blue-800"
+            className="bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-950 dark:text-amber-300 dark:border-amber-800"
           >
-            <Clock className="h-3 w-3 mr-1 text-blue-600" /> SLA Resposta
+            <Clock className="h-3 w-3 mr-1 text-amber-600 dark:text-amber-400" /> SLA Resposta
           </Badge>
         )
       case 'SLA_RESOLUTION':
@@ -217,7 +217,7 @@ export default function AlertAuditPage() {
         )
       case 'VIEWED':
         return (
-          <Badge className="bg-blue-600 hover:bg-blue-700 text-white font-medium">
+          <Badge className="bg-amber-600 hover:bg-amber-700 text-white font-medium">
             <ExternalLink className="h-3 w-3 mr-1" /> Visualizado
           </Badge>
         )
@@ -354,7 +354,8 @@ export default function AlertAuditPage() {
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-2xl font-bold tracking-tight flex items-center gap-2">
-            <FileSearch className="h-6 w-6 text-blue-600" /> Auditoria de Alertas
+            <FileSearch className="h-6 w-6 text-amber-600 dark:text-amber-400" /> Auditoria de
+            Alertas
           </h2>
           <p className="text-sm text-muted-foreground">
             Acompanhe o engajamento dos operadores com alertas de chamados estagnados, SLAs e
@@ -380,7 +381,7 @@ export default function AlertAuditPage() {
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="text-sm font-semibold flex items-center gap-2">
-            <Filter className="h-4 w-4 text-blue-600" /> Filtros de Pesquisa
+            <Filter className="h-4 w-4 text-amber-600 dark:text-amber-400" /> Filtros de Pesquisa
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -457,14 +458,14 @@ export default function AlertAuditPage() {
 
       {/* Cards de Resumo */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="border-l-4 border-l-blue-600 shadow-sm">
+        <Card className="border-l-4 border-l-amber-600 shadow-sm">
           <CardContent className="p-4 flex items-center justify-between">
             <div>
               <p className="text-xs font-medium text-muted-foreground">Total de Interações</p>
               <h3 className="text-2xl font-bold mt-1">{stats.total}</h3>
               <p className="text-[11px] text-muted-foreground mt-0.5">no período selecionado</p>
             </div>
-            <div className="h-10 w-10 rounded-full bg-blue-100 dark:bg-blue-950 flex items-center justify-center text-blue-600">
+            <div className="h-10 w-10 rounded-full bg-amber-100 dark:bg-amber-950/60 flex items-center justify-center text-amber-600 dark:text-amber-400">
               <Layers className="h-5 w-5" />
             </div>
           </CardContent>
@@ -581,7 +582,7 @@ export default function AlertAuditPage() {
                           {tkt ? (
                             <Link
                               to={`/tickets/${tkt.id}`}
-                              className="font-medium text-blue-600 dark:text-blue-400 hover:underline inline-flex items-center gap-1"
+                              className="font-medium text-amber-600 dark:text-amber-400 hover:underline inline-flex items-center gap-1"
                             >
                               <span>#{tkt.number}</span>
                               <span className="text-muted-foreground font-normal truncate max-w-[200px]">

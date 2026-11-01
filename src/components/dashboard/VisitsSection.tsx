@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import { ChartCard } from '@/components/dashboard/ChartCard'
 import { ChartContainer, type ChartConfig } from '@/components/ui/chart'
-import { BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, Legend } from 'recharts'
+import { BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, Legend, LabelList } from 'recharts'
 import { ExecutiveKpiCard } from '@/components/dashboard/ExecutiveKpiCard'
 import { CheckCircle, Calendar, Percent } from 'lucide-react'
 import { computeVisitMetrics, computeMonthlyVisits } from '@/lib/dashboard-metrics'
@@ -59,8 +59,32 @@ export function VisitsSection({ data }: VisitsSectionProps) {
               <YAxis tick={{ fontSize: 10 }} />
               <Tooltip contentStyle={{ fontSize: 11 }} />
               <Legend wrapperStyle={{ fontSize: 11 }} />
-              <Bar dataKey="Agendadas" fill="hsl(var(--chart-1))" radius={4} />
-              <Bar dataKey="Concluidas" fill="hsl(var(--chart-2))" radius={4} />
+              <Bar
+                dataKey="Agendadas"
+                fill="hsl(var(--chart-1))"
+                radius={4}
+                isAnimationActive={false}
+              >
+                <LabelList
+                  dataKey="Agendadas"
+                  position="top"
+                  formatter={(val: any) => (val > 0 ? String(val) : '')}
+                  style={{ fontSize: '10px', fill: 'currentColor', fontWeight: 600 }}
+                />
+              </Bar>
+              <Bar
+                dataKey="Concluidas"
+                fill="hsl(var(--chart-2))"
+                radius={4}
+                isAnimationActive={false}
+              >
+                <LabelList
+                  dataKey="Concluidas"
+                  position="top"
+                  formatter={(val: any) => (val > 0 ? String(val) : '')}
+                  style={{ fontSize: '10px', fill: 'currentColor', fontWeight: 600 }}
+                />
+              </Bar>
             </BarChart>
           </ChartContainer>
         )}

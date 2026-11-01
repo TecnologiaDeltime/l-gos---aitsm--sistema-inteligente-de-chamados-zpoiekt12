@@ -136,7 +136,7 @@ export default function RecurrentActivities() {
     <div className="space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-2">
         <h2 className="text-xl font-bold flex items-center gap-2">
-          <Repeat className="h-5 w-5 text-blue-600" /> Atividades Recorrentes
+          <Repeat className="h-5 w-5 text-amber-600 dark:text-amber-400" /> Atividades Recorrentes
         </h2>
         <div className="flex gap-2">
           <Button

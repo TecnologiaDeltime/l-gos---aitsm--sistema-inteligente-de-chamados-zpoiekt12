@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react'
 import { ChartContainer, type ChartConfig } from '@/components/ui/chart'
-import { BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, Legend } from 'recharts'
+import { BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, Legend, LabelList } from 'recharts'
 import { ChartCard } from '@/components/dashboard/ChartCard'
 import { Button } from '@/components/ui/button'
 import { computeMonthlyChart } from '@/lib/dashboard-metrics'
@@ -98,8 +98,34 @@ export function TicketsChartSection({ tickets, onDrillDown }: TicketsChartSectio
               }}
             />
             <Legend wrapperStyle={{ fontSize: 11 }} />
-            <Bar dataKey="Abertos" fill="hsl(var(--chart-1))" radius={4} cursor="pointer" />
-            <Bar dataKey="Resolvidos" fill="hsl(var(--chart-2))" radius={4} cursor="pointer" />
+            <Bar
+              dataKey="Abertos"
+              fill="hsl(var(--chart-1))"
+              radius={4}
+              cursor="pointer"
+              isAnimationActive={false}
+            >
+              <LabelList
+                dataKey="Abertos"
+                position="top"
+                formatter={(val: any) => (val > 0 ? String(val) : '')}
+                style={{ fontSize: '10px', fill: 'currentColor', fontWeight: 600 }}
+              />
+            </Bar>
+            <Bar
+              dataKey="Resolvidos"
+              fill="hsl(var(--chart-2))"
+              radius={4}
+              cursor="pointer"
+              isAnimationActive={false}
+            >
+              <LabelList
+                dataKey="Resolvidos"
+                position="top"
+                formatter={(val: any) => (val > 0 ? String(val) : '')}
+                style={{ fontSize: '10px', fill: 'currentColor', fontWeight: 600 }}
+              />
+            </Bar>
           </BarChart>
         </ChartContainer>
       )}

@@ -538,7 +538,8 @@ export default function MonthlyClientReportPage() {
           <div className="flex items-center gap-2">
             <div>
               <h1 className="text-xl font-bold flex items-center gap-2 text-slate-900 dark:text-slate-100">
-                <FileText className="h-5 w-5 text-blue-600" /> Relatório Mensal do Cliente
+                <FileText className="h-5 w-5 text-amber-600 dark:text-amber-400" /> Relatório Mensal
+                do Cliente
               </h1>
               <p className="text-xs text-slate-500">
                 Extração gráfica mensal com consolidação de acordos, setores, solicitantes e ativos
@@ -552,7 +553,7 @@ export default function MonthlyClientReportPage() {
               size="sm"
               onClick={() => setScheduleDialogOpen(true)}
               disabled={!companyId}
-              className="border-blue-600 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/40"
+              className="border-amber-600 text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/40"
             >
               <Mail className="h-4 w-4 mr-1.5" /> Envio Automático por E-mail
             </Button>
@@ -568,7 +569,7 @@ export default function MonthlyClientReportPage() {
               size="sm"
               onClick={loadReport}
               disabled={loadingReport || !companyId}
-              className="bg-blue-600 hover:bg-blue-700"
+              className="bg-primary hover:bg-primary/90 text-primary-foreground"
             >
               <RefreshCw className={`h-4 w-4 mr-1.5 ${loadingReport ? 'animate-spin' : ''}`} />
               Gerar Relatório
@@ -631,7 +632,8 @@ export default function MonthlyClientReportPage() {
               {/* Cliente */}
               <div className="space-y-1.5">
                 <Label className="text-xs font-semibold flex items-center gap-1.5">
-                  <Building2 className="h-3.5 w-3.5 text-blue-600" /> Cliente / Empresa
+                  <Building2 className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" /> Cliente /
+                  Empresa
                 </Label>
                 <Select
                   value={companyId}
@@ -654,7 +656,8 @@ export default function MonthlyClientReportPage() {
               {/* Mês de Referência */}
               <div className="space-y-1.5">
                 <Label className="text-xs font-semibold flex items-center gap-1.5">
-                  <Calendar className="h-3.5 w-3.5 text-blue-600" /> Mês de Referência
+                  <Calendar className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" /> Mês de
+                  Referência
                 </Label>
                 <div className="flex items-center gap-1">
                   <Button
@@ -765,7 +768,7 @@ export default function MonthlyClientReportPage() {
               <h2 className="abnt-cover-title text-2xl font-extrabold tracking-tight text-slate-900 dark:text-slate-100">
                 RELATÓRIO MENSAL DE ATENDIMENTO TÉCNICO
               </h2>
-              <p className="abnt-cover-subtitle text-lg font-medium text-blue-700 dark:text-blue-400 mt-2">
+              <p className="abnt-cover-subtitle text-lg font-medium text-amber-700 dark:text-amber-400 mt-2">
                 {reportData.company.trade_name || reportData.company.legal_name}
               </p>
               <p className="text-sm text-slate-600 dark:text-slate-400 mt-1 font-serif">
@@ -812,7 +815,7 @@ export default function MonthlyClientReportPage() {
             <Card className="shadow-xs">
               <CardContent className="p-4">
                 <p className="text-xs font-medium text-muted-foreground">Horas Utilizadas</p>
-                <p className="text-2xl font-bold font-mono text-blue-600 mt-1">
+                <p className="text-2xl font-bold font-mono text-amber-600 dark:text-amber-400 mt-1">
                   {reportData.totalUsedHours.toFixed(1)}h
                 </p>
                 <p className="text-[11px] text-muted-foreground mt-0.5">Total apurado</p>
@@ -842,7 +845,7 @@ export default function MonthlyClientReportPage() {
                       ? 'text-red-600'
                       : reportData.totalUtilizationPercent > 80
                         ? 'text-amber-600'
-                        : 'text-blue-600'
+                        : 'text-amber-600 dark:text-amber-400'
                   }`}
                 >
                   {reportData.totalUtilizationPercent.toFixed(1)}%
@@ -857,7 +860,7 @@ export default function MonthlyClientReportPage() {
           {/* ============================================================== */}
           <section className="abnt-section bg-white dark:bg-slate-900 border rounded-xl p-6 shadow-xs print:border-none print:shadow-none print:p-0">
             <h3 className="abnt-section-title text-lg font-bold flex items-center gap-2 mb-4 text-slate-900 dark:text-slate-100">
-              <Clock className="h-5 w-5 text-blue-600 print:hidden" />
+              <Clock className="h-5 w-5 text-amber-600 dark:text-amber-400 print:hidden" />
               1. Horas por Acordo de Atendimento
             </h3>
 
@@ -957,7 +960,7 @@ export default function MonthlyClientReportPage() {
                         <TableCell className="text-xs text-right font-mono">
                           {ag.contractedHours.toFixed(2)}h
                         </TableCell>
-                        <TableCell className="text-xs text-right font-mono font-semibold text-blue-700 dark:text-blue-400">
+                        <TableCell className="text-xs text-right font-mono font-semibold text-amber-700 dark:text-amber-400">
                           {ag.usedHours.toFixed(2)}h
                         </TableCell>
                         <TableCell
@@ -990,7 +993,7 @@ export default function MonthlyClientReportPage() {
                       <TableCell className="text-xs text-right font-mono">
                         {reportData.totalContractedHours.toFixed(2)}h
                       </TableCell>
-                      <TableCell className="text-xs text-right font-mono text-blue-700 dark:text-blue-400">
+                      <TableCell className="text-xs text-right font-mono text-amber-700 dark:text-amber-400">
                         {reportData.totalUsedHours.toFixed(2)}h
                       </TableCell>
                       <TableCell
@@ -1020,7 +1023,7 @@ export default function MonthlyClientReportPage() {
           {/* ============================================================== */}
           <section className="abnt-section bg-white dark:bg-slate-900 border rounded-xl p-6 shadow-xs print:border-none print:shadow-none print:p-0">
             <h3 className="abnt-section-title text-lg font-bold flex items-center gap-2 mb-4 text-slate-900 dark:text-slate-100">
-              <Layers className="h-5 w-5 text-blue-600 print:hidden" />
+              <Layers className="h-5 w-5 text-amber-600 dark:text-amber-400 print:hidden" />
               2. Horas Utilizadas por Setor
             </h3>
 
@@ -1127,7 +1130,7 @@ export default function MonthlyClientReportPage() {
           {/* ============================================================== */}
           <section className="abnt-section bg-white dark:bg-slate-900 border rounded-xl p-6 shadow-xs print:border-none print:shadow-none print:p-0">
             <h3 className="abnt-section-title text-lg font-bold flex items-center gap-2 mb-4 text-slate-900 dark:text-slate-100">
-              <Users className="h-5 w-5 text-blue-600 print:hidden" />
+              <Users className="h-5 w-5 text-amber-600 dark:text-amber-400 print:hidden" />
               3. Horas Utilizadas por Usuário Solicitante
             </h3>
 
@@ -1250,7 +1253,7 @@ export default function MonthlyClientReportPage() {
           {/* ============================================================== */}
           <section className="abnt-section bg-white dark:bg-slate-900 border rounded-xl p-6 shadow-xs print:border-none print:shadow-none print:p-0">
             <h3 className="abnt-section-title text-lg font-bold flex items-center gap-2 mb-4 text-slate-900 dark:text-slate-100">
-              <BarChart3 className="h-5 w-5 text-blue-600 print:hidden" />
+              <BarChart3 className="h-5 w-5 text-amber-600 dark:text-amber-400 print:hidden" />
               4. Atividades Mais Requisitadas no Mês
             </h3>
 
@@ -1468,7 +1471,7 @@ export default function MonthlyClientReportPage() {
           {/* ============================================================== */}
           <section className="abnt-section bg-white dark:bg-slate-900 border rounded-xl p-6 shadow-xs print:border-none print:shadow-none print:p-0">
             <h3 className="abnt-section-title text-lg font-bold flex items-center gap-2 mb-4 text-slate-900 dark:text-slate-100">
-              <HardDrive className="h-5 w-5 text-blue-600 print:hidden" />
+              <HardDrive className="h-5 w-5 text-amber-600 dark:text-amber-400 print:hidden" />
               6. Movimentação de Ativos no Período (Entradas e Saídas)
             </h3>
 
@@ -1503,11 +1506,11 @@ export default function MonthlyClientReportPage() {
                 </p>
               </div>
 
-              <div className="border rounded-lg p-3 bg-blue-50/50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-900">
-                <span className="text-[11px] font-bold text-blue-700 dark:text-blue-400 uppercase tracking-wider block">
+              <div className="border rounded-lg p-3 bg-amber-50/50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-900">
+                <span className="text-[11px] font-bold text-amber-700 dark:text-amber-400 uppercase tracking-wider block">
                   Ativos Ativos Totais
                 </span>
-                <p className="text-2xl font-bold font-mono text-blue-700 dark:text-blue-300 mt-1">
+                <p className="text-2xl font-bold font-mono text-amber-700 dark:text-amber-300 mt-1">
                   {reportData.assets.activeCount}
                 </p>
                 <p className="text-[11px] text-muted-foreground mt-0.5">Em uso no cliente</p>
@@ -1706,7 +1709,7 @@ export default function MonthlyClientReportPage() {
           {/* ============================================================== */}
           <section className="abnt-section abnt-section-landscape bg-white dark:bg-slate-900 border rounded-xl p-6 shadow-xs print:border-none print:shadow-none print:p-0">
             <h3 className="abnt-section-title text-lg font-bold flex items-center gap-2 mb-4 text-slate-900 dark:text-slate-100">
-              <TrendingUp className="h-5 w-5 text-blue-600 print:hidden" />
+              <TrendingUp className="h-5 w-5 text-amber-600 dark:text-amber-400 print:hidden" />
               7. Comparativo com Meses Anteriores
             </h3>
 

@@ -187,7 +187,7 @@ export default function UnitReportsPage() {
             </div>
           </div>
           <Button
-            className="mt-4 bg-blue-600 hover:bg-blue-700"
+            className="mt-4 bg-primary hover:bg-primary/90 text-primary-foreground"
             onClick={generateReport}
             disabled={loading}
           >
@@ -202,7 +202,7 @@ export default function UnitReportsPage() {
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="flex items-center gap-1.5 text-xs">
-                  <Clock className="h-3.5 w-3.5 text-blue-600" /> Horas
+                  <Clock className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" /> Horas
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -282,7 +282,9 @@ export default function UnitReportsPage() {
                   ) : (
                     tickets.map((t) => (
                       <tr key={t.id} className="hover:bg-slate-50/60 dark:hover:bg-slate-800/50">
-                        <td className="p-3.5 font-bold text-blue-600">#{t.number}</td>
+                        <td className="p-3.5 font-bold text-amber-600 dark:text-amber-400">
+                          #{t.number}
+                        </td>
                         <td className="p-3.5 font-medium text-slate-900 max-w-sm truncate dark:text-slate-100">
                           {t.title}
                         </td>

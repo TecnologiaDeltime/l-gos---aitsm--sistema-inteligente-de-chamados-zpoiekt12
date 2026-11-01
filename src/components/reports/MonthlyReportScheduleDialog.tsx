@@ -197,7 +197,7 @@ export function MonthlyReportScheduleDialog({
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-base">
-            <Mail className="h-5 w-5 text-blue-600" />
+            <Mail className="h-5 w-5 text-amber-600 dark:text-amber-400" />
             Envio Automático do Relatório Mensal &mdash; {companyName}
           </DialogTitle>
           <DialogDescription className="text-xs">
@@ -238,7 +238,8 @@ export function MonthlyReportScheduleDialog({
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <Label className="text-xs font-semibold flex items-center gap-1.5">
-                  <Clock className="h-3.5 w-3.5 text-blue-600" /> Dia do Disparo no Mês
+                  <Clock className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" /> Dia do
+                  Disparo no Mês
                 </Label>
                 <div className="flex items-center gap-2">
                   <Input
@@ -276,7 +277,8 @@ export function MonthlyReportScheduleDialog({
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
                   <Label className="text-xs font-semibold flex items-center gap-1.5">
-                    <Users className="h-3.5 w-3.5 text-blue-600" /> Incluir Pontos Focais do Cliente
+                    <Users className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" /> Incluir
+                    Pontos Focais do Cliente
                   </Label>
                   <p className="text-[11px] text-slate-500">
                     Dispara automaticamente para os contatos marcados como &quot;Ponto Focal&quot;
@@ -344,8 +346,8 @@ export function MonthlyReportScheduleDialog({
 
           {/* ABA 2: DISPARAR AGORA */}
           <TabsContent value="send_now" className="space-y-4">
-            <div className="p-3 rounded-lg border bg-blue-50/50 dark:bg-blue-950/20 text-xs space-y-1 text-slate-700 dark:text-slate-300">
-              <p className="font-semibold text-blue-800 dark:text-blue-300 flex items-center gap-1.5">
+            <div className="p-3 rounded-lg border bg-amber-50/50 dark:bg-amber-950/20 text-xs space-y-1 text-slate-700 dark:text-slate-300">
+              <p className="font-semibold text-amber-800 dark:text-amber-300 flex items-center gap-1.5">
                 <Send className="h-3.5 w-3.5" /> Envio Imediato de Teste / Produção
               </p>
               <p>
@@ -405,7 +407,7 @@ export function MonthlyReportScheduleDialog({
                 size="sm"
                 onClick={handleSendNow}
                 disabled={sendingNow}
-                className="bg-blue-600 hover:bg-blue-700"
+                className="bg-primary hover:bg-primary/90 text-primary-foreground"
               >
                 {sendingNow ? (
                   'Enviando...'

@@ -49,9 +49,9 @@ const FEATURE_CATEGORIES: FeatureCategory[] = [
     id: 'tickets',
     title: 'Tickets e Atendimento',
     icon: Ticket,
-    color: 'text-blue-600 dark:text-blue-400',
-    bgLight: 'bg-blue-50/70 dark:bg-blue-950/20',
-    borderColor: 'border-blue-200 dark:border-blue-900',
+    color: 'text-amber-600 dark:text-amber-400',
+    bgLight: 'bg-amber-50/70 dark:bg-amber-950/20',
+    borderColor: 'border-amber-200 dark:border-amber-900',
     items: [
       {
         id: 'tk-1',
@@ -147,9 +147,9 @@ const FEATURE_CATEGORIES: FeatureCategory[] = [
     id: 'cmdb',
     title: 'CMDB (Gerenciamento de Configuração)',
     icon: Server,
-    color: 'text-indigo-600 dark:text-indigo-400',
-    bgLight: 'bg-indigo-50/70 dark:bg-indigo-950/20',
-    borderColor: 'border-indigo-200 dark:border-indigo-900',
+    color: 'text-orange-600 dark:text-orange-400',
+    bgLight: 'bg-orange-50/70 dark:bg-orange-950/20',
+    borderColor: 'border-orange-200 dark:border-orange-900',
     items: [
       {
         id: 'cmdb-1',
@@ -570,7 +570,7 @@ export default function ImplementedFeaturesReport() {
           </CardContent>
         </Card>
 
-        <Card className="shadow-sm border-l-4 border-l-blue-500">
+        <Card className="shadow-sm border-l-4 border-l-amber-500">
           <CardHeader className="p-4 pb-1">
             <CardDescription className="text-xs font-semibold text-muted-foreground uppercase">
               Módulos Principais
