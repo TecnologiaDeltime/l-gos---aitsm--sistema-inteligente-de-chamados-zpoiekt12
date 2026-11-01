@@ -35,7 +35,7 @@ export function ProtectedRoute({
     return <Navigate to="/login" state={{ from: location }} replace />
   }
 
-  // Se for admin, acesso total garantido (Regra 3)
+  // Se for admin, acesso total garantido (Regra 3 - Administrador é imune)
   if (!isAdmin) {
     // 1. Checagem por requiredModule
     if (requiredModule) {
@@ -55,7 +55,7 @@ export function ProtectedRoute({
       }
     }
 
-    // 2. Checagem granular automática pelo caminho da URL (ex.: /reports/monthly-client, /atendimento)
+    // 2. Checagem granular automática pelo caminho da URL (ex.: /reports/monthly-client, /atendimento, /settings/ticket-templates)
     if (!canAccessPath(location.pathname)) {
       return <Navigate to="/dashboard" replace />
     }

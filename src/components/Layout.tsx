@@ -80,6 +80,7 @@ import {
 import { AiAssistantDrawer } from '@/components/AiAssistantDrawer'
 import { NewTicketToast } from '@/components/NewTicketToast'
 import { RefreshIndicator } from '@/components/RefreshIndicator'
+import { autoRegisterMenuItems } from '@/lib/permissions-registry'
 
 export default function Layout() {
   const { user, signOut } = useAuth()
@@ -561,8 +562,32 @@ export default function Layout() {
       label: 'Console AITSM (Protótipo)',
       path: '/console-aitsm.html',
       icon: Sparkles,
-      show: true,
+      show: permissions.canAccessItem('settings', 'settings_aitsm_console'),
       external: true,
+    },
+    {
+      label: 'Portal do Cliente (Gestão)',
+      path: '/settings?tab=portal',
+      icon: Settings,
+      show: permissions.canAccessItem('settings', 'settings_portal'),
+    },
+    {
+      label: 'Notificações de Clientes',
+      path: '/settings?tab=client_notif',
+      icon: Bell,
+      show: permissions.canAccessItem('settings', 'settings_client_notif'),
+    },
+    {
+      label: 'Segurança & Sessão',
+      path: '/settings?tab=security',
+      icon: ShieldCheck,
+      show: permissions.canAccessItem('settings', 'settings_security'),
+    },
+    {
+      label: 'Modelos de Chamados',
+      path: '/settings/ticket-templates',
+      icon: FileText,
+      show: permissions.canAccessItem('settings', 'settings_ticket_templates'),
     },
     {
       label: 'Caixa de E-mail & IMAP',
@@ -689,6 +714,19 @@ export default function Layout() {
   ]
   const relatoriosGroupVisible =
     !permissions.isModuleHidden('reports') && relatoriosSubmenuItems.some((i) => i.show)
+
+  // Auto-registro dinâmico de todos os menus na matriz de permissões
+  // Garante que qualquer rota/item criado no Layout apareça na matriz sem edição manual!
+  autoRegisterMenuItems('dashboard', 'Atendimento', dashboardSubmenuItems)
+  autoRegisterMenuItems('tickets', 'Atendimento', chamadosSubmenuItems)
+  autoRegisterMenuItems('clients', 'Operações & Gestão', clientSubmenuItems)
+  autoRegisterMenuItems('cmdb', 'Operações & Gestão', cmdbSubmenuItems)
+  autoRegisterMenuItems('changes', 'Operações & Gestão', changesSubmenuItems)
+  autoRegisterMenuItems('problems', 'Operações & Gestão', problemsSubmenuItems)
+  autoRegisterMenuItems('visits', 'Operações & Gestão', visitsN2SubmenuItems)
+  autoRegisterMenuItems('reports', 'Relatórios & Qualidade', relatoriosSubmenuItems)
+  autoRegisterMenuItems('admin', 'Administração', adminSubmenuItems)
+  autoRegisterMenuItems('settings', 'Administração', configuracoesSubmenuItems)
 
   const configuracoesGroupVisible =
     !permissions.isModuleHidden('settings') && configuracoesSubmenuItems.some((i) => i.show)

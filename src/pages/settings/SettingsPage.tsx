@@ -326,110 +326,124 @@ export default function SettingsPage() {
 
         {/* Abas de Primeiro Nível em Configurações */}
         <div className="inline-flex flex-wrap items-center gap-1.5 p-1 rounded-xl bg-secondary/60 border border-border self-start sm:self-auto">
-          <Button
-            type="button"
-            size="sm"
-            variant={mainTab === 'general' ? 'default' : 'ghost'}
-            onClick={() => handleTabChange('general')}
-            className={`h-8 text-xs font-semibold rounded-lg transition-all ${
-              mainTab === 'general'
-                ? 'bg-card text-foreground shadow-sm border border-border'
-                : 'text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            <Settings className="h-3.5 w-3.5 mr-1.5 text-primary" />
-            Gerais
-          </Button>
+          {permissions.canAccessItem('settings', 'settings_general') && (
+            <Button
+              type="button"
+              size="sm"
+              variant={mainTab === 'general' ? 'default' : 'ghost'}
+              onClick={() => handleTabChange('general')}
+              className={`h-8 text-xs font-semibold rounded-lg transition-all ${
+                mainTab === 'general'
+                  ? 'bg-card text-foreground shadow-sm border border-border'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              <Settings className="h-3.5 w-3.5 mr-1.5 text-primary" />
+              Gerais
+            </Button>
+          )}
 
-          <Button
-            type="button"
-            size="sm"
-            variant={mainTab === 'portal' ? 'default' : 'ghost'}
-            onClick={() => handleTabChange('portal')}
-            className={`h-8 text-xs font-semibold rounded-lg transition-all ${
-              mainTab === 'portal'
-                ? 'bg-amber-500/20 text-amber-500 border border-amber-500/30 shadow-xs shadow-amber-500/10'
-                : 'text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            <Globe className="h-3.5 w-3.5 mr-1.5 text-amber-500" />
-            Portal do Cliente
-          </Button>
+          {permissions.canAccessItem('settings', 'settings_portal') && (
+            <Button
+              type="button"
+              size="sm"
+              variant={mainTab === 'portal' ? 'default' : 'ghost'}
+              onClick={() => handleTabChange('portal')}
+              className={`h-8 text-xs font-semibold rounded-lg transition-all ${
+                mainTab === 'portal'
+                  ? 'bg-amber-500/20 text-amber-500 border border-amber-500/30 shadow-xs shadow-amber-500/10'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              <Globe className="h-3.5 w-3.5 mr-1.5 text-amber-500" />
+              Portal do Cliente
+            </Button>
+          )}
 
-          <Button
-            type="button"
-            size="sm"
-            variant={mainTab === 'design' ? 'default' : 'ghost'}
-            onClick={() => handleTabChange('design')}
-            className={`h-8 text-xs font-semibold rounded-lg transition-all ${
-              mainTab === 'design'
-                ? 'bg-primary/20 text-primary border border-primary/30 shadow-xs shadow-primary/10'
-                : 'text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            <Palette className="h-3.5 w-3.5 mr-1.5 text-primary" />
-            Design & Cores
-          </Button>
+          {permissions.canAccessItem('settings', 'settings_design') && (
+            <Button
+              type="button"
+              size="sm"
+              variant={mainTab === 'design' ? 'default' : 'ghost'}
+              onClick={() => handleTabChange('design')}
+              className={`h-8 text-xs font-semibold rounded-lg transition-all ${
+                mainTab === 'design'
+                  ? 'bg-primary/20 text-primary border border-primary/30 shadow-xs shadow-primary/10'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              <Palette className="h-3.5 w-3.5 mr-1.5 text-primary" />
+              Design & Cores
+            </Button>
+          )}
 
-          <Button
-            type="button"
-            size="sm"
-            variant={mainTab === 'client_notif' ? 'default' : 'ghost'}
-            onClick={() => handleTabChange('client_notif')}
-            className={`h-8 text-xs font-semibold rounded-lg transition-all ${
-              mainTab === 'client_notif'
-                ? 'bg-sky-500/20 text-sky-400 border border-sky-500/30'
-                : 'text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            <Bell className="h-3.5 w-3.5 mr-1.5 text-sky-400" />
-            Notificações
-          </Button>
+          {permissions.canAccessItem('settings', 'settings_client_notif') && (
+            <Button
+              type="button"
+              size="sm"
+              variant={mainTab === 'client_notif' ? 'default' : 'ghost'}
+              onClick={() => handleTabChange('client_notif')}
+              className={`h-8 text-xs font-semibold rounded-lg transition-all ${
+                mainTab === 'client_notif'
+                  ? 'bg-sky-500/20 text-sky-400 border border-sky-500/30'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              <Bell className="h-3.5 w-3.5 mr-1.5 text-sky-400" />
+              Notificações
+            </Button>
+          )}
 
-          <Button
-            type="button"
-            size="sm"
-            variant={mainTab === 'security' ? 'default' : 'ghost'}
-            onClick={() => handleTabChange('security')}
-            className={`h-8 text-xs font-semibold rounded-lg transition-all ${
-              mainTab === 'security'
-                ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
-                : 'text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            <ShieldCheck className="h-3.5 w-3.5 mr-1.5 text-emerald-400" />
-            Segurança & Sessão
-          </Button>
+          {permissions.canAccessItem('settings', 'settings_security') && (
+            <Button
+              type="button"
+              size="sm"
+              variant={mainTab === 'security' ? 'default' : 'ghost'}
+              onClick={() => handleTabChange('security')}
+              className={`h-8 text-xs font-semibold rounded-lg transition-all ${
+                mainTab === 'security'
+                  ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              <ShieldCheck className="h-3.5 w-3.5 mr-1.5 text-emerald-400" />
+              Segurança & Sessão
+            </Button>
+          )}
 
-          <Button
-            type="button"
-            size="sm"
-            variant={mainTab === 'vault' ? 'default' : 'ghost'}
-            onClick={() => handleTabChange('vault')}
-            className={`h-8 text-xs font-semibold rounded-lg transition-all ${
-              mainTab === 'vault'
-                ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
-                : 'text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            <Lock className="h-3.5 w-3.5 mr-1.5 text-amber-400" />
-            Cofre de Senhas
-          </Button>
+          {permissions.canAccessItem('vault', 'vault_cofre') && (
+            <Button
+              type="button"
+              size="sm"
+              variant={mainTab === 'vault' ? 'default' : 'ghost'}
+              onClick={() => handleTabChange('vault')}
+              className={`h-8 text-xs font-semibold rounded-lg transition-all ${
+                mainTab === 'vault'
+                  ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              <Lock className="h-3.5 w-3.5 mr-1.5 text-amber-400" />
+              Cofre de Senhas
+            </Button>
+          )}
 
-          <Button
-            type="button"
-            size="sm"
-            variant={mainTab === 'email' ? 'default' : 'ghost'}
-            onClick={() => handleTabChange('email')}
-            className={`h-8 text-xs font-semibold rounded-lg transition-all ${
-              mainTab === 'email'
-                ? 'bg-primary/20 text-primary border border-primary/30'
-                : 'text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            <Mail className="h-3.5 w-3.5 mr-1.5 text-primary" />
-            IMAP & E-mail
-          </Button>
+          {permissions.canAccessItem('settings', 'settings_email') && (
+            <Button
+              type="button"
+              size="sm"
+              variant={mainTab === 'email' ? 'default' : 'ghost'}
+              onClick={() => handleTabChange('email')}
+              className={`h-8 text-xs font-semibold rounded-lg transition-all ${
+                mainTab === 'email'
+                  ? 'bg-primary/20 text-primary border border-primary/30'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              <Mail className="h-3.5 w-3.5 mr-1.5 text-primary" />
+              IMAP & E-mail
+            </Button>
+          )}
 
           {permissions.canManageProfiles && (
             <Button
@@ -451,35 +465,42 @@ export default function SettingsPage() {
       </div>
 
       {/* SEÇÃO PERFIS DE ACESSO */}
-      {mainTab === 'profiles' && (
+      {mainTab === 'profiles' && permissions.canManageProfiles && (
         <div className="space-y-6">
           <ProfilesPage embeddedTab />
         </div>
       )}
 
       {/* SEÇÃO PORTAL DO CLIENTE */}
-      {mainTab === 'portal' && <ClientPortalSettingsTab />}
-
-      {/* SEÇÃO DESIGN & APARÊNCIA */}
-      {mainTab === 'design' && <DesignSettingsTab isAdminOrGestor={permissions.isGestor} />}
-
-      {/* SEÇÃO NOTIFICAÇÕES DO CLIENTE */}
-      {mainTab === 'client_notif' && (
-        <ClientNotificationSettingsTab isAdminOrGestor={permissions.isGestor} />
+      {mainTab === 'portal' && permissions.canAccessItem('settings', 'settings_portal') && (
+        <ClientPortalSettingsTab />
       )}
 
+      {/* SEÇÃO DESIGN & APARÊNCIA */}
+      {mainTab === 'design' && permissions.canAccessItem('settings', 'settings_design') && (
+        <DesignSettingsTab isAdminOrGestor={permissions.isGestor} />
+      )}
+
+      {/* SEÇÃO NOTIFICAÇÕES DO CLIENTE */}
+      {mainTab === 'client_notif' &&
+        permissions.canAccessItem('settings', 'settings_client_notif') && (
+          <ClientNotificationSettingsTab isAdminOrGestor={permissions.isGestor} />
+        )}
+
       {/* SEÇÃO SEGURANÇA & SESSÃO (Expiração, Força Bruta, 2FA) */}
-      {mainTab === 'security' && <SecuritySettingsTab isAdmin={permissions.isAdmin} />}
+      {mainTab === 'security' && permissions.canAccessItem('settings', 'settings_security') && (
+        <SecuritySettingsTab isAdmin={permissions.isAdmin} />
+      )}
 
       {/* SEÇÃO 0: COFRE DE SENHAS */}
-      {mainTab === 'vault' && (
+      {mainTab === 'vault' && permissions.canAccessItem('vault', 'vault_cofre') && (
         <div className="space-y-6">
           <VaultPage embeddedTab />
         </div>
       )}
 
       {/* SEÇÃO 1 (INDEPENDENTE): CONEXÃO IMAP REAL & CAIXA DE E-MAIL */}
-      {mainTab === 'email' && (
+      {mainTab === 'email' && permissions.canAccessItem('settings', 'settings_email') && (
         <div className="space-y-6">
           {emailConfigLoading ? (
             <Card className="itsm-card">

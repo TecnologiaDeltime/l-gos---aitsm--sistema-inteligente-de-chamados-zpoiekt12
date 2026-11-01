@@ -194,10 +194,21 @@ export function usePermissions() {
   const canAccessPath = (pathname: string): boolean => {
     if (isAdmin) return true
 
-    // Procurar item do catálogo que casa com esta rota
+    // 1. Procurar item do catálogo que casa com esta rota exata ou início de path
     for (const mod of GRANULAR_SYSTEM_MODULES) {
       for (const item of mod.items) {
-        if (item.path && (item.path === pathname || pathname.startsWith(item.path + '/'))) {
+        if (!item.path) continue
+
+        // Se o path tiver parâmetros de query (ex: /settings?tab=portal), checa apenas se pathname for /settings
+        const itemBasePath = item.path.split('?')[0]
+        if (
+          itemBasePath === pathname ||
+          (itemBasePath !== '/' && pathname.startsWith(itemBasePath + '/'))
+        ) {
+          // Se o item tem query param (ex: /settings?tab=portal), a rota base /settings não bloqueia por causa desse item
+          if (item.path.includes('?')) {
+            continue
+          }
           return canAccessItem(mod.key, item.key)
         }
       }
