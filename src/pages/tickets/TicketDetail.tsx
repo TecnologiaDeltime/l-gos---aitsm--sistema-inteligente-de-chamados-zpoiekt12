@@ -105,6 +105,11 @@ import { SlaPauseDialog, STATUS_BY_REASON } from '@/components/SlaPauseDialog'
 import { AccompanimentDialog } from '@/components/AccompanimentDialog'
 import { formatMinutes } from '@/lib/duration'
 import {
+  handleTimeSpentMask,
+  handleTimeSpentKeyDown,
+  validateTimeSpentValue,
+} from '@/lib/time-mask'
+import {
   Inbox,
   Sparkles,
   Check,
@@ -408,32 +413,13 @@ export default function TicketDetail({
 
   // Máscara com dois pontos (:) fixos no formato 00:00
   const handleTimeSpentChange = (rawInput: string) => {
-    // Mantém apenas dígitos
-    const digits = rawInput.replace(/\D/g, '').slice(0, 4)
-    if (!digits) {
-      setTimeSpent('')
-      setTimeError('')
-      return
-    }
-    let formatted = ''
-    if (digits.length <= 2) {
-      formatted = `${digits.padStart(2, '0')}:00`
-    } else {
-      const hh = digits.slice(0, 2)
-      const mm = digits.slice(2).padEnd(2, '0')
-      formatted = `${hh}:${mm}`
-    }
+    const formatted = handleTimeSpentMask(rawInput, timeSpent)
     setTimeSpent(formatted)
     setTimeError(validateTimeSpent(formatted))
   }
 
   const validateTimeSpent = (value: string): string => {
-    if (!value.trim()) return ''
-    const match = value.trim().match(/^(\d{2}):(\d{2})$/)
-    if (!match) return 'Formato inválido. Use 00:00.'
-    const mins = parseInt(match[2], 10)
-    if (mins > 59) return 'Minutos devem ser menores que 60.'
-    return ''
+    return validateTimeSpentValue(value, false)
   }
 
   const parseTimeToMinutes = (value: string): number => {
@@ -1176,6 +1162,15 @@ export default function TicketDetail({
                         placeholder="00:00"
                         value={timeSpent}
                         onChange={(e) => handleTimeSpentChange(e.target.value)}
+                        onKeyDown={(e) =>
+                          handleTimeSpentKeyDown(
+                            e,
+                            timeSpent,
+                            setTimeSpent,
+                            setTimeError,
+                            validateTimeSpent,
+                          )
+                        }
                         maxLength={5}
                         className="h-8 w-28 text-center font-mono text-sm tracking-wider"
                       />

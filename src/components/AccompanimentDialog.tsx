@@ -21,6 +21,11 @@ import { Clock, Loader2 } from 'lucide-react'
 import { addAccompanimentHours } from '@/services/tickets'
 import { useToast } from '@/hooks/use-toast'
 import { getErrorMessage } from '@/lib/pocketbase/errors'
+import {
+  handleTimeSpentMask,
+  handleTimeSpentKeyDown,
+  validateTimeSpentValue,
+} from '@/lib/time-mask'
 
 interface AccompanimentDialogProps {
   ticketId: string
@@ -44,33 +49,13 @@ export function AccompanimentDialog({
 
   // Máscara com dois pontos (:) fixos no formato 00:00
   const handleTimeSpentChange = (rawInput: string) => {
-    const digits = rawInput.replace(/\D/g, '').slice(0, 4)
-    if (!digits) {
-      setTimeSpent('')
-      setTimeError('')
-      return
-    }
-    let formatted = ''
-    if (digits.length <= 2) {
-      formatted = `${digits.padStart(2, '0')}:00`
-    } else {
-      const hh = digits.slice(0, 2)
-      const mm = digits.slice(2).padEnd(2, '0')
-      formatted = `${hh}:${mm}`
-    }
+    const formatted = handleTimeSpentMask(rawInput, timeSpent)
     setTimeSpent(formatted)
     setTimeError(validateTimeSpent(formatted))
   }
 
   const validateTimeSpent = (val: string): string => {
-    if (!val.trim()) return 'Informe o tempo gasto no acompanhamento.'
-    const match = val.trim().match(/^(\d{2}):(\d{2})$/)
-    if (!match) return 'Formato inválido. Use 00:00.'
-    const mins = parseInt(match[2], 10)
-    if (mins > 59) return 'Minutos inválidos (máximo 59).'
-    const totalMin = parseInt(match[1], 10) * 60 + mins
-    if (totalMin <= 0) return 'O tempo deve ser maior que 00:00.'
-    return ''
+    return validateTimeSpentValue(val, true)
   }
 
   const parseTimeToSeconds = (val: string): number => {
@@ -162,6 +147,9 @@ export function AccompanimentDialog({
               placeholder="00:00"
               value={timeSpent}
               onChange={(e) => handleTimeSpentChange(e.target.value)}
+              onKeyDown={(e) =>
+                handleTimeSpentKeyDown(e, timeSpent, setTimeSpent, setTimeError, validateTimeSpent)
+              }
               maxLength={5}
               className="h-8 w-28 text-center font-mono text-sm tracking-wider"
             />
