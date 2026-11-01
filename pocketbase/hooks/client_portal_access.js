@@ -102,6 +102,19 @@ routerAdd('GET', '/backend/v1/portal/clients-access', (c) => {
     for (var i = 0; i < companies.length; i++) {
       var comp = companies[i]
       var users = []
+      var hoursContracted = 0
+
+      // Busca horas contratadas do contrato ativo da empresa se houver
+      try {
+        var activeContract = $app.findFirstRecordByFilter(
+          'contracts',
+          'company = "' + comp.id + '" && status = "Ativo"',
+        )
+        if (activeContract) {
+          hoursContracted = activeContract.getInt('monthly_hours') || 0
+        }
+      } catch (_) {}
+
       try {
         var compUsers = $app.findRecordsByFilter(
           'users',
@@ -151,10 +164,14 @@ routerAdd('GET', '/backend/v1/portal/clients-access', (c) => {
       result.push({
         company: {
           id: comp.id,
-          name: comp.getString('name'),
-          cnpj: comp.getString('cnpj'),
+          name:
+            comp.getString('trade_name') ||
+            comp.getString('legal_name') ||
+            comp.getString('code') ||
+            'Cliente',
+          cnpj: comp.getString('document'),
           email: comp.getString('email'),
-          hours_contracted: comp.getInt('contracted_hours') || comp.getInt('hours_contracted') || 0,
+          hours_contracted: hoursContracted,
         },
         portalUsers: users,
         contacts: focalPoints,
@@ -210,8 +227,8 @@ routerAdd('POST', '/backend/v1/portal/generate-user', (c) => {
     email = 'portal.' + slugify(comp.getString('name')) + '@cliente.itsm'
   }
   if (!name) {
-    name =
-      comp.getString('name') + (userRole === 'cliente_gestor' ? ' (Ponto Focal)' : ' (Usuário)')
+    var compDisplayName = comp.getString('trade_name') || comp.getString('legal_name') || 'Cliente'
+    name = compDisplayName + (userRole === 'cliente_gestor' ? ' (Ponto Focal)' : ' (Usuário)')
   }
 
   try {

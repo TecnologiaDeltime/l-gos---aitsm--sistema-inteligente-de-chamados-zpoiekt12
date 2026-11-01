@@ -4,6 +4,7 @@ import { ApprovalRecord } from '@/services/approvals'
 import { ConfigurationItemRecord } from '@/services/configuration-items'
 import { TechnicalVisitRecord } from '@/services/technical-visits'
 import { ContractPeriodRecord } from '@/services/contract-periods'
+import { CategoryRecord } from '@/services/categories'
 
 export interface PublicLogRecord {
   id: string
@@ -141,6 +142,64 @@ export async function getClientPortalVisits(companyId: string): Promise<Technica
 /**
  * Busca o período contratual e o consumo de horas do cliente.
  */
+export interface PortalData {
+  company: any | null
+  tickets: TicketRecord[]
+  approvals: ApprovalRecord[]
+  configurationItems: ConfigurationItemRecord[]
+  technicalVisits: TechnicalVisitRecord[]
+  categories: CategoryRecord[]
+}
+
+export async function getClientPortalData(user: any): Promise<PortalData> {
+  let companyId = user?.company
+
+  // Se o usuário não tiver companyId diretamente (ex: admin visualizando o portal),
+  // tenta pegar a primeira empresa cadastrada
+  if (!companyId) {
+    try {
+      const companies = await pb.collection('companies').getList(1, 1, { sort: '-created' })
+      if (companies.items.length > 0) {
+        companyId = companies.items[0].id
+      }
+    } catch {
+      /* ignore */
+    }
+  }
+
+  let company: any = null
+  if (companyId) {
+    try {
+      company = await pb.collection('companies').getOne(companyId)
+    } catch {
+      /* ignore */
+    }
+  }
+
+  // Busca dados em paralelo
+  const [tickets, approvals, configurationItems, technicalVisits, categories] = await Promise.all([
+    companyId ? getClientPortalTickets(companyId) : Promise.resolve([]),
+    companyId ? getClientPortalApprovals(companyId) : Promise.resolve([]),
+    companyId ? getClientPortalAssets(companyId) : Promise.resolve([]),
+    companyId ? getClientPortalVisits(companyId) : Promise.resolve([]),
+    pb
+      .collection('categories')
+      .getFullList<CategoryRecord>({ sort: 'name' })
+      .catch(() => []),
+  ])
+
+  return {
+    company,
+    tickets,
+    approvals,
+    configurationItems,
+    technicalVisits,
+    categories,
+  }
+}
+
+export const getClientHoursBalance = getClientPortalHours
+
 export async function getClientPortalHours(companyId: string, month: number, year: number) {
   if (!companyId) {
     return {
@@ -154,38 +213,51 @@ export async function getClientPortalHours(companyId: string, month: number, yea
   }
 
   // 1. Tenta buscar período em contract_periods
-  const periodKey = `${year}-${String(month).padStart(2, '0')}`
+  const startIso = new Date(year, month - 1, 1).toISOString()
+  const endIso = new Date(year, month, 0, 23, 59, 59, 999).toISOString()
+
   let periodRecord: ContractPeriodRecord | null = null
   let contracted = 0
 
   try {
+    // Busca períodos associados aos contratos da empresa
     const periods = await pb.collection('contract_periods').getFullList<ContractPeriodRecord>({
-      filter: `contract.company = "${companyId}" && (period_key = "${periodKey}" || month = ${month} && year = ${year})`,
+      filter: `contract.company = "${companyId}"`,
       sort: '-created',
       expand: 'contract',
     })
-    if (periods.length > 0) {
-      periodRecord = periods[0]
-      contracted = Number(periodRecord.contracted_hours || 0)
+
+    // Filtra pelo mês e ano desejado
+    const match = periods.find((p) => {
+      if (!p.period_start) return false
+      const d = new Date(p.period_start)
+      return d.getUTCFullYear() === year && d.getUTCMonth() + 1 === month
+    })
+
+    if (match) {
+      periodRecord = match
+      contracted = Number(match.contracted_hours || 0)
     }
   } catch {
     /* intentionally ignored */
   }
 
-  // 2. Se não encontrou período, busca na empresa/contrato
+  // 2. Se não encontrou período, busca no contrato ativo da empresa (monthly_hours)
   if (!contracted) {
     try {
-      const company = await pb.collection('companies').getOne(companyId)
-      contracted = Number(company.contracted_hours || (company as any).hours_contracted || 0)
+      const contracts = await pb.collection('contracts').getFullList({
+        filter: `company = "${companyId}" && status = "Ativo"`,
+        sort: '-created',
+      })
+      if (contracts.length > 0) {
+        contracted = Number(contracts[0].monthly_hours || 0)
+      }
     } catch {
       /* intentionally ignored */
     }
   }
 
   // 3. Calcula as horas consumidas no período (ticket_interactions de tickets da empresa)
-  const startIso = new Date(year, month - 1, 1).toISOString()
-  const endIso = new Date(year, month, 0, 23, 59, 59, 999).toISOString()
-
   let consumedMinutes = 0
   try {
     // Interações faturáveis de chamados da empresa criadas no período

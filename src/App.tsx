@@ -63,6 +63,7 @@ import ClientHoursPage from '@/pages/clients/ClientHoursPage'
 import BlockingManagement from '@/pages/blocking/BlockingManagement'
 import NotFound from '@/pages/NotFound'
 import PortalPage from '@/pages/portal/PortalPage'
+import PortalLogin from '@/pages/portal/PortalLogin'
 import UnitReportsPage from '@/pages/reports/UnitReportsPage'
 import ClientExtractionPage from '@/pages/reports/ClientExtractionPage'
 import MonthlyClientReportPage from '@/pages/reports/MonthlyClientReportPage'
@@ -122,8 +123,18 @@ import { useAuth } from '@/hooks/use-auth'
 
 function RootRedirect() {
   const { user } = useAuth()
-  const target = user?.role === 'cliente_solicitante' ? '/portal' : '/dashboard'
+  const isClient = user?.role === 'cliente_solicitante' || user?.role === 'cliente_gestor'
+  const target = isClient ? '/portal' : '/dashboard'
   return <Navigate to={target} replace />
+}
+
+function PortalProtectedRoute({ children }: { children: React.ReactNode }) {
+  const { isAuthenticated, loading } = useAuth()
+  if (loading) return null
+  if (!isAuthenticated) {
+    return <Navigate to="/portal/login" replace />
+  }
+  return <>{children}</>
 }
 
 const App = () => (
@@ -139,6 +150,7 @@ const App = () => (
             <Routes>
               {/* Public Auth Routes */}
               <Route path="/login" element={<Login />} />
+              <Route path="/portal/login" element={<PortalLogin />} />
               <Route path="/recuperar-senha" element={<RecoverPassword />} />
               <Route path="/recover-password" element={<RecoverPassword />} />
               <Route path="/survey/:token" element={<SurveyPublic />} />
@@ -148,9 +160,9 @@ const App = () => (
               <Route
                 path="/portal"
                 element={
-                  <ProtectedRoute>
+                  <PortalProtectedRoute>
                     <PortalPage />
-                  </ProtectedRoute>
+                  </PortalProtectedRoute>
                 }
               />
 

@@ -1,19 +1,38 @@
-import { useEffect, useState } from 'react'
-import { useNavigate, Navigate } from 'react-router-dom'
-import { Shield, LogOut, PlusCircle, Ticket, CheckCircle, Clock } from 'lucide-react'
-import { useAuth } from '@/hooks/use-auth'
-import { useRealtime } from '@/hooks/use-realtime'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import React, { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog'
+  LifeBuoy,
+  Plus,
+  Clock,
+  CheckCircle2,
+  CalendarDays,
+  Server,
+  FileText,
+  LogOut,
+  Building2,
+  ShieldCheck,
+  Search,
+  Filter,
+  RefreshCw,
+  Sun,
+  Moon,
+  AlertCircle,
+  Eye,
+  ChevronRight,
+  TrendingUp,
+  MapPin,
+  CheckCircle,
+  XCircle,
+} from 'lucide-react'
+import pb from '@/lib/pocketbase/client'
+import { useAuth } from '@/hooks/use-auth'
+import { useTheme } from '@/hooks/use-theme'
+import { useToast } from '@/hooks/use-toast'
+import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Textarea } from '@/components/ui/textarea'
+import { Badge } from '@/components/ui/badge'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   Select,
   SelectContent,
@@ -21,274 +40,649 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { PriorityBadge } from '@/components/PriorityBadge'
-import { StatusBadge } from '@/components/StatusBadge'
-import { getTickets, createTicket, TicketRecord } from '@/services/tickets'
-import { getCategories, CategoryRecord } from '@/services/categories'
-import { useToast } from '@/hooks/use-toast'
+import { getClientPortalData, getClientHoursBalance, PortalData } from '@/services/client-portal'
+import { TicketRecord } from '@/services/tickets'
+import { formatDateTime } from '@/lib/date-format'
+
+// Sub-componentes
+import TicketPublicDetailDialog from '@/components/portal/TicketPublicDetailDialog'
+import PortalNewTicketDialog from '@/components/portal/PortalNewTicketDialog'
+import PortalApprovalsTab from '@/components/portal/PortalApprovalsTab'
+import PortalAssetsTab from '@/components/portal/PortalAssetsTab'
+import PortalVisitsTab from '@/components/portal/PortalVisitsTab'
+import PortalHoursTab from '@/components/portal/PortalHoursTab'
 
 export default function PortalPage() {
-  const { user, signOut } = useAuth()
-  const { toast } = useToast()
   const navigate = useNavigate()
-  const [tickets, setTickets] = useState<TicketRecord[]>([])
-  const [categories, setCategories] = useState<CategoryRecord[]>([])
-  const [dialogOpen, setDialogOpen] = useState(false)
-  const [title, setTitle] = useState('')
-  const [description, setDescription] = useState('')
-  const [type, setType] = useState('Incidente')
-  const [category, setCategory] = useState('')
-  const [impact, setImpact] = useState('Médio')
-  const [urgency, setUrgency] = useState('Média')
+  const { user, logout } = useAuth()
+  const { theme, toggleTheme, designSettings } = useTheme()
+  const { toast } = useToast()
 
-  const loadData = async () => {
-    if (!user?.company) return
-    const filter = user.unit
-      ? `company = "${user.company}" && unit = "${user.unit}"`
-      : `company = "${user.company}"`
+  // Tabs
+  const [activeTab, setActiveTab] = useState<
+    'tickets' | 'approvals' | 'assets' | 'visits' | 'hours'
+  >('tickets')
+
+  // Dados do portal
+  const [data, setData] = useState<PortalData | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
+
+  // Período de horas
+  const now = new Date()
+  const [selectedMonth, setSelectedMonth] = useState(now.getMonth() + 1)
+  const [selectedYear, setSelectedYear] = useState(now.getFullYear())
+  const [hoursData, setHoursData] = useState({
+    contractedHours: 0,
+    consumedHours: 0,
+    balanceHours: 0,
+    percentUsed: 0,
+    periodName: `${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`,
+    hasContract: false,
+  })
+  const [hoursLoading, setHoursLoading] = useState(false)
+
+  // Modais
+  const [selectedTicket, setSelectedTicket] = useState<TicketRecord | null>(null)
+  const [newTicketOpen, setNewTicketOpen] = useState(false)
+
+  // Filtros de chamados
+  const [ticketSearch, setTicketSearch] = useState('')
+  const [ticketStatusFilter, setTicketStatusFilter] = useState('todos')
+
+  // Identificação do usuário
+  const isFocalPoint =
+    user?.role === 'cliente_gestor' || user?.role === 'admin' || user?.role === 'gestor'
+
+  const companyId = user?.company || (data?.company?.id as string) || ''
+  const companyName = data?.company?.trade_name || data?.company?.legal_name || 'Sua Empresa'
+
+  // Carregar dados
+  const loadPortalData = async (isSilent = false) => {
+    if (!isSilent) setLoading(true)
+    else setRefreshing(true)
+
     try {
-      const data = await getTickets(filter)
-      setTickets(data)
-    } catch {
-      /* intentionally ignored */
+      const portalResult = await getClientPortalData(user)
+      setData(portalResult)
+
+      // Se temos empresa, busca dados de horas para o período selecionado
+      if (portalResult.company?.id) {
+        setHoursLoading(true)
+        const balance = await getClientHoursBalance(
+          portalResult.company.id,
+          selectedMonth,
+          selectedYear,
+        )
+        setHoursData(balance)
+        setHoursLoading(false)
+      }
+    } catch (err: any) {
+      console.error('Erro ao carregar dados do portal:', err)
+      toast({
+        title: 'Erro ao carregar dados',
+        description:
+          err?.message || 'Não foi possível carregar as informações do portal do cliente.',
+        variant: 'destructive',
+      })
+    } finally {
+      setLoading(false)
+      setRefreshing(false)
+    }
+  }
+
+  // Recarregar horas quando o período muda
+  const handleChangePeriod = async (month: number, year: number) => {
+    setSelectedMonth(month)
+    setSelectedYear(year)
+    if (!data?.company?.id) return
+
+    try {
+      setHoursLoading(true)
+      const balance = await getClientHoursBalance(data.company.id, month, year)
+      setHoursData(balance)
+    } catch (err) {
+      console.error('Erro ao atualizar período de horas:', err)
+    } finally {
+      setHoursLoading(false)
     }
   }
 
   useEffect(() => {
-    loadData()
-    getCategories()
-      .then(setCategories)
-      .catch(() => {})
+    loadPortalData()
   }, [user])
 
-  useRealtime('tickets', () => {
-    loadData()
+  const handleLogout = () => {
+    logout()
+    navigate('/portal/login')
+  }
+
+  // Filtragem dos chamados
+  const tickets = data?.tickets || []
+  const filteredTickets = tickets.filter((t) => {
+    const matchesSearch =
+      t.title.toLowerCase().includes(ticketSearch.toLowerCase()) ||
+      t.number.toLowerCase().includes(ticketSearch.toLowerCase()) ||
+      t.description?.toLowerCase().includes(ticketSearch.toLowerCase())
+
+    const matchesStatus =
+      ticketStatusFilter === 'todos' ||
+      (ticketStatusFilter === 'abertos' &&
+        t.status !== 'Resolvido' &&
+        t.status !== 'Fechado' &&
+        t.status !== 'Cancelado') ||
+      (ticketStatusFilter === 'concluidos' &&
+        (t.status === 'Resolvido' || t.status === 'Fechado')) ||
+      t.status === ticketStatusFilter
+
+    return matchesSearch && matchesStatus
   })
 
-  if (user && user.role !== 'cliente_solicitante') {
-    return <Navigate to="/dashboard" replace />
-  }
-  if (!user) return null
-
-  const openCount = tickets.filter(
-    (t) => !['Resolvido', 'Encerrado', 'Cancelado'].includes(t.status),
+  // Contadores
+  const pendingApprovalsCount = (data?.approvals || []).filter(
+    (a) => a.status === 'Pendente',
   ).length
-  const resolvedCount = tickets.filter((t) => ['Resolvido', 'Encerrado'].includes(t.status)).length
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    await createTicket({
-      number: 'PENDENTE',
-      company: user.company!,
-      unit: user.unit || undefined,
-      title,
-      description,
-      type,
-      category: category || undefined,
-      impact,
-      urgency,
-      priority: impact === 'Alto' && urgency === 'Alta' ? 'P1' : 'P3',
-      status: 'Novo',
-      requester_name: user.name || 'Solicitante',
-      requester_email: user.email,
-      source: 'Portal',
-      sla_status: 'Dentro do Prazo',
-    })
-    toast({ title: 'Chamado aberto com sucesso!' })
-    setDialogOpen(false)
-    setTitle('')
-    setDescription('')
-    loadData()
-  }
+  const scheduledVisitsCount = (data?.technicalVisits || []).filter(
+    (v) => v.status === 'Agendada' || v.status === 'Em Andamento',
+  ).length
+  const activeTicketsCount = tickets.filter(
+    (t) => t.status !== 'Resolvido' && t.status !== 'Fechado' && t.status !== 'Cancelado',
+  ).length
 
   return (
-    <div className="min-h-screen bg-slate-100">
-      <header className="flex h-16 items-center justify-between border-b bg-white px-6 shadow-sm">
-        <div className="flex items-center gap-2">
-          <Shield className="h-6 w-6 text-blue-600" />
-          <span className="font-bold text-lg">Portal do Cliente</span>
-        </div>
-        <div className="flex items-center gap-3">
-          <span className="text-sm font-medium text-slate-700">{user.name}</span>
-          <Button variant="ghost" size="sm" onClick={signOut}>
-            <LogOut className="mr-1.5 h-4 w-4" /> Sair
-          </Button>
+    <div className="min-h-screen bg-background text-foreground flex flex-col">
+      {/* =========================================================================
+          CABEÇALHO OFICIAL: Grafite #17181C com letras âmbar/brancas
+          ========================================================================= */}
+      <header className="sticky top-0 z-40 w-full border-b border-amber-500/20 bg-[#17181C] text-amber-100 shadow-md">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
+          {/* Logo e Nome da Empresa */}
+          <div className="flex items-center gap-3">
+            {designSettings?.logo_url ? (
+              <img
+                src={designSettings.logo_url}
+                alt="Logo"
+                className="h-8 max-w-[120px] object-contain drop-shadow"
+              />
+            ) : (
+              <div className="p-2 bg-amber-500/10 border border-amber-500/30 rounded-lg text-amber-400">
+                <LifeBuoy className="h-5 w-5" />
+              </div>
+            )}
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="font-mono text-sm font-bold tracking-wider text-amber-400 uppercase">
+                  Portal do Cliente
+                </span>
+                <span className="text-[10px] font-mono px-2 py-0.2 rounded-full border border-amber-500/40 bg-amber-500/10 text-amber-300">
+                  {companyName}
+                </span>
+              </div>
+              <p className="text-[11px] text-zinc-400 hidden sm:block">
+                Central Integrada de Chamados, Ativos, Visitas e Horas
+              </p>
+            </div>
+          </div>
+
+          {/* Ações do Topo */}
+          <div className="flex items-center gap-2 sm:gap-3">
+            {/* Botão Novo Chamado Destaque */}
+            <Button
+              size="sm"
+              onClick={() => setNewTicketOpen(true)}
+              className="bg-amber-600 hover:bg-amber-700 text-white font-semibold text-xs shadow-sm shadow-amber-600/30 gap-1.5 h-8 sm:h-9"
+            >
+              <Plus className="h-4 w-4" />
+              <span className="hidden sm:inline">Abrir Chamado</span>
+            </Button>
+
+            {/* Alternador de tema oficial */}
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={toggleTheme}
+              className="border-zinc-700 bg-zinc-800/80 text-amber-300 hover:bg-zinc-700 hover:text-amber-200 h-8 w-8 sm:h-9 sm:w-9"
+              title={theme === 'dark' ? 'Modo Claro' : 'Modo Escuro'}
+            >
+              {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+            </Button>
+
+            {/* Recarregar dados */}
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => loadPortalData(true)}
+              disabled={refreshing}
+              className="border-zinc-700 bg-zinc-800/80 text-zinc-300 hover:bg-zinc-700 h-8 w-8 sm:h-9 sm:w-9"
+              title="Atualizar Informações"
+            >
+              <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin text-amber-400' : ''}`} />
+            </Button>
+
+            {/* Usuário / Logout */}
+            <div className="flex items-center gap-2 pl-2 border-l border-zinc-700">
+              <div className="text-right hidden md:block">
+                <span className="text-xs font-semibold text-zinc-100 block leading-tight">
+                  {user?.name || 'Cliente'}
+                </span>
+                <span className="text-[10px] text-amber-400">
+                  {isFocalPoint ? 'Ponto Focal' : 'Solicitante'}
+                </span>
+              </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={handleLogout}
+                className="text-zinc-400 hover:text-rose-400 hover:bg-zinc-800 h-8 w-8 sm:h-9 sm:w-9"
+                title="Sair do Portal"
+              >
+                <LogOut className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
         </div>
       </header>
 
-      <main className="mx-auto max-w-5xl p-6 space-y-6">
-        <div className="grid gap-4 sm:grid-cols-3">
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="flex items-center gap-2 text-sm">
-                <Ticket className="h-4 w-4 text-blue-600" /> Total
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-2xl font-bold">{tickets.length}</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="flex items-center gap-2 text-sm">
-                <Clock className="h-4 w-4 text-orange-500" /> Em Aberto
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-2xl font-bold">{openCount}</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="flex items-center gap-2 text-sm">
-                <CheckCircle className="h-4 w-4 text-green-600" /> Resolvidos
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-2xl font-bold">{resolvedCount}</p>
-            </CardContent>
-          </Card>
-        </div>
+      {/* =========================================================================
+          CORPO PRINCIPAL: Abas dos 6 Módulos do Usuário
+          ========================================================================= */}
+      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+        {/* Banner de Boas-vindas com Resumo Rápido */}
+        <div className="bg-card border rounded-2xl p-4 sm:p-5 shadow-2xs space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div>
+              <h2 className="text-lg font-bold text-foreground">Olá, {user?.name || 'Cliente'}!</h2>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Bem-vindo à área de atendimento da <strong>{companyName}</strong>. Aqui você
+                gerencia solicitações, valida aprovações e audita o consumo de horas.
+              </p>
+            </div>
 
-        <div className="flex justify-between items-center">
-          <h2 className="text-lg font-bold">Meus Chamados</h2>
-          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-            <DialogTrigger asChild>
-              <Button className="bg-blue-600 hover:bg-blue-700">
-                <PlusCircle className="mr-2 h-4 w-4" /> Novo Chamado
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Novo Chamado</DialogTitle>
-              </DialogHeader>
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="space-y-1">
-                  <label className="text-xs font-semibold">Tipo</label>
-                  <Select value={type} onValueChange={setType}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Incidente">Incidente</SelectItem>
-                      <SelectItem value="Requisição de Serviço">Requisição de Serviço</SelectItem>
-                      <SelectItem value="Dúvida">Dúvida</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-1">
-                  <label className="text-xs font-semibold">Categoria</label>
-                  <Select value={category} onValueChange={setCategory}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {categories.map((c) => (
-                        <SelectItem key={c.id} value={c.id}>
-                          {c.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-1">
-                    <label className="text-xs font-semibold">Impacto</label>
-                    <Select value={impact} onValueChange={setImpact}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Alto">Alto</SelectItem>
-                        <SelectItem value="Médio">Médio</SelectItem>
-                        <SelectItem value="Baixo">Baixo</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-xs font-semibold">Urgência</label>
-                    <Select value={urgency} onValueChange={setUrgency}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Alta">Alta</SelectItem>
-                        <SelectItem value="Média">Média</SelectItem>
-                        <SelectItem value="Baixa">Baixa</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-                <div className="space-y-1">
-                  <label className="text-xs font-semibold">Título</label>
-                  <Input
-                    required
-                    value={title}
-                    onChange={(e) => setTitle(e.target.value)}
-                    placeholder="Resumo do problema"
-                  />
-                </div>
-                <div className="space-y-1">
-                  <label className="text-xs font-semibold">Descrição</label>
-                  <Textarea
-                    required
-                    rows={4}
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                    placeholder="Descreva o problema..."
-                  />
-                </div>
-                <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-700">
-                  Abrir Chamado
-                </Button>
-              </form>
-            </DialogContent>
-          </Dialog>
-        </div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <Badge
+                variant="outline"
+                className="border-amber-500/40 text-amber-600 dark:text-amber-400 py-1 px-2.5 text-xs font-semibold"
+              >
+                {isFocalPoint ? 'Perfil: Ponto Focal Autorizado' : 'Perfil: Solicitante'}
+              </Badge>
+            </div>
+          </div>
 
-        <div className="rounded-xl border bg-white shadow-sm overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs text-slate-600">
-              <thead className="bg-slate-50 border-b font-semibold text-slate-700">
-                <tr>
-                  <th className="p-3.5">Nº</th>
-                  <th className="p-3.5">Título</th>
-                  <th className="p-3.5">Prioridade</th>
-                  <th className="p-3.5">Status</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y">
-                {tickets.length === 0 ? (
-                  <tr>
-                    <td colSpan={4} className="p-8 text-center text-slate-500">
-                      Nenhum chamado encontrado.
-                    </td>
-                  </tr>
-                ) : (
-                  tickets.map((t) => (
-                    <tr
-                      key={t.id}
-                      className="hover:bg-slate-50/60 cursor-pointer"
-                      onClick={() => navigate(`/tickets/${t.id}`)}
-                    >
-                      <td className="p-3.5 font-bold text-blue-600">{t.number}</td>
-                      <td className="p-3.5 font-medium text-slate-900 max-w-sm truncate">
-                        {t.title}
-                      </td>
-                      <td className="p-3.5">
-                        <PriorityBadge priority={t.priority} />
-                      </td>
-                      <td className="p-3.5">
-                        <StatusBadge status={t.status} />
-                      </td>
-                    </tr>
-                  ))
+          {/* Cards de atalho e contadores rápidos */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2 border-t border-border/50">
+            <button
+              onClick={() => setActiveTab('tickets')}
+              className={`p-3 rounded-xl border text-left transition-all ${
+                activeTab === 'tickets'
+                  ? 'border-amber-500 bg-amber-500/10'
+                  : 'bg-muted/30 hover:bg-muted/60'
+              }`}
+            >
+              <div className="flex items-center justify-between text-muted-foreground text-xs mb-1">
+                <span>Chamados Ativos</span>
+                <LifeBuoy className="h-4 w-4 text-amber-500" />
+              </div>
+              <span className="text-xl font-bold text-foreground">{activeTicketsCount}</span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('approvals')}
+              className={`p-3 rounded-xl border text-left transition-all ${
+                activeTab === 'approvals'
+                  ? 'border-amber-500 bg-amber-500/10'
+                  : 'bg-muted/30 hover:bg-muted/60'
+              }`}
+            >
+              <div className="flex items-center justify-between text-muted-foreground text-xs mb-1">
+                <span>Aprovações</span>
+                <ShieldCheck className="h-4 w-4 text-blue-500" />
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xl font-bold text-foreground">{pendingApprovalsCount}</span>
+                {pendingApprovalsCount > 0 && (
+                  <Badge className="bg-amber-500 text-slate-900 text-[10px] px-1.5 py-0 font-bold">
+                    Pendente
+                  </Badge>
                 )}
-              </tbody>
-            </table>
+              </div>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('visits')}
+              className={`p-3 rounded-xl border text-left transition-all ${
+                activeTab === 'visits'
+                  ? 'border-amber-500 bg-amber-500/10'
+                  : 'bg-muted/30 hover:bg-muted/60'
+              }`}
+            >
+              <div className="flex items-center justify-between text-muted-foreground text-xs mb-1">
+                <span>Visitas Agendadas</span>
+                <CalendarDays className="h-4 w-4 text-emerald-500" />
+              </div>
+              <span className="text-xl font-bold text-foreground">{scheduledVisitsCount}</span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('hours')}
+              className={`p-3 rounded-xl border text-left transition-all ${
+                activeTab === 'hours'
+                  ? 'border-amber-500 bg-amber-500/10'
+                  : 'bg-muted/30 hover:bg-muted/60'
+              }`}
+            >
+              <div className="flex items-center justify-between text-muted-foreground text-xs mb-1">
+                <span>Saldo de Horas</span>
+                <Clock className="h-4 w-4 text-purple-500" />
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="text-xl font-bold text-foreground">{hoursData.balanceHours}h</span>
+                <span className="text-[11px] text-muted-foreground">({hoursData.periodName})</span>
+              </div>
+            </button>
           </div>
         </div>
+
+        {/* =========================================================================
+            NAVEGAÇÃO POR ABAS (TABS)
+            ========================================================================= */}
+        <Tabs
+          value={activeTab}
+          onValueChange={(val: any) => setActiveTab(val)}
+          className="space-y-4"
+        >
+          <div className="border-b border-border/80 overflow-x-auto">
+            <TabsList className="bg-transparent h-auto p-0 gap-2 sm:gap-4 flex justify-start">
+              <TabsTrigger
+                value="tickets"
+                className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-amber-500 data-[state=active]:text-amber-600 dark:data-[state=active]:text-amber-400 rounded-none px-3 py-2.5 text-xs sm:text-sm font-semibold gap-2"
+              >
+                <LifeBuoy className="h-4 w-4" />
+                Meus Chamados ({tickets.length})
+              </TabsTrigger>
+
+              <TabsTrigger
+                value="approvals"
+                className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-amber-500 data-[state=active]:text-amber-600 dark:data-[state=active]:text-amber-400 rounded-none px-3 py-2.5 text-xs sm:text-sm font-semibold gap-2"
+              >
+                <ShieldCheck className="h-4 w-4" />
+                Aprovações
+                {pendingApprovalsCount > 0 && (
+                  <Badge className="bg-amber-500 text-slate-900 text-[10px] px-1.5 py-0 font-bold ml-1">
+                    {pendingApprovalsCount}
+                  </Badge>
+                )}
+              </TabsTrigger>
+
+              <TabsTrigger
+                value="assets"
+                className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-amber-500 data-[state=active]:text-amber-600 dark:data-[state=active]:text-amber-400 rounded-none px-3 py-2.5 text-xs sm:text-sm font-semibold gap-2"
+              >
+                <Server className="h-4 w-4" />
+                Meus Ativos (CMDB) ({data?.configurationItems?.length || 0})
+              </TabsTrigger>
+
+              <TabsTrigger
+                value="visits"
+                className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-amber-500 data-[state=active]:text-amber-600 dark:data-[state=active]:text-amber-400 rounded-none px-3 py-2.5 text-xs sm:text-sm font-semibold gap-2"
+              >
+                <CalendarDays className="h-4 w-4" />
+                Visitas Técnicas ({data?.technicalVisits?.length || 0})
+              </TabsTrigger>
+
+              <TabsTrigger
+                value="hours"
+                className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-amber-500 data-[state=active]:text-amber-600 dark:data-[state=active]:text-amber-400 rounded-none px-3 py-2.5 text-xs sm:text-sm font-semibold gap-2"
+              >
+                <Clock className="h-4 w-4" />
+                Horas e Franquia ({hoursData.periodName})
+              </TabsTrigger>
+            </TabsList>
+          </div>
+
+          {/* =========================================================================
+              ABA 1: MEUS CHAMADOS (Lista + Andamento + Logs Públicos)
+              ========================================================================= */}
+          <TabsContent value="tickets" className="space-y-4 mt-0">
+            {/* Filtros e Ações de Chamados */}
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-card border rounded-xl p-3 sm:p-4 shadow-2xs">
+              <div className="flex items-center gap-2 flex-1">
+                <div className="relative flex-1 max-w-md">
+                  <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Buscar por número, título ou assunto..."
+                    value={ticketSearch}
+                    onChange={(e) => setTicketSearch(e.target.value)}
+                    className="pl-9 text-xs h-9"
+                  />
+                </div>
+
+                <Select value={ticketStatusFilter} onValueChange={setTicketStatusFilter}>
+                  <SelectTrigger className="w-[160px] text-xs h-9">
+                    <SelectValue placeholder="Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="todos">Todos os Status</SelectItem>
+                    <SelectItem value="abertos">Apenas Abertos</SelectItem>
+                    <SelectItem value="concluidos">Concluídos</SelectItem>
+                    <SelectItem value="Novo">Novo</SelectItem>
+                    <SelectItem value="Em Andamento">Em Andamento</SelectItem>
+                    <SelectItem value="Aguardando Solicitante">Aguardando Você</SelectItem>
+                    <SelectItem value="Resolvido">Resolvido</SelectItem>
+                    <SelectItem value="Fechado">Fechado</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <Button
+                size="sm"
+                onClick={() => setNewTicketOpen(true)}
+                className="bg-amber-600 hover:bg-amber-700 text-white font-semibold text-xs gap-1.5 h-9"
+              >
+                <Plus className="h-4 w-4" />
+                Abrir Novo Chamado
+              </Button>
+            </div>
+
+            {/* Listagem de Chamados */}
+            {loading ? (
+              <div className="py-12 text-center text-xs text-muted-foreground bg-card border rounded-xl">
+                Carregando chamados...
+              </div>
+            ) : filteredTickets.length === 0 ? (
+              <div className="py-12 text-center text-xs text-muted-foreground bg-card border rounded-xl space-y-3">
+                <LifeBuoy className="h-8 w-8 text-muted-foreground mx-auto opacity-60" />
+                <p className="font-semibold text-sm text-foreground">Nenhum chamado localizado</p>
+                <p className="text-muted-foreground">
+                  {ticketSearch || ticketStatusFilter !== 'todos'
+                    ? 'Nenhum chamado corresponde aos filtros aplicados.'
+                    : 'Sua empresa ainda não possui chamados registrados.'}
+                </p>
+                <Button
+                  size="sm"
+                  onClick={() => setNewTicketOpen(true)}
+                  className="bg-amber-600 hover:bg-amber-700 text-white text-xs gap-1"
+                >
+                  <Plus className="h-4 w-4" /> Abrir Primeiro Chamado
+                </Button>
+              </div>
+            ) : (
+              <div className="grid gap-3">
+                {filteredTickets.map((ticket) => {
+                  const isClosed = ticket.status === 'Resolvido' || ticket.status === 'Fechado'
+                  const isWaitingClient = ticket.status === 'Aguardando Solicitante'
+
+                  return (
+                    <Card
+                      key={ticket.id}
+                      onClick={() => setSelectedTicket(ticket)}
+                      className="cursor-pointer transition-all hover:border-amber-500/50 hover:shadow-sm bg-card"
+                    >
+                      <CardHeader className="p-4 pb-2">
+                        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="font-mono font-bold text-sm text-amber-600 dark:text-amber-400">
+                                #{ticket.number}
+                              </span>
+                              <Badge
+                                variant="outline"
+                                className={
+                                  isClosed
+                                    ? 'bg-muted text-muted-foreground'
+                                    : isWaitingClient
+                                      ? 'bg-amber-500/20 text-amber-700 dark:text-amber-300 border-amber-500/40 font-bold'
+                                      : 'bg-emerald-500/15 text-emerald-600 border-emerald-500/30'
+                                }
+                              >
+                                {ticket.status}
+                              </Badge>
+                              {ticket.type && (
+                                <Badge variant="secondary" className="text-xs">
+                                  {ticket.type}
+                                </Badge>
+                              )}
+                              {ticket.priority && (
+                                <span className="text-[11px] text-muted-foreground">
+                                  Prioridade: <strong>{ticket.priority}</strong>
+                                </span>
+                              )}
+                            </div>
+                            <CardTitle className="text-base font-semibold text-foreground">
+                              {ticket.title}
+                            </CardTitle>
+                          </div>
+
+                          <div className="flex items-center gap-2 self-start sm:self-auto">
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="text-xs text-amber-600 dark:text-amber-400 gap-1 h-8"
+                            >
+                              <Eye className="h-3.5 w-3.5" />
+                              Ver Andamento e Logs
+                              <ChevronRight className="h-3.5 w-3.5" />
+                            </Button>
+                          </div>
+                        </div>
+                      </CardHeader>
+
+                      <CardContent className="p-4 pt-1 space-y-2 text-xs text-muted-foreground">
+                        <p className="line-clamp-2 text-foreground/80 leading-relaxed">
+                          {ticket.description}
+                        </p>
+
+                        <div className="flex items-center justify-between text-[11px] pt-1 border-t border-border/40">
+                          <span>
+                            Aberto em: <strong>{formatDateTime(ticket.created)}</strong>
+                          </span>
+                          {ticket.expand?.category?.name && (
+                            <span>
+                              Categoria: <strong>{ticket.expand.category.name}</strong>
+                            </span>
+                          )}
+                          {ticket.requester_name && (
+                            <span className="hidden sm:inline">
+                              Solicitante: <strong>{ticket.requester_name}</strong>
+                            </span>
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )
+                })}
+              </div>
+            )}
+          </TabsContent>
+
+          {/* =========================================================================
+              ABA 2: APROVAÇÕES DOS PONTOS FOCAIS
+              ========================================================================= */}
+          <TabsContent value="approvals" className="mt-0">
+            <PortalApprovalsTab
+              approvals={data?.approvals || []}
+              loading={loading}
+              onRefresh={() => loadPortalData(true)}
+              isFocalPoint={isFocalPoint}
+              onOpenTicket={(t) => setSelectedTicket(t)}
+            />
+          </TabsContent>
+
+          {/* =========================================================================
+              ABA 3: MEUS ATIVOS (CMDB)
+              ========================================================================= */}
+          <TabsContent value="assets" className="mt-0">
+            <PortalAssetsTab assets={data?.configurationItems || []} loading={loading} />
+          </TabsContent>
+
+          {/* =========================================================================
+              ABA 4: VISITAS TÉCNICAS
+              ========================================================================= */}
+          <TabsContent value="visits" className="mt-0">
+            <PortalVisitsTab
+              visits={data?.technicalVisits || []}
+              loading={loading}
+              onOpenTicket={(t) => setSelectedTicket(t)}
+            />
+          </TabsContent>
+
+          {/* =========================================================================
+              ABA 5: HORAS CONTRATADAS × CONSUMIDAS × SALDO
+              ========================================================================= */}
+          <TabsContent value="hours" className="mt-0">
+            <PortalHoursTab
+              hoursData={hoursData}
+              loading={hoursLoading}
+              selectedMonth={selectedMonth}
+              selectedYear={selectedYear}
+              onChangePeriod={handleChangePeriod}
+            />
+          </TabsContent>
+        </Tabs>
       </main>
+
+      {/* =========================================================================
+          RODAPÉ DO PORTAL
+          ========================================================================= */}
+      <footer className="border-t border-border/50 py-4 text-center text-xs text-muted-foreground mt-auto bg-card/50">
+        <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
+          <span>{companyName} • Portal do Cliente do Sistema ITSM LUIZ</span>
+          <span className="text-[11px]">
+            Logs transparentes, segurança e conformidade operacional.
+          </span>
+        </div>
+      </footer>
+
+      {/* Modal de Detalhes Públicos e Logs Públicos do Chamado (sem anotações internas) */}
+      {selectedTicket && (
+        <TicketPublicDetailDialog
+          ticket={selectedTicket}
+          open={!!selectedTicket}
+          onOpenChange={(open) => {
+            if (!open) {
+              setSelectedTicket(null)
+              loadPortalData(true)
+            }
+          }}
+        />
+      )}
+
+      {/* Modal de Novo Chamado Amarrado à Empresa */}
+      <PortalNewTicketDialog
+        open={newTicketOpen}
+        onOpenChange={setNewTicketOpen}
+        companyId={companyId}
+        companyName={companyName}
+        user={{
+          id: user?.id || '',
+          name: user?.name || '',
+          email: user?.email || '',
+          unit: user?.unit,
+          phone: user?.phone,
+        }}
+        categories={data?.categories || []}
+        assets={data?.configurationItems || []}
+        onSuccess={() => loadPortalData(true)}
+      />
     </div>
   )
 }

@@ -53,15 +53,19 @@ export default function Login() {
   const [infoMessage, setInfoMessage] = useState<string | null>(null)
 
   const navigate = useNavigate()
-  const { login, isAuthenticated } = useAuth()
+  const { login, isAuthenticated, user } = useAuth()
   const { toast } = useToast()
 
   // Se já autenticado e sem etapas intermediárias pendentes, direcionar
   useEffect(() => {
     if (isAuthenticated && step === 'credentials') {
-      navigate('/dashboard')
+      if (user?.role === 'cliente_solicitante' || user?.role === 'cliente_gestor') {
+        navigate('/portal')
+      } else {
+        navigate('/dashboard')
+      }
     }
-  }, [isAuthenticated, navigate, step])
+  }, [isAuthenticated, user, navigate, step])
 
   // Checar se há mensagem de sessão expirada e carregar logotipo dinâmico
   useEffect(() => {
@@ -117,7 +121,12 @@ export default function Login() {
       } else {
         // Não requer 2FA: concluir login imediatamente
         login(authData.token, authData.record)
-        navigate('/dashboard')
+        const role = authData.record?.role
+        if (role === 'cliente_solicitante' || role === 'cliente_gestor') {
+          navigate('/portal')
+        } else {
+          navigate('/dashboard')
+        }
       }
     } catch (err: any) {
       console.error('Login error:', err)
@@ -343,6 +352,16 @@ export default function Login() {
               >
                 {isLoading ? 'Autenticando...' : 'Entrar no Sistema'}
               </Button>
+
+              <div className="flex items-center justify-between w-full pt-2 border-t text-xs text-muted-foreground">
+                <span>É cliente ou ponto focal?</span>
+                <a
+                  href="/portal/login"
+                  className="text-primary hover:underline font-semibold flex items-center gap-1"
+                >
+                  Portal do Cliente &rarr;
+                </a>
+              </div>
             </CardFooter>
           </form>
         )}
