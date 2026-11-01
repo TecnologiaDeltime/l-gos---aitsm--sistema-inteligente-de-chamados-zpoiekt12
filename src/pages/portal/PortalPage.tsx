@@ -28,6 +28,7 @@ import {
   Building,
   AlertTriangle,
   BarChart3,
+  Star,
 } from 'lucide-react'
 import pb from '@/lib/pocketbase/client'
 import { useAuth } from '@/hooks/use-auth'
@@ -775,6 +776,46 @@ export default function PortalPage() {
                                   Prioridade: <strong>{ticket.priority}</strong>
                                 </span>
                               )}
+
+                              {/* Indicador de Satisfação com Estrelas */}
+                              {(() => {
+                                const score = Number((ticket as any).satisfaction_score) || 0
+                                const isEvaluated = score >= 1 && score <= 5
+
+                                return (
+                                  <div
+                                    className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md border text-xs font-medium ${
+                                      isEvaluated
+                                        ? 'bg-amber-500/10 border-amber-500/30 text-amber-600 dark:text-amber-400'
+                                        : 'bg-muted/40 border-border/60 text-muted-foreground'
+                                    }`}
+                                    title={
+                                      isEvaluated
+                                        ? `Chamado avaliado com nota ${score} de 5 estrelas${(ticket as any).satisfaction_comment ? `: "${(ticket as any).satisfaction_comment}"` : ''}`
+                                        : 'Chamado ainda não avaliado (clique para abrir e avaliar com até 5 estrelas)'
+                                    }
+                                  >
+                                    <div className="flex items-center gap-0.5">
+                                      {[1, 2, 3, 4, 5].map((starIndex) => {
+                                        const filled = isEvaluated && starIndex <= score
+                                        return (
+                                          <Star
+                                            key={starIndex}
+                                            className={`h-3 w-3 ${
+                                              filled
+                                                ? 'text-amber-500 fill-amber-500 drop-shadow-xs'
+                                                : 'text-zinc-300 dark:text-zinc-600'
+                                            }`}
+                                          />
+                                        )
+                                      })}
+                                    </div>
+                                    <span className="text-[10px] font-semibold">
+                                      {isEvaluated ? `${score}/5` : 'Não avaliado'}
+                                    </span>
+                                  </div>
+                                )
+                              })()}
                             </div>
                             <CardTitle className="text-base font-semibold text-foreground">
                               {ticket.title}

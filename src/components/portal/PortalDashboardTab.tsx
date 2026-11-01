@@ -1,18 +1,14 @@
-import React from 'react'
+import React, { useMemo } from 'react'
 import {
   LifeBuoy,
   Clock,
   CheckCircle2,
-  AlertCircle,
   Building2,
-  TrendingUp,
   Users,
   Activity,
   BarChart3,
   Calendar,
-  Layers,
   ArrowUpRight,
-  PieChart as PieChartIcon,
 } from 'lucide-react'
 import {
   BarChart,
@@ -99,6 +95,42 @@ export default function PortalDashboardTab({
   const currentYear = new Date().getFullYear()
   const years = [currentYear - 2, currentYear - 1, currentYear, currentYear + 1]
   const isCurrentMonth = selectedMonth === new Date().getMonth() + 1 && selectedYear === currentYear
+
+  const sectors = metrics?.sectors || []
+  const last3Months = metrics?.last3Months || []
+  const top10Activities = metrics?.top10Activities || []
+  const top10Requesters = metrics?.top10Requesters || []
+
+  // Prepara dados para o gráfico de consumo por setor (memoizado para evitar re-criação de array)
+  const sectorChartData = useMemo(
+    () =>
+      sectors.slice(0, 8).map((s) => ({
+        name: s.sectorName.length > 16 ? s.sectorName.slice(0, 16) + '...' : s.sectorName,
+        fullName: s.sectorName,
+        Horas: s.hours,
+        Chamados: s.ticketCount,
+        percent: s.percent,
+      })),
+    [sectors],
+  )
+
+  // Prepara dados para o gráfico de série mensal dos últimos 3 meses (memoizado)
+  const months3ChartData = useMemo(
+    () =>
+      last3Months.map((m) => ({
+        name: m.label,
+        Contratadas: m.contractedHours,
+        Consumidas: m.consumedHours,
+        Saldo: m.balanceHours,
+        Abertos: m.ticketsOpened,
+        Fechados: m.ticketsClosed,
+      })),
+    [last3Months],
+  )
+
+  // Top setor que mais requisita
+  const topSector = sectors.length > 0 ? sectors[0] : null
+
   if (loading) {
     return (
       <div className="space-y-6">
@@ -118,33 +150,6 @@ export default function PortalDashboardTab({
       </div>
     )
   }
-
-  const sectors = metrics?.sectors || []
-  const last3Months = metrics?.last3Months || []
-  const top10Activities = metrics?.top10Activities || []
-  const top10Requesters = metrics?.top10Requesters || []
-
-  // Prepara dados para o gráfico de consumo por setor
-  const sectorChartData = sectors.slice(0, 8).map((s) => ({
-    name: s.sectorName.length > 16 ? s.sectorName.slice(0, 16) + '...' : s.sectorName,
-    fullName: s.sectorName,
-    Horas: s.hours,
-    Chamados: s.ticketCount,
-    percent: s.percent,
-  }))
-
-  // Prepara dados para o gráfico de série mensal dos últimos 3 meses
-  const months3ChartData = last3Months.map((m) => ({
-    name: m.label,
-    Contratadas: m.contractedHours,
-    Consumidas: m.consumedHours,
-    Saldo: m.balanceHours,
-    Abertos: m.ticketsOpened,
-    Fechados: m.ticketsClosed,
-  }))
-
-  // Top setor que mais requisita
-  const topSector = sectors.length > 0 ? sectors[0] : null
 
   return (
     <div className="space-y-6">
@@ -432,6 +437,7 @@ export default function PortalDashboardTab({
                       name="Horas de Suporte (h)"
                       radius={[4, 4, 0, 0]}
                       fill="#d97706"
+                      isAnimationActive={false}
                     >
                       <LabelList
                         dataKey="Horas"
@@ -439,8 +445,11 @@ export default function PortalDashboardTab({
                         formatter={(val: any) => (val > 0 ? `${val}h` : '')}
                         style={{ fontSize: '10px', fill: 'currentColor', fontWeight: 600 }}
                       />
-                      {sectorChartData.map((_, idx) => (
-                        <Cell key={idx} fill={SECTOR_COLORS[idx % SECTOR_COLORS.length]} />
+                      {sectorChartData.map((item, idx) => (
+                        <Cell
+                          key={item.fullName || idx}
+                          fill={SECTOR_COLORS[idx % SECTOR_COLORS.length]}
+                        />
                       ))}
                     </Bar>
                   </BarChart>
@@ -525,6 +534,7 @@ export default function PortalDashboardTab({
                       name="Franquia Contratada"
                       fill="#3b82f6"
                       radius={[4, 4, 0, 0]}
+                      isAnimationActive={false}
                     >
                       <LabelList
                         dataKey="Contratadas"
@@ -538,6 +548,7 @@ export default function PortalDashboardTab({
                       name="Horas Consumidas"
                       fill="#d97706"
                       radius={[4, 4, 0, 0]}
+                      isAnimationActive={false}
                     >
                       <LabelList
                         dataKey="Consumidas"

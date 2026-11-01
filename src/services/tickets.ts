@@ -49,6 +49,10 @@ export interface TicketRecord {
   email_html?: string
   created: string
   updated: string
+  /** Pesquisa de satisfação do cliente (nota 1 a 5, comentário e data de resposta). */
+  satisfaction_score?: number
+  satisfaction_comment?: string
+  satisfaction_responded_at?: string
   /** Última interação do chamado (expand via getTicketsWithLastInteraction). */
   last_interaction_at?: string
   triage_suggestions?: {
