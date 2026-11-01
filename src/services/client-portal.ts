@@ -193,7 +193,7 @@ export async function getClientPortalData(
     companyId ? getClientPortalAssets(companyId) : Promise.resolve([]),
     companyId ? getClientPortalVisits(companyId) : Promise.resolve([]),
     pb
-      .collection('categories')
+      .collection('tkt_categories')
       .getFullList<CategoryRecord>({ sort: 'name' })
       .catch(() => []),
   ])
