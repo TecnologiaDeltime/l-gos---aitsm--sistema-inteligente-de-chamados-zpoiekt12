@@ -95,6 +95,7 @@ import {
   type TicketAttachmentRecord,
 } from '@/services/attachments'
 import { PriorityBadge } from '@/components/PriorityBadge'
+import { TicketAiReplyPanel } from '@/components/TicketAiReplyPanel'
 import { StatusBadge } from '@/components/StatusBadge'
 import { OriginalEmailCard } from '@/components/OriginalEmailCard'
 import { sanitizeEmailHtml } from '@/lib/sanitize-email-html'
@@ -1045,6 +1046,17 @@ export default function TicketDetail({
             <TabsTrigger value="history">Histórico</TabsTrigger>
           </TabsList>
           <TabsContent value="interactions" className="pt-4 space-y-4">
+            {canEditTicket && perms.canAccessItem('tickets', 'tickets_ai_reply') && (
+              <TicketAiReplyPanel
+                ticketId={ticket.id}
+                ticketNumber={ticket.number}
+                requesterName={ticket.requester_name}
+                canEdit={canEditTicket}
+                onApplyDraft={(draftText) => {
+                  setComment(draftText)
+                }}
+              />
+            )}
             <div className="flex items-center justify-between rounded-lg border border-border bg-muted px-4 py-2">
               <span className="text-sm font-semibold text-foreground">Total de Horas</span>
               <span className="text-sm font-bold tabular-nums text-primary">
@@ -1060,16 +1072,25 @@ export default function TicketDetail({
                   <div className="flex justify-between items-center">
                     <div className="flex items-center gap-2">
                       <span className="font-bold text-foreground">
-                        {i.expand?.author?.name || 'Usuário'}
+                        {i.content?.includes('[Resposta Automática por IA]')
+                          ? 'Agente de IA'
+                          : i.expand?.author?.name || 'Usuário'}
                       </span>
-                      {i.origin === 'Automático' && (
+                      {i.content?.includes('[Resposta Automática por IA]') ? (
+                        <Badge
+                          variant="outline"
+                          className="text-[10px] bg-amber-500/10 text-primary border-amber-500/30"
+                        >
+                          🤖 Resposta IA
+                        </Badge>
+                      ) : i.origin === 'Automático' ? (
                         <Badge
                           variant="outline"
                           className="text-[10px] bg-sky-50 text-sky-700 border-sky-200 dark:bg-sky-950/50 dark:text-sky-300 dark:border-sky-800"
                         >
                           E-mail
                         </Badge>
-                      )}
+                      ) : null}
                       {i.origin === 'Cronômetro' && (
                         <Badge
                           variant="outline"

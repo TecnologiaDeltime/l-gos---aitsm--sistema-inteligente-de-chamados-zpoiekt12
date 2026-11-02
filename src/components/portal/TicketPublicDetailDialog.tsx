@@ -587,13 +587,23 @@ export default function TicketPublicDetailDialog({
                         <div className="flex items-center gap-1.5 font-semibold">
                           <span
                             className={
-                              isStaff ? 'text-amber-600 dark:text-amber-400' : 'text-foreground'
+                              log.content?.includes('[Resposta Automática por IA]')
+                                ? 'text-amber-500 font-bold'
+                                : isStaff
+                                  ? 'text-amber-600 dark:text-amber-400'
+                                  : 'text-foreground'
                             }
                           >
-                            {log.expand?.author?.name || 'Participante'}
+                            {log.content?.includes('[Resposta Automática por IA]')
+                              ? '🤖 Agente de IA'
+                              : log.expand?.author?.name || 'Participante'}
                           </span>
                           <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4">
-                            {isStaff ? 'Atendimento Suporte' : 'Cliente'}
+                            {log.content?.includes('[Resposta Automática por IA]')
+                              ? 'Resposta IA'
+                              : isStaff
+                                ? 'Atendimento Suporte'
+                                : 'Cliente'}
                           </Badge>
                         </div>
                         <span className="text-[11px] text-muted-foreground flex items-center gap-1">

@@ -102,6 +102,13 @@ const BASE_SYSTEM_MODULES: GranularModuleDefinition[] = [
         description: 'Fila de pendências e deliberações de aprovação',
         path: '/tickets/approvals',
       },
+      {
+        key: 'tickets_ai_reply',
+        label: 'Resposta com IA em Chamados',
+        description:
+          'Uso do Agente Nativo de IA para gerar rascunhos de resposta e interações em chamados',
+        path: '/tickets',
+      },
     ],
   },
   {
@@ -674,6 +681,13 @@ const BASE_SYSTEM_MODULES: GranularModuleDefinition[] = [
         label: 'Configurações Gerais',
         description: 'Preferências gerais e perfil do usuário logado',
         path: '/settings',
+      },
+      {
+        key: 'settings_ai_reply',
+        label: 'Configurações de IA (Chamados)',
+        description:
+          'Gestão dos modos do Agente Nativo de IA: sugestão de rascunhos, resposta automática ou ambos',
+        path: '/settings?tab=ai_reply',
       },
     ],
   },

@@ -22,7 +22,8 @@ import ProfilesPage from '@/pages/profiles/ProfilesPage'
 import { ClientNotificationSettingsTab } from '@/components/settings/ClientNotificationSettingsTab'
 import { DesignSettingsTab } from '@/components/settings/DesignSettingsTab'
 import ClientPortalSettingsTab from '@/components/settings/ClientPortalSettingsTab'
-import { ShieldCheck, Globe, Shield } from 'lucide-react'
+import { AiTicketSettingsTab } from '@/components/settings/AiTicketSettingsTab'
+import { ShieldCheck, Globe, Shield, Bot } from 'lucide-react'
 import {
   getVoiceAlertsEnabled,
   setVoiceAlertsEnabled,
@@ -60,17 +61,27 @@ export default function SettingsPage() {
       ? 'portal'
       : searchParams.get('tab') === 'design'
         ? 'design'
-        : searchParams.get('tab') === 'email'
-          ? 'email'
-          : searchParams.get('tab') === 'client_notif'
-            ? 'client_notif'
-            : searchParams.get('tab') === 'vault'
-              ? 'vault'
-              : searchParams.get('tab') === 'security'
-                ? 'security'
-                : 'general'
+        : searchParams.get('tab') === 'ai_reply'
+          ? 'ai_reply'
+          : searchParams.get('tab') === 'email'
+            ? 'email'
+            : searchParams.get('tab') === 'client_notif'
+              ? 'client_notif'
+              : searchParams.get('tab') === 'vault'
+                ? 'vault'
+                : searchParams.get('tab') === 'security'
+                  ? 'security'
+                  : 'general'
   const [mainTab, setMainTab] = useState<
-    'general' | 'portal' | 'design' | 'client_notif' | 'email' | 'vault' | 'security' | 'profiles'
+    | 'general'
+    | 'portal'
+    | 'design'
+    | 'ai_reply'
+    | 'client_notif'
+    | 'email'
+    | 'vault'
+    | 'security'
+    | 'profiles'
   >(initialTab as any)
 
   const handleTabChange = (
@@ -78,6 +89,7 @@ export default function SettingsPage() {
       | 'general'
       | 'portal'
       | 'design'
+      | 'ai_reply'
       | 'client_notif'
       | 'email'
       | 'vault'
@@ -90,17 +102,19 @@ export default function SettingsPage() {
         ? { tab: 'portal' }
         : tab === 'design'
           ? { tab: 'design' }
-          : tab === 'client_notif'
-            ? { tab: 'client_notif' }
-            : tab === 'email'
-              ? { tab: 'email' }
-              : tab === 'vault'
-                ? { tab: 'vault' }
-                : tab === 'security'
-                  ? { tab: 'security' }
-                  : tab === 'profiles'
-                    ? { tab: 'profiles' }
-                    : {},
+          : tab === 'ai_reply'
+            ? { tab: 'ai_reply' }
+            : tab === 'client_notif'
+              ? { tab: 'client_notif' }
+              : tab === 'email'
+                ? { tab: 'email' }
+                : tab === 'vault'
+                  ? { tab: 'vault' }
+                  : tab === 'security'
+                    ? { tab: 'security' }
+                    : tab === 'profiles'
+                      ? { tab: 'profiles' }
+                      : {},
     )
   }
 
@@ -111,6 +125,8 @@ export default function SettingsPage() {
       setMainTab('portal')
     } else if (tabFromUrl === 'design' && mainTab !== 'design') {
       setMainTab('design')
+    } else if (tabFromUrl === 'ai_reply' && mainTab !== 'ai_reply') {
+      setMainTab('ai_reply')
     } else if (tabFromUrl === 'client_notif' && mainTab !== 'client_notif') {
       setMainTab('client_notif')
     } else if (tabFromUrl === 'email' && mainTab !== 'email') {
@@ -377,6 +393,23 @@ export default function SettingsPage() {
             </Button>
           )}
 
+          {permissions.canAccessItem('settings', 'settings_ai_reply') && (
+            <Button
+              type="button"
+              size="sm"
+              variant={mainTab === 'ai_reply' ? 'default' : 'ghost'}
+              onClick={() => handleTabChange('ai_reply')}
+              className={`h-8 text-xs font-semibold rounded-lg transition-all ${
+                mainTab === 'ai_reply'
+                  ? 'bg-amber-500/20 text-primary border border-amber-500/30 shadow-xs shadow-amber-500/10'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              <Bot className="h-3.5 w-3.5 mr-1.5 text-primary" />
+              Inteligência Artificial (IA)
+            </Button>
+          )}
+
           {permissions.canAccessItem('settings', 'settings_client_notif') && (
             <Button
               type="button"
@@ -479,6 +512,11 @@ export default function SettingsPage() {
       {/* SEÇÃO DESIGN & APARÊNCIA */}
       {mainTab === 'design' && permissions.canAccessItem('settings', 'settings_design') && (
         <DesignSettingsTab isAdminOrGestor={permissions.isGestor} />
+      )}
+
+      {/* SEÇÃO INTELIGÊNCIA ARTIFICIAL (IA) */}
+      {mainTab === 'ai_reply' && permissions.canAccessItem('settings', 'settings_ai_reply') && (
+        <AiTicketSettingsTab isAdminOrGestor={permissions.isGestor} />
       )}
 
       {/* SEÇÃO NOTIFICAÇÕES DO CLIENTE */}

@@ -260,6 +260,26 @@ A Base de Conhecimento do Sistema ITSM combina repositório técnico com automa�
 - **Sugestões de Melhoria**: para cada artigo sinalizado, o painel exibe o diagnóstico e uma proposta detalhada de melhoria (adicionar tópicos, atualizar comandos, clarificar etapas).
 - **Aplicação ou Recusa**: com um clique, o curador pode aplicar a sugestão de melhoria diretamente ao artigo ou recusar a recomendação caso julgue inadequada.
 
+### 7.4 Agente Nativo de IA para Resposta a Chamados (`ticket-responder-agent`)
+
+O sistema integra o agente nativo do Skip Cloud (`ticket-responder-agent`), configurado via migração `0117_ai_ticket_responder.js` e hook `ai_ticket_responder.js`, atuando no atendimento interno e no Portal do Cliente em **dois modos configuráveis**:
+
+- **Modo Sugestão (Rascunho do Operador)**:
+  - Na tela de detalhes do chamado interno (`TicketDetail.tsx`), o operador dispõe do painel/botão **"Gerar Resposta com IA"** (`TicketAiReplyPanel.tsx`).
+  - O agente analisa o contexto integral do chamado: título, descrição, dados do solicitante, ativo e item de configuração (CI) vinculado, interações anteriores e artigos técnicos relevantes da Base de Conhecimento.
+  - O operador pode refinar o rascunho com instruções pontuais (ex.: _"oriente reiniciar o modem"_), revisar/editar o texto e transferi-lo com um clique para a caixa de comentário/interação oficial.
+- **Modo Automático**:
+  - Quando ativado em Configurações, o agente responde automaticamente aos novos chamados recém-abertos, acolhendo o solicitante e fornecendo diagnóstico preliminar imediato.
+  - Configuração granular de canais: permite escolher se a resposta automática atua no **Sistema Interno**, no **Portal do Cliente**, ou em ambos.
+  - As interações automáticas recebem o cabeçalho `🤖 [Resposta Automática por IA]` e badge visual dedicado, identificando a autoria da IA tanto para os técnicos quanto para os clientes no portal (`TicketPublicDetailDialog.tsx`).
+- **Regra de Horas e Franquia (0108 / 0109)**:
+  - Respostas geradas automaticamente são criadas com `origin: 'Automático'`, `duration_minutes: 0` e `billing_status: 'Não Faturável'`.
+  - **Não debitam a franquia de horas do cliente**, mantendo rigorosa aderência à política contratual vigente.
+- **Configuração Centralizada**:
+  - Aba dedicada **"Inteligência Artificial (IA)"** em Configurações (`/settings?tab=ai_reply`), permitindo ativar/desativar o recurso, selecionar o modo (Sugestão, Automático ou Ambos), definir canais e customizar diretrizes organizacionais.
+- **Controle de Acesso Granular**:
+  - Itens dedicados no catálogo de Perfis de Acesso com 3 níveis (Visualizar / Editar / Configurar): `tickets_ai_reply` (módulo Chamados) e `settings_ai_reply` (módulo Configurações).
+
 _[print: tela principal da base de conhecimento com busca e categorias de artigos]_
 _[print: painel de rascunhos de artigos gerados por ia pendentes de revisão]_
 _[print: painel de cura algorítmica de artigos com sugestões de melhoria]_

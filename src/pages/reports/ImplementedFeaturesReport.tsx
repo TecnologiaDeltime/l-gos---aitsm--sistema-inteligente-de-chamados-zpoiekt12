@@ -567,6 +567,13 @@ const FEATURE_CATEGORIES: FeatureCategory[] = [
           'Painel de controle com abas unificadas para Artigos Oficiais, Fila de Rascunhos de IA e Diagnósticos de Cura, garantindo governança ITIL de qualidade antes da publicação e rastreabilidade total do chamado de origem.',
         tag: 'Governança & Qualidade',
       },
+      {
+        id: 'kb-ai-4',
+        title: 'Agente Nativo de IA para Resposta a Chamados (Dois Modos)',
+        description:
+          'Agente nativo do Skip Cloud (ticket-responder-agent) integrado ao atendimento interno e ao Portal do Cliente. Opera nos dois modos configuráveis: (1) Sugestão ao operador via botão "Resposta IA", gerando rascunhos contextualizados com chamado, ativos e base de conhecimento para revisão e envio como interação; e (2) Resposta automática opcional que acolhe o solicitante sem debitar franquia de horas (origem Automático, Não Faturável).',
+        tag: 'Agente Nativo / ITSM',
+      },
     ],
   },
   {

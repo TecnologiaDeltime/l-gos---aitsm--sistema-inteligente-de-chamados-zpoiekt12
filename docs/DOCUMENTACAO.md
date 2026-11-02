@@ -17,7 +17,7 @@ O conjunto documental está dividido em módulos temáticos para facilitar a con
    - **CMDB & Gestão de Ativos**: Cadastro Completo de Ativos e Itens de Configuração, Dono do Equipamento, Usuário Responsável, Status de Disponibilidade (_Em uso, Obsoleto, Descartado, Disponível, Em Estoque_), Importação em lote e Tipos de CI.
    - **Gestão de Contratos**: Contratos vigentes, franquia de horas, conciliação e períodos contratuais.
    - **Gestão de Visitas Técnicas N2**: Dashboard de Visitas, Calendário e Agenda, Minhas Visitas, Lançamento de Despesas e Reembolsos, Ordens de Serviço, Assinaturas Digitais, Checklists Técnicos e Visitas Recorrentes.
-   - **Base de Conhecimento com Inteligência Artificial**: Consulta e publicação de artigos técnicos, Geração Automática de Rascunhos por IA a partir de notas de encerramento de técnicos seniores, e Painel de Cura com Diagnóstico Algorítmico e Recomendações de Melhoria.
+   - **Base de Conhecimento com Inteligência Artificial**: Consulta e publicação de artigos técnicos, Geração Automática de Rascunhos por IA a partir de notas de encerramento de técnicos seniores, Painel de Cura com Diagnóstico Algorítmico e Agente Nativo de IA para Resposta a Chamados nos dois modos (sugestão ao operador e resposta automática).
    - **Portal do Cliente (`/portal`)**: Tela de Login dedicada (`/portal/login`), Dashboard Analítico, Meus Chamados com timeline pública, Abertura de Chamado, Aprovações por Pontos Focais, Inventário de TI (CMDB) com histórico de manutenção e atalho de chamado, Visitas Técnicas agendadas com técnico designado, Saldo de Horas e Franquia, e Relatórios Mensais ABNT Liberados.
 
 2. **[Relatórios e Extrações](RELATORIOS.md)**
