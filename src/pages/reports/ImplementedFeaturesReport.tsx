@@ -816,7 +816,7 @@ export default function ImplementedFeaturesReport() {
             </span>
             <span className="flex items-center gap-1.5">
               <Building className="w-3.5 h-3.5 text-primary" />
-              <strong>Sistema:</strong> Lógos ITSM Enterprise v1.0
+              <strong>Sistema:</strong> Lógos AITILSM Enterprise v1.0
             </span>
             <span className="flex items-center gap-1.5">
               <Layers className="w-3.5 h-3.5 text-primary" />
@@ -1059,7 +1059,7 @@ export default function ImplementedFeaturesReport() {
       <div className="bg-card border border-border rounded-xl p-4 md:p-6 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-muted-foreground print:border-t-2 print:border-border print:shadow-none print:rounded-none print:p-3 print:mt-6">
         <div className="space-y-0.5 text-center sm:text-left">
           <p className="font-semibold text-foreground">
-            Lógos ITSM — Plataforma de Gestão de Serviços de TI
+            Lógos AITILSM — Plataforma de Gestão de Serviços de TI
           </p>
           <p>Documento de validação de entregas e recursos homologados.</p>
         </div>

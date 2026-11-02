@@ -1,15 +1,15 @@
-import logosLogoPng from '@/assets/logo-logos-ambar-com-aitsm-1-68a29.png'
+import logosLogoPng from '@/assets/logo-logos-ambar-em-png-transparente-4-8654a.png'
 
 /**
- * Identidade visual oficial do sistema: Lógos ITSM.
+ * Identidade visual oficial do sistema: Lógos AITILSM.
  * O logotipo oficial enviado pelo cliente fica em
- * `src/assets/logo-logos-ambar-com-aitsm-1-68a29.png` e o monograma "L"
- * é reproduzido em SVG para superfícies compactas (sidebar, topo e favicon).
+ * `src/assets/logo-logos-ambar-em-png-transparente-4-8654a.png` (símbolo "L" estilizado em laranja/âmbar + "Lógos")
+ * e o monograma "L" é reproduzido em SVG para superfícies compactas (sidebar, topo e favicon).
  */
 
-export const SYSTEM_NAME = 'Lógos ITSM'
+export const SYSTEM_NAME = 'Lógos AITILSM'
 export const SYSTEM_NAME_SHORT = 'Lógos'
-export const SYSTEM_FULL_NAME = 'Lógos ITSM — Sistema de Gestão de Chamados'
+export const SYSTEM_FULL_NAME = 'Lógos AITILSM — Sistema de Gestão de Chamados'
 export { logosLogoPng }
 
 /** Monograma "L" estilizado em gradiente laranja/âmbar (marca Lógos). */
@@ -34,7 +34,7 @@ export function LogosMonogram({ className = 'h-8 w-8' }: { className?: string })
 }
 
 /**
- * Logotipo completo (monograma + "Lógos" + "AITSM") para telas de login,
+ * Logotipo completo (monograma + "Lógos" + "AITILSM") para telas de login,
  * cabeçalhos e superfícies em destaque. Legível nos temas escuro e claro.
  */
 export function LogosLogoFull({
@@ -58,7 +58,7 @@ export function LogosLogoFull({
         <div
           className={`font-bold tracking-[0.35em] text-amber-500/80 uppercase ${subtitleClassName}`}
         >
-          AITSM
+          AITILSM
         </div>
       </div>
     </div>
@@ -66,16 +66,17 @@ export function LogosLogoFull({
 }
 
 /**
- * Bloco de marca para tela de login: o logotipo oficial enviado pelo cliente
- * em destaque, dentro de painel branco (o arquivo tem fundo branco).
+ * Bloco de marca para telas de autenticação e destaque.
+ * Exibe a imagem oficial do logotipo Lógos (símbolo L + texto Lógos em âmbar).
+ * Fundo escuro sutil com borda âmbar e suporte a dark/light mode para acabamento perfeito.
  */
 export function LogosLogoPanel({ className = 'max-h-16' }: { className?: string }) {
   return (
-    <div className="rounded-xl bg-white border border-border/50 shadow-sm px-5 py-3 inline-flex items-center justify-center">
+    <div className="rounded-xl bg-[#0f1013] border border-amber-500/20 shadow-md px-5 py-3 inline-flex items-center justify-center">
       <img
         src={logosLogoPng}
-        alt="Lógos ITSM — AITSM"
-        className={`${className} w-auto object-contain`}
+        alt="Lógos AITILSM"
+        className={`${className} w-auto object-contain drop-shadow-[0_2px_8px_rgba(245,158,11,0.2)]`}
       />
     </div>
   )

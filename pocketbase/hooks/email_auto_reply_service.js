@@ -142,7 +142,7 @@
       encryption: 'STARTTLS',
       user: '',
       password: '',
-      senderName: 'Lógos ITSM',
+      senderName: 'Lógos AITILSM',
       replyTo: '',
       senderEmail: 'noreply@logositsm.com.br',
     }
@@ -297,7 +297,7 @@
   function renderInstitutionalTemplate(opts) {
     opts = opts || {}
     var preheader = escapeHtml(opts.preheader || '')
-    var badgeText = escapeHtml(opts.badgeText || 'Lógos ITSM')
+    var badgeText = escapeHtml(opts.badgeText || 'Lógos AITILSM')
     var badgeColor = opts.badgeColor || '#d97706' // Âmbar padrão ITSM
     var title = escapeHtml(opts.title || '')
     var subtitle = escapeHtml(opts.subtitle || '')
@@ -319,7 +319,7 @@
         '" alt="Logo" style="max-height: 40px; max-width: 180px; display: block; border: 0;" />\n' +
         '    </td>\n' +
         '    <td style="padding-left: 14px; vertical-align: middle; border-left: 1px solid rgba(255,255,255,0.2); margin-left: 14px;">\n' +
-        '      <div style="font-size: 16px; font-weight: 800; color: #ffffff; letter-spacing: -0.3px; line-height: 18px;">Lógos <span style="color: #fbbf24; font-weight: 600;">ITSM</span></div>\n' +
+        '      <div style="font-size: 16px; font-weight: 800; color: #ffffff; letter-spacing: -0.3px; line-height: 18px;">Lógos <span style="color: #fbbf24; font-weight: 600;">AITILSM</span></div>\n' +
         '      <div style="font-size: 10px; color: #94a3b8; font-weight: 500; text-transform: uppercase; letter-spacing: 0.8px; margin-top: 2px;">Gestão de Serviços de TI</div>\n' +
         '    </td>\n' +
         '  </tr>\n' +
@@ -334,7 +334,7 @@
         '      ⚡\n' +
         '    </td>\n' +
         '    <td style="padding-left: 12px; vertical-align: middle;">\n' +
-        '      <div style="font-size: 19px; font-weight: 800; color: #ffffff; letter-spacing: -0.5px; line-height: 20px;">Lógos <span style="color: #fbbf24; font-weight: 600;">ITSM</span></div>\n' +
+        '      <div style="font-size: 19px; font-weight: 800; color: #ffffff; letter-spacing: -0.5px; line-height: 20px;">Lógos <span style="color: #fbbf24; font-weight: 600;">AITILSM</span></div>\n' +
         '      <div style="font-size: 10px; color: #94a3b8; font-weight: 500; text-transform: uppercase; letter-spacing: 0.8px; margin-top: 2px;">Gestão de Serviços de TI</div>\n' +
         '    </td>\n' +
         '  </tr>\n' +
@@ -420,7 +420,7 @@
       '</p>\n' +
       '              <p style="margin: 0; font-size: 10.5px; color: #94a3b8;">© ' +
       new Date().getFullYear() +
-      ' Lógos ITSM • Plataforma de Gestão de Incidentes e Requisições</p>\n' +
+      ' Lógos AITILSM • Plataforma de Gestão de Incidentes e Requisições</p>\n' +
       '            </td>\n' +
       '          </tr>\n' +
       '        </table>\n' +

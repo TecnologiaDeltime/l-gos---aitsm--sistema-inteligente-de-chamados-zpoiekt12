@@ -145,7 +145,7 @@
       encryption: 'STARTTLS',
       user: '',
       password: '',
-      senderName: 'Lógos ITSM',
+      senderName: 'Lógos AITILSM',
       replyTo: '',
       senderEmail: 'noreply@logositsm.com.br',
     }
@@ -2526,7 +2526,7 @@
       '</td></tr>' +
       '</table>' +
       '<hr style="border: none; border-top: 1px solid #e2e8f0; margin: 20px 0;" />' +
-      '<p style="font-size: 11px; color: #94a3b8; margin-bottom: 0;">Lógos ITSM — Notificações e Alertas Operacionais</p>' +
+      '<p style="font-size: 11px; color: #94a3b8; margin-bottom: 0;">Lógos AITILSM — Notificações e Alertas Operacionais</p>' +
       '</div>'
 
     var textBody =

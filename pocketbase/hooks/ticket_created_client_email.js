@@ -232,7 +232,7 @@ onRecordAfterCreateSuccess((e) => {
       'Olá ' +
       requesterName +
       ',\n\n' +
-      'Seu chamado foi aberto com sucesso no sistema Lógos ITSM e já está na fila de atendimento.\n\n' +
+      'Seu chamado foi aberto com sucesso no sistema Lógos AITILSM e já está na fila de atendimento.\n\n' +
       'Número do Chamado: #' +
       ticketNumber +
       '\n' +
@@ -249,7 +249,7 @@ onRecordAfterCreateSuccess((e) => {
       priority +
       '\n\n' +
       'Um operador técnico entrará em contato em breve.\n\n' +
-      '-- Lógos ITSM'
+      '-- Lógos AITILSM'
 
     if (typeof globalThis.itsmSendWithAudit === 'function') {
       globalThis.itsmSendWithAudit({

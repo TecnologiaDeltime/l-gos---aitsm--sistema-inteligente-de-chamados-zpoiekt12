@@ -6,9 +6,9 @@
       <stop offset="100%" stop-color="#C2410C"/>
     </linearGradient>
   </defs>
-  <rect width="100" height="100" rx="22" fill="#17181C"/>
+  <rect width="100" height="100" rx="22" fill="#0F1013"/>
   <path
-    d="M20 14 L48 14 L48 58 L84 58 L73 88 L20 88 Z M48 14 L48 58 L60 58 L60 34 Z"
+    d="M18 12 L46 12 L46 56 L86 56 L74 90 L18 90 Z M46 12 L46 56 L58 56 L58 32 Z"
     fill="url(#g)"
     fill-rule="evenodd"
   />

@@ -302,7 +302,7 @@ routerAdd(
             'h)'
 
           var message = new MailerMessage()
-          message.from = { address: 'noreply@logositsm.com.br', name: 'Lógos ITSM' }
+          message.from = { address: 'noreply@logositsm.com.br', name: 'Lógos AITILSM' }
           message.to = [{ address: dest.email }]
           message.subject = subject
           message.text = bodyText

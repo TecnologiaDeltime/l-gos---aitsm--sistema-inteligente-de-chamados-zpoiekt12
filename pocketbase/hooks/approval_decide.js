@@ -142,7 +142,7 @@ routerAdd('GET', '/backend/v1/approvals/act', (e) => {
       '  <meta name="viewport" content="width=device-width, initial-scale=1.0">\n' +
       '  <title>' +
       esc(statusTitle) +
-      ' - Lógos ITSM</title>\n' +
+      ' - Lógos AITILSM</title>\n' +
       '  <style>\n' +
       '    body { margin: 0; padding: 0; background-color: #f1f5f9; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; color: #1e293b; display: flex; align-items: center; justify-content: center; min-height: 100vh; }\n' +
       '    .card { background: #ffffff; border-radius: 12px; max-width: 540px; width: 90%; margin: 20px; padding: 36px 32px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.07); border: 1px solid #e2e8f0; text-align: center; }\n' +
@@ -169,7 +169,7 @@ routerAdd('GET', '/backend/v1/approvals/act', (e) => {
       esc(message) +
       '</p>\n' +
       (details ? '    <div class="details">' + details + '</div>\n' : '') +
-      '    <div class="footer">Lógos ITSM • Sistema de Gestão de Chamados e Aprovações</div>\n' +
+      '    <div class="footer">Lógos AITILSM • Sistema de Gestão de Chamados e Aprovações</div>\n' +
       '  </div>\n</body>\n</html>'
 
     return e.html(200, html)

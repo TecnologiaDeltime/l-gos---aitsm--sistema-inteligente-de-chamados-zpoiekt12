@@ -364,7 +364,7 @@ onRecordAfterUpdateSuccess((e) => {
       cleanSolution +
       '\n\n' +
       'Caso precise de suporte adicional, entre em contato através do portal do cliente.\n\n' +
-      '-- Lógos ITSM'
+      '-- Lógos AITILSM'
 
     // Lista consolidada de destinatários (solicitante + contatos/focais extras se configurados)
     var allDestinations = []

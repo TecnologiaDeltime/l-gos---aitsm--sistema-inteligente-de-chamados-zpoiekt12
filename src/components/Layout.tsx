@@ -881,7 +881,7 @@ export default function Layout() {
                 className="text-base font-bold tracking-tight truncate transition-colors group-hover:opacity-90"
                 style={{ color: customSidebarText }}
               >
-                Lógos ITSM
+                Lógos AITILSM
               </span>
             </div>
           )}
@@ -1647,7 +1647,7 @@ export default function Layout() {
           className="text-[10px] font-mono font-medium opacity-80"
           style={{ color: customSidebarText }}
         >
-          Lógos ITSM
+          Lógos AITILSM
         </p>
         <span
           className="inline-flex items-center gap-1.5 text-[10px] font-mono font-medium"

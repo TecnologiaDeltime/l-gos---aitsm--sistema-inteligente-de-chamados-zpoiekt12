@@ -126,7 +126,7 @@ export default function ApprovalPublic() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <ShieldCheck className="h-6 w-6 text-blue-600" />
-              <span className="font-bold text-slate-900 tracking-tight">Lógos ITSM</span>
+              <span className="font-bold text-slate-900 tracking-tight">Lógos AITILSM</span>
             </div>
             <Badge
               variant={

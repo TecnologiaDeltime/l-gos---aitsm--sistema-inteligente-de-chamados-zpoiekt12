@@ -946,7 +946,7 @@ export default function MonthlyClientReportPage() {
                 </PrintChartContainer>
               </div>
               <p className="abnt-source-bottom">
-                Fonte: Elaborado pelo autor com base nos registros do Lógos ITSM (
+                Fonte: Elaborado pelo autor com base nos registros do Lógos AITILSM (
                 {reportData.periodLabel}).
               </p>
             </div>
@@ -1027,7 +1027,7 @@ export default function MonthlyClientReportPage() {
                 </Table>
               </div>
               <p className="abnt-source-bottom">
-                Fonte: Módulo de Contratos e Gestão de Tempo do Lógos ITSM.
+                Fonte: Módulo de Contratos e Gestão de Tempo do Lógos AITILSM.
               </p>
             </div>
           </section>
@@ -1112,7 +1112,7 @@ export default function MonthlyClientReportPage() {
                     </PrintChartContainer>
                   </div>
                   <p className="abnt-source-bottom">
-                    Fonte: Apuração por centro de custo/departamento — Lógos ITSM.
+                    Fonte: Apuração por centro de custo/departamento — Lógos AITILSM.
                   </p>
                 </div>
                 {/* Tabela de Apoio 2 */}
@@ -1242,7 +1242,8 @@ export default function MonthlyClientReportPage() {
                     </PrintChartContainer>
                   </div>
                   <p className="abnt-source-bottom">
-                    Fonte: Registros de abertura de chamados e apontamentos técnicos (Lógos ITSM).
+                    Fonte: Registros de abertura de chamados e apontamentos técnicos (Lógos
+                    AITILSM).
                   </p>
                 </div>
                 {/* Tabela de Apoio 3 */}
@@ -1286,7 +1287,7 @@ export default function MonthlyClientReportPage() {
                       </TableBody>
                     </Table>
                   </div>
-                  <p className="abnt-source-bottom">Fonte: Lógos ITSM.</p>
+                  <p className="abnt-source-bottom">Fonte: Lógos AITILSM.</p>
                 </div>
               </>
             )}
@@ -1430,7 +1431,9 @@ export default function MonthlyClientReportPage() {
                       </TableBody>
                     </Table>
                   </div>
-                  <p className="abnt-source-bottom">Fonte: Catálogo de Serviços do Lógos ITSM.</p>
+                  <p className="abnt-source-bottom">
+                    Fonte: Catálogo de Serviços do Lógos AITILSM.
+                  </p>
                 </div>
               </>
             )}
@@ -1653,7 +1656,7 @@ export default function MonthlyClientReportPage() {
                   </PrintChartContainer>
                 </div>
                 <p className="abnt-source-bottom">
-                  Fonte: Módulo de Gestão de Ativos (Equipments) do Lógos ITSM.
+                  Fonte: Módulo de Gestão de Ativos (Equipments) do Lógos AITILSM.
                 </p>
               </div>
             )}
@@ -1713,7 +1716,7 @@ export default function MonthlyClientReportPage() {
                     </Table>
                   </div>
                 )}
-                <p className="abnt-source-bottom">Fonte: CMDB Lógos ITSM.</p>
+                <p className="abnt-source-bottom">Fonte: CMDB Lógos AITILSM.</p>
               </div>
 
               {reportData.assets.exitedList.length > 0 && (
@@ -1764,7 +1767,7 @@ export default function MonthlyClientReportPage() {
                       </TableBody>
                     </Table>
                   </div>
-                  <p className="abnt-source-bottom">Fonte: CMDB Lógos ITSM.</p>
+                  <p className="abnt-source-bottom">Fonte: CMDB Lógos AITILSM.</p>
                 </div>
               )}
             </div>
@@ -1874,7 +1877,8 @@ export default function MonthlyClientReportPage() {
                     </PrintChartContainer>
                   </div>
                   <p className="abnt-source-bottom">
-                    Fonte: Registros históricos de interações e apontamentos de horas (Lógos ITSM).
+                    Fonte: Registros históricos de interações e apontamentos de horas (Lógos
+                    AITILSM).
                   </p>
                 </div>
                 {/* Quadro 7: Comparativo mensal de consumo (Layout Expandido em Paisagem) */}
@@ -2000,7 +2004,7 @@ export default function MonthlyClientReportPage() {
                     </Table>
                   </div>
                   <p className="abnt-source-bottom">
-                    Fonte: Série histórica consolidada dos últimos 6 meses (Lógos ITSM).
+                    Fonte: Série histórica consolidada dos últimos 6 meses (Lógos AITILSM).
                   </p>
                 </div>
               </>
@@ -2012,7 +2016,7 @@ export default function MonthlyClientReportPage() {
               <div>
                 <div className="border-b border-black w-48 mx-auto mb-2" />
                 <p className="font-bold">Responsável Técnico Deltime</p>
-                <p className="text-muted-foreground">Lógos ITSM</p>
+                <p className="text-muted-foreground">Lógos AITILSM</p>
               </div>
               <div>
                 <div className="border-b border-black w-48 mx-auto mb-2" />
@@ -2023,7 +2027,7 @@ export default function MonthlyClientReportPage() {
               </div>
             </div>
             <p className="text-center text-[10px] text-muted-foreground mt-6">
-              Relatório emitido automaticamente pelo Lógos ITSM em{' '}
+              Relatório emitido automaticamente pelo Lógos AITILSM em{' '}
               {new Date().toLocaleString('pt-BR')}. Documento em conformidade com normas ABNT NBR
               10719.
             </p>
