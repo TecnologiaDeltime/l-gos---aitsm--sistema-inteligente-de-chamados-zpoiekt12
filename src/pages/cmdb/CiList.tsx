@@ -10,10 +10,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { getEquipments, EquipmentRecord, CI_STATUSES, DEVICE_TYPES } from '@/services/equipments'
+import {
+  getEquipments,
+  EquipmentRecord,
+  CI_STATUSES,
+  AVAILABILITY_STATUSES,
+  DEVICE_TYPES,
+} from '@/services/equipments'
 import { getCompanies } from '@/services/companies'
 import { getTickets } from '@/services/tickets'
 import { CiStatusBadge } from '@/components/CiStatusBadge'
+import { AvailabilityStatusBadge } from '@/components/AvailabilityStatusBadge'
 import { useRealtime } from '@/hooks/use-realtime'
 
 export default function CiList() {
@@ -25,6 +32,7 @@ export default function CiList() {
   const [companyFilter, setCompanyFilter] = useState('all')
   const [typeFilter, setTypeFilter] = useState('all')
   const [statusFilter, setStatusFilter] = useState('all')
+  const [availabilityFilter, setAvailabilityFilter] = useState('all')
   const [manufacturerFilter, setManufacturerFilter] = useState('all')
   const [hostnameFilter, setHostnameFilter] = useState('all')
   const [deviceTypeFilter, setDeviceTypeFilter] = useState('all')
@@ -77,6 +85,11 @@ export default function CiList() {
         if (companyFilter !== 'all' && e.company !== companyFilter) return false
         if (typeFilter !== 'all' && e.type !== typeFilter) return false
         if (statusFilter !== 'all' && e.status !== statusFilter) return false
+        if (
+          availabilityFilter !== 'all' &&
+          (e.availability_status || 'Em uso') !== availabilityFilter
+        )
+          return false
         if (manufacturerFilter !== 'all' && e.manufacturer !== manufacturerFilter) return false
         if (hostnameFilter !== 'all' && e.hostname !== hostnameFilter) return false
         if (deviceTypeFilter !== 'all' && e.device_type !== deviceTypeFilter) return false
@@ -99,6 +112,7 @@ export default function CiList() {
     companyFilter,
     typeFilter,
     statusFilter,
+    availabilityFilter,
     manufacturerFilter,
     hostnameFilter,
     deviceTypeFilter,
@@ -207,6 +221,19 @@ export default function CiList() {
               ))}
             </SelectContent>
           </Select>
+          <Select value={availabilityFilter} onValueChange={setAvailabilityFilter}>
+            <SelectTrigger className="w-36">
+              <SelectValue placeholder="Disponibilidade" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todas Disponib.</SelectItem>
+              {AVAILABILITY_STATUSES.map((s) => (
+                <SelectItem key={s} value={s}>
+                  {s}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           <Select value={hostnameFilter} onValueChange={setHostnameFilter}>
             <SelectTrigger className="w-36">
               <SelectValue placeholder="Hostname" />
@@ -256,7 +283,8 @@ export default function CiList() {
                 {cols.map((c) => (
                   <SortHeader key={c.key} col={c.key} label={c.label} />
                 ))}
-                <SortHeader col="status" label="Status" />
+                <SortHeader col="status" label="Status Oper." />
+                <SortHeader col="availability_status" label="Disponibilidade" />
                 <SortHeader label="Chamados" />
                 <SortHeader label="Empresa" />
                 <SortHeader label="Unidade" />
@@ -298,6 +326,9 @@ export default function CiList() {
                     <td className="p-3">{e.patrimony_number || '-'}</td>
                     <td className="p-3">
                       <CiStatusBadge status={e.status} />
+                    </td>
+                    <td className="p-3">
+                      <AvailabilityStatusBadge status={e.availability_status || 'Em uso'} />
                     </td>
                     <td className="p-3">
                       <span

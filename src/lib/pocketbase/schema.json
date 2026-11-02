@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-01T23:43:01.548Z",
+  "generatedAt": "2026-11-02T00:01:43.938Z",
   "collections": [
     {
       "name": "users",
@@ -1139,6 +1139,13 @@
           "type": "text",
           "required": false,
           "system": false
+        },
+        {
+          "name": "availability_status",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["Em uso", "Obsoleto", "Descartado", "Disponível", "Em Estoque"]
         }
       ],
       "indexes": [
@@ -8829,6 +8836,13 @@
           "required": false,
           "system": false,
           "collectionRef": "company_units"
+        },
+        {
+          "name": "availability_status",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["Em uso", "Obsoleto", "Descartado", "Disponível", "Em Estoque"]
         }
       ],
       "indexes": [

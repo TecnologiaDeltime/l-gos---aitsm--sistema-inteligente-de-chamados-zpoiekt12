@@ -694,6 +694,12 @@ export default function Layout() {
       icon: Timer,
       show: permissions.canAccessItem('reports', 'rep_worked_hours'),
     },
+    {
+      label: 'Relatório de Ativos',
+      path: '/reports/assets',
+      icon: Server,
+      show: permissions.canAccessItem('reports', 'rep_assets'),
+    },
   ]
   const relatoriosGroupVisible =
     !permissions.isModuleHidden('reports') && relatoriosSubmenuItems.some((i) => i.show)

@@ -321,6 +321,13 @@ const FEATURE_CATEGORIES: FeatureCategory[] = [
           'Apresentação de metadados, número de série, localização e especificações técnicas na visualização do ticket.',
         tag: 'Diagnóstico',
       },
+      {
+        id: 'cmdb-5',
+        title: 'Status de Disponibilidade nos Ativos',
+        description:
+          'Campo estruturado com as opções Em uso, Obsoleto, Descartado, Disponível e Em Estoque, integrado no cadastro/edição, listagem e ficha do ativo.',
+        tag: 'CMDB & Ciclo de Vida',
+      },
     ],
   },
   {
@@ -469,6 +476,13 @@ const FEATURE_CATEGORIES: FeatureCategory[] = [
         description:
           'Apuração linha a linha do tempo efetivo de trabalho utilizando o play e pause do chamado (origem Cronômetro, não debita franquia do cliente e acumula nas horas do operador), totalizadores de horas trabalhadas e os 7 filtros completos, com exportação em CSV, XLSX e PDF.',
         tag: 'Produtividade / Cronômetro',
+      },
+      {
+        id: 'rep-9',
+        title: 'Relatório Detalhado de Ativos (/reports/assets)',
+        description:
+          'Inventário completo de equipamentos/CMDB com filtros por Empresa (Cliente), Filial e Setor, exibindo todos os campos de cadastro (hardware, dono, operacional, datas e Status de Disponibilidade) com exportação em CSV, XLSX e PDF.',
+        tag: 'CMDB / Inventário',
       },
     ],
   },

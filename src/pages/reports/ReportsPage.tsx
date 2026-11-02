@@ -115,6 +115,12 @@ const OTHER_REPORTS = [
     path: '/reports/worked-hours',
     itemKey: 'rep_worked_hours',
   },
+  {
+    title: 'Relatório de Ativos',
+    desc: 'Inventário completo e detalhado com filtros por Empresa, Filial e Setor, dados de hardware, garantia e disponibilidade.',
+    path: '/reports/assets',
+    itemKey: 'rep_assets',
+  },
 ]
 
 export default function ReportsPage() {

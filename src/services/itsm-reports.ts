@@ -87,6 +87,43 @@ export interface WorkedHoursReportRow {
   solution: string
 }
 
+export interface AssetReportRow {
+  id: string
+  name: string
+  hostname: string
+  device_type: string
+  type: string
+  manufacturer: string
+  model: string
+  serial_number: string
+  patrimony_number: string
+  ip_address: string
+  operating_system: string
+  processor: string
+  processor_cores: string
+  ram_total: string
+  storage: string
+  storage_type: string
+  storageDisplay: string
+  owner: string
+  responsible_user: string
+  companyId: string
+  companyName: string
+  branchId: string
+  branchName: string
+  sectorId: string
+  sectorName: string
+  location: string
+  status: string
+  availability_status: string
+  supplier: string
+  acquisition_date?: string
+  warranty_until?: string
+  notes: string
+  createdAt: string
+  updatedAt: string
+}
+
 export interface AuxiliaryFilterOptions {
   companies: Array<{ id: string; name: string }>
   branches: Array<{ id: string; name: string; companyId: string }>
@@ -94,6 +131,16 @@ export interface AuxiliaryFilterOptions {
   operators: Array<{ id: string; name: string }>
   activities: Array<{ id: string; name: string }>
   statuses: string[]
+}
+
+export interface AssetReportFilters {
+  companyId?: string
+  branchId?: string
+  sectorId?: string
+  status?: string
+  availability_status?: string
+  device_type?: string
+  search?: string
 }
 
 export const TICKET_REPORT_STATUSES = [
@@ -284,6 +331,96 @@ export async function getTicketReport(
   })
 
   return { rows, totalAccompanimentSeconds: totalAccSeconds }
+}
+
+/**
+ * 4. RELATÓRIO DETALHADO DE ATIVOS (CMDB)
+ * Filtros principais: Empresa (Cliente), Filial e Setor.
+ * Traz todos os campos de cadastro dos ativos:
+ * nome, tipo, serial, marca, modelo, localização, filial, setor,
+ * status do ativo, Status de Disponibilidade, notas, datas de compra/garantia, etc.
+ */
+export async function getAssetReport(
+  filters: AssetReportFilters,
+): Promise<{ rows: AssetReportRow[] }> {
+  const parts: string[] = []
+
+  if (filters.companyId && filters.companyId !== 'all') {
+    parts.push(`company = "${filters.companyId}"`)
+  }
+  if (filters.branchId && filters.branchId !== 'all') {
+    parts.push(`unit = "${filters.branchId}"`)
+  }
+  if (filters.sectorId && filters.sectorId !== 'all') {
+    parts.push(`department = "${filters.sectorId}"`)
+  }
+  if (filters.status && filters.status !== 'all') {
+    parts.push(`status = "${filters.status}"`)
+  }
+  if (filters.availability_status && filters.availability_status !== 'all') {
+    parts.push(`availability_status = "${filters.availability_status}"`)
+  }
+  if (filters.device_type && filters.device_type !== 'all') {
+    parts.push(`device_type = "${filters.device_type}"`)
+  }
+  if (filters.search) {
+    const s = filters.search.replace(/"/g, '')
+    parts.push(
+      `(name ~ "${s}" || serial_number ~ "${s}" || patrimony_number ~ "${s}" || ip_address ~ "${s}" || hostname ~ "${s}" || manufacturer ~ "${s}" || model ~ "${s}" || owner ~ "${s}")`,
+    )
+  }
+
+  const filter = parts.join(' && ')
+  const list = await pb.collection('equipments').getFullList({
+    filter,
+    sort: '-updated',
+    expand: 'company,unit,department',
+  })
+
+  const rows: AssetReportRow[] = list.map((e: any) => {
+    const storageDisplay = e.storage
+      ? `${e.storage}${e.storage_type ? ` (${e.storage_type})` : ''}`
+      : '—'
+
+    return {
+      id: e.id,
+      name: e.name || '—',
+      hostname: e.hostname || '—',
+      device_type: e.device_type || '—',
+      type: e.type || '—',
+      manufacturer: e.manufacturer || '—',
+      model: e.model || '—',
+      serial_number: e.serial_number || '—',
+      patrimony_number: e.patrimony_number || '—',
+      ip_address: e.ip_address || '—',
+      operating_system: e.operating_system || '—',
+      processor: e.processor || '—',
+      processor_cores: e.processor_cores || '—',
+      ram_total: e.ram_total || '—',
+      storage: e.storage || '—',
+      storage_type: e.storage_type || '—',
+      storageDisplay,
+      owner: e.owner || '—',
+      responsible_user: e.responsible_user || '—',
+      companyId: e.company || '',
+      companyName: e.expand?.company?.trade_name || e.expand?.company?.legal_name || '—',
+      branchId: e.unit || '',
+      branchName: e.expand?.unit?.name || '—',
+      sectorId: e.department || '',
+      sectorName: e.expand?.department?.name || '—',
+      location: e.location || '—',
+      status: e.status || 'Ativo',
+      availability_status: e.availability_status || 'Em uso',
+      supplier: e.supplier || '—',
+      acquisition_date: e.acquisition_date || undefined,
+      warranty_until: e.warranty_until || undefined,
+      notes: e.notes || '—',
+      createdAt: e.created,
+      updatedAt: e.updated,
+    }
+  })
+
+  return { rows }
 }
 
 /**

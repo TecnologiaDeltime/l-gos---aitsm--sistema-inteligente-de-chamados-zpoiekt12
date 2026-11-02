@@ -26,6 +26,7 @@ export interface EquipmentRecord {
   supplier?: string
   acquisition_date?: string
   status?: string
+  availability_status?: 'Em uso' | 'Obsoleto' | 'Descartado' | 'Disponível' | 'Em Estoque' | string
   location?: string
   notes?: string
   created: string
@@ -38,6 +39,7 @@ export interface EquipmentFilters {
   unit?: string
   type?: string
   status?: string
+  availability_status?: string
   manufacturer?: string
   hostname?: string
   device_type?: string
@@ -55,6 +57,16 @@ export const CI_STATUSES = [
   'Reserva',
   'Emprestado',
 ]
+
+export const AVAILABILITY_STATUSES = [
+  'Em uso',
+  'Obsoleto',
+  'Descartado',
+  'Disponível',
+  'Em Estoque',
+] as const
+
+export type AvailabilityStatus = (typeof AVAILABILITY_STATUSES)[number]
 
 export const STORAGE_TYPES = ['HDD', 'SSD', 'NVMe', 'Híbrido', 'SAN', 'NAS']
 
@@ -79,6 +91,8 @@ export const getEquipments = (filters?: EquipmentFilters) => {
   if (filters?.unit && filters.unit !== 'all') parts.push(`unit = "${filters.unit}"`)
   if (filters?.type && filters.type !== 'all') parts.push(`type = "${filters.type}"`)
   if (filters?.status && filters.status !== 'all') parts.push(`status = "${filters.status}"`)
+  if (filters?.availability_status && filters.availability_status !== 'all')
+    parts.push(`availability_status = "${filters.availability_status}"`)
   if (filters?.manufacturer && filters.manufacturer !== 'all')
     parts.push(`manufacturer = "${filters.manufacturer}"`)
   if (filters?.hostname && filters.hostname !== 'all')

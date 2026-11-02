@@ -65,6 +65,7 @@ import OperatorHoursPage from '@/pages/reports/OperatorHoursPage'
 import TicketsReportPage from '@/pages/reports/TicketsReportPage'
 import TicketInteractionsReportPage from '@/pages/reports/TicketInteractionsReportPage'
 import WorkedHoursReportPage from '@/pages/reports/WorkedHoursReportPage'
+import AssetsReportPage from '@/pages/reports/AssetsReportPage'
 import AutomationList from '@/pages/automations/AutomationList'
 import AutomationEditor from '@/pages/automations/AutomationEditor'
 import TechnicalAgenda from '@/pages/visits/TechnicalAgenda'
@@ -233,6 +234,14 @@ const App = () => (
                   element={
                     <ProtectedRoute requiredModule="reports" requiredItem="rep_worked_hours">
                       <WorkedHoursReportPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/reports/assets"
+                  element={
+                    <ProtectedRoute requiredModule="reports" requiredItem="rep_assets">
+                      <AssetsReportPage />
                     </ProtectedRoute>
                   }
                 />

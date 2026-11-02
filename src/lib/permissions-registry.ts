@@ -553,6 +553,13 @@ const BASE_SYSTEM_MODULES: GranularModuleDefinition[] = [
           'Tempo de trabalho efetivo apurado via play/pause do cronômetro por chamado linha a linha',
         path: '/reports/worked-hours',
       },
+      {
+        key: 'rep_assets',
+        label: 'Relatório de Ativos',
+        description:
+          'Inventário completo e detalhado de ativos/CMDB com filtros de Empresa, Filial e Setor e todos os campos cadastrais',
+        path: '/reports/assets',
+      },
     ],
   },
 

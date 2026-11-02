@@ -21,9 +21,11 @@ import {
   updateEquipment,
   EquipmentRecord,
   CI_STATUSES,
+  AVAILABILITY_STATUSES,
   DEVICE_TYPES,
   STORAGE_TYPES,
 } from '@/services/equipments'
+import { AvailabilityStatusBadge } from '@/components/AvailabilityStatusBadge'
 import { getCompanies, getCompanyUnits, getCompanyDepartments } from '@/services/companies'
 import { extractFieldErrors, type FieldErrors } from '@/lib/pocketbase/errors'
 import { useToast } from '@/hooks/use-toast'
@@ -197,8 +199,14 @@ export function CiDetailInfo({
               Status e Observações
             </h3>
             <div className="grid grid-cols-2 gap-4 md:grid-cols-3 rounded-xl border bg-white p-6 dark:bg-slate-900">
-              <Field label="Status" value={equipment.status} />
-              <div className="col-span-2 md:col-span-2">
+              <Field label="Status Operacional" value={equipment.status} />
+              <div className="space-y-0.5">
+                <p className="text-xs text-slate-500">Status de Disponibilidade</p>
+                <div className="pt-0.5">
+                  <AvailabilityStatusBadge status={equipment.availability_status} />
+                </div>
+              </div>
+              <div className="col-span-2 md:col-span-3">
                 <Field label="Notas" value={equipment.notes} />
               </div>
             </div>
@@ -463,7 +471,7 @@ export function CiDetailInfo({
         </h3>
         <div className="grid grid-cols-2 gap-4 md:grid-cols-3 rounded-xl border bg-white p-6 dark:bg-slate-900">
           <div>
-            <Label className="text-xs">Status</Label>
+            <Label className="text-xs">Status Operacional</Label>
             <Select
               value={form.status || ''}
               onValueChange={(v) => set('status', v)}
@@ -481,7 +489,25 @@ export function CiDetailInfo({
               </SelectContent>
             </Select>
           </div>
-          <div className="col-span-2 md:col-span-2">
+          <div>
+            <Label className="text-xs">Status de Disponibilidade</Label>
+            <Select
+              value={form.availability_status || 'Em uso'}
+              onValueChange={(v) => set('availability_status', v)}
+            >
+              <SelectTrigger className={inputCls}>
+                <SelectValue placeholder="Selecione a disponibilidade" />
+              </SelectTrigger>
+              <SelectContent>
+                {AVAILABILITY_STATUSES.map((st) => (
+                  <SelectItem key={st} value={st}>
+                    {st}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="col-span-2 md:col-span-3">
             <Label className="text-xs">Notas</Label>
             <Textarea value={form.notes || ''} onChange={(e) => set('notes', e.target.value)} />
           </div>

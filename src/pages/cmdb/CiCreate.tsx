@@ -11,7 +11,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { createEquipment, CI_STATUSES, DEVICE_TYPES, STORAGE_TYPES } from '@/services/equipments'
+import {
+  createEquipment,
+  CI_STATUSES,
+  AVAILABILITY_STATUSES,
+  DEVICE_TYPES,
+  STORAGE_TYPES,
+} from '@/services/equipments'
 import { getCompanies, getCompanyUnits, getCompanyDepartments } from '@/services/companies'
 import { getClientContacts, type ClientContactRecord } from '@/services/client-contacts'
 import { useToast } from '@/hooks/use-toast'
@@ -55,6 +61,7 @@ export default function CiCreate() {
     warranty_until: '',
     supplier: '',
     status: 'Ativo',
+    availability_status: 'Em uso',
     notes: '',
     company: '',
     unit: '',
@@ -497,7 +504,7 @@ export default function CiCreate() {
               </h3>
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <div className="space-y-1">
-                  <Label className="text-xs">Status</Label>
+                  <Label className="text-xs">Status Operacional</Label>
                   <Select value={form.status} onValueChange={(v) => set('status', v)}>
                     <SelectTrigger className={inputCls}>
                       <SelectValue />
@@ -506,6 +513,24 @@ export default function CiCreate() {
                       {CI_STATUSES.map((s) => (
                         <SelectItem key={s} value={s}>
                           {s}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">Status de Disponibilidade *</Label>
+                  <Select
+                    value={form.availability_status}
+                    onValueChange={(v) => set('availability_status', v)}
+                  >
+                    <SelectTrigger className={inputCls}>
+                      <SelectValue placeholder="Selecione a disponibilidade" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {AVAILABILITY_STATUSES.map((st) => (
+                        <SelectItem key={st} value={st}>
+                          {st}
                         </SelectItem>
                       ))}
                     </SelectContent>
