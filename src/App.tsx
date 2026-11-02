@@ -206,6 +206,11 @@ const App = () => (
                 <Route path="/contracts/:id" element={<ContractView />} />
                 <Route path="/contracts/:id/edit" element={<ContractEdit />} />
                 {/* Perfis de Acesso & Cadastro de Operadores */}
+                <Route path="/profiles" element={<ProfilesPage />} />
+                <Route path="/admin/profiles" element={<ProfilesPage />} />
+                <Route path="/settings/profiles" element={<ProfilesPage />} />
+                <Route path="/operators" element={<OperatorsPage />} />
+                <Route path="/admin/operators" element={<OperatorsPage />} />
                 <Route
                   path="/reports/operator-hours"
                   element={

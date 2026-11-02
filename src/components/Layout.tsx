@@ -555,6 +555,14 @@ export default function Layout() {
       external: true,
     },
     {
+      label: 'Perfis de Acesso',
+      path: '/profiles',
+      icon: Shield,
+      show:
+        permissions.canAccessItem('admin', 'admin_profiles') &&
+        (permissions.canReadModule('profiles') || permissions.isAdmin),
+    },
+    {
       label: 'Portal do Cliente (Gestão)',
       path: '/settings?tab=portal',
       icon: Settings,
