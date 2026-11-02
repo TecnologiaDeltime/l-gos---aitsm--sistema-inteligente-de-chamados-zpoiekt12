@@ -137,14 +137,21 @@ export function CollaboratorSection({ clientId }: { clientId?: string }) {
 
   const handleCancelDelete = async () => {
     const contact = contacts.find((c) => c.id === deleteId)
-    if (contact && associatedEquipments.length > 0) {
+    if (contact) {
       try {
         await createAssetAutomationLog({
           action_type: 'cancelamento_exclusao_usuario',
           target_user_id: contact.id,
           target_user_name: contact.full_name,
-          description: `Exclusão do colaborador "${contact.full_name}" cancelada pelo operador.`,
+          equipment_id: associatedEquipments[0]?.id,
+          equipment_name: associatedEquipments.map((e) => e.name).join(', ') || undefined,
+          description: `Exclusão do colaborador "${contact.full_name}" cancelada pelo operador.${
+            associatedEquipments.length > 0
+              ? ` O colaborador possui ${associatedEquipments.length} ativo(s) vinculado(s).`
+              : ''
+          }`,
           details: {
+            entity: 'client_contacts',
             associated_equipments_count: associatedEquipments.length,
             equipments: associatedEquipments.map((e) => ({ id: e.id, name: e.name })),
           },
@@ -190,6 +197,8 @@ export function CollaboratorSection({ clientId }: { clientId?: string }) {
         action_type: 'exclusao_usuario',
         target_user_id: deleteId,
         target_user_name: contact?.full_name || 'Colaborador',
+        equipment_id: associatedEquipments[0]?.id,
+        equipment_name: associatedEquipments.map((e) => e.name).join(', ') || undefined,
         description: `Cadastro do colaborador/usuário responsável "${contact?.full_name}" excluído do Sistema. ${
           associatedEquipments.length > 0
             ? `${associatedEquipments.length} equipamento(s) vinculado(s) alterado(s) para "Disponível".`
@@ -197,6 +206,7 @@ export function CollaboratorSection({ clientId }: { clientId?: string }) {
         }`,
         details: {
           client_id: clientId,
+          entity: 'client_contacts',
           associated_equipments: associatedEquipments,
         },
       })

@@ -12,7 +12,17 @@ import {
   AlertDialogCancel,
   AlertDialogAction,
 } from '@/components/ui/alert-dialog'
-import { Plus, Pencil, Trash2, Star, Mail, Phone, Building2 } from 'lucide-react'
+import {
+  Plus,
+  Pencil,
+  Trash2,
+  Star,
+  Mail,
+  Phone,
+  Building2,
+  AlertTriangle,
+  Loader2,
+} from 'lucide-react'
 import {
   getFocalPoints,
   deleteClientContact,
@@ -21,6 +31,11 @@ import {
 } from '@/services/client-contacts'
 import { getCompanyUnitsByCompany, type CompanyUnitRecord } from '@/services/company-units'
 import { createCompanyAuditLog } from '@/services/companies'
+import {
+  findEquipmentsByResponsible,
+  setEquipmentsAvailableForUser,
+  createAssetAutomationLog,
+} from '@/services/asset-automation-logs'
 import { useRealtime } from '@/hooks/use-realtime'
 import { useAuth } from '@/hooks/use-auth'
 import { useToast } from '@/hooks/use-toast'
@@ -46,6 +61,11 @@ export function FocalPointSection({
   const [editing, setEditing] = useState<ClientContactRecord | null>(null)
   const [editPendingIdx, setEditPendingIdx] = useState<number | null>(null)
   const [deleteId, setDeleteId] = useState<string | null>(null)
+  const [checkingEquipments, setCheckingEquipments] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+  const [associatedEquipments, setAssociatedEquipments] = useState<
+    Array<{ id: string; name: string; hostname?: string }>
+  >([])
 
   const loadData = useCallback(async () => {
     if (!clientId) return
@@ -101,11 +121,71 @@ export function FocalPointSection({
     loadData()
   }
 
+  const handleOpenDelete = async (fp: ClientContactRecord) => {
+    setDeleteId(fp.id)
+    setCheckingEquipments(true)
+    try {
+      const eqList = await findEquipmentsByResponsible({
+        contactId: fp.id,
+        id: fp.user || undefined,
+        name: fp.full_name,
+      })
+      setAssociatedEquipments(eqList)
+    } catch {
+      setAssociatedEquipments([])
+    } finally {
+      setCheckingEquipments(false)
+    }
+  }
+
+  const handleCancelDelete = async () => {
+    const fp = focalPoints.find((f) => f.id === deleteId)
+    if (fp) {
+      try {
+        await createAssetAutomationLog({
+          action_type: 'cancelamento_exclusao_usuario',
+          target_user_id: fp.id,
+          target_user_name: fp.full_name,
+          equipment_id: associatedEquipments[0]?.id,
+          equipment_name: associatedEquipments.map((e) => e.name).join(', ') || undefined,
+          description: `Exclusão do ponto focal/colaborador "${fp.full_name}" cancelada pelo operador.${
+            associatedEquipments.length > 0
+              ? ` O colaborador possui ${associatedEquipments.length} ativo(s) vinculado(s).`
+              : ''
+          }`,
+          details: {
+            entity: 'client_contacts_focal_point',
+            associated_equipments_count: associatedEquipments.length,
+            equipments: associatedEquipments.map((e) => ({ id: e.id, name: e.name })),
+          },
+        })
+      } catch (logErr) {
+        console.warn('Erro ao registrar cancelamento de ponto focal:', logErr)
+      }
+    }
+    setDeleteId(null)
+    setAssociatedEquipments([])
+  }
+
   const handleDelete = async () => {
     if (!deleteId || !user?.id) return
+    const fp = focalPoints.find((f) => f.id === deleteId)
     try {
-      const fp = focalPoints.find((f) => f.id === deleteId)
+      setDeleting(true)
+
+      if (associatedEquipments.length > 0) {
+        await setEquipmentsAvailableForUser(
+          associatedEquipments,
+          {
+            id: deleteId,
+            name: fp?.full_name || 'Ponto Focal',
+          },
+          user.name || user.email,
+        )
+      }
+
       await deleteClientContact(deleteId)
+
       await createCompanyAuditLog({
         user: user.id,
         action: 'deleted focal point',
@@ -114,11 +194,39 @@ export function FocalPointSection({
         description: `Ponto focal "${fp?.full_name}" excluído`,
         old_values: fp as unknown as Record<string, unknown>,
       })
-      toast({ title: 'Ponto focal excluído!' })
+
+      await createAssetAutomationLog({
+        action_type: 'exclusao_usuario',
+        target_user_id: deleteId,
+        target_user_name: fp?.full_name || 'Ponto Focal',
+        equipment_id: associatedEquipments[0]?.id,
+        equipment_name: associatedEquipments.map((e) => e.name).join(', ') || undefined,
+        description: `Cadastro do ponto focal/colaborador "${fp?.full_name}" excluído do Sistema. ${
+          associatedEquipments.length > 0
+            ? `${associatedEquipments.length} equipamento(s) vinculado(s) alterado(s) para "Disponível".`
+            : 'Nenhum equipamento estava vinculado.'
+        }`,
+        details: {
+          client_id: clientId,
+          entity: 'client_contacts_focal_point',
+          associated_equipments: associatedEquipments,
+        },
+      })
+
+      toast({
+        title: 'Ponto focal excluído!',
+        description:
+          associatedEquipments.length > 0
+            ? `${associatedEquipments.length} equipamento(s) tiveram o status alterado para Disponível.`
+            : undefined,
+      })
+      await loadData()
     } catch {
       toast({ title: 'Erro ao excluir ponto focal', variant: 'destructive' })
     } finally {
+      setDeleting(false)
       setDeleteId(null)
+      setAssociatedEquipments([])
     }
   }
 
@@ -247,7 +355,7 @@ export function FocalPointSection({
               fp.phone,
               fp.unit ? branchMap[fp.unit] : undefined,
               () => openEdit(fp),
-              () => setDeleteId(fp.id),
+              () => handleOpenDelete(fp),
             ),
           )}
         </div>
@@ -260,17 +368,82 @@ export function FocalPointSection({
         contact={editing}
         onSaved={handleSaved}
       />
-      <AlertDialog open={!!deleteId} onOpenChange={(o) => !o && setDeleteId(null)}>
-        <AlertDialogContent>
+      <AlertDialog open={!!deleteId} onOpenChange={(o) => !o && handleCancelDelete()}>
+        <AlertDialogContent className="border-border">
           <AlertDialogHeader>
-            <AlertDialogTitle>Excluir Ponto Focal</AlertDialogTitle>
-            <AlertDialogDescription>
-              Tem certeza? Esta ação não pode ser desfeita.
+            <AlertDialogTitle className="flex items-center gap-2 text-amber-600 dark:text-amber-400">
+              <AlertTriangle className="h-5 w-5" />
+              Confirmar Exclusão de Usuário
+            </AlertDialogTitle>
+            <AlertDialogDescription className="space-y-3 pt-2 text-foreground">
+              {checkingEquipments ? (
+                <div className="flex items-center gap-2 py-2 text-xs text-muted-foreground">
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  Verificando ativos vinculados ao colaborador...
+                </div>
+              ) : associatedEquipments.length > 0 ? (
+                <div className="space-y-3">
+                  <div className="p-3 rounded-lg border border-amber-500/30 bg-amber-500/10 dark:bg-amber-950/20 text-amber-800 dark:text-amber-200 text-xs space-y-1.5">
+                    <p className="font-semibold text-sm">
+                      Atenção: este usuário possui ativo(s) cadastrado(s) em seu nome!
+                    </p>
+                    <p>
+                      O colaborador{' '}
+                      <strong>{focalPoints.find((f) => f.id === deleteId)?.full_name}</strong> é
+                      responsável por <strong>{associatedEquipments.length} equipamento(s)</strong>.
+                    </p>
+                    <p className="font-medium">
+                      Assim que a exclusão for confirmada, o status do(s) equipamento(s) ficará como{' '}
+                      <strong>Disponível</strong>.
+                    </p>
+                  </div>
+                  <div className="max-h-32 overflow-y-auto space-y-1 pr-1 border rounded p-2 bg-muted/40 text-xs">
+                    {associatedEquipments.map((eq) => (
+                      <div
+                        key={eq.id}
+                        className="flex justify-between items-center text-muted-foreground"
+                      >
+                        <span className="font-medium text-foreground">{eq.name}</span>
+                        <span className="font-mono text-[11px]">
+                          {eq.hostname || 'Sem hostname'}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                  <p className="font-semibold text-sm">Deseja realmente excluir?</p>
+                </div>
+              ) : (
+                <div className="space-y-2 text-xs text-muted-foreground">
+                  <p className="text-sm text-foreground">
+                    Tem certeza que deseja excluir o ponto focal{' '}
+                    <strong>{focalPoints.find((f) => f.id === deleteId)?.full_name}</strong>?
+                  </p>
+                  <p>
+                    Esta ação removerá o colaborador do cliente. Nenhum equipamento está vinculado
+                    em seu nome.
+                  </p>
+                  <p className="font-semibold text-sm text-foreground pt-1">
+                    Deseja realmente excluir?
+                  </p>
+                </div>
+              )}
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete}>Excluir</AlertDialogAction>
+          <AlertDialogFooter className="gap-2 sm:gap-0">
+            <AlertDialogCancel
+              disabled={deleting}
+              onClick={handleCancelDelete}
+              className="border-border hover:bg-muted font-medium"
+            >
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              disabled={deleting || checkingEquipments}
+              className="bg-amber-600 hover:bg-amber-700 text-white font-semibold"
+            >
+              {deleting ? 'Excluindo...' : 'Sim'}
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

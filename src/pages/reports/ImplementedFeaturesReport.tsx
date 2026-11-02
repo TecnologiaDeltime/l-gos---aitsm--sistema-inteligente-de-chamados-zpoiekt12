@@ -342,6 +342,13 @@ const FEATURE_CATEGORIES: FeatureCategory[] = [
           'Na exclusão de equipamentos pela listagem do CMDB ou pela ficha técnica do ativo, se houver usuário cadastrado como responsável/proprietário, sobe o diálogo de confirmação ("possui um usuário cadastrado para este equipamento, deseja realmente excluir o equipamento?" com opções Sim e Cancelar). Em "Sim", o equipamento é colocado como Disponível, a ação é auditada e a exclusão é confirmada; em "Cancelar", a operação é abortada sem alterações.',
         tag: 'Automação & CMDB',
       },
+      {
+        id: 'cmdb-aut-3',
+        title: 'Automação na exclusão individual de cada colaborador de cliente',
+        description:
+          'A regra de automação de ativos opera individualmente na exclusão de cada colaborador ou ponto focal vinculado a um cliente, e não apenas na exclusão da empresa inteira. Ao acionar a exclusão de um colaborador que possui ativos vinculados no CMDB (como responsável ou proprietário), sobe diálogo de confirmação com aviso ("este usuário possui ativo cadastrado em seu nome, o equipamento ficará como disponível") e botões Sim e Cancelar. Em "Sim", todos os ativos do colaborador têm seu status alterado para "Disponível", a exclusão do contato é concluída e auditada; em "Cancelar", a ação é abortada e auditada com registro de cancelamento. Regra garantida tanto no front-end quanto no hook server-side via API.',
+        tag: 'Automação & Colaboradores',
+      },
     ],
   },
   {

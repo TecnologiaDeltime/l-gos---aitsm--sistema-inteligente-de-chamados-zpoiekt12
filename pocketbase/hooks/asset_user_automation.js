@@ -87,6 +87,7 @@ onRecordAfterDeleteSuccess((e) => {
   const contactRec = e.record
   const contactId = contactRec.id
   const contactName = contactRec.getString('full_name') || contactId
+  const linkedUserId = contactRec.getString('user') || ''
   const operatorId = e.auth ? e.auth.id : ''
   const operatorName = e.auth
     ? e.auth.getString('name') || e.auth.getString('email') || 'Operador'
@@ -94,7 +95,7 @@ onRecordAfterDeleteSuccess((e) => {
 
   try {
     const safeName = contactName.replace(/"/g, '')
-    const filter =
+    let filter =
       'responsible_user = "' +
       contactId +
       '" || owner = "' +
@@ -104,6 +105,9 @@ onRecordAfterDeleteSuccess((e) => {
       '" || owner = "' +
       safeName +
       '"'
+    if (linkedUserId) {
+      filter += ' || responsible_user = "' + linkedUserId + '" || owner = "' + linkedUserId + '"'
+    }
     const equipments = $app.findRecordsByFilter('equipments', filter, '', 500, 0)
 
     for (let i = 0; i < equipments.length; i++) {
@@ -126,7 +130,7 @@ onRecordAfterDeleteSuccess((e) => {
             'description',
             'Status do equipamento "' +
               eq.getString('name') +
-              '" alterado para "Disponível" após exclusão do contato/responsável "' +
+              '" alterado para "Disponível" após exclusão do colaborador/usuário de cliente "' +
               contactName +
               '".',
           )
@@ -136,6 +140,7 @@ onRecordAfterDeleteSuccess((e) => {
               trigger: 'backend_hook_contact_delete',
               contact_id: contactId,
               contact_name: contactName,
+              linked_user_id: linkedUserId,
               equipment_id: eq.id,
               new_status: 'Disponível',
             }),
@@ -151,6 +156,53 @@ onRecordAfterDeleteSuccess((e) => {
             )
         }
       }
+    }
+
+    // Registra o evento de exclusão do colaborador no log de automações caso ainda não tenha sido registrado pela UI
+    try {
+      const logCol = $app.findCollectionByNameOrId('asset_automation_logs')
+      const log = new Record(logCol)
+      if (operatorId) log.set('operator', operatorId)
+      log.set('operator_name', operatorName)
+      log.set('action_type', 'exclusao_usuario')
+      log.set('target_user_id', contactId)
+      log.set('target_user_name', contactName)
+      if (equipments.length > 0) {
+        log.set('equipment_id', equipments[0].id)
+        log.set('equipment_name', equipments.map((item) => item.getString('name')).join(', '))
+      }
+      log.set(
+        'description',
+        'Cadastro do colaborador/usuário de cliente "' +
+          contactName +
+          '" excluído. ' +
+          (equipments.length > 0
+            ? equipments.length + ' equipamento(s) vinculado(s) alterado(s) para "Disponível".'
+            : 'Nenhum equipamento estava vinculado.'),
+      )
+      log.set(
+        'details',
+        JSON.stringify({
+          trigger: 'backend_hook_contact_delete',
+          contact_id: contactId,
+          contact_name: contactName,
+          client_id: contactRec.getString('client'),
+          associated_equipments_count: equipments.length,
+          associated_equipments: equipments.map((item) => ({
+            id: item.id,
+            name: item.getString('name'),
+          })),
+        }),
+      )
+      $app.save(log)
+    } catch (auditErr) {
+      $app
+        .logger()
+        .error(
+          'Falha ao gravar log de exclusao_usuario no hook de client_contacts',
+          'error',
+          auditErr.message,
+        )
     }
   } catch (err) {
     $app
