@@ -328,6 +328,20 @@ const FEATURE_CATEGORIES: FeatureCategory[] = [
           'Campo estruturado com as opções Em uso, Obsoleto, Descartado, Disponível e Em Estoque, integrado no cadastro/edição, listagem e ficha do ativo.',
         tag: 'CMDB & Ciclo de Vida',
       },
+      {
+        id: 'cmdb-aut-1',
+        title: 'Automação na exclusão de usuário responsável por ativo',
+        description:
+          'Ao excluir um usuário (Operadores do sistema ou Colaboradores do cliente) com equipamento vinculado em seu nome, o sistema exibe diálogo de confirmação com aviso detalhado ("este usuário possui ativo cadastrado em seu nome deseja realmente excluir, o equipamento ficará como disponível" com opções Sim e Cancelar). Em "Sim", o usuário é excluído e os ativos associados têm o status alterado automaticamente para "Disponível", com sincronização no front-end e regras server-side nos hooks de users e client_contacts.',
+        tag: 'Automação & Ativos',
+      },
+      {
+        id: 'cmdb-aut-2',
+        title: 'Automação na exclusão de equipamento com usuário vinculado',
+        description:
+          'Na exclusão de equipamentos pela listagem do CMDB ou pela ficha técnica do ativo, se houver usuário cadastrado como responsável/proprietário, sobe o diálogo de confirmação ("possui um usuário cadastrado para este equipamento, deseja realmente excluir o equipamento?" com opções Sim e Cancelar). Em "Sim", o equipamento é colocado como Disponível, a ação é auditada e a exclusão é confirmada; em "Cancelar", a operação é abortada sem alterações.',
+        tag: 'Automação & CMDB',
+      },
     ],
   },
   {
@@ -483,6 +497,13 @@ const FEATURE_CATEGORIES: FeatureCategory[] = [
         description:
           'Inventário completo de equipamentos/CMDB com filtros por Empresa (Cliente), Filial e Setor, exibindo todos os campos de cadastro (hardware, dono, operacional, datas e Status de Disponibilidade) com exportação em CSV, XLSX e PDF.',
         tag: 'CMDB / Inventário',
+      },
+      {
+        id: 'rep-10',
+        title: 'Relatório de Auditoria de Automações de Ativos (/reports/asset-automations)',
+        description:
+          'Painel analítico completo para consulta e rastreabilidade de todas as ações de automação entre usuários e equipamentos: exclusões de usuários com ativos virando "Disponível", exclusões de equipamentos com usuário vinculado, mudanças automáticas de status e cancelamentos pelo operador. Inclui métricas e contadores de total, filtros por período, tipo de ação e busca textual, escuta realtime via websocket, diálogo de detalhes técnicos e exportação em CSV.',
+        tag: 'Auditoria & Automação',
       },
     ],
   },

@@ -121,6 +121,12 @@ const OTHER_REPORTS = [
     path: '/reports/assets',
     itemKey: 'rep_assets',
   },
+  {
+    title: 'Auditoria de Automações de Ativos',
+    desc: 'Histórico e auditoria de ações de exclusão de usuários e equipamentos, mudanças automáticas de status para Disponível e cancelamentos.',
+    path: '/reports/asset-automations',
+    itemKey: 'rep_asset_automation_logs',
+  },
 ]
 
 export default function ReportsPage() {

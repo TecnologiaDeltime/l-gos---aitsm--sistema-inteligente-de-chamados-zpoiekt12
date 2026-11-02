@@ -118,7 +118,7 @@ export function CollaboratorSection({ clientId }: { clientId?: string }) {
     return contacts.filter((c) => (c.full_name || '').toLowerCase().includes(q))
   }, [contacts, search])
 
-  const handleOpenDelete = async (c: ClientContact) => {
+  const handleOpenDelete = async (c: ClientContactRecord) => {
     setDeleteId(c.id)
     setCheckingEquipments(true)
     try {

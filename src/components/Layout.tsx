@@ -700,6 +700,12 @@ export default function Layout() {
       icon: Server,
       show: permissions.canAccessItem('reports', 'rep_assets'),
     },
+    {
+      label: 'Automações de Ativos',
+      path: '/reports/asset-automations',
+      icon: Shield,
+      show: permissions.canAccessItem('reports', 'rep_asset_automation_logs'),
+    },
   ]
   const relatoriosGroupVisible =
     !permissions.isModuleHidden('reports') && relatoriosSubmenuItems.some((i) => i.show)

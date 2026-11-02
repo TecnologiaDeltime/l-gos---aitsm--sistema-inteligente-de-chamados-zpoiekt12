@@ -68,6 +68,11 @@ import { OperatorItem, CreateOperatorData, UpdateOperatorData } from '@/types/op
 import { ProfileRecord } from '@/types/profiles'
 import { useRealtime } from '@/hooks/use-realtime'
 import { getErrorMessage } from '@/lib/pocketbase/errors'
+import {
+  findEquipmentsByResponsible,
+  setEquipmentsAvailableForUser,
+  createAssetAutomationLog,
+} from '@/services/asset-automation-logs'
 
 const DEFAULT_TEAMS = [
   'Suporte N1',
