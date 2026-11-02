@@ -109,6 +109,13 @@ const BASE_SYSTEM_MODULES: GranularModuleDefinition[] = [
           'Uso do Agente Nativo de IA para gerar rascunhos de resposta e interações em chamados',
         path: '/tickets',
       },
+      {
+        key: 'tickets_ai_tags',
+        label: 'Sugestão de Tags por IA em Chamados',
+        description:
+          'Uso da IA para sugerir tags e palavras-chave relevantes na visualização interna do chamado',
+        path: '/tickets',
+      },
     ],
   },
   {

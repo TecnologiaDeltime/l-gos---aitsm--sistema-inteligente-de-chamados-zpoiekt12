@@ -13,7 +13,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { useToast } from '@/hooks/use-toast'
-import { Bot, Sparkles, Save, CheckCircle2, ShieldCheck, HelpCircle } from 'lucide-react'
+import { Bot, Sparkles, Save, CheckCircle2, ShieldCheck, HelpCircle, Tag } from 'lucide-react'
 import { aiTicketReplyService, AiTicketSettings, AiTicketMode } from '@/services/ai-ticket-reply'
 import { getErrorMessage } from '@/lib/pocketbase/errors'
 
@@ -35,6 +35,7 @@ export function AiTicketSettingsTab({ isAdminOrGestor }: AiTicketSettingsTabProp
     include_history: true,
     include_asset: true,
     system_instructions: 'Seja cordial, profissional e forneça passos técnicos objetivos e claros.',
+    tag_suggestions_enabled: true,
   })
 
   useEffect(() => {
@@ -292,6 +293,33 @@ export function AiTicketSettingsTab({ isAdminOrGestor }: AiTicketSettingsTabProp
               className="text-xs bg-card border-border font-sans"
               placeholder="Ex: Seja cordial, chame o solicitante pelo primeiro nome, forneça passos numerados objetivos..."
             />
+          </div>
+
+          {/* Sugestão de Tags por IA */}
+          <div className="space-y-3 pt-3 border-t border-border/60">
+            <div className="flex items-center justify-between p-3.5 rounded-xl border border-border/70 bg-card/60">
+              <div className="space-y-1 pr-4">
+                <Label className="text-sm font-semibold text-foreground flex items-center gap-2 cursor-pointer">
+                  <Tag className="h-4 w-4 text-primary" />
+                  Sugestão de Tags por IA para Chamados
+                  <Badge
+                    variant="outline"
+                    className="bg-amber-500/10 text-primary border-amber-500/30 text-[10px] font-mono"
+                  >
+                    Operador Interno
+                  </Badge>
+                </Label>
+                <p className="text-xs text-muted-foreground max-w-xl">
+                  Permite que a IA analise título, descrição e contexto do chamado para sugerir tags
+                  relevantes ao operador na tela do chamado interno.
+                </p>
+              </div>
+              <Switch
+                checked={settings.tag_suggestions_enabled ?? true}
+                onCheckedChange={(c) => setSettings({ ...settings, tag_suggestions_enabled: c })}
+                disabled={!isAdminOrGestor || saving || !settings.enabled}
+              />
+            </div>
           </div>
 
           {/* Regra de Horas e Franquia */}

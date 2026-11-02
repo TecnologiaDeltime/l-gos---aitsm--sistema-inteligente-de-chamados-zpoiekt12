@@ -13,6 +13,7 @@ interface TicketAiReplyPanelProps {
   requesterName?: string
   canEdit: boolean
   onApplyDraft: (draftText: string) => void
+  onTagAdded?: () => void
 }
 
 export function TicketAiReplyPanel({

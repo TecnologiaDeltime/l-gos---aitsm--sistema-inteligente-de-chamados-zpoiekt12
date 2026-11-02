@@ -1,7 +1,8 @@
 /**
- * Hook do Agente Nativo de IA para Resposta a Chamados ITSM
+ * Hook do Agente Nativo de IA para Resposta e Sugestão de Tags em Chamados ITSM
  * Rotas:
  * - POST /backend/v1/ai/ticket-draft : Gera rascunho de resposta para o chamado usando o agente nativo 'ticket-responder-agent'
+ * - POST /backend/v1/ai/ticket-tags  : Analisa contexto do chamado e gera lista de tags relevantes sugeridas pela IA
  * - GET  /backend/v1/ai/ticket-settings : Retorna a configuração vigente de IA para chamados
  * - POST /backend/v1/ai/ticket-settings : Salva configuração de IA para chamados (admin/gestor)
  *
@@ -43,6 +44,7 @@ routerAdd('POST', '/backend/v1/ai/ticket-draft', (e) => {
     include_history: true,
     include_asset: true,
     system_instructions: '',
+    tag_suggestions_enabled: true,
   }
 
   try {
@@ -61,6 +63,7 @@ routerAdd('POST', '/backend/v1/ai/ticket-draft', (e) => {
       settings.include_history = s.getBool('include_history')
       settings.include_asset = s.getBool('include_asset')
       settings.system_instructions = s.getString('system_instructions') || ''
+      settings.tag_suggestions_enabled = s.getBool('tag_suggestions_enabled')
     }
   } catch (errSettings) {
     console.warn('[AI_TICKET] Erro ao ler ai_ticket_settings:', errSettings)
@@ -249,6 +252,175 @@ routerAdd('POST', '/backend/v1/ai/ticket-draft', (e) => {
   }
 })
 
+// ROTA: POST /backend/v1/ai/ticket-tags
+routerAdd('POST', '/backend/v1/ai/ticket-tags', (e) => {
+  const authRecord = e.auth
+  if (!authRecord) {
+    return e.json(401, { error: 'Autenticação necessária.' })
+  }
+
+  let body = {}
+  try {
+    body = e.requestInfo().body || {}
+  } catch (_) {}
+
+  const ticketId = body.ticketId || body.ticket_id
+  if (!ticketId) {
+    return e.json(400, { error: 'ticketId é obrigatório.' })
+  }
+
+  let ticket
+  try {
+    ticket = e.app.findRecordById('tickets', ticketId)
+  } catch (err) {
+    return e.json(404, { error: 'Chamado não encontrado.' })
+  }
+
+  // Buscar configurações de IA
+  let settings = {
+    enabled: true,
+    tag_suggestions_enabled: true,
+  }
+
+  try {
+    const settingsRecs = e.app.findRecordsByFilter(
+      'ai_ticket_settings',
+      'scope = "global"',
+      '',
+      1,
+      0,
+    )
+    if (settingsRecs.length > 0) {
+      const s = settingsRecs[0]
+      settings.enabled = s.getBool('enabled')
+      settings.tag_suggestions_enabled = s.getBool('tag_suggestions_enabled')
+    }
+  } catch (errSettings) {
+    console.warn('[AI_TICKET] Erro ao ler ai_ticket_settings em ticket-tags:', errSettings)
+  }
+
+  if (!settings.enabled || !settings.tag_suggestions_enabled) {
+    return e.json(400, {
+      error: 'A funcionalidade de sugestão de tags por IA está desativada nas configurações.',
+    })
+  }
+
+  try {
+    const number = ticket.getString('number') || ticket.id
+    const title = ticket.getString('title') || 'Sem título'
+    const description = ticket.getString('description') || 'Sem descrição'
+    const currentTags = ticket.getString('tags') || ''
+    const type = ticket.getString('type') || 'Incidente'
+    const priority = ticket.getString('priority') || 'Média'
+
+    let categoryName = ''
+    const catId = ticket.getString('category')
+    if (catId) {
+      try {
+        const cat = e.app.findRecordById('tkt_categories', catId)
+        if (cat) categoryName = cat.getString('name')
+      } catch (_) {}
+    }
+
+    let assetName = ''
+    const eqId = ticket.getString('equipment')
+    const ciId = ticket.getString('configuration_item')
+    if (eqId) {
+      try {
+        const eq = e.app.findRecordById('equipments', eqId)
+        if (eq) assetName = eq.getString('name') || eq.getString('hostname') || ''
+      } catch (_) {}
+    }
+    if (ciId && !assetName) {
+      try {
+        const ci = e.app.findRecordById('configuration_items', ciId)
+        if (ci) assetName = ci.getString('name') || ''
+      } catch (_) {}
+    }
+
+    let promptText =
+      'Você é um assistente especialista em ITSM e Service Desk (ITIL 4).\n' +
+      'Sua tarefa é analisar o chamado abaixo e sugerir entre 3 e 7 tags/palavras-chave curtas e altamente relevantes (em português, sem acento ou com acento padronizado, minúsculas ou capitalizadas, ex: "rede", "vpn", "impressora", "lentidao", "outlook", "windows", "acesso", "hardware", "wifi", "erp").\n\n' +
+      'Contexto do Chamado:\n' +
+      '- Número: ' +
+      number +
+      '\n' +
+      '- Tipo: ' +
+      type +
+      '\n' +
+      '- Prioridade: ' +
+      priority +
+      '\n' +
+      (categoryName ? '- Categoria: ' + categoryName + '\n' : '') +
+      (assetName ? '- Ativo Envolvido: ' + assetName + '\n' : '') +
+      (currentTags ? '- Tags Atuais: ' + currentTags + '\n' : '') +
+      '- Título: ' +
+      title +
+      '\n' +
+      '- Descrição: ' +
+      description +
+      '\n\n' +
+      'REQUISITO OBRIGATÓRIO DE SAÍDA:\n' +
+      'Responda ESTRITAMENTE em formato JSON com o campo "tags": array de strings. Sem explicações ou markdown em volta. Exemplo:\n' +
+      '{"tags": ["vpn", "conectividade", "rede-interna", "home-office"]}'
+
+    const agent = $ai.agent('ticket-responder-agent')
+    const agentResponse = agent.send(promptText)
+
+    const rawReply =
+      typeof agentResponse === 'string'
+        ? agentResponse
+        : agentResponse.reply || agentResponse.text || JSON.stringify(agentResponse)
+
+    let tags = []
+
+    // Tentar extrair JSON da resposta
+    try {
+      const jsonMatch = rawReply.match(/\{[\s\S]*\}/)
+      if (jsonMatch) {
+        const parsed = JSON.parse(jsonMatch[0])
+        if (Array.isArray(parsed.tags)) {
+          tags = parsed.tags.map((t) => String(t).trim()).filter((t) => t.length > 0)
+        }
+      }
+    } catch (_) {}
+
+    // Fallback: se não encontrou JSON, separar por vírgulas ou quebras de linha
+    if (tags.length === 0) {
+      const cleaned = rawReply
+        .replace(/[\[\]"'{}]/g, '')
+        .split(/[,\n•\-\*]/)
+        .map((t) => t.trim().replace(/^tags:\s*/i, ''))
+        .filter((t) => t.length > 1 && t.length < 30)
+
+      tags = Array.from(new Set(cleaned)).slice(0, 8)
+    }
+
+    // Normalizar tags (minúsculas, trim, sem duplicatas)
+    const normalizedTags = Array.from(
+      new Set(tags.map((t) => t.toLowerCase().trim()).filter((t) => t.length > 1 && t !== 'tags')),
+    ).slice(0, 8)
+
+    return e.json(200, {
+      ticketId: ticket.id,
+      ticketNumber: ticket.getString('number') || ticket.id,
+      currentTags: currentTags
+        ? currentTags
+            .split(',')
+            .map((t) => t.trim())
+            .filter(Boolean)
+        : [],
+      suggestedTags: normalizedTags,
+      generatedAt: new Date().toISOString(),
+    })
+  } catch (err) {
+    console.error('[AI_TICKET] Erro ao sugerir tags para o chamado:', err)
+    return e.json(500, {
+      error: 'Erro ao gerar tags com o agente de IA: ' + (err.message || String(err)),
+    })
+  }
+})
+
 // ROTA: GET /backend/v1/ai/ticket-settings
 routerAdd('GET', '/backend/v1/ai/ticket-settings', (e) => {
   const authRecord = e.auth
@@ -267,6 +439,7 @@ routerAdd('GET', '/backend/v1/ai/ticket-settings', (e) => {
     include_history: true,
     include_asset: true,
     system_instructions: 'Seja cordial, profissional e forneça passos técnicos objetivos e claros.',
+    tag_suggestions_enabled: true,
   }
 
   try {
@@ -283,6 +456,7 @@ routerAdd('GET', '/backend/v1/ai/ticket-settings', (e) => {
       settings.include_history = rec.getBool('include_history')
       settings.include_asset = rec.getBool('include_asset')
       settings.system_instructions = rec.getString('system_instructions') || ''
+      settings.tag_suggestions_enabled = rec.getBool('tag_suggestions_enabled')
     }
   } catch (err) {
     console.warn('[AI_TICKET] Erro ao buscar ai_ticket_settings:', err)
@@ -331,6 +505,8 @@ routerAdd('POST', '/backend/v1/ai/ticket-settings', (e) => {
     if (body.include_asset !== undefined) rec.set('include_asset', !!body.include_asset)
     if (body.system_instructions !== undefined)
       rec.set('system_instructions', String(body.system_instructions))
+    if (body.tag_suggestions_enabled !== undefined)
+      rec.set('tag_suggestions_enabled', !!body.tag_suggestions_enabled)
 
     e.app.save(rec)
 
@@ -345,6 +521,7 @@ routerAdd('POST', '/backend/v1/ai/ticket-settings', (e) => {
       include_history: rec.getBool('include_history'),
       include_asset: rec.getBool('include_asset'),
       system_instructions: rec.getString('system_instructions') || '',
+      tag_suggestions_enabled: rec.getBool('tag_suggestions_enabled'),
     }
 
     return e.json(200, {
@@ -374,6 +551,7 @@ onRecordAfterCreateSuccess((e) => {
       include_history: true,
       include_asset: true,
       system_instructions: '',
+      tag_suggestions_enabled: true,
     }
 
     try {
@@ -388,6 +566,7 @@ onRecordAfterCreateSuccess((e) => {
         settings.include_history = s.getBool('include_history')
         settings.include_asset = s.getBool('include_asset')
         settings.system_instructions = s.getString('system_instructions') || ''
+        settings.tag_suggestions_enabled = s.getBool('tag_suggestions_enabled')
       }
     } catch (_) {}
 

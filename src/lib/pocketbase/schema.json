@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-02T15:06:26.525Z",
+  "generatedAt": "2026-11-02T15:30:50.091Z",
   "collections": [
     {
       "name": "users",
@@ -1581,6 +1581,12 @@
           "required": false,
           "system": false,
           "selectValues": ["Em conformidade", "Fora de conformidade"]
+        },
+        {
+          "name": "tags",
+          "type": "text",
+          "required": false,
+          "system": false
         }
       ],
       "indexes": [
@@ -11651,6 +11657,12 @@
           "required": false,
           "system": false,
           "autodateTriggers": ["onCreate", "onUpdate"]
+        },
+        {
+          "name": "tag_suggestions_enabled",
+          "type": "bool",
+          "required": false,
+          "system": false
         }
       ],
       "indexes": ["CREATE UNIQUE INDEX idx_ai_ticket_settings_scope ON ai_ticket_settings (scope)"]

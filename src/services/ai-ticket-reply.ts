@@ -1,4 +1,4 @@
-import pb from '@/lib/pocketbase/client'
+import { pb } from '@/lib/pocketbase/client'
 
 export type AiTicketMode = 'suggestion' | 'automatic' | 'both'
 
@@ -12,60 +12,47 @@ export interface AiTicketSettings {
   include_kb: boolean
   include_history: boolean
   include_asset: boolean
-  system_instructions?: string
-}
-
-export interface AiTicketDraftRequest {
-  ticketId: string
-  prompt?: string
+  system_instructions: string
+  tag_suggestions_enabled?: boolean
 }
 
 export interface AiTicketDraftResponse {
   ticketId: string
   ticketNumber: string
   draft: string
-  mode: AiTicketMode
+  mode: string
   generatedAt: string
 }
 
-export const aiTicketReplyService = {
-  async getSettings(): Promise<AiTicketSettings> {
-    try {
-      // Tentar via endpoint backend
-      const res = await pb.send<AiTicketSettings>('/backend/v1/ai/ticket-settings', {
-        method: 'GET',
-      })
-      if (res && typeof res.enabled === 'boolean') {
-        return res
-      }
-    } catch (err) {
-      console.warn('[aiTicketReplyService] Fallback para leitura da collection:', err)
-    }
+export interface AiTicketTagsResponse {
+  ticketId: string
+  ticketNumber: string
+  currentTags: string[]
+  suggestedTags: string[]
+  generatedAt: string
+}
 
-    // Fallback: consulta direta na collection ai_ticket_settings
-    try {
-      const records = await pb.collection('ai_ticket_settings').getList(1, 1, {
-        filter: 'scope = "global"',
-      })
-      if (records.items.length > 0) {
-        const item = records.items[0]
-        return {
-          id: item.id,
-          scope: 'global',
-          enabled: !!item.enabled,
-          mode: (item.mode as AiTicketMode) || 'both',
-          auto_reply_internal: !!item.auto_reply_internal,
-          auto_reply_portal: !!item.auto_reply_portal,
-          include_kb: !!item.include_kb,
-          include_history: !!item.include_history,
-          include_asset: !!item.include_asset,
-          system_instructions: item.system_instructions || '',
-        }
-      }
-    } catch {
-      /* intentionally ignored */
+export async function getAiTicketSettings(): Promise<AiTicketSettings> {
+  try {
+    const res = await pb.send<{ [key: string]: unknown }>('/backend/v1/ai/ticket-settings', {
+      method: 'GET',
+    })
+    return {
+      id: typeof res.id === 'string' ? res.id : '',
+      scope: 'global',
+      enabled: Boolean(res.enabled ?? true),
+      mode: (res.mode as AiTicketMode) || 'both',
+      auto_reply_internal: Boolean(res.auto_reply_internal ?? true),
+      auto_reply_portal: Boolean(res.auto_reply_portal ?? true),
+      include_kb: Boolean(res.include_kb ?? true),
+      include_history: Boolean(res.include_history ?? true),
+      include_asset: Boolean(res.include_asset ?? true),
+      system_instructions:
+        typeof res.system_instructions === 'string' ? res.system_instructions : '',
+      tag_suggestions_enabled: Boolean(res.tag_suggestions_enabled ?? true),
     }
-
+  } catch (err) {
+    console.warn('[AI_TICKET_SERVICE] Falha ao carregar configurações de IA:', err)
     return {
       scope: 'global',
       enabled: true,
@@ -75,27 +62,50 @@ export const aiTicketReplyService = {
       include_kb: true,
       include_history: true,
       include_asset: true,
-      system_instructions:
-        'Seja cordial, profissional e forneça passos técnicos objetivos e claros.',
+      system_instructions: '',
+      tag_suggestions_enabled: true,
     }
-  },
+  }
+}
 
-  async saveSettings(settings: Partial<AiTicketSettings>): Promise<AiTicketSettings> {
-    const res = await pb.send<{ message: string; settings: AiTicketSettings }>(
-      '/backend/v1/ai/ticket-settings',
-      {
-        method: 'POST',
-        body: settings,
-      },
-    )
-    return res.settings
-  },
-
-  async generateDraft(req: AiTicketDraftRequest): Promise<AiTicketDraftResponse> {
-    const res = await pb.send<AiTicketDraftResponse>('/backend/v1/ai/ticket-draft', {
+export async function saveAiTicketSettings(
+  settings: Partial<AiTicketSettings>,
+): Promise<AiTicketSettings> {
+  const res = await pb.send<{ message: string; settings: AiTicketSettings }>(
+    '/backend/v1/ai/ticket-settings',
+    {
       method: 'POST',
-      body: req,
-    })
-    return res
-  },
+      body: settings,
+    },
+  )
+  return res.settings
+}
+
+export async function generateTicketDraft(options: {
+  ticketId: string
+  prompt?: string
+}): Promise<AiTicketDraftResponse> {
+  return pb.send<AiTicketDraftResponse>('/backend/v1/ai/ticket-draft', {
+    method: 'POST',
+    body: {
+      ticketId: options.ticketId,
+      prompt: options.prompt,
+    },
+  })
+}
+
+export async function generateTicketTags(ticketId: string): Promise<AiTicketTagsResponse> {
+  return pb.send<AiTicketTagsResponse>('/backend/v1/ai/ticket-tags', {
+    method: 'POST',
+    body: {
+      ticketId,
+    },
+  })
+}
+
+export const aiTicketReplyService = {
+  getSettings: getAiTicketSettings,
+  saveSettings: saveAiTicketSettings,
+  generateDraft: generateTicketDraft,
+  generateTags: generateTicketTags,
 }

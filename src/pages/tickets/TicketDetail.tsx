@@ -96,6 +96,7 @@ import {
 } from '@/services/attachments'
 import { PriorityBadge } from '@/components/PriorityBadge'
 import { TicketAiReplyPanel } from '@/components/TicketAiReplyPanel'
+import { TicketTagsSection } from '@/components/TicketTagsSection'
 import { StatusBadge } from '@/components/StatusBadge'
 import { OriginalEmailCard } from '@/components/OriginalEmailCard'
 import { sanitizeEmailHtml } from '@/lib/sanitize-email-html'
@@ -1936,6 +1937,17 @@ export default function TicketDetail({
             )}
           </div>
         </div>
+        <TicketTagsSection
+          ticketId={ticket.id}
+          currentTagsString={ticket.tags || ''}
+          canEdit={canEditTicket}
+          canUseAiTags={perms.canAccessItem('tickets', 'tickets_ai_tags')}
+          onUpdateTags={async (newTagsString) => {
+            await updateTicket(ticket.id, { tags: newTagsString })
+            loadData()
+          }}
+        />
+
         <div className="itsm-card p-4 space-y-3">
           <h3 className="font-semibold text-sm text-foreground border-b border-border pb-2">
             Fila de Atendimento
