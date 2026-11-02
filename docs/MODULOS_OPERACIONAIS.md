@@ -1,6 +1,6 @@
-# Módulos Operacionais — Lógos ITSM
+# Módulos Operacionais — Lógos AITILSM
 
-Este documento descreve detalhadamente todos os módulos operacionais do Lógos ITSM, seus fluxos de trabalho, regras de validação e pontos de interface do usuário.
+Este documento descreve detalhadamente todos os módulos operacionais do Lógos AITILSM, seus fluxos de trabalho, regras de validação e pontos de interface do usuário.
 
 ---
 

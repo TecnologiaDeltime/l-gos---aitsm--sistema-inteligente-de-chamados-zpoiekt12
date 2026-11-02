@@ -1,6 +1,6 @@
-# Ponto de Restauração e Procedimento de Rollback — Lógos ITSM
+# Ponto de Restauração e Procedimento de Rollback — Lógos AITILSM
 
-Este documento registra oficialmente o **Ponto de Restauração (Restore Point)** do Lógos ITSM, estabelecido a partir da versão **0.0.291** (homologada, entregue e com QA 100% limpo), além de descrever os procedimentos de recuperação (rollback), limitações técnicas e governança para novos pontos de restauração.
+Este documento registra oficialmente o **Ponto de Restauração (Restore Point)** do Lógos AITILSM, estabelecido a partir da versão **0.0.291** (homologada, entregue e com QA 100% limpo), além de descrever os procedimentos de recuperação (rollback), limitações técnicas e governança para novos pontos de restauração.
 
 ---
 
