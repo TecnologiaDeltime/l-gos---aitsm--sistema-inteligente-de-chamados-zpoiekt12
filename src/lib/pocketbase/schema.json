@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-02T00:01:43.938Z",
+  "generatedAt": "2026-11-02T00:26:48.510Z",
   "collections": [
     {
       "name": "users",
@@ -11475,6 +11475,100 @@
       "indexes": [
         "CREATE INDEX idx_kb_curations_status ON knowledge_curations (status)",
         "CREATE INDEX idx_kb_curations_article ON knowledge_curations (article)"
+      ]
+    },
+    {
+      "name": "asset_automation_logs",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != \"\"",
+        "view": "@request.auth.id != \"\"",
+        "create": "@request.auth.id != \"\"",
+        "update": "@request.auth.id != \"\" && (@request.auth.role = \"admin\" || @request.auth.role = \"gestor\")",
+        "delete": "@request.auth.id != \"\" && @request.auth.role = \"admin\""
+      },
+      "fields": [
+        {
+          "name": "operator",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "operator_name",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "action_type",
+          "type": "select",
+          "required": true,
+          "system": false,
+          "selectValues": [
+            "exclusao_usuario",
+            "exclusao_ativo",
+            "mudanca_status",
+            "cancelamento_exclusao_usuario",
+            "cancelamento_exclusao_ativo"
+          ]
+        },
+        {
+          "name": "description",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "equipment_id",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "equipment_name",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "target_user_name",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "target_user_id",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "details",
+          "type": "json",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": [
+        "CREATE INDEX idx_asset_autologs_action ON asset_automation_logs (action_type)",
+        "CREATE INDEX idx_asset_autologs_equipment ON asset_automation_logs (equipment_id)",
+        "CREATE INDEX idx_asset_autologs_created ON asset_automation_logs (created)"
       ]
     }
   ]

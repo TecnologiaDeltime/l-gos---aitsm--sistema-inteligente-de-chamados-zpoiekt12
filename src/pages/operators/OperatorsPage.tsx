@@ -103,6 +103,10 @@ export default function OperatorsPage() {
   const [editingOperator, setEditingOperator] = useState<OperatorItem | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<OperatorItem | null>(null)
   const [deleting, setDeleting] = useState(false)
+  const [checkingEquipments, setCheckingEquipments] = useState(false)
+  const [associatedEquipments, setAssociatedEquipments] = useState<
+    Array<{ id: string; name: string; hostname?: string }>
+  >([])
 
   // Reset password
   const [resettingTarget, setResettingTarget] = useState<OperatorItem | null>(null)
@@ -266,6 +270,43 @@ export default function OperatorsPage() {
     await loadData()
   }
 
+  const handleOpenDeleteDialog = async (op: OperatorItem) => {
+    setDeleteTarget(op)
+    setCheckingEquipments(true)
+    try {
+      const eqList = await findEquipmentsByResponsible({
+        id: op.id,
+        name: op.name || `${op.first_name || ''} ${op.last_name || ''}`.trim(),
+      })
+      setAssociatedEquipments(eqList)
+    } catch {
+      setAssociatedEquipments([])
+    } finally {
+      setCheckingEquipments(false)
+    }
+  }
+
+  const handleCancelDelete = async () => {
+    if (deleteTarget && associatedEquipments.length > 0) {
+      try {
+        await createAssetAutomationLog({
+          action_type: 'cancelamento_exclusao_usuario',
+          target_user_id: deleteTarget.id,
+          target_user_name: deleteTarget.name || deleteTarget.email,
+          description: `Exclusão do operador "${deleteTarget.name || deleteTarget.email}" cancelada pelo operador.`,
+          details: {
+            associated_equipments_count: associatedEquipments.length,
+            equipments: associatedEquipments.map((e) => ({ id: e.id, name: e.name })),
+          },
+        })
+      } catch (logErr) {
+        console.warn('Erro ao registrar cancelamento:', logErr)
+      }
+    }
+    setDeleteTarget(null)
+    setAssociatedEquipments([])
+  }
+
   const handleDeleteOperator = async () => {
     if (!deleteTarget) return
 
@@ -276,6 +317,7 @@ export default function OperatorsPage() {
         variant: 'destructive',
       })
       setDeleteTarget(null)
+      setAssociatedEquipments([])
       return
     }
 
@@ -286,17 +328,50 @@ export default function OperatorsPage() {
         variant: 'destructive',
       })
       setDeleteTarget(null)
+      setAssociatedEquipments([])
       return
     }
 
     try {
       setDeleting(true)
+
+      // Regra 1: se possuir ativo(s), muda automaticamente status para "Disponível" e registra
+      if (associatedEquipments.length > 0) {
+        await setEquipmentsAvailableForUser(
+          associatedEquipments,
+          {
+            id: deleteTarget.id,
+            name: deleteTarget.name || deleteTarget.email,
+          },
+          currentUser?.name || currentUser?.email,
+        )
+      }
+
       await deleteOperator(deleteTarget.id)
+
+      await createAssetAutomationLog({
+        action_type: 'exclusao_usuario',
+        target_user_id: deleteTarget.id,
+        target_user_name: deleteTarget.name || deleteTarget.email,
+        description: `Cadastro do usuário responsável "${deleteTarget.name || deleteTarget.email}" excluído do Sistema. ${
+          associatedEquipments.length > 0
+            ? `${associatedEquipments.length} equipamento(s) vinculado(s) alterado(s) para "Disponível".`
+            : 'Nenhum equipamento estava vinculado.'
+        }`,
+        details: {
+          associated_equipments: associatedEquipments,
+        },
+      })
+
       toast({
-        title: 'Operador excluído com sucesso',
-        description: `A conta de "${deleteTarget.name || deleteTarget.email}" foi removida.`,
+        title: 'Usuário excluído com sucesso',
+        description:
+          associatedEquipments.length > 0
+            ? `O usuário foi excluído e ${associatedEquipments.length} equipamento(s) tiveram seu status alterado para Disponível.`
+            : `A conta de "${deleteTarget.name || deleteTarget.email}" foi removida.`,
       })
       setDeleteTarget(null)
+      setAssociatedEquipments([])
       await loadData()
     } catch (err: any) {
       const errMsg = err?.message || getErrorMessage(err) || 'Não foi possível excluir o operador.'
@@ -755,7 +830,7 @@ export default function OperatorsPage() {
                               size="sm"
                               className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/50"
                               title="Excluir Operador"
-                              onClick={() => setDeleteTarget(op)}
+                              onClick={() => handleOpenDeleteDialog(op)}
                             >
                               <Trash2 className="h-4 w-4" />
                             </Button>
@@ -913,7 +988,7 @@ export default function OperatorsPage() {
                         variant="ghost"
                         size="sm"
                         className="text-xs h-8 text-red-600 hover:text-red-700 hover:bg-red-50"
-                        onClick={() => setDeleteTarget(op)}
+                        onClick={() => handleOpenDeleteDialog(op)}
                       >
                         <Trash2 className="h-3.5 w-3.5 mr-1" />
                         Excluir
@@ -977,33 +1052,81 @@ export default function OperatorsPage() {
         generatedPassword={generatedPassword}
       />
 
-      {/* Delete Confirmation Alert */}
-      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
-        <AlertDialogContent>
+      {/* Delete Confirmation Alert com Regra 1 */}
+      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && handleCancelDelete()}>
+        <AlertDialogContent className="border-border">
           <AlertDialogHeader>
-            <AlertDialogTitle className="flex items-center gap-2 text-red-600">
+            <AlertDialogTitle className="flex items-center gap-2 text-amber-600 dark:text-amber-400">
               <AlertTriangle className="h-5 w-5" />
-              Confirmar Exclusão de Operador
+              Confirmar Exclusão de Usuário
             </AlertDialogTitle>
-            <AlertDialogDescription className="space-y-2 pt-2">
-              <p>
-                Tem certeza que deseja excluir o operador{' '}
-                <strong>{deleteTarget?.name || deleteTarget?.email}</strong>?
-              </p>
-              <p className="text-xs text-muted-foreground">
-                Esta ação removerá o acesso do operador ao sistema. Os históricos de chamados e
-                apontamentos já realizados permanecerão gravados.
-              </p>
+            <AlertDialogDescription className="space-y-3 pt-2 text-foreground">
+              {checkingEquipments ? (
+                <div className="flex items-center gap-2 py-2 text-xs text-muted-foreground">
+                  <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                  Verificando ativos vinculados...
+                </div>
+              ) : associatedEquipments.length > 0 ? (
+                <div className="space-y-3">
+                  <div className="p-3 rounded-lg border border-amber-500/30 bg-amber-500/10 dark:bg-amber-950/20 text-amber-800 dark:text-amber-200 text-xs space-y-1.5">
+                    <p className="font-semibold text-sm">
+                      Atenção: este usuário possui ativo(s) cadastrado(s) em seu nome!
+                    </p>
+                    <p>
+                      O operador <strong>{deleteTarget?.name || deleteTarget?.email}</strong> é
+                      responsável por <strong>{associatedEquipments.length} equipamento(s)</strong>.
+                    </p>
+                    <p className="font-medium">
+                      Assim que a exclusão for confirmada, o status do(s) equipamento(s) ficará como{' '}
+                      <strong>Disponível</strong>.
+                    </p>
+                  </div>
+                  <div className="max-h-32 overflow-y-auto space-y-1 pr-1 border rounded p-2 bg-muted/40 text-xs">
+                    {associatedEquipments.map((eq) => (
+                      <div
+                        key={eq.id}
+                        className="flex justify-between items-center text-muted-foreground"
+                      >
+                        <span className="font-medium text-foreground">{eq.name}</span>
+                        <span className="font-mono text-[11px]">
+                          {eq.hostname || 'Sem hostname'}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                  <p className="font-semibold text-sm">Deseja realmente excluir?</p>
+                </div>
+              ) : (
+                <div className="space-y-2 text-xs text-muted-foreground">
+                  <p className="text-sm text-foreground">
+                    Tem certeza que deseja excluir o usuário{' '}
+                    <strong>{deleteTarget?.name || deleteTarget?.email}</strong>?
+                  </p>
+                  <p>
+                    Esta ação removerá o acesso do usuário ao sistema. Nenhum equipamento está
+                    atualmente cadastrado em seu nome.
+                  </p>
+                  <p className="font-semibold text-sm text-foreground pt-1">
+                    Deseja realmente excluir?
+                  </p>
+                </div>
+              )}
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={deleting}>Cancelar</AlertDialogCancel>
+          <AlertDialogFooter className="gap-2 sm:gap-0">
+            <AlertDialogCancel
+              disabled={deleting}
+              onClick={handleCancelDelete}
+              className="border-border hover:bg-muted font-medium"
+            >
+              Cancelar
+            </AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDeleteOperator}
-              disabled={deleting}
-              className="bg-red-600 hover:bg-red-700 text-white"
+              disabled={deleting || checkingEquipments}
+              className="bg-amber-600 hover:bg-amber-700 text-white font-semibold"
             >
-              {deleting ? 'Excluindo...' : 'Sim, Excluir Operador'}
+              {deleting ? 'Excluindo...' : 'Sim'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

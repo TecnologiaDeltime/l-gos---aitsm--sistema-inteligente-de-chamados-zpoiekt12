@@ -560,6 +560,13 @@ const BASE_SYSTEM_MODULES: GranularModuleDefinition[] = [
           'Inventário completo e detalhado de ativos/CMDB com filtros de Empresa, Filial e Setor e todos os campos cadastrais',
         path: '/reports/assets',
       },
+      {
+        key: 'rep_asset_automation_logs',
+        label: 'Auditoria de Automações de Ativos',
+        description:
+          'Histórico e auditoria de ações de exclusão de usuários e equipamentos, mudanças automáticas de status e cancelamentos',
+        path: '/reports/asset-automations',
+      },
     ],
   },
 

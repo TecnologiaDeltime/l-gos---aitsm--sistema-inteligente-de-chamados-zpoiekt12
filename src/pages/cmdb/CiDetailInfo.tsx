@@ -28,6 +28,20 @@ import {
 import { AvailabilityStatusBadge } from '@/components/AvailabilityStatusBadge'
 import { getCompanies, getCompanyUnits, getCompanyDepartments } from '@/services/companies'
 import { extractFieldErrors, type FieldErrors } from '@/lib/pocketbase/errors'
+import { deleteEquipment } from '@/services/equipments'
+import { createAssetAutomationLog } from '@/services/asset-automation-logs'
+import { useNavigate } from 'react-router-dom'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
+import { AlertTriangle, Trash2 } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 import { usePermissions } from '@/hooks/use-permissions'
 
@@ -49,7 +63,12 @@ export function CiDetailInfo({
   const [showDiscard, setShowDiscard] = useState(false)
   const [justification, setJustification] = useState('')
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({})
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false)
+  const [deletingEquipment, setDeletingEquipment] = useState(false)
   const { toast } = useToast()
+  const navigate = useNavigate()
+
+  const linkedUser = (equipment.owner || equipment.responsible_user || '').trim()
 
   useEffect(() => {
     getCompanies()
@@ -112,10 +131,98 @@ export function CiDetailInfo({
     ? `${equipment.storage}${equipment.storage_type ? ` (${equipment.storage_type})` : ''}`
     : undefined
 
+  const handleCancelDeleteEquipment = async () => {
+    try {
+      await createAssetAutomationLog({
+        action_type: 'cancelamento_exclusao_ativo',
+        equipment_id: equipment.id,
+        equipment_name: equipment.name,
+        target_user_name: linkedUser || 'Nenhum',
+        description: `Exclusão do equipamento "${equipment.name}" cancelada pelo operador.`,
+        details: {
+          equipment_id: equipment.id,
+          equipment_name: equipment.name,
+          linked_user: linkedUser,
+        },
+      })
+    } catch (logErr) {
+      console.warn('Erro ao registrar cancelamento de exclusão do ativo:', logErr)
+    }
+    setShowDeleteDialog(false)
+  }
+
+  const handleConfirmDeleteEquipment = async () => {
+    try {
+      setDeletingEquipment(true)
+
+      // Regra 2: quando o operador clicar em Sim, mude o status do dispositivo para disponível
+      // e guarde todas as ações em log antes da exclusão
+      await updateEquipment(equipment.id, {
+        availability_status: 'Disponível',
+      })
+
+      await createAssetAutomationLog({
+        action_type: 'mudanca_status',
+        equipment_id: equipment.id,
+        equipment_name: equipment.name,
+        target_user_name: linkedUser || 'Nenhum',
+        description: `Status do equipamento "${equipment.name}" alterado para "Disponível" na confirmação de exclusão pelo operador.`,
+        details: {
+          previous_status: equipment.availability_status || 'Em uso',
+          new_status: 'Disponível',
+          reason: 'confirmacao_exclusao_ativo',
+          linked_user: linkedUser,
+        },
+      })
+
+      await createAssetAutomationLog({
+        action_type: 'exclusao_ativo',
+        equipment_id: equipment.id,
+        equipment_name: equipment.name,
+        target_user_name: linkedUser || 'Nenhum',
+        description: `Equipamento "${equipment.name}" excluído pelo operador após confirmação. Usuário vinculado: ${linkedUser || 'Nenhum'}. Status de disponibilidade final: Disponível.`,
+        details: {
+          equipment_id: equipment.id,
+          equipment_name: equipment.name,
+          linked_user: linkedUser,
+          final_availability_status: 'Disponível',
+        },
+      })
+
+      await deleteEquipment(equipment.id)
+
+      toast({
+        title: 'Equipamento excluído com sucesso',
+        description: `O ativo "${equipment.name}" foi removido do sistema.`,
+      })
+      setShowDeleteDialog(false)
+      navigate('/cmdb/assets')
+    } catch (err: any) {
+      toast({
+        title: 'Erro ao excluir equipamento',
+        description: err?.message || 'Falha na exclusão do ativo.',
+        variant: 'destructive',
+      })
+    } finally {
+      setDeletingEquipment(false)
+    }
+  }
+
   if (!isEditing)
     return (
       <div className="space-y-4">
-        <div className="flex justify-end">
+        <div className="flex justify-end gap-2">
+          {canDeleteEquipment && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700 dark:border-red-900/50 dark:hover:bg-red-950/40"
+              onClick={() => setShowDeleteDialog(true)}
+            >
+              <Trash2 className="h-3.5 w-3.5 mr-1" />
+              Excluir Ativo
+            </Button>
+          )}
           {canEditEquipment && (
             <Button
               size="sm"
@@ -541,6 +648,69 @@ export function CiDetailInfo({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Regra 2: Diálogo de confirmação de exclusão do equipamento */}
+      <AlertDialog
+        open={showDeleteDialog}
+        onOpenChange={(open) => !open && handleCancelDeleteEquipment()}
+      >
+        <AlertDialogContent className="border-border">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-amber-600 dark:text-amber-400">
+              <AlertTriangle className="h-5 w-5" />
+              Confirmar Exclusão de Equipamento
+            </AlertDialogTitle>
+            <AlertDialogDescription className="space-y-3 pt-2 text-foreground">
+              {linkedUser ? (
+                <div className="space-y-3">
+                  <div className="p-3 rounded-lg border border-amber-500/30 bg-amber-500/10 dark:bg-amber-950/20 text-amber-800 dark:text-amber-200 text-xs space-y-1.5">
+                    <p className="font-semibold text-sm">
+                      Atenção: possui um usuário cadastrado para este equipamento!
+                    </p>
+                    <p>
+                      Usuário vinculado: <strong>{linkedUser}</strong>
+                    </p>
+                    <p className="font-medium">
+                      Ao confirmar com Sim, o status do dispositivo será alterado para{' '}
+                      <strong>Disponível</strong> e a ação será gravada no log de auditoria.
+                    </p>
+                  </div>
+                  <p className="font-semibold text-sm">Deseja realmente excluir o equipamento?</p>
+                </div>
+              ) : (
+                <div className="space-y-2 text-xs text-muted-foreground">
+                  <p className="text-sm text-foreground">
+                    Tem certeza que deseja excluir o equipamento <strong>{equipment.name}</strong>?
+                  </p>
+                  <p>
+                    Nenhum usuário está atualmente vinculado a este ativo. A ação será gravada no
+                    log de auditoria.
+                  </p>
+                  <p className="font-semibold text-sm text-foreground pt-1">
+                    Deseja realmente excluir o equipamento?
+                  </p>
+                </div>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="gap-2 sm:gap-0">
+            <AlertDialogCancel
+              disabled={deletingEquipment}
+              onClick={handleCancelDeleteEquipment}
+              className="border-border hover:bg-muted font-medium"
+            >
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmDeleteEquipment}
+              disabled={deletingEquipment}
+              className="bg-amber-600 hover:bg-amber-700 text-white font-semibold"
+            >
+              {deletingEquipment ? 'Excluindo...' : 'Sim'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

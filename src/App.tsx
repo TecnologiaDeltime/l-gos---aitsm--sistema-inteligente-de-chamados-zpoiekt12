@@ -245,6 +245,17 @@ const App = () => (
                     </ProtectedRoute>
                   }
                 />
+                <Route
+                  path="/reports/asset-automations"
+                  element={
+                    <ProtectedRoute
+                      requiredModule="reports"
+                      requiredItem="rep_asset_automation_logs"
+                    >
+                      <AssetAutomationLogsPage />
+                    </ProtectedRoute>
+                  }
+                />
                 <Route path="/team" element={<TeamList />} />
                 <Route path="/team/new" element={<TeamDetail />} />
                 <Route path="/queues" element={<QueueManagement />} />
