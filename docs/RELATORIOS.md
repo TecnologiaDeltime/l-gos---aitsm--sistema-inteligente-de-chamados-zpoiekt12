@@ -1,6 +1,6 @@
-# Relatórios e Extrações de Dados — Sistema ITSM LUIZ
+# Relatórios e Extrações de Dados — Lógos ITSM
 
-O Sistema ITSM LUIZ conta com uma suíte avançada de relatórios gerenciais, operacionais e de conformidade. Todas as visões fornecem dados auditáveis em tempo real, filtros dinâmicos e opções de exportação padronizadas.
+O Lógos ITSM conta com uma suíte avançada de relatórios gerenciais, operacionais e de conformidade. Todas as visões fornecem dados auditáveis em tempo real, filtros dinâmicos e opções de exportação padronizadas.
 
 ---
 

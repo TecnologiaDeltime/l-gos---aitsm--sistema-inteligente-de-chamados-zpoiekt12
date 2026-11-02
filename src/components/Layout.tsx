@@ -81,6 +81,7 @@ import { AiAssistantDrawer } from '@/components/AiAssistantDrawer'
 import { NewTicketToast } from '@/components/NewTicketToast'
 import { RefreshIndicator } from '@/components/RefreshIndicator'
 import { autoRegisterMenuItems } from '@/lib/permissions-registry'
+import { LogosMonogram } from '@/components/brand/LogosLogo'
 
 export default function Layout() {
   const { user, signOut } = useAuth()

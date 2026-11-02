@@ -1,6 +1,6 @@
-# Documentação Oficial e Completa do Sistema ITSM LUIZ
+# Documentação Oficial e Completa do Lógos ITSM
 
-Bem-vindo à documentação oficial completa do **Sistema ITSM LUIZ**. Este documento consolida a arquitetura funcional, regras de negócio vigentes, perfis de acesso, fluxos operacionais, relatórios e parâmetros de configuração da plataforma.
+Bem-vindo à documentação oficial completa do **Lógos ITSM**. Este documento consolida a arquitetura funcional, regras de negócio vigentes, perfis de acesso, fluxos operacionais, relatórios e parâmetros de configuração da plataforma.
 
 A documentação adota o formato **Híbrido**: texto descritivo detalhado em conformidade estrita com o código-fonte da aplicação, enriquecido com marcadores de captura de tela no padrão `*[print: descrição da tela ou ação]*`, permitindo inserção posterior das capturas de tela.
 
@@ -50,7 +50,7 @@ O conjunto documental está dividido em módulos temáticos para facilitar a con
 
 ## 2. Visão de Arquitetura da Solução
 
-O Sistema ITSM LUIZ é construído em tecnologia web moderna e escalável:
+O Lógos ITSM é construído em tecnologia web moderna e escalável:
 
 - **Frontend**: React 19 + TypeScript + Vite + Tailwind CSS + Kit completo shadcn/ui.
 - **Backend**: PocketBase nativo no Skip Cloud com migrações JavaScript idempotentes (`pocketbase/migrations/`), hooks de ciclo de vida (`pocketbase/hooks/`) e WebSocket realtime para eventos instantâneos.

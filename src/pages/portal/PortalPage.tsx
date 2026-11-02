@@ -61,6 +61,7 @@ import PortalAssetsTab from '@/components/portal/PortalAssetsTab'
 import PortalVisitsTab from '@/components/portal/PortalVisitsTab'
 import PortalHoursTab from '@/components/portal/PortalHoursTab'
 import PendingReportEvaluationNotification from '@/components/portal/PendingReportEvaluationNotification'
+import { LogosMonogram } from '@/components/brand/LogosLogo'
 import {
   getClientPortalDashboardMetrics,
   PortalDashboardMetrics,

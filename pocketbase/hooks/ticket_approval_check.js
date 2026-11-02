@@ -280,7 +280,7 @@ onRecordAfterCreateSuccess((e) => {
         password: '',
         senderName: 'Lógos ITSM',
         replyTo: '',
-        senderEmail: 'noreply@serviceone.com.br',
+        senderEmail: 'noreply@logositsm.com.br',
       }
       try {
         var s = $app.settings
@@ -289,7 +289,7 @@ onRecordAfterCreateSuccess((e) => {
           fallback.host = s.smtp.host
           fallback.port = s.smtp.port || 587
           fallback.user = s.smtp.username || ''
-          fallback.senderEmail = s.smtp.username || 'noreply@serviceone.com.br'
+          fallback.senderEmail = s.smtp.username || 'noreply@logositsm.com.br'
         }
         if (s && s.meta && s.meta.senderAddress) fallback.senderEmail = s.meta.senderAddress
         if (s && s.meta && s.meta.senderName) fallback.senderName = s.meta.senderName
@@ -366,7 +366,7 @@ onRecordAfterCreateSuccess((e) => {
         client.send(message)
         return {
           success: true,
-          smtp_used: mailerConfig.isDedicated ? 'dedicated_mailbox' : 'serviceone_fallback',
+          smtp_used: mailerConfig.isDedicated ? 'dedicated_mailbox' : 'logos_fallback',
           host: mailerConfig.host,
           user: mailerConfig.user || mailerConfig.senderEmail,
         }
@@ -386,7 +386,7 @@ onRecordAfterCreateSuccess((e) => {
             fallbackClient.send(message)
             return {
               success: true,
-              smtp_used: 'serviceone_fallback',
+              smtp_used: 'logos_fallback',
               fallback_reason: primaryErr.message,
               host: originalSmtp ? originalSmtp.host : '',
               user: originalSmtp ? originalSmtp.username : '',
@@ -418,7 +418,7 @@ onRecordAfterCreateSuccess((e) => {
       if (!opts) throw new Error('Parâmetros de e-mail ausentes.')
       var mailerConfig = resolveSystemMailerConfig()
       var message = createSystemMailMessage()
-      var senderEmail = mailerConfig.senderEmail || 'noreply@serviceone.com.br'
+      var senderEmail = mailerConfig.senderEmail || 'noreply@logositsm.com.br'
       var senderName = mailerConfig.senderName || 'Atendimento HelpDesk'
 
       if (opts.from && typeof opts.from === 'object') {

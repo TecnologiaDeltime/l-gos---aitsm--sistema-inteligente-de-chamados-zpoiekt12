@@ -664,7 +664,7 @@ export const ScheduledTicketDialog: React.FC<ScheduledTicketDialogProps> = ({
                 <p className="font-medium text-foreground mb-1">Canais disparados:</p>
                 <ul className="list-disc list-inside space-y-0.5">
                   <li>Notificação in-app (tipo Alerta)</li>
-                  <li>E-mail noreply@serviceone.com.br</li>
+                  <li>E-mail noreply@logositsm.com.br</li>
                   <li>Destinatários: Criador + Responsável atribuído</li>
                 </ul>
               </div>

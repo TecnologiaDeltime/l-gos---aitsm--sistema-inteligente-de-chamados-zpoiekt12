@@ -141,7 +141,7 @@ cronAdd('scheduled_tickets_cron', '*/5 * * * *', function () {
                 'Lógos ITSM'
 
               var mailMsg = new MailerMessage()
-              mailMsg.from = { address: 'noreply@serviceone.com.br', name: 'Lógos ITSM' }
+              mailMsg.from = { address: 'noreply@logositsm.com.br', name: 'Lógos ITSM' }
               mailMsg.to = [{ address: userEmail }]
               mailMsg.subject = emailSubj
               mailMsg.text = emailBody

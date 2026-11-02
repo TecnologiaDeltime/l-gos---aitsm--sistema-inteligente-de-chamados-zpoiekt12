@@ -1,4 +1,4 @@
-# Configurações, Governança e Controle de Acesso — Sistema ITSM LUIZ
+# Configurações, Governança e Controle de Acesso — Lógos ITSM
 
 Este documento aborda os aspectos de segurança, perfis de acesso, parametrizações globais do sistema, identidade visual, autenticação de dois fatores e regras arquiteturais de negócio.
 
@@ -6,7 +6,7 @@ Este documento aborda os aspectos de segurança, perfis de acesso, parametrizaç
 
 ## 1. Perfis de Acesso e Matriz Granular de Permissões (`/profiles`)
 
-O controle de autorização do Sistema ITSM LUIZ adota o modelo de matriz de permissões granulares por perfil de acesso, permitindo que a liderança defina exatamente quais telas, botões e ações cada colaborador pode executar.
+O controle de autorização do Lógos ITSM adota o modelo de matriz de permissões granulares por perfil de acesso, permitindo que a liderança defina exatamente quais telas, botões e ações cada colaborador pode executar.
 
 ### 1.1 Os 3 Níveis de Acesso
 
@@ -162,7 +162,7 @@ _[print: aba de modelos de chamados com cadastro de templates de solução]_
 
 ## 5. Identidade Visual e Temas Oficiais
 
-O design do Sistema ITSM LUIZ segue uma paleta de cores corporativa de alto contraste, desenvolvida para reduzir a fadiga visual:
+O design do Lógos ITSM segue uma paleta de cores corporativa de alto contraste, desenvolvida para reduzir a fadiga visual:
 
 ### 5.1 Os Dois Temas Oficiais
 

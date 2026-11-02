@@ -223,7 +223,7 @@
         ? globalThis.resolveSystemMailerConfig()
         : { host: '', port: 587, encryption: 'STARTTLS', user: '', senderEmail: '' }
 
-    var senderAccount = mailerConfig.user || mailerConfig.senderEmail || 'noreply@serviceone.com.br'
+    var senderAccount = mailerConfig.user || mailerConfig.senderEmail || 'noreply@logositsm.com.br'
     var senderName = mailerConfig.senderName || 'Lógos ITSM'
 
     var sendSuccess = false

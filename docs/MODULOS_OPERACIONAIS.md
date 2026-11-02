@@ -1,6 +1,6 @@
-# Módulos Operacionais — Sistema ITSM LUIZ
+# Módulos Operacionais — Lógos ITSM
 
-Este documento descreve detalhadamente todos os módulos operacionais do Sistema ITSM LUIZ, seus fluxos de trabalho, regras de validação e pontos de interface do usuário.
+Este documento descreve detalhadamente todos os módulos operacionais do Lógos ITSM, seus fluxos de trabalho, regras de validação e pontos de interface do usuário.
 
 ---
 

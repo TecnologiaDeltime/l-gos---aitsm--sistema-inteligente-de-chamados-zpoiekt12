@@ -28,6 +28,7 @@ import {
   CheckCircle2,
 } from 'lucide-react'
 import { getCompanies, CompanyRecord } from '@/services/companies'
+import { LogosLogoPanel } from '@/components/brand/LogosLogo'
 import {
   Select,
   SelectContent,
@@ -182,9 +183,7 @@ export default function PortalLogin() {
                 />
               </div>
             ) : (
-              <div className="p-3 bg-gradient-to-br from-amber-500/20 via-amber-500/10 to-transparent border border-amber-500/30 rounded-2xl text-amber-500">
-                <Building2 className="h-7 w-7 text-amber-500" />
-              </div>
+              <LogosLogoPanel className="max-h-14" />
             )}
           </div>
 

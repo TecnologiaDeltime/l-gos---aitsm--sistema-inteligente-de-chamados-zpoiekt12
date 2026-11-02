@@ -22,7 +22,7 @@ export function exportContractPdf(contract: ContractRecord, userName: string, lo
   const now = new Date().toLocaleString('pt-BR')
   const logoHeader = logoUrl
     ? `<div style="margin-bottom:16px;text-align:left"><img src="${logoUrl}" alt="Logotipo da Empresa" style="max-height:48px;max-width:240px;object-fit:contain" /></div>`
-    : ''
+    : `<div style="margin-bottom:16px;display:flex;align-items:center;gap:8px"><span style="font-size:16px;font-weight:800;color:#17181c;background:#fef3c7;border:1px solid #f59e0b;padding:4px 10px;border-radius:6px;font-family:sans-serif">Lógos ITSM</span></div>`
   const html = `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="utf-8">
 <title>Contrato ${contract.number}</title>
 <style>body{font-family:Arial,sans-serif;margin:40px;color:#1e293b}
@@ -60,7 +60,7 @@ ${logoHeader}
 <tr><td>Política de Visita Técnica</td><td>${fmt(contract.technical_visit_policy)}</td></tr></table>
 <h2>5. Observações</h2><table>
 <tr><td>Observações</td><td>${fmt(contract.notes)}</td></tr></table>
-<div class="footer">Gerado em ${now} por ${fmt(userName)}</div>
+<div class="footer">Gerado em ${now} por ${fmt(userName)} • Lógos ITSM</div>
 </body></html>`
 
   const iframe = document.createElement('iframe')

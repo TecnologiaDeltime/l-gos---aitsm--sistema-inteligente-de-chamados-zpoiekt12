@@ -1,7 +1,7 @@
 import logosLogoPng from '@/assets/logo-logos-ambar-com-aitsm-1-68a29.png'
 
 /**
- * Identidade visual oficial do sistema: Lógos ITSM (antigo ServiceOne).
+ * Identidade visual oficial do sistema: Lógos ITSM.
  * O logotipo oficial enviado pelo cliente fica em
  * `src/assets/logo-logos-ambar-com-aitsm-1-68a29.png` e o monograma "L"
  * é reproduzido em SVG para superfícies compactas (sidebar, topo e favicon).
@@ -10,7 +10,7 @@ import logosLogoPng from '@/assets/logo-logos-ambar-com-aitsm-1-68a29.png'
 export const SYSTEM_NAME = 'Lógos ITSM'
 export const SYSTEM_NAME_SHORT = 'Lógos'
 export const SYSTEM_FULL_NAME = 'Lógos ITSM — Sistema de Gestão de Chamados'
-export const logosLogoPng = logosLogoPng
+export { logosLogoPng }
 
 /** Monograma "L" estilizado em gradiente laranja/âmbar (marca Lógos). */
 export function LogosMonogram({ className = 'h-8 w-8' }: { className?: string }) {

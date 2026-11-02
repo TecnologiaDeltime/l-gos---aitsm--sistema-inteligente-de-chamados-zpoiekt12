@@ -254,7 +254,7 @@ export interface SendTestEmailResponse {
   sender_name?: string
   sent_at?: string
   subject?: string
-  smtp_used?: 'dedicated_mailbox' | 'serviceone_fallback' | string
+  smtp_used?: 'dedicated_mailbox' | 'system_fallback' | string
   smtp_host?: string
   error?: string
 }
@@ -273,7 +273,7 @@ export interface SmtpTestResponse {
   message: string
   duration_ms?: number
   steps: SmtpTestStep[]
-  smtp_used?: 'dedicated_mailbox' | 'serviceone_fallback' | string
+  smtp_used?: 'dedicated_mailbox' | 'system_fallback' | string
   host?: string
   port?: number
   user?: string
