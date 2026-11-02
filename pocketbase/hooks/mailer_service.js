@@ -1,7 +1,7 @@
 // Helper unificado para resolução e envio de e-mails do sistema ITSM
 // Regra de precedência:
 // 1. Configuração SMTP dedicada da caixa de e-mail (email_config: smtp_host, smtp_port, smtp_user, smtp_password, smtp_sender_name, smtp_reply_to)
-// 2. Fallback: Configuração global SMTP do ServiceOne ($app.settings().smtp)
+// 2. Fallback: Configuração global SMTP do sistema ($app.settings().smtp)
 //
 // Disponibiliza as funções globais:
 // - resolveSystemMailerConfig()
@@ -101,7 +101,7 @@
       }
     } catch (_) {}
 
-    // Fallback: ServiceOne SMTP padrão do PocketBase
+    // Fallback: SMTP padrão do PocketBase
     var fallback = {
       isDedicated: false,
       host: '',
@@ -109,7 +109,7 @@
       encryption: 'STARTTLS',
       user: '',
       password: '',
-      senderName: 'ServiceOne ITSM',
+      senderName: 'Lógos ITSM',
       replyTo: '',
       senderEmail: 'noreply@serviceone.com.br',
     }
@@ -299,7 +299,7 @@
         user: mailerConfig.user || mailerConfig.senderEmail,
       }
     } catch (primaryErr) {
-      // Se a caixa dedicada falhar, restaura as configurações originais e tenta o fallback ServiceOne
+      // Se a caixa dedicada falhar, restaura as configurações originais e tenta o fallback SMTP
       restoreSettings()
       needsRestore = false
 
@@ -307,7 +307,7 @@
         $app
           .logger()
           .warn(
-            'sendSystemMailMessage: falha no envio via caixa dedicada, tentando fallback ServiceOne',
+            'sendSystemMailMessage: falha no envio via caixa dedicada, tentando fallback SMTP',
             'host',
             mailerConfig.host,
             'user',
@@ -330,7 +330,7 @@
           $app
             .logger()
             .error(
-              'sendSystemMailMessage: falha também no fallback ServiceOne',
+              'sendSystemMailMessage: falha também no fallback SMTP',
               'err',
               fallbackErr.message,
             )

@@ -348,7 +348,7 @@ cronAdd('level_consumption_alerts', '*/5 * * * *', function () {
         pctRounded +
         '%\n\n' +
         'Acesse o sistema para maiores detalhes.\n\n' +
-        '-- ServiceOne'
+        '-- Lógos ITSM'
 
       // ---- Notificação in-app ----
       var userIds = Object.keys(recipientIds)
@@ -381,7 +381,7 @@ cronAdd('level_consumption_alerts', '*/5 * * * *', function () {
       for (var em2 = 0; em2 < emailList.length; em2++) {
         try {
           var mailMsg = new MailerMessage()
-          mailMsg.from = { address: 'noreply@serviceone.com.br', name: 'ServiceOne' }
+          mailMsg.from = { address: 'noreply@serviceone.com.br', name: 'Lógos ITSM' }
           mailMsg.to = [{ address: emailList[em2] }]
           mailMsg.subject = subject
           mailMsg.text = bodyText

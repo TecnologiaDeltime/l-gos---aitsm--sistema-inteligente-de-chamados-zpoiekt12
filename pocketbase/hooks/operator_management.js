@@ -120,7 +120,7 @@
           var htmlBody =
             '<div style="font-family: -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 24px; color: #1e293b; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px;">' +
             '<div style="border-bottom: 2px solid #3b82f6; padding-bottom: 16px; margin-bottom: 24px;">' +
-            '<h2 style="color: #0f172a; margin: 0; font-size: 20px;">Bem-vindo ao ServiceOne ITSM</h2>' +
+            '<h2 style="color: #0f172a; margin: 0; font-size: 20px;">Bem-vindo ao Lógos ITSM</h2>' +
             '<p style="color: #64748b; margin: 4px 0 0 0; font-size: 14px;">Suas credenciais de primeiro acesso foram criadas</p>' +
             '</div>' +
             '<p style="font-size: 15px; line-height: 1.5;">Olá <strong>' +
@@ -144,7 +144,7 @@
                 '" style="background-color: #2563eb; color: #ffffff; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 14px; display: inline-block;">Acessar o Sistema</a></p>'
               : '') +
             '<hr style="border: none; border-top: 1px solid #e2e8f0; margin: 24px 0;" />' +
-            '<p style="font-size: 12px; color: #94a3b8; margin: 0;">Este é um e-mail automático enviado pelo ServiceOne ITSM. Por favor, não responda a esta mensagem.</p>' +
+            '<p style="font-size: 12px; color: #94a3b8; margin: 0;">Este é um e-mail automático enviado pelo Lógos ITSM. Por favor, não responda a esta mensagem.</p>' +
             '</div>'
 
           var textBody =

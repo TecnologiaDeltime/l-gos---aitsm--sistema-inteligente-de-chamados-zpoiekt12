@@ -145,7 +145,7 @@ cronAdd('approval_escalation_cron', '* * * * *', function () {
       encryption: 'STARTTLS',
       user: '',
       password: '',
-      senderName: 'ServiceOne ITSM',
+      senderName: 'Lógos ITSM',
       replyTo: '',
       senderEmail: 'noreply@serviceone.com.br',
     }
@@ -244,7 +244,7 @@ cronAdd('approval_escalation_cron', '* * * * *', function () {
         $app
           .logger()
           .warn(
-            'approval_escalation_cron: falha no envio via caixa dedicada, tentando fallback ServiceOne',
+            'approval_escalation_cron: falha no envio via caixa dedicada, tentando fallback SMTP',
             'err',
             primaryErr.message,
           )
@@ -262,7 +262,7 @@ cronAdd('approval_escalation_cron', '* * * * *', function () {
           $app
             .logger()
             .error(
-              'approval_escalation_cron: falha também no fallback ServiceOne',
+              'approval_escalation_cron: falha também no fallback SMTP',
               'err',
               fallbackErr.message,
             )
@@ -415,7 +415,7 @@ cronAdd('approval_escalation_cron', '* * * * *', function () {
       '                          ⚡\n' +
       '                        </td>\n' +
       '                        <td style="padding-left: 14px; vertical-align: middle;">\n' +
-      '                          <div style="font-size: 20px; font-weight: 800; color: #ffffff; letter-spacing: -0.5px; line-height: 22px;">ServiceOne <span style="color: #38bdf8; font-weight: 600;">ITSM</span></div>\n' +
+      '                          <div style="font-size: 20px; font-weight: 800; color: #ffffff; letter-spacing: -0.5px; line-height: 22px;">Lógos <span style="color: #fbbf24; font-weight: 600;">ITSM</span></div>\n' +
       '                          <div style="font-size: 11px; color: #94a3b8; font-weight: 500; text-transform: uppercase; letter-spacing: 0.8px; margin-top: 2px;">Gestão de Serviços de TI</div>\n' +
       '                        </td>\n' +
       '                      </tr>\n' +
@@ -470,7 +470,7 @@ cronAdd('approval_escalation_cron', '* * * * *', function () {
       '</p>\n' +
       '              <p style="margin: 0; font-size: 11px; color: #94a3b8;">© ' +
       new Date().getFullYear() +
-      ' ServiceOne ITSM • Plataforma de Gestão de Incidentes e Requisições</p>\n' +
+      ' Lógos ITSM • Plataforma de Gestão de Incidentes e Requisições</p>\n' +
       '            </td>\n' +
       '          </tr>\n' +
       '        </table>\n' +
@@ -731,7 +731,7 @@ cronAdd('approval_escalation_cron', '* * * * *', function () {
         'Ou visualize via portal web: ' +
         webPortalUrl +
         '\n\n' +
-        '-- ServiceOne ITSM'
+        '-- Lógos ITSM'
 
       try {
         if (typeof globalThis.itsmSendWithAudit === 'function') {

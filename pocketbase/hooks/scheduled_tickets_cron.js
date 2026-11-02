@@ -138,10 +138,10 @@ cronAdd('scheduled_tickets_cron', '*/5 * * * *', function () {
                 ' minuto(s)\n\n' +
                 'O chamado será gerado automaticamente pelo sistema de Tickets Programados.\n\n' +
                 'Atenciosamente,\n' +
-                'ServiceOne ITSM'
+                'Lógos ITSM'
 
               var mailMsg = new MailerMessage()
-              mailMsg.from = { address: 'noreply@serviceone.com.br', name: 'ServiceOne' }
+              mailMsg.from = { address: 'noreply@serviceone.com.br', name: 'Lógos ITSM' }
               mailMsg.to = [{ address: userEmail }]
               mailMsg.subject = emailSubj
               mailMsg.text = emailBody

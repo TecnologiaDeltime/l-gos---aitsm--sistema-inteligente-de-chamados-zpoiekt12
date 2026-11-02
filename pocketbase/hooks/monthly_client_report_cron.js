@@ -381,7 +381,7 @@ cronAdd('monthly_client_report_cron', '0 6 * * *', function () {
         'ul.abnt-recs li { margin-bottom: 6px; }' +
         '</style></head><body>' +
         '<div class="container">' +
-        '<div class="cover-header">SERVICEONE GESTÃO DE TI E OPERAÇÕES</div>' +
+        '<div class="cover-header">LÓGOS GESTÃO DE TI E OPERAÇÕES</div>' +
         '<div class="cover-title">Relatório Mensal de Serviços</div>' +
         '<div class="cover-subtitle">Cliente: <strong>' +
         companyName +
@@ -423,7 +423,7 @@ cronAdd('monthly_client_report_cron', '0 6 * * *', function () {
         (100 - utilizationPct) +
         '%</td></tr>' +
         '</tbody></table>' +
-        '<div class="source">Fonte: ServiceOne ITSM.</div>' +
+        '<div class="source">Fonte: Lógos ITSM.</div>' +
         '<h2>2. Horas por Setor / Departamento</h2>' +
         '<p class="abnt-p">Distribuição das horas despendidas de acordo com os setores demandantes da organização.</p>' +
         '<div class="caption">Quadro 2 &ndash; Horas consumidas por departamento</div>' +
@@ -445,7 +445,7 @@ cronAdd('monthly_client_report_cron', '0 6 * * *', function () {
       }
 
       htmlContent +=
-        '</tbody></table><div class="source">Fonte: ServiceOne ITSM.</div>' +
+        '</tbody></table><div class="source">Fonte: Lógos ITSM.</div>' +
         '<h2>3. Horas por Solicitante</h2>' +
         '<p class="abnt-p">Detalhamento dos colaboradores com maior volume de suporte técnico no mês.</p>' +
         '<div class="caption">Quadro 3 &ndash; Usuários com maior consumo técnico</div>' +
@@ -469,7 +469,7 @@ cronAdd('monthly_client_report_cron', '0 6 * * *', function () {
       }
 
       htmlContent +=
-        '</tbody></table><div class="source">Fonte: ServiceOne ITSM.</div>' +
+        '</tbody></table><div class="source">Fonte: Lógos ITSM.</div>' +
         '<h2>4. Atividades Mais Requisitadas</h2>' +
         '<p class="abnt-p">Classificação das categorias de serviço mais acionadas no catálogo técnico.</p>' +
         '<div class="caption">Quadro 4 &ndash; Atividades de maior demanda</div>' +
@@ -534,7 +534,7 @@ cronAdd('monthly_client_report_cron', '0 6 * * *', function () {
         '</td><td>Inventariados</td></tr>' +
         '</tbody></table><div class="source">Fonte: Base de Ativos (CMDB).</div>' +
         '<p style="margin-top: 30px; font-size: 9pt; color: #666; text-align: center; border-top: 1pt solid #ccc; padding-top: 10px;">' +
-        'Relatório gerado automaticamente pelo ServiceOne ITSM.' +
+        'Relatório gerado automaticamente pelo Lógos ITSM.' +
         '</p></div></body></html>'
 
       // Envia via mailClient ou serviço unificado do sistema
@@ -543,7 +543,7 @@ cronAdd('monthly_client_report_cron', '0 6 * * *', function () {
       for (var rIdx = 0; rIdx < recipients.length; rIdx++) {
         var targetEmail = recipients[rIdx]
         var message = new MailerMessage()
-        message.from = { address: 'noreply@serviceone.com.br', name: 'ServiceOne - ITSM' }
+        message.from = { address: 'noreply@serviceone.com.br', name: 'Lógos - ITSM' }
         message.to = [{ address: targetEmail }]
         message.subject = subject
         message.html = htmlContent
@@ -967,7 +967,7 @@ routerAdd(
         'ul.abnt-recs li { margin-bottom: 6px; }' +
         '</style></head><body>' +
         '<div class="container">' +
-        '<div class="cover-header">SERVICEONE GESTÃO DE TI E OPERAÇÕES</div>' +
+        '<div class="cover-header">LÓGOS GESTÃO DE TI E OPERAÇÕES</div>' +
         '<div class="cover-title">Relatório Mensal de Serviços</div>' +
         '<div class="cover-subtitle">Cliente: <strong>' +
         companyName +
@@ -1009,7 +1009,7 @@ routerAdd(
         (100 - utilizationPct) +
         '%</td></tr>' +
         '</tbody></table>' +
-        '<div class="source">Fonte: ServiceOne ITSM.</div>' +
+        '<div class="source">Fonte: Lógos ITSM.</div>' +
         '<h2>2. Horas por Setor / Departamento</h2>' +
         '<p class="abnt-p">Distribuição das horas despendidas de acordo com os setores demandantes da organização.</p>' +
         '<div class="caption">Quadro 2 &ndash; Horas consumidas por departamento</div>' +
@@ -1031,7 +1031,7 @@ routerAdd(
       }
 
       htmlContent +=
-        '</tbody></table><div class="source">Fonte: ServiceOne ITSM.</div>' +
+        '</tbody></table><div class="source">Fonte: Lógos ITSM.</div>' +
         '<h2>3. Horas por Solicitante</h2>' +
         '<p class="abnt-p">Detalhamento dos colaboradores com maior volume de suporte técnico no mês.</p>' +
         '<div class="caption">Quadro 3 &ndash; Usuários com maior consumo técnico</div>' +
@@ -1055,7 +1055,7 @@ routerAdd(
       }
 
       htmlContent +=
-        '</tbody></table><div class="source">Fonte: ServiceOne ITSM.</div>' +
+        '</tbody></table><div class="source">Fonte: Lógos ITSM.</div>' +
         '<h2>4. Atividades Mais Requisitadas</h2>' +
         '<p class="abnt-p">Classificação das categorias de serviço mais acionadas no catálogo técnico.</p>' +
         '<div class="caption">Quadro 4 &ndash; Atividades de maior demanda</div>' +
@@ -1120,7 +1120,7 @@ routerAdd(
         '</td><td>Inventariados</td></tr>' +
         '</tbody></table><div class="source">Fonte: Base de Ativos (CMDB).</div>' +
         '<p style="margin-top: 30px; font-size: 9pt; color: #666; text-align: center; border-top: 1pt solid #ccc; padding-top: 10px;">' +
-        'Relatório gerado automaticamente pelo ServiceOne ITSM.' +
+        'Relatório gerado automaticamente pelo Lógos ITSM.' +
         '</p></div></body></html>'
 
       var sendErrors = []
@@ -1128,7 +1128,7 @@ routerAdd(
       for (var rIdx = 0; rIdx < recipients.length; rIdx++) {
         var targetEmail = recipients[rIdx]
         var message = new MailerMessage()
-        message.from = { address: 'noreply@serviceone.com.br', name: 'ServiceOne - ITSM' }
+        message.from = { address: 'noreply@serviceone.com.br', name: 'Lógos - ITSM' }
         message.to = [{ address: targetEmail }]
         message.subject = subject
         message.html = htmlContent

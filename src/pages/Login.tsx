@@ -247,13 +247,13 @@ export default function Login() {
 
       <Card className="relative w-full max-w-md shadow-2xl border border-border/80 bg-card/95 backdrop-blur-xl">
         {/* Badge do sistema e status */}
-      <div className="flex items-center justify-between px-6 pt-5 pb-1">
-        <div className="flex items-center gap-2">
-          <span className="h-2 w-2 rounded-full bg-primary shadow-[0_0_8px_rgba(245,158,11,0.8)] animate-pulse" />
-          <span className="text-[11px] font-mono font-semibold tracking-wider text-muted-foreground uppercase">
-            {SYSTEM_NAME}
-          </span>
-        </div>
+        <div className="flex items-center justify-between px-6 pt-5 pb-1">
+          <div className="flex items-center gap-2">
+            <span className="h-2 w-2 rounded-full bg-primary shadow-[0_0_8px_rgba(245,158,11,0.8)] animate-pulse" />
+            <span className="text-[11px] font-mono font-semibold tracking-wider text-muted-foreground uppercase">
+              {SYSTEM_NAME}
+            </span>
+          </div>
           <span className="text-[10px] font-mono px-2 py-0.5 rounded-full border border-primary/30 bg-primary/10 text-primary">
             v1.0 SECURE
           </span>

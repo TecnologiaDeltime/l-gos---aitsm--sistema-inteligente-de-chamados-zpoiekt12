@@ -2212,7 +2212,7 @@ export function ImapEmailSettings({
                           >
                             {testSendResult.smtp_used === 'dedicated_mailbox'
                               ? 'Caixa dedicada'
-                              : 'Fallback ServiceOne'}
+                              : 'Fallback SMTP'}
                           </Badge>
                         )}
                       </div>
@@ -2345,7 +2345,7 @@ export function ImapEmailSettings({
                         >
                           {smtpTestResponse.smtp_used === 'dedicated_mailbox'
                             ? 'Caixa dedicada'
-                            : 'Fallback ServiceOne'}
+                            : 'Fallback SMTP'}
                         </Badge>
                       )}
                     </div>

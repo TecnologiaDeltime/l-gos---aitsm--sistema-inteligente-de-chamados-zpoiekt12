@@ -145,7 +145,7 @@
       encryption: 'STARTTLS',
       user: '',
       password: '',
-      senderName: 'ServiceOne ITSM',
+      senderName: 'Lógos ITSM',
       replyTo: '',
       senderEmail: 'noreply@serviceone.com.br',
     }
@@ -270,7 +270,7 @@
         $app
           .logger()
           .warn(
-            'email_test_routes sendSystemMailMessage: falha no envio via caixa dedicada, tentando fallback ServiceOne',
+            'email_test_routes sendSystemMailMessage: falha no envio via caixa dedicada, tentando fallback SMTP',
             'host',
             mailerConfig.host,
             'user',
@@ -293,7 +293,7 @@
           $app
             .logger()
             .error(
-              'email_test_routes sendSystemMailMessage: falha também no fallback ServiceOne',
+              'email_test_routes sendSystemMailMessage: falha também no fallback SMTP',
               'err',
               fallbackErr.message,
             )
@@ -2414,7 +2414,7 @@
 
     steps[4].status = isFallback ? 'warning' : 'success'
     steps[4].message = isFallback
-      ? 'Mensagem enviada com sucesso utilizando o Fallback SMTP do ServiceOne (a caixa dedicada falhou ou utilizou contingência: ' +
+      ? 'Mensagem enviada com sucesso utilizando o Fallback SMTP do sistema (a caixa dedicada falhou ou utilizou contingência: ' +
         (dispatchResult.fallback_reason || 'contingência') +
         ').'
       : 'Mensagem enviada diretamente através da Caixa Dedicada configurada (' +
@@ -2428,7 +2428,7 @@
 
     var totalDuration = Date.now() - totalStart
     var summarySuccess = isFallback
-      ? 'Validação SMTP concluída com AVISO: envio entregue via Fallback ServiceOne para ' +
+      ? 'Validação SMTP concluída com AVISO: envio entregue via Fallback SMTP do sistema para ' +
         destination +
         '.'
       : 'Validação SMTP em 5 etapas 100% APROVADA! Mensagem de teste entregue via caixa dedicada para ' +
@@ -2526,7 +2526,7 @@
       '</td></tr>' +
       '</table>' +
       '<hr style="border: none; border-top: 1px solid #e2e8f0; margin: 20px 0;" />' +
-      '<p style="font-size: 11px; color: #94a3b8; margin-bottom: 0;">ServiceOne ITSM — Notificações e Alertas Operacionais</p>' +
+      '<p style="font-size: 11px; color: #94a3b8; margin-bottom: 0;">Lógos ITSM — Notificações e Alertas Operacionais</p>' +
       '</div>'
 
     var textBody =
@@ -2565,7 +2565,7 @@
           id: 'smtp_dispatch',
           name:
             'Disparo de e-mail de teste via ' +
-            (used === 'dedicated_mailbox' ? 'Caixa Dedicada' : 'ServiceOne Fallback'),
+            (used === 'dedicated_mailbox' ? 'Caixa Dedicada' : 'Fallback SMTP'),
           status: 'success',
           message: 'Mensagem enviada com sucesso para ' + targetEmail,
           duration_ms: 0,
@@ -2582,7 +2582,7 @@
         summaryMessage:
           successMessage +
           ' via ' +
-          (used === 'dedicated_mailbox' ? 'Caixa Dedicada' : 'ServiceOne Fallback'),
+          (used === 'dedicated_mailbox' ? 'Caixa Dedicada' : 'Fallback SMTP'),
         steps: auditSteps,
         latestMessagesCount: 1,
         executedBy: callerAuth,

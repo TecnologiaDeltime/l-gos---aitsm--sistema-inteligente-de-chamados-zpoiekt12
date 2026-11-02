@@ -173,7 +173,7 @@ onRecordAfterUpdateSuccess((e) => {
     var type = ticket.getString('type') || 'Incidente'
 
     // Operador responsável
-    var operatorName = 'Equipe ServiceOne'
+    var operatorName = 'Equipe Lógos'
     var assignedId = ticket.getString('assigned_to')
     if (assignedId) {
       try {
@@ -364,7 +364,7 @@ onRecordAfterUpdateSuccess((e) => {
       cleanSolution +
       '\n\n' +
       'Caso precise de suporte adicional, entre em contato através do portal do cliente.\n\n' +
-      '-- ServiceOne ITSM'
+      '-- Lógos ITSM'
 
     // Lista consolidada de destinatários (solicitante + contatos/focais extras se configurados)
     var allDestinations = []
