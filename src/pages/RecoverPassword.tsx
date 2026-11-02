@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { securityService } from '@/services/security'
 import { getDesignSettings } from '@/services/design-settings'
+import { LogosLogoPanel, SYSTEM_NAME } from '@/components/brand/LogosLogo'
 
 export default function RecoverPassword() {
   const [sent, setSent] = useState(false)
@@ -58,8 +59,11 @@ export default function RecoverPassword() {
               className="h-12 w-auto max-w-[240px] object-contain mb-1"
             />
           ) : (
-            <span className="text-xl font-bold tracking-tight text-foreground">ITSM Desk</span>
+            <LogosLogoPanel className="max-h-12" />
           )}
+          <span className="text-[11px] font-mono font-semibold tracking-wider text-muted-foreground uppercase">
+            {SYSTEM_NAME}
+          </span>
           <h1 className="text-xl font-bold">Recuperar Senha</h1>
         </div>
 

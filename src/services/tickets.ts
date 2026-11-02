@@ -65,6 +65,7 @@ export interface TicketRecord {
     reason?: string
     source?: string
   }
+  tags?: string
   expand?: any
 }
 

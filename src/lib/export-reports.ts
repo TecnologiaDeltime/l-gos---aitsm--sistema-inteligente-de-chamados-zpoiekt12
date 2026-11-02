@@ -168,7 +168,7 @@ export function exportReportToPdf<T>(options: ExportReportOptions<T>): void {
 
   const logoHtml = logoUrl
     ? `<div class="logo-container"><img src="${escapeHtml(logoUrl)}" alt="Logotipo da Empresa" class="company-logo" /></div>`
-    : `<div class="logo-fallback"><span class="logo-dot"></span><span class="logo-text">ITSM Desk</span></div>`
+    : `<div class="logo-fallback"><span class="logo-text">Lógos ITSM</span></div>`
 
   const theadHtml = columns
     .map(
@@ -388,7 +388,7 @@ export function exportReportToPdf<T>(options: ExportReportOptions<T>): void {
   </div>
 
   <div class="footer-note">
-    <span>Sistema ITSM de Chamados • Documento confidencial para fins de auditoria e controle de serviços</span>
+    <span>Lógos ITSM • Documento confidencial para fins de auditoria e controle de serviços</span>
     <span>Arquivo: ${escapeHtml(filename)}.pdf</span>
   </div>
 </body>

@@ -875,18 +875,12 @@ export default function Layout() {
             </div>
           ) : (
             <div className="flex items-center gap-2 py-1">
-              <span
-                className="h-2.5 w-2.5 rounded-full"
-                style={{
-                  backgroundColor: '#d97706',
-                  boxShadow: '0 0 8px rgba(217, 119, 6, 0.6)',
-                }}
-              />
+              <LogosMonogram className="h-7 w-7 shrink-0" />
               <span
                 className="text-base font-bold tracking-tight truncate transition-colors group-hover:opacity-90"
                 style={{ color: customSidebarText }}
               >
-                ITSM Desk
+                Lógos ITSM
               </span>
             </div>
           )}
@@ -1652,7 +1646,7 @@ export default function Layout() {
           className="text-[10px] font-mono font-medium opacity-80"
           style={{ color: customSidebarText }}
         >
-          ITSM Desk
+          Lógos ITSM
         </p>
         <span
           className="inline-flex items-center gap-1.5 text-[10px] font-mono font-medium"

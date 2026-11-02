@@ -384,8 +384,8 @@ export default function PortalPage() {
                 className="h-8 max-w-[120px] object-contain drop-shadow"
               />
             ) : (
-              <div className="p-2 bg-amber-500/10 border border-amber-500/30 rounded-lg text-amber-400">
-                <LifeBuoy className="h-5 w-5" />
+              <div className="p-1.5 bg-white border border-amber-500/30 rounded-lg flex items-center justify-center">
+                <LogosMonogram className="h-6 w-6" />
               </div>
             )}
             <div>
@@ -993,7 +993,7 @@ export default function PortalPage() {
           ========================================================================= */}
       <footer className="border-t border-border/50 py-4 text-center text-xs text-muted-foreground mt-auto bg-card/50">
         <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
-          <span>{companyName} • Portal do Cliente do Sistema ITSM LUIZ</span>
+          <span>{companyName} • Portal do Cliente do Sistema Lógos ITSM</span>
           <span className="text-[11px]">
             Logs transparentes, segurança e conformidade operacional.
           </span>

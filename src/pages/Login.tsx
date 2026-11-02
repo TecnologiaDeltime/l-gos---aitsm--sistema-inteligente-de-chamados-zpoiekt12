@@ -29,6 +29,7 @@ import {
   ArrowLeft,
   LifeBuoy,
 } from 'lucide-react'
+import { LogosLogoPanel, SYSTEM_NAME } from '@/components/brand/LogosLogo'
 
 type LoginStep = 'credentials' | 'totp' | 'totp_setup'
 
@@ -246,13 +247,13 @@ export default function Login() {
 
       <Card className="relative w-full max-w-md shadow-2xl border border-border/80 bg-card/95 backdrop-blur-xl">
         {/* Badge do sistema e status */}
-        <div className="flex items-center justify-between px-6 pt-5 pb-1">
-          <div className="flex items-center gap-2">
-            <span className="h-2 w-2 rounded-full bg-primary shadow-[0_0_8px_rgba(245,158,11,0.8)] animate-pulse" />
-            <span className="text-[11px] font-mono font-semibold tracking-wider text-muted-foreground uppercase">
-              ITSM Desk
-            </span>
-          </div>
+      <div className="flex items-center justify-between px-6 pt-5 pb-1">
+        <div className="flex items-center gap-2">
+          <span className="h-2 w-2 rounded-full bg-primary shadow-[0_0_8px_rgba(245,158,11,0.8)] animate-pulse" />
+          <span className="text-[11px] font-mono font-semibold tracking-wider text-muted-foreground uppercase">
+            {SYSTEM_NAME}
+          </span>
+        </div>
           <span className="text-[10px] font-mono px-2 py-0.5 rounded-full border border-primary/30 bg-primary/10 text-primary">
             v1.0 SECURE
           </span>
@@ -261,23 +262,8 @@ export default function Login() {
         {/* CABEÇALHO COM LOGOTIPO DINÂMICO OU ÍCONE NEUTRO */}
         <CardHeader className="space-y-1.5 text-center pt-2">
           <div className="flex justify-center mb-2">
-            {logoUrl ? (
-              <div className="py-2 px-3 rounded-xl bg-background/50 border border-border/50 max-w-[220px]">
-                <img
-                  src={logoUrl}
-                  alt="Logotipo da Empresa"
-                  className="max-h-12 w-auto object-contain mx-auto drop-shadow-sm"
-                />
-              </div>
-            ) : (
-              <div className="p-3.5 bg-gradient-to-br from-primary/20 via-primary/10 to-transparent border border-primary/30 rounded-2xl text-primary">
-                {step === 'credentials' && <KeyRound className="h-7 w-7 text-primary" />}
-                {step === 'totp' && <Smartphone className="h-7 w-7 text-primary" />}
-                {step === 'totp_setup' && <ShieldCheck className="h-7 w-7 text-primary" />}
-              </div>
-            )}
+            <LogosLogoPanel className="max-h-16" />
           </div>
-
           <CardTitle className="text-2xl font-bold tracking-tight text-foreground">
             {step === 'credentials' && 'Portal de Acesso'}
             {step === 'totp' && 'Verificação em Duas Etapas'}

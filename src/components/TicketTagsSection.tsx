@@ -45,15 +45,23 @@ export function TicketTagsSection({
 
   // Verificar se sugestão de tags está habilitada nas configurações de IA
   useEffect(() => {
-    if (!canUseAiTags)
-      return aiTicketReplyService
-        .getSettings()
-        .then((s) => {
+    if (!canUseAiTags) return
+    let active = true
+    aiTicketReplyService
+      .getSettings()
+      .then((s) => {
+        if (active) {
           setAiEnabledInSettings(Boolean(s.enabled && (s.tag_suggestions_enabled ?? true)))
-        })
-        .catch(() => {
+        }
+      })
+      .catch(() => {
+        if (active) {
           setAiEnabledInSettings(true)
-        })
+        }
+      })
+    return () => {
+      active = false
+    }
   }, [canUseAiTags])
 
   const handleAddCustomTag = async () => {

@@ -283,7 +283,7 @@ export function DesignSettingsTab({ isAdminOrGestor }: DesignSettingsTabProps) {
                     ) : (
                       <div className="text-center space-y-1">
                         <span className="text-sm font-bold tracking-tight text-foreground/80">
-                          ITSM Desk
+                          Lógos ITSM
                         </span>
                         <p className="text-[10px] text-muted-foreground">
                           (Modo texto ativo — nenhum arquivo carregado)
@@ -406,7 +406,7 @@ export function DesignSettingsTab({ isAdminOrGestor }: DesignSettingsTabProps) {
                     ) : (
                       <div className="text-center space-y-1">
                         <span className="text-sm font-bold tracking-tight text-slate-800">
-                          ITSM Desk
+                          Lógos ITSM
                         </span>
                         <p className="text-[9px] text-slate-500">(Texto padrão em documentos)</p>
                       </div>
@@ -740,7 +740,7 @@ export function DesignSettingsTab({ isAdminOrGestor }: DesignSettingsTabProps) {
                   className="text-sm font-bold tracking-tight"
                   style={{ color: theme === 'light' ? '#FFFFFF' : '#FCD34D' }}
                 >
-                  ITSM Desk
+                  Lógos ITSM
                 </span>
                 <span
                   className="ml-auto text-[9px] font-mono px-1.5 py-0.5 rounded border"
@@ -830,7 +830,7 @@ export function DesignSettingsTab({ isAdminOrGestor }: DesignSettingsTabProps) {
                   color: theme === 'light' ? 'rgba(255,255,255,0.75)' : 'rgba(252,211,77,0.7)',
                 }}
               >
-                <span>ITSM Desk</span>
+                <span>Lógos ITSM</span>
                 <span
                   className="inline-flex items-center gap-1.5"
                   style={{ color: theme === 'light' ? '#FFFFFF' : '#FCD34D' }}
