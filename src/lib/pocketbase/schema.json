@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-03T17:07:29.422Z",
+  "generatedAt": "2026-11-03T18:46:51.915Z",
   "collections": [
     {
       "name": "users",
@@ -2843,6 +2843,19 @@
           "required": false,
           "system": false,
           "selectValues": ["Individual", "Sequencial", "Paralela"]
+        },
+        {
+          "name": "approval_role",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["client", "internal", "general"]
+        },
+        {
+          "name": "rejection_reason",
+          "type": "text",
+          "required": false,
+          "system": false
         }
       ],
       "indexes": [
@@ -6353,6 +6366,30 @@
         {
           "name": "description",
           "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "request_types",
+          "type": "json",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "require_high_priority",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "require_client_approval",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "require_internal_approval",
+          "type": "bool",
           "required": false,
           "system": false
         }
