@@ -1,5 +1,15 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react'
-import { PlusCircle, Paperclip, ShieldCheck, Building2, User, X, FileIcon } from 'lucide-react'
+import {
+  PlusCircle,
+  Paperclip,
+  ShieldCheck,
+  Building2,
+  User,
+  X,
+  FileIcon,
+  UserCheck,
+  Laptop,
+} from 'lucide-react'
 import {
   Dialog,
   DialogContent,
@@ -58,15 +68,11 @@ export default function PortalNewTicketDialog({
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [type, setType] = useState('Incidente')
-  const [selectedAsset, setSelectedAsset] = useState<string>(initialAssetId || '')
+  const [selectedAsset, setSelectedAsset] = useState<string>(initialAssetId || 'none')
 
   useEffect(() => {
     if (open) {
-      if (initialAssetId) {
-        setSelectedAsset(initialAssetId)
-      } else {
-        setSelectedAsset('none')
-      }
+      setSelectedAsset(initialAssetId || 'none')
     }
   }, [open, initialAssetId])
 
@@ -147,6 +153,31 @@ export default function PortalNewTicketDialog({
     }
   }
 
+  // Botão "Meu chamado": preenche automaticamente os dados do usuário logado
+  const handleAutoFillMyTicket = () => {
+    setSelectedSector('none')
+    setPreferredContactId('logged_user')
+    setContactName(user.name || '')
+    setContactEmail(user.email || '')
+    setContactPhone(user.phone || '')
+
+    // Equipamento/ativo vinculado ao próprio usuário, se houver
+    const myAsset =
+      assets.find(
+        (a) =>
+          (a as any).responsible_user === user.id ||
+          (a as any).custodian === user.id ||
+          (a as any).owner === user.id ||
+          (a as any).user === user.id,
+      ) || assets.find((a) => (a as any).unit && (a as any).unit === user.unit)
+    setSelectedAsset(myAsset ? myAsset.id : 'none')
+
+    toast({
+      title: 'Dados preenchidos',
+      description: 'Setor, contato e equipamento foram preenchidos com os seus dados.',
+    })
+  }
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
       const file = e.target.files[0]
@@ -222,7 +253,7 @@ export default function PortalNewTicketDialog({
       setTitle('')
       setDescription('')
       setType('Incidente')
-      setSelectedAsset('')
+      setSelectedAsset('none')
       setSelectedSector('none')
       setPreferredContactId('')
       setSelectedFile(null)
@@ -256,46 +287,21 @@ export default function PortalNewTicketDialog({
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4 pt-1">
-          {/* Linha 1: Tipo de Solicitação e Ativo Envolvido */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-foreground">Tipo de Solicitação</label>
-              <Select value={type} onValueChange={setType}>
-                <SelectTrigger className="text-xs h-9">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Incidente">Incidente (Algo parou de funcionar)</SelectItem>
-                  <SelectItem value="Requisição de Serviço">
-                    Requisição de Serviço (Solicitar algo novo)
-                  </SelectItem>
-                  <SelectItem value="Dúvida">Dúvida / Esclarecimento</SelectItem>
-                  <SelectItem value="Visita Técnica">Visita Técnica Presencial</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-foreground">
-                Equipamento / Ativo Envolvido (Opcional)
-              </label>
-              <Select value={selectedAsset} onValueChange={setSelectedAsset}>
-                <SelectTrigger className="text-xs h-9">
-                  <SelectValue placeholder="Nenhum ativo específico" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">Nenhum ativo específico</SelectItem>
-                  {assets.map((a) => (
-                    <SelectItem key={a.id} value={a.id}>
-                      {a.name} {a.serial_number ? `(${a.serial_number})` : ''}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+          {/* Atalho: Meu chamado */}
+          <div className="flex justify-end">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleAutoFillMyTicket}
+              className="text-xs gap-1.5 h-8 border-amber-500/50 text-amber-700 dark:text-amber-400 hover:bg-amber-500/10"
+            >
+              <UserCheck className="h-3.5 w-3.5" />
+              Meu chamado
+            </Button>
           </div>
 
-          {/* Linha 2: Selecionar o Setor e Nome do Contato */}
+          {/* Linha 1: Selecionar o Setor e Nome do Contato */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {/* Selecionar o Setor */}
             <div className="space-y-1.5">
@@ -370,6 +376,46 @@ export default function PortalNewTicketDialog({
                     </p>
                   )}
               </div>
+            </div>
+          </div>
+
+          {/* Linha 2: Equipamento/Ativo Envolvido e Tipo de Solicitação */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+                <Laptop className="h-3.5 w-3.5 text-amber-500" />
+                Equipamento / Ativo Envolvido (Opcional)
+              </label>
+              <Select value={selectedAsset} onValueChange={setSelectedAsset}>
+                <SelectTrigger className="text-xs h-9">
+                  <SelectValue placeholder="Nenhum ativo específico" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Nenhum ativo específico</SelectItem>
+                  {assets.map((a) => (
+                    <SelectItem key={a.id} value={a.id}>
+                      {a.name} {a.serial_number ? `(${a.serial_number})` : ''}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-foreground">Tipo de Solicitação</label>
+              <Select value={type} onValueChange={setType}>
+                <SelectTrigger className="text-xs h-9">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Incidente">Incidente (Algo parou de funcionar)</SelectItem>
+                  <SelectItem value="Requisição de Serviço">
+                    Requisição de Serviço (Solicitar algo novo)
+                  </SelectItem>
+                  <SelectItem value="Dúvida">Dúvida / Esclarecimento</SelectItem>
+                  <SelectItem value="Visita Técnica">Visita Técnica Presencial</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
 
