@@ -306,6 +306,61 @@ routerAdd(
           message.to = [{ address: dest.email }]
           message.subject = subject
           message.text = bodyText
+
+          if (typeof globalThis.itsmRenderBaseEmailTemplate === 'function') {
+            var esc =
+              globalThis.itsmEscapeHtml ||
+              function (s) {
+                return s || ''
+              }
+            var contentHtml =
+              '<p style="margin: 0 0 16px 0; font-size: 15px; color: #1E293B;">Olá <strong>' +
+              esc(dest.name || 'Membro do Comitê') +
+              '</strong>,</p>' +
+              '<p style="margin: 0 0 16px 0; color: #475569;">Uma mudança requer seu voto no comitê <strong>' +
+              esc(committeeType) +
+              '</strong>.</p>' +
+              '<table border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px; margin: 16px 0; font-size: 14px;">' +
+              '  <tr><td style="padding: 10px 14px; font-weight: bold; color: #64748B; width: 120px;">Mudança:</td><td style="padding: 10px 14px; color: #0F172A; font-weight: 600;">#' +
+              esc(changeNumber) +
+              ' - ' +
+              esc(changeTitle) +
+              '</td></tr>' +
+              '  <tr><td style="padding: 10px 14px; font-weight: bold; color: #64748B; border-top: 1px solid #E2E8F0;">Solicitante:</td><td style="padding: 10px 14px; color: #0F172A; border-top: 1px solid #E2E8F0;">' +
+              esc(requesterName || '-') +
+              '</td></tr>' +
+              '  <tr><td style="padding: 10px 14px; font-weight: bold; color: #64748B; border-top: 1px solid #E2E8F0;">Empresa:</td><td style="padding: 10px 14px; color: #0F172A; border-top: 1px solid #E2E8F0;">' +
+              esc(companyName || '-') +
+              '</td></tr>' +
+              (deadlineAt
+                ? '  <tr><td style="padding: 10px 14px; font-weight: bold; color: #64748B; border-top: 1px solid #E2E8F0;">Prazo:</td><td style="padding: 10px 14px; color: #B45309; font-weight: bold; border-top: 1px solid #E2E8F0;">' +
+                  esc(deadlineAt.toLocaleString('pt-BR')) +
+                  ' (' +
+                  deadlineHours +
+                  'h)</td></tr>'
+                : '') +
+              '</table>' +
+              '<p style="margin: 0; color: #475569; font-size: 13px;">Por favor, acesse o sistema para registrar seu voto (Aprovar / Recusar / Solicitar Revisão).</p>'
+
+            var actionHtml =
+              '<a href="' +
+              esc(link) +
+              '" style="display: inline-block; background-color: #D97706; color: #FFFFFF; font-weight: 700; font-size: 14px; padding: 12px 28px; border-radius: 8px; text-decoration: none; box-shadow: 0 2px 4px rgba(217, 119, 6, 0.3);">' +
+              'Registrar Voto no Comitê' +
+              '</a>'
+
+            message.html = globalThis.itsmRenderBaseEmailTemplate({
+              variant: 'brand',
+              badgeText: 'Comitê ' + committeeType,
+              title: 'Voto Solicitado: Mudança #' + changeNumber,
+              subtitle: changeTitle,
+              preheader: 'Avaliação solicitada para Mudança #' + changeNumber,
+              contentHtml: contentHtml,
+              actionHtml: actionHtml,
+              footerNote: 'Notificação enviada pelo fluxo de Mudanças do Lógos AITILSM.',
+            })
+          }
+
           if (globalThis.sendSystemMailMessage) {
             globalThis.sendSystemMailMessage(message)
           } else {

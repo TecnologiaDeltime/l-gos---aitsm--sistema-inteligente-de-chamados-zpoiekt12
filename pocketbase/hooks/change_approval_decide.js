@@ -351,6 +351,7 @@ routerAdd(
           '\n\nLink: ' +
           link
 
+        var isApproved = finalResult === 'Aprovada'
         for (var ei = 0; ei < recipients.length; ei++) {
           if (!recipients[ei].email) continue
           try {
@@ -359,6 +360,73 @@ routerAdd(
             message.to = [{ address: recipients[ei].email }]
             message.subject = subject
             message.text = bodyText
+
+            if (typeof globalThis.itsmRenderBaseEmailTemplate === 'function') {
+              var esc =
+                globalThis.itsmEscapeHtml ||
+                function (s) {
+                  return s || ''
+                }
+              var statusColor = isApproved ? '#16A34A' : '#DC2626'
+              var statusBg = isApproved ? '#DCFCE7' : '#FEE2E2'
+
+              var votesHtml =
+                '<ul style="margin: 8px 0 0 0; padding-left: 20px; color: #475569; font-size: 13px;">'
+              for (var vi = 0; vi < voteLines.length; vi++) {
+                votesHtml += '<li style="margin-bottom: 4px;">' + esc(voteLines[vi]) + '</li>'
+              }
+              votesHtml += '</ul>'
+
+              var contentHtml =
+                '<p style="margin: 0 0 16px 0; font-size: 15px; color: #1E293B;">A Mudança <strong>#' +
+                esc(changeNumber) +
+                '</strong> teve sua votação concluída pelo Comitê <strong>' +
+                esc(committeeType) +
+                '</strong>.</p>' +
+                '<div style="background-color: ' +
+                statusBg +
+                '; border-left: 4px solid ' +
+                statusColor +
+                '; padding: 12px 16px; border-radius: 6px; margin: 16px 0;">' +
+                '  <div style="font-size: 13px; color: #64748B; text-transform: uppercase; font-weight: 700;">Resultado Final:</div>' +
+                '  <div style="font-size: 18px; font-weight: 800; color: ' +
+                statusColor +
+                '; margin-top: 2px;">' +
+                esc(resultText) +
+                '</div>' +
+                '</div>' +
+                '<table border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px; margin: 16px 0; font-size: 14px;">' +
+                '  <tr><td style="padding: 10px 14px; font-weight: bold; color: #64748B; width: 120px;">Título:</td><td style="padding: 10px 14px; color: #0F172A; font-weight: 600;">' +
+                esc(changeTitle) +
+                '</td></tr>' +
+                '  <tr><td style="padding: 10px 14px; font-weight: bold; color: #64748B; border-top: 1px solid #E2E8F0;">Empresa:</td><td style="padding: 10px 14px; color: #0F172A; border-top: 1px solid #E2E8F0;">' +
+                esc(companyName || '-') +
+                '</td></tr>' +
+                '  <tr><td style="padding: 10px 14px; font-weight: bold; color: #64748B; border-top: 1px solid #E2E8F0; vertical-align: top;">Votos:</td><td style="padding: 10px 14px; color: #0F172A; border-top: 1px solid #E2E8F0;">' +
+                votesHtml +
+                '</td></tr>' +
+                '</table>'
+
+              var actionHtml =
+                '<a href="' +
+                esc(link) +
+                '" style="display: inline-block; background-color: #D97706; color: #FFFFFF; font-weight: 700; font-size: 14px; padding: 12px 28px; border-radius: 8px; text-decoration: none; box-shadow: 0 2px 4px rgba(217, 119, 6, 0.3);">' +
+                'Visualizar Mudança #' +
+                esc(changeNumber) +
+                '</a>'
+
+              message.html = globalThis.itsmRenderBaseEmailTemplate({
+                variant: isApproved ? 'brand' : 'critical',
+                badgeText: 'Resultado Comitê ' + committeeType,
+                title: 'Mudança #' + changeNumber + ': ' + resultText,
+                subtitle: changeTitle,
+                preheader: 'Resultado da deliberação: Mudança #' + changeNumber + ' ' + resultText,
+                contentHtml: contentHtml,
+                actionHtml: actionHtml,
+                footerNote: 'Deliberação oficial do Comitê de Mudanças Lógos AITILSM.',
+              })
+            }
+
             if (globalThis.sendSystemMailMessage) {
               globalThis.sendSystemMailMessage(message)
             } else {
