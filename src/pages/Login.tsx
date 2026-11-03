@@ -262,7 +262,15 @@ export default function Login() {
         {/* CABEÇALHO COM LOGOTIPO DINÂMICO OU ÍCONE NEUTRO */}
         <CardHeader className="space-y-1.5 text-center pt-2">
           <div className="flex justify-center mb-2">
-            <LogosLogoPanel className="max-h-16" />
+            {logoUrl ? (
+              <img
+                src={logoUrl}
+                alt={SYSTEM_NAME}
+                className="max-h-16 w-auto object-contain mx-auto drop-shadow-sm"
+              />
+            ) : (
+              <LogosLogoPanel className="max-h-16" />
+            )}
           </div>
           <CardTitle className="text-2xl font-bold tracking-tight text-foreground">
             {step === 'credentials' && 'Portal de Acesso'}

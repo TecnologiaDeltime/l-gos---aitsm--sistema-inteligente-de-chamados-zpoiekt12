@@ -175,13 +175,11 @@ export default function PortalLogin() {
         <CardHeader className="space-y-1.5 text-center pt-4">
           <div className="flex justify-center mb-2">
             {designSettings?.logo_url ? (
-              <div className="py-2 px-3 rounded-xl bg-background/50 border border-border/50 max-w-[220px]">
-                <img
-                  src={designSettings.logo_url}
-                  alt="Logotipo"
-                  className="max-h-12 w-auto object-contain mx-auto drop-shadow-sm"
-                />
-              </div>
+              <img
+                src={designSettings.logo_url}
+                alt="Logotipo"
+                className="max-h-14 w-auto object-contain mx-auto drop-shadow-sm"
+              />
             ) : (
               <LogosLogoPanel className="max-h-14" />
             )}

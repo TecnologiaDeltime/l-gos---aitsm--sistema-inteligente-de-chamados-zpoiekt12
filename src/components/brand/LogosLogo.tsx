@@ -68,15 +68,35 @@ export function LogosLogoFull({
 /**
  * Bloco de marca para telas de autenticação e destaque.
  * Exibe a imagem oficial do logotipo Lógos (símbolo L + texto Lógos em âmbar).
- * Fundo escuro sutil com borda âmbar e suporte a dark/light mode para acabamento perfeito.
+ * Renderiza o logo DIRETAMENTE sem caixa, painel, borda ou fundo atrás dele,
+ * com contraste refinado via drop-shadow que mantém excelente legibilidade
+ * tanto no tema escuro (Amber Alert) quanto no tema claro (Marrom & Branco).
  */
-export function LogosLogoPanel({ className = 'max-h-16' }: { className?: string }) {
+export function LogosLogoPanel({
+  className = 'max-h-16',
+  withPanel = false,
+}: {
+  className?: string
+  withPanel?: boolean
+}) {
+  if (withPanel) {
+    return (
+      <div className="rounded-xl bg-[#0f1013] border border-amber-500/20 shadow-md px-5 py-3 inline-flex items-center justify-center">
+        <img
+          src={logosLogoPng}
+          alt="Lógos AITILSM"
+          className={`${className} w-auto object-contain drop-shadow-[0_2px_8px_rgba(245,158,11,0.2)]`}
+        />
+      </div>
+    )
+  }
+
   return (
-    <div className="rounded-xl bg-[#0f1013] border border-amber-500/20 shadow-md px-5 py-3 inline-flex items-center justify-center">
+    <div className="inline-flex items-center justify-center bg-transparent p-0 m-0 border-0 shadow-none">
       <img
         src={logosLogoPng}
         alt="Lógos AITILSM"
-        className={`${className} w-auto object-contain drop-shadow-[0_2px_8px_rgba(245,158,11,0.2)]`}
+        className={`${className} w-auto object-contain drop-shadow-[0_2px_6px_rgba(180,83,9,0.35)] dark:drop-shadow-[0_2px_10px_rgba(245,158,11,0.35)]`}
       />
     </div>
   )
