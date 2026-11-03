@@ -52,6 +52,8 @@ import {
   Sun,
   Moon,
   Sparkles,
+  PanelLeftClose,
+  PanelLeftOpen,
 } from 'lucide-react'
 import { useAuth } from '@/hooks/use-auth'
 import { useTheme } from '@/hooks/use-theme'
@@ -71,6 +73,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet'
 import {
   getNotifications,
@@ -95,6 +98,27 @@ export default function Layout() {
 
   const [notifications, setNotifications] = useState<NotificationRecord[]>([])
   const [mobileOpen, setMobileOpen] = useState(false)
+  const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(() => {
+    try {
+      const saved = localStorage.getItem('logos_sidebar_collapsed')
+      return saved === 'true'
+    } catch {
+      return false
+    }
+  })
+
+  const toggleSidebarCollapse = () => {
+    setSidebarCollapsed((prev) => {
+      const next = !prev
+      try {
+        localStorage.setItem('logos_sidebar_collapsed', String(next))
+      } catch {
+        /* intentionally ignored */
+      }
+      return next
+    })
+  }
+
   const [clientMenuOpen, setClientMenuOpen] = useState(false)
   const [chamadosMenuOpen, setChamadosMenuOpen] = useState(false)
   const [dashboardMenuOpen, setDashboardMenuOpen] = useState(false)
@@ -741,7 +765,19 @@ export default function Layout() {
   const navBeforeClient = navItems.slice(0, splitIdx).filter((i) => i.show)
   const navAfterClient = navItems.slice(splitIdx).filter((i) => i.show)
 
-  const renderSubItem = (sub: any, currentFull?: string) => {
+  // Harmonia da barra lateral por modo:
+  // Escuro: barra grafite #17181C, texto âmbar #FCD34D, ativo #d97706
+  // Claro: barra grafite #17181C, texto branco #FFFFFF, ativo #d97706
+  const isLightMode = theme === 'light'
+  const customSidebarBg = designSettings?.sidebar_bg_color || '#17181C'
+  const customSidebarText =
+    designSettings?.sidebar_text_color || (isLightMode ? '#FFFFFF' : '#FCD34D')
+  const activeItemColor = '#D97706'
+
+  // Auxiliar para saber se uma barra está no modo recolhido (apenas no desktop)
+  const isCollapsed = sidebarCollapsed && !isMobile
+
+  const renderSubItem = (sub: any, currentFull?: string, inFlyout = false) => {
     const SubIcon = sub.icon
     const subActive = currentFull
       ? currentFull === sub.path ||
@@ -755,11 +791,11 @@ export default function Layout() {
           target="_blank"
           rel="noopener noreferrer"
           onClick={() => setMobileOpen(false)}
-          style={{ color: customSidebarText }}
+          style={{ color: inFlyout ? undefined : customSidebarText }}
           className="relative flex items-center gap-2.5 px-2.5 py-1.5 text-xs font-medium rounded-md transition-all duration-150 hover:bg-sidebar-accent hover:text-sidebar-foreground"
         >
           <SubIcon
-            style={{ color: customSidebarText || undefined }}
+            style={{ color: inFlyout ? undefined : customSidebarText || undefined }}
             className="h-3.5 w-3.5 shrink-0 opacity-85 text-amber-500"
           />
           <span className="truncate">{sub.label}</span>
@@ -780,7 +816,7 @@ export default function Layout() {
                 backgroundColor: 'rgba(217, 119, 6, 0.14)',
               }
             : {
-                color: customSidebarText,
+                color: inFlyout ? undefined : customSidebarText,
               }
         }
         className={`relative flex items-center gap-2.5 px-2.5 py-1.5 text-xs font-medium rounded-md transition-all duration-150 ${
@@ -790,7 +826,13 @@ export default function Layout() {
         }`}
       >
         <SubIcon
-          style={{ color: subActive ? activeItemColor : customSidebarText || undefined }}
+          style={{
+            color: subActive
+              ? activeItemColor
+              : inFlyout
+                ? undefined
+                : customSidebarText || undefined,
+          }}
           className={`h-3.5 w-3.5 shrink-0 ${subActive ? 'text-primary' : 'opacity-85'}`}
         />
         <span className="truncate">{sub.label}</span>
@@ -801,7 +843,8 @@ export default function Layout() {
   const renderNavItem = (item: any) => {
     const Icon = item.icon
     const active = location.pathname === item.path
-    return (
+
+    const itemContent = (
       <Link
         key={item.path}
         to={item.path}
@@ -818,7 +861,9 @@ export default function Layout() {
                 color: customSidebarText,
               }
         }
-        className={`relative flex items-center gap-3 mx-2 my-0.5 px-3 py-2 text-[13px] font-medium rounded-lg transition-all duration-200 ${
+        className={`relative flex items-center ${
+          isCollapsed ? 'justify-center mx-1.5 px-2 py-2.5' : 'gap-3 mx-2 px-3 py-2'
+        } my-0.5 text-[13px] font-medium rounded-lg transition-all duration-200 ${
           active
             ? 'bg-gradient-to-r from-primary/20 via-primary/10 to-transparent text-primary font-semibold shadow-xs shadow-primary/10 ring-1 ring-primary/30'
             : 'hover:bg-sidebar-accent hover:text-sidebar-foreground'
@@ -837,19 +882,184 @@ export default function Layout() {
           style={{ color: active ? activeItemColor : customSidebarText || undefined }}
           className={`h-4 w-4 shrink-0 transition-colors ${active ? 'text-primary' : 'opacity-85'}`}
         />
-        <span className="truncate">{item.label}</span>
+        {!isCollapsed && <span className="truncate">{item.label}</span>}
       </Link>
     )
+
+    if (isCollapsed) {
+      return (
+        <Tooltip key={item.path} delayDuration={100}>
+          <TooltipTrigger asChild>{itemContent}</TooltipTrigger>
+          <TooltipContent side="right" className="font-medium text-xs">
+            {item.label}
+          </TooltipContent>
+        </Tooltip>
+      )
+    }
+
+    return itemContent
   }
 
-  // Harmonia da barra lateral por modo:
-  // Escuro: barra grafite #17181C, texto âmbar #FCD34D, ativo #d97706
-  // Claro: barra grafite #17181C, texto branco #FFFFFF, ativo #d97706
-  const isLightMode = theme === 'light'
-  const customSidebarBg = designSettings?.sidebar_bg_color || '#17181C'
-  const customSidebarText =
-    designSettings?.sidebar_text_color || (isLightMode ? '#FFFFFF' : '#FCD34D')
-  const activeItemColor = '#D97706'
+  // Renderizador unificado de grupos com submenu (suporta modo normal e modo recolhido via Popover Flyout)
+  const renderNavGroup = ({
+    key,
+    label,
+    icon: GroupIcon,
+    items,
+    isOpen,
+    onToggle,
+  }: {
+    key: string
+    label: string
+    icon: React.ElementType
+    items: {
+      label: string
+      path: string
+      icon: React.ElementType
+      show: boolean
+      external?: boolean
+    }[]
+    isOpen: boolean
+    onToggle: () => void
+  }) => {
+    const visibleItems = items.filter((i) => i.show)
+    if (visibleItems.length === 0) return null
+
+    const hasActiveChild = visibleItems.some((i) => {
+      if (i.path.includes('?')) {
+        return `${location.pathname}${location.search}` === i.path
+      }
+      return location.pathname === i.path
+    })
+
+    // Modo recolhido: exibe botão de ícone centralizado com Popover lateral contendo a lista do submenu
+    if (isCollapsed) {
+      return (
+        <div key={key} className="my-1 flex justify-center">
+          <Popover>
+            <PopoverTrigger asChild>
+              <button
+                type="button"
+                data-nav-active={hasActiveChild ? 'true' : undefined}
+                style={
+                  hasActiveChild
+                    ? {
+                        color: activeItemColor,
+                        backgroundColor: 'rgba(217, 119, 6, 0.18)',
+                        boxShadow: `0 0 0 1px rgba(217, 119, 6, 0.35)`,
+                      }
+                    : {
+                        color: customSidebarText,
+                      }
+                }
+                className={`relative flex items-center justify-center h-10 w-10 rounded-lg transition-all duration-200 ${
+                  hasActiveChild
+                    ? 'text-primary bg-primary/10 font-semibold'
+                    : 'text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground'
+                }`}
+                title={label}
+                aria-label={label}
+              >
+                {hasActiveChild && (
+                  <span
+                    className="absolute left-0 top-1.5 bottom-1.5 w-1 rounded-r-full bg-primary"
+                    style={{
+                      backgroundColor: activeItemColor,
+                      boxShadow: `0 0 8px ${activeItemColor}`,
+                    }}
+                  />
+                )}
+                <GroupIcon
+                  className="h-4 w-4 shrink-0"
+                  style={{
+                    color: hasActiveChild ? activeItemColor : customSidebarText || undefined,
+                  }}
+                />
+              </button>
+            </PopoverTrigger>
+            <PopoverContent
+              side="right"
+              align="start"
+              sideOffset={8}
+              className="w-56 p-2 bg-sidebar border border-sidebar-border shadow-xl rounded-lg backdrop-blur"
+              style={{
+                backgroundColor: customSidebarBg || '#17181C',
+                color: customSidebarText || '#FFFFFF',
+              }}
+            >
+              <div className="px-2.5 py-1.5 text-xs font-semibold uppercase tracking-wider opacity-75 border-b border-sidebar-border/70 mb-1">
+                {label}
+              </div>
+              <div className="space-y-0.5 max-h-72 overflow-y-auto sidebar-scroll">
+                {visibleItems.map((sub) => {
+                  const currentFull = `${location.pathname}${location.search}`
+                  return renderSubItem(sub, currentFull, true)
+                })}
+              </div>
+            </PopoverContent>
+          </Popover>
+        </div>
+      )
+    }
+
+    // Modo expandido (padrão)
+    return (
+      <div key={key} className="my-0.5">
+        <div className="flex items-center px-2">
+          <button
+            onClick={onToggle}
+            data-nav-active={hasActiveChild ? 'true' : undefined}
+            style={
+              hasActiveChild
+                ? {
+                    color: activeItemColor,
+                    backgroundColor: 'rgba(217, 119, 6, 0.14)',
+                  }
+                : {
+                    color: customSidebarText,
+                  }
+            }
+            className={`flex flex-1 items-center gap-3 px-3 py-2 text-[13px] font-medium rounded-lg transition-all duration-200 ${
+              hasActiveChild
+                ? 'text-primary bg-primary/10 font-semibold'
+                : 'text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground'
+            }`}
+          >
+            <GroupIcon
+              className="h-4 w-4 shrink-0 text-primary"
+              style={{
+                color: hasActiveChild ? activeItemColor : customSidebarText || undefined,
+              }}
+            />
+            <span className="truncate">{label}</span>
+            {isOpen ? (
+              <ChevronDown
+                className="ml-auto h-3.5 w-3.5 opacity-75"
+                style={{
+                  color: hasActiveChild ? activeItemColor : customSidebarText || undefined,
+                }}
+              />
+            ) : (
+              <ChevronRight
+                className="ml-auto h-3.5 w-3.5 opacity-75"
+                style={{
+                  color: hasActiveChild ? activeItemColor : customSidebarText || undefined,
+                }}
+              />
+            )}
+          </button>
+        </div>
+        {isOpen && (
+          <div className="ml-4 pl-2 my-1 border-l border-sidebar-border/70 space-y-0.5">
+            {visibleItems.map((sub) => {
+              const currentFull = `${location.pathname}${location.search}`
+              return renderSubItem(sub, currentFull)
+            })}
+          </div>
+        )}
+      </div>
+    )
+  }
 
   const navContent = (
     <div
@@ -860,18 +1070,28 @@ export default function Layout() {
       }}
     >
       <div
-        className="flex h-16 items-center px-4 border-b border-sidebar-border/80"
+        className={`flex h-16 items-center ${
+          isCollapsed ? 'justify-center px-2' : 'justify-between px-3.5'
+        } border-b border-sidebar-border/80`}
         style={{
           backgroundColor: customSidebarBg ? `${customSidebarBg}ee` : undefined,
         }}
       >
-        <Link to="/" className="flex items-center gap-2.5 group w-full overflow-hidden">
-          {designSettings?.logo_url ? (
+        <Link
+          to="/"
+          className={`flex items-center ${isCollapsed ? 'justify-center' : 'gap-2.5'} group overflow-hidden`}
+          title="Lógos AITILSM"
+        >
+          {isCollapsed ? (
+            <div className="flex items-center justify-center py-1">
+              <LogosMonogram className="h-7 w-7 shrink-0 transition-transform group-hover:scale-110" />
+            </div>
+          ) : designSettings?.logo_url ? (
             <div className="relative flex items-center max-h-11">
               <img
                 src={designSettings.logo_url}
                 alt="Logotipo"
-                className="h-9 w-auto max-w-[190px] object-contain drop-shadow-[0_0_8px_hsl(var(--primary)/0.25)] transition-transform duration-300 group-hover:scale-105"
+                className="h-9 w-auto max-w-[170px] object-contain drop-shadow-[0_0_8px_hsl(var(--primary)/0.25)] transition-transform duration-300 group-hover:scale-105"
               />
             </div>
           ) : (
@@ -886,782 +1106,206 @@ export default function Layout() {
             </div>
           )}
         </Link>
+
+        {/* Botão de colapso no topo da barra (somente desktop, quando expandida) */}
+        {!isMobile && !isCollapsed && (
+          <Tooltip delayDuration={150}>
+            <TooltipTrigger asChild>
+              <button
+                type="button"
+                onClick={toggleSidebarCollapse}
+                className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-sidebar-accent transition-colors"
+                aria-label="Recolher barra lateral"
+              >
+                <PanelLeftClose
+                  className="h-4 w-4"
+                  style={{ color: customSidebarText || undefined }}
+                />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="right">
+              <p className="text-xs">Recolher barra lateral</p>
+            </TooltipContent>
+          </Tooltip>
+        )}
       </div>
 
-      <nav className="sidebar-scroll flex-1 overflow-y-auto py-2 scroll-smooth">
+      <nav
+        className={`sidebar-scroll flex-1 overflow-y-auto ${isCollapsed ? 'px-1 py-3' : 'py-2'} scroll-smooth`}
+      >
         {navBeforeClient.map(renderNavItem)}
-        {dashboardGroupVisible && (
-          <div key="dashboard-group" className="my-0.5">
-            <div className="flex items-center px-2">
-              <button
-                onClick={() => setDashboardMenuOpen(!dashboardMenuOpen)}
-                data-nav-active={
-                  dashboardSubmenuItems.some((i) => i.show && location.pathname === i.path)
-                    ? 'true'
-                    : undefined
-                }
-                style={
-                  dashboardSubmenuItems.some((i) => i.show && location.pathname === i.path)
-                    ? {
-                        color: activeItemColor,
-                        backgroundColor: 'rgba(217, 119, 6, 0.14)',
-                      }
-                    : {
-                        color: customSidebarText,
-                      }
-                }
-                className={`flex flex-1 items-center gap-3 px-3 py-2 text-[13px] font-medium rounded-lg transition-all duration-200 ${
-                  dashboardSubmenuItems.some((i) => i.show && location.pathname === i.path)
-                    ? 'text-primary bg-primary/10 font-semibold'
-                    : 'text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground'
-                }`}
-              >
-                <LayoutDashboard
-                  className="h-4 w-4 shrink-0 text-primary"
-                  style={{
-                    color: dashboardSubmenuItems.some((i) => i.show && location.pathname === i.path)
-                      ? activeItemColor
-                      : customSidebarText || undefined,
-                  }}
-                />
-                <span className="truncate">Dashboard</span>
-                {dashboardMenuOpen ? (
-                  <ChevronDown
-                    className="ml-auto h-3.5 w-3.5 opacity-75"
-                    style={{
-                      color: dashboardSubmenuItems.some(
-                        (i) => i.show && location.pathname === i.path,
-                      )
-                        ? activeItemColor
-                        : customSidebarText || undefined,
-                    }}
-                  />
-                ) : (
-                  <ChevronRight
-                    className="ml-auto h-3.5 w-3.5 opacity-75"
-                    style={{
-                      color: dashboardSubmenuItems.some(
-                        (i) => i.show && location.pathname === i.path,
-                      )
-                        ? activeItemColor
-                        : customSidebarText || undefined,
-                    }}
-                  />
-                )}
-              </button>
-            </div>
-            {dashboardMenuOpen && (
-              <div className="ml-4 pl-2 my-1 border-l border-sidebar-border/70 space-y-0.5">
-                {dashboardSubmenuItems.filter((i) => i.show).map((sub) => renderSubItem(sub))}
-              </div>
-            )}
-          </div>
-        )}
-        {chamadosGroupVisible && (
-          <div key="chamados-group" className="my-0.5">
-            <div className="flex items-center px-2">
-              <button
-                onClick={() => setChamadosMenuOpen(!chamadosMenuOpen)}
-                data-nav-active={
-                  chamadosSubmenuItems.some((i) => i.show && location.pathname === i.path)
-                    ? 'true'
-                    : undefined
-                }
-                style={
-                  chamadosSubmenuItems.some((i) => i.show && location.pathname === i.path)
-                    ? {
-                        color: activeItemColor,
-                        backgroundColor: 'rgba(217, 119, 6, 0.14)',
-                      }
-                    : {
-                        color: customSidebarText,
-                      }
-                }
-                className={`flex flex-1 items-center gap-3 px-3 py-2 text-[13px] font-medium rounded-lg transition-all duration-200 ${
-                  chamadosSubmenuItems.some((i) => i.show && location.pathname === i.path)
-                    ? 'text-primary bg-primary/10 font-semibold'
-                    : 'text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground'
-                }`}
-              >
-                <Ticket
-                  className="h-4 w-4 shrink-0 text-primary"
-                  style={{
-                    color: chamadosSubmenuItems.some((i) => i.show && location.pathname === i.path)
-                      ? activeItemColor
-                      : customSidebarText || undefined,
-                  }}
-                />
-                <span className="truncate">Tickets</span>
-                {chamadosMenuOpen ? (
-                  <ChevronDown
-                    className="ml-auto h-3.5 w-3.5 opacity-75"
-                    style={{
-                      color: chamadosSubmenuItems.some(
-                        (i) => i.show && location.pathname === i.path,
-                      )
-                        ? activeItemColor
-                        : customSidebarText || undefined,
-                    }}
-                  />
-                ) : (
-                  <ChevronRight
-                    className="ml-auto h-3.5 w-3.5 opacity-75"
-                    style={{
-                      color: chamadosSubmenuItems.some(
-                        (i) => i.show && location.pathname === i.path,
-                      )
-                        ? activeItemColor
-                        : customSidebarText || undefined,
-                    }}
-                  />
-                )}
-              </button>
-            </div>
-            {chamadosMenuOpen && (
-              <div className="ml-4 pl-2 my-1 border-l border-sidebar-border/70 space-y-0.5">
-                {chamadosSubmenuItems
-                  .filter((i) => i.show)
-                  .map((sub) => {
-                    const currentFull = `${location.pathname}${location.search}`
-                    return renderSubItem(sub, currentFull)
-                  })}
-              </div>
-            )}
-          </div>
-        )}
-        {clientGroupVisible && (
-          <div key="cliente-group" className="my-0.5">
-            <div className="flex items-center px-2">
-              <button
-                onClick={() => setClientMenuOpen(!clientMenuOpen)}
-                data-nav-active={
-                  clientSubmenuItems.some((i) => i.show && location.pathname === i.path)
-                    ? 'true'
-                    : undefined
-                }
-                style={
-                  clientSubmenuItems.some((i) => i.show && location.pathname === i.path)
-                    ? {
-                        color: activeItemColor,
-                        backgroundColor: 'rgba(217, 119, 6, 0.14)',
-                      }
-                    : {
-                        color: customSidebarText,
-                      }
-                }
-                className={`flex flex-1 items-center gap-3 px-3 py-2 text-[13px] font-medium rounded-lg transition-all duration-200 ${
-                  clientSubmenuItems.some((i) => i.show && location.pathname === i.path)
-                    ? 'text-primary bg-primary/10 font-semibold'
-                    : 'text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground'
-                }`}
-              >
-                <Building2
-                  className="h-4 w-4 shrink-0 text-primary"
-                  style={{
-                    color: clientSubmenuItems.some((i) => i.show && location.pathname === i.path)
-                      ? activeItemColor
-                      : customSidebarText || undefined,
-                  }}
-                />
-                <span className="truncate">Cliente</span>
-                {clientMenuOpen ? (
-                  <ChevronDown
-                    className="ml-auto h-3.5 w-3.5 opacity-75"
-                    style={{
-                      color: clientSubmenuItems.some((i) => i.show && location.pathname === i.path)
-                        ? activeItemColor
-                        : customSidebarText || undefined,
-                    }}
-                  />
-                ) : (
-                  <ChevronRight
-                    className="ml-auto h-3.5 w-3.5 opacity-75"
-                    style={{
-                      color: clientSubmenuItems.some((i) => i.show && location.pathname === i.path)
-                        ? activeItemColor
-                        : customSidebarText || undefined,
-                    }}
-                  />
-                )}
-              </button>
-            </div>
-            {clientMenuOpen && (
-              <div className="ml-4 pl-2 my-1 border-l border-sidebar-border/70 space-y-0.5">
-                {clientSubmenuItems.filter((i) => i.show).map((sub) => renderSubItem(sub))}
-              </div>
-            )}
-          </div>
-        )}
-        {cmdbGroupVisible && (
-          <div key="cmdb-group" className="my-0.5">
-            <div className="flex items-center px-2">
-              <button
-                onClick={() => setCmdbMenuOpen(!cmdbMenuOpen)}
-                data-nav-active={
-                  cmdbSubmenuItems.some((i) => i.show && location.pathname === i.path)
-                    ? 'true'
-                    : undefined
-                }
-                style={
-                  cmdbSubmenuItems.some((i) => i.show && location.pathname === i.path)
-                    ? {
-                        color: activeItemColor,
-                        backgroundColor: 'rgba(217, 119, 6, 0.14)',
-                      }
-                    : {
-                        color: customSidebarText,
-                      }
-                }
-                className={`flex flex-1 items-center gap-3 px-3 py-2 text-[13px] font-medium rounded-lg transition-all duration-200 ${
-                  cmdbSubmenuItems.some((i) => i.show && location.pathname === i.path)
-                    ? 'text-primary bg-primary/10 font-semibold'
-                    : 'text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground'
-                }`}
-              >
-                <Server
-                  className="h-4 w-4 shrink-0 text-primary"
-                  style={{
-                    color: cmdbSubmenuItems.some((i) => i.show && location.pathname === i.path)
-                      ? activeItemColor
-                      : customSidebarText || undefined,
-                  }}
-                />
-                <span className="truncate">CMDB</span>
-                {cmdbMenuOpen ? (
-                  <ChevronDown
-                    className="ml-auto h-3.5 w-3.5 opacity-75"
-                    style={{
-                      color: cmdbSubmenuItems.some((i) => i.show && location.pathname === i.path)
-                        ? activeItemColor
-                        : customSidebarText || undefined,
-                    }}
-                  />
-                ) : (
-                  <ChevronRight
-                    className="ml-auto h-3.5 w-3.5 opacity-75"
-                    style={{
-                      color: cmdbSubmenuItems.some((i) => i.show && location.pathname === i.path)
-                        ? activeItemColor
-                        : customSidebarText || undefined,
-                    }}
-                  />
-                )}
-              </button>
-            </div>
-            {cmdbMenuOpen && (
-              <div className="ml-4 pl-2 my-1 border-l border-sidebar-border/70 space-y-0.5">
-                {cmdbSubmenuItems.filter((i) => i.show).map((sub) => renderSubItem(sub))}
-              </div>
-            )}
-          </div>
-        )}
-        {changesGroupVisible && (
-          <div key="changes-group" className="my-0.5">
-            <div className="flex items-center px-2">
-              <button
-                onClick={() => setChangesMenuOpen(!changesMenuOpen)}
-                data-nav-active={
-                  changesSubmenuItems.some((i) => i.show && location.pathname === i.path)
-                    ? 'true'
-                    : undefined
-                }
-                style={
-                  changesSubmenuItems.some((i) => i.show && location.pathname === i.path)
-                    ? {
-                        color: activeItemColor,
-                        backgroundColor: 'rgba(217, 119, 6, 0.14)',
-                      }
-                    : {
-                        color: customSidebarText,
-                      }
-                }
-                className={`flex flex-1 items-center gap-3 px-3 py-2 text-[13px] font-medium rounded-lg transition-all duration-200 ${
-                  changesSubmenuItems.some((i) => i.show && location.pathname === i.path)
-                    ? 'text-primary bg-primary/10 font-semibold'
-                    : 'text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground'
-                }`}
-              >
-                <GitBranch
-                  className="h-4 w-4 shrink-0 text-primary"
-                  style={{
-                    color: changesSubmenuItems.some((i) => i.show && location.pathname === i.path)
-                      ? activeItemColor
-                      : customSidebarText || undefined,
-                  }}
-                />
-                <span className="truncate">Gestão de Mudanças</span>
-                {changesMenuOpen ? (
-                  <ChevronDown
-                    className="ml-auto h-3.5 w-3.5 opacity-75"
-                    style={{
-                      color: changesSubmenuItems.some((i) => i.show && location.pathname === i.path)
-                        ? activeItemColor
-                        : customSidebarText || undefined,
-                    }}
-                  />
-                ) : (
-                  <ChevronRight
-                    className="ml-auto h-3.5 w-3.5 opacity-75"
-                    style={{
-                      color: changesSubmenuItems.some((i) => i.show && location.pathname === i.path)
-                        ? activeItemColor
-                        : customSidebarText || undefined,
-                    }}
-                  />
-                )}
-              </button>
-            </div>
-            {changesMenuOpen && (
-              <div className="ml-4 pl-2 my-1 border-l border-sidebar-border/70 space-y-0.5">
-                {changesSubmenuItems.filter((i) => i.show).map((sub) => renderSubItem(sub))}
-              </div>
-            )}
-          </div>
-        )}
-        {problemsGroupVisible && (
-          <div key="problems-group" className="my-0.5">
-            <div className="flex items-center px-2">
-              <button
-                onClick={() => setProblemsMenuOpen(!problemsMenuOpen)}
-                data-nav-active={
-                  problemsSubmenuItems.some((i) => i.show && location.pathname === i.path)
-                    ? 'true'
-                    : undefined
-                }
-                style={
-                  problemsSubmenuItems.some((i) => i.show && location.pathname === i.path)
-                    ? {
-                        color: activeItemColor,
-                        backgroundColor: 'rgba(217, 119, 6, 0.14)',
-                      }
-                    : {
-                        color: customSidebarText,
-                      }
-                }
-                className={`flex flex-1 items-center gap-3 px-3 py-2 text-[13px] font-medium rounded-lg transition-all duration-200 ${
-                  problemsSubmenuItems.some((i) => i.show && location.pathname === i.path)
-                    ? 'text-primary bg-primary/10 font-semibold'
-                    : 'text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground'
-                }`}
-              >
-                <Bug
-                  className="h-4 w-4 shrink-0 text-primary"
-                  style={{
-                    color: problemsSubmenuItems.some((i) => i.show && location.pathname === i.path)
-                      ? activeItemColor
-                      : customSidebarText || undefined,
-                  }}
-                />
-                <span className="truncate">Gestão de Problemas</span>
-                {problemsMenuOpen ? (
-                  <ChevronDown
-                    className="ml-auto h-3.5 w-3.5 opacity-75"
-                    style={{
-                      color: problemsSubmenuItems.some(
-                        (i) => i.show && location.pathname === i.path,
-                      )
-                        ? activeItemColor
-                        : customSidebarText || undefined,
-                    }}
-                  />
-                ) : (
-                  <ChevronRight
-                    className="ml-auto h-3.5 w-3.5 opacity-75"
-                    style={{
-                      color: problemsSubmenuItems.some(
-                        (i) => i.show && location.pathname === i.path,
-                      )
-                        ? activeItemColor
-                        : customSidebarText || undefined,
-                    }}
-                  />
-                )}
-              </button>
-            </div>
-            {problemsMenuOpen && (
-              <div className="ml-4 pl-2 my-1 border-l border-sidebar-border/70 space-y-0.5">
-                {problemsSubmenuItems.filter((i) => i.show).map((sub) => renderSubItem(sub))}
-              </div>
-            )}
-          </div>
-        )}
-        {knowledgeGroupVisible && (
-          <div key="knowledge-group" className="my-0.5">
-            <div className="flex items-center px-2">
-              <button
-                onClick={() => setKnowledgeMenuOpen(!knowledgeMenuOpen)}
-                data-nav-active={
-                  knowledgeSubmenuItems.some(
-                    (i) =>
-                      i.show &&
-                      (location.pathname === i.path ||
-                        (i.path.includes('?') &&
-                          `${location.pathname}${location.search}` === i.path)),
-                  )
-                    ? 'true'
-                    : undefined
-                }
-                style={
-                  knowledgeSubmenuItems.some(
-                    (i) =>
-                      i.show &&
-                      (location.pathname === i.path ||
-                        (i.path.includes('?') &&
-                          `${location.pathname}${location.search}` === i.path)),
-                  )
-                    ? {
-                        color: activeItemColor,
-                        backgroundColor: 'rgba(217, 119, 6, 0.14)',
-                      }
-                    : {
-                        color: customSidebarText,
-                      }
-                }
-                className={`flex flex-1 items-center gap-3 px-3 py-2 text-[13px] font-medium rounded-lg transition-all duration-200 ${
-                  knowledgeSubmenuItems.some(
-                    (i) =>
-                      i.show &&
-                      (location.pathname === i.path ||
-                        (i.path.includes('?') &&
-                          `${location.pathname}${location.search}` === i.path)),
-                  )
-                    ? 'text-primary bg-primary/10 font-semibold'
-                    : 'text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground'
-                }`}
-              >
-                <BookOpen
-                  className="h-4 w-4 shrink-0 text-primary"
-                  style={{
-                    color: knowledgeSubmenuItems.some((i) => location.pathname === i.path)
-                      ? activeItemColor
-                      : customSidebarText || undefined,
-                  }}
-                />
-                <span className="truncate">Base de Conhecimento</span>
-                {knowledgeMenuOpen ? (
-                  <ChevronDown
-                    className="ml-auto h-3.5 w-3.5 opacity-75"
-                    style={{
-                      color: knowledgeSubmenuItems.some((i) => location.pathname === i.path)
-                        ? activeItemColor
-                        : customSidebarText || undefined,
-                    }}
-                  />
-                ) : (
-                  <ChevronRight
-                    className="ml-auto h-3.5 w-3.5 opacity-75"
-                    style={{
-                      color: knowledgeSubmenuItems.some((i) => location.pathname === i.path)
-                        ? activeItemColor
-                        : customSidebarText || undefined,
-                    }}
-                  />
-                )}
-              </button>
-            </div>
-            {knowledgeMenuOpen && (
-              <div className="ml-4 pl-2 my-1 border-l border-sidebar-border/70 space-y-0.5">
-                {knowledgeSubmenuItems.filter((i) => i.show).map((sub) => renderSubItem(sub))}
-              </div>
-            )}
-          </div>
-        )}
 
-        {visitsN2GroupVisible && (
-          <div key="visits-n2-group" className="my-0.5">
-            <div className="flex items-center px-2">
-              <button
-                onClick={() => setVisitsN2MenuOpen(!visitsN2MenuOpen)}
-                data-nav-active={
-                  visitsN2SubmenuItems.some((i) => i.show && location.pathname === i.path)
-                    ? 'true'
-                    : undefined
-                }
-                style={
-                  visitsN2SubmenuItems.some((i) => i.show && location.pathname === i.path)
-                    ? {
-                        color: activeItemColor,
-                        backgroundColor: 'rgba(217, 119, 6, 0.14)',
-                      }
-                    : {
-                        color: customSidebarText,
-                      }
-                }
-                className={`flex flex-1 items-center gap-3 px-3 py-2 text-[13px] font-medium rounded-lg transition-all duration-200 ${
-                  visitsN2SubmenuItems.some((i) => i.show && location.pathname === i.path)
-                    ? 'text-primary bg-primary/10 font-semibold'
-                    : 'text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground'
-                }`}
-              >
-                <MapPin
-                  className="h-4 w-4 shrink-0 text-primary"
-                  style={{
-                    color: visitsN2SubmenuItems.some((i) => location.pathname === i.path)
-                      ? activeItemColor
-                      : customSidebarText || undefined,
-                  }}
-                />
-                <span className="truncate">Gestão de Visitas</span>
-                {visitsN2MenuOpen ? (
-                  <ChevronDown
-                    className="ml-auto h-3.5 w-3.5 opacity-75"
-                    style={{
-                      color: visitsN2SubmenuItems.some((i) => location.pathname === i.path)
-                        ? activeItemColor
-                        : customSidebarText || undefined,
-                    }}
-                  />
-                ) : (
-                  <ChevronRight
-                    className="ml-auto h-3.5 w-3.5 opacity-75"
-                    style={{
-                      color: visitsN2SubmenuItems.some((i) => location.pathname === i.path)
-                        ? activeItemColor
-                        : customSidebarText || undefined,
-                    }}
-                  />
-                )}
-              </button>
-            </div>
-            {visitsN2MenuOpen && (
-              <div className="ml-4 pl-2 my-1 border-l border-sidebar-border/70 space-y-0.5">
-                {visitsN2SubmenuItems.filter((i) => i.show).map((sub) => renderSubItem(sub))}
-              </div>
-            )}
-          </div>
-        )}
-        {relatoriosGroupVisible && (
-          <div key="relatorios-group" className="my-0.5">
-            <div className="flex items-center px-2">
-              <button
-                onClick={() => setRelatoriosMenuOpen(!relatoriosMenuOpen)}
-                data-nav-active={
-                  relatoriosSubmenuItems.some((i) => i.show && location.pathname === i.path)
-                    ? 'true'
-                    : undefined
-                }
-                style={
-                  relatoriosSubmenuItems.some((i) => i.show && location.pathname === i.path)
-                    ? {
-                        color: activeItemColor,
-                        backgroundColor: 'rgba(217, 119, 6, 0.14)',
-                      }
-                    : {
-                        color: customSidebarText,
-                      }
-                }
-                className={`flex flex-1 items-center gap-3 px-3 py-2 text-[13px] font-medium rounded-lg transition-all duration-200 ${
-                  relatoriosSubmenuItems.some((i) => i.show && location.pathname === i.path)
-                    ? 'text-primary bg-primary/10 font-semibold'
-                    : 'text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground'
-                }`}
-              >
-                <FileBarChart
-                  className="h-4 w-4 shrink-0 text-primary"
-                  style={{
-                    color: relatoriosSubmenuItems.some(
-                      (i) => i.show && location.pathname === i.path,
-                    )
-                      ? activeItemColor
-                      : customSidebarText || undefined,
-                  }}
-                />
-                <span className="truncate">Relatórios</span>
-                {relatoriosMenuOpen ? (
-                  <ChevronDown
-                    className="ml-auto h-3.5 w-3.5 opacity-75"
-                    style={{
-                      color: relatoriosSubmenuItems.some(
-                        (i) => i.show && location.pathname === i.path,
-                      )
-                        ? activeItemColor
-                        : customSidebarText || undefined,
-                    }}
-                  />
-                ) : (
-                  <ChevronRight
-                    className="ml-auto h-3.5 w-3.5 opacity-75"
-                    style={{
-                      color: relatoriosSubmenuItems.some(
-                        (i) => i.show && location.pathname === i.path,
-                      )
-                        ? activeItemColor
-                        : customSidebarText || undefined,
-                    }}
-                  />
-                )}
-              </button>
-            </div>
-            {relatoriosMenuOpen && (
-              <div className="ml-4 pl-2 my-1 border-l border-sidebar-border/70 space-y-0.5">
-                {relatoriosSubmenuItems.filter((i) => i.show).map((sub) => renderSubItem(sub))}
-              </div>
-            )}
-          </div>
-        )}
+        {dashboardGroupVisible &&
+          renderNavGroup({
+            key: 'dashboard-group',
+            label: 'Dashboard',
+            icon: LayoutDashboard,
+            items: dashboardSubmenuItems,
+            isOpen: dashboardMenuOpen,
+            onToggle: () => setDashboardMenuOpen(!dashboardMenuOpen),
+          })}
+
+        {chamadosGroupVisible &&
+          renderNavGroup({
+            key: 'chamados-group',
+            label: 'Tickets',
+            icon: Ticket,
+            items: chamadosSubmenuItems,
+            isOpen: chamadosMenuOpen,
+            onToggle: () => setChamadosMenuOpen(!chamadosMenuOpen),
+          })}
+
+        {clientGroupVisible &&
+          renderNavGroup({
+            key: 'cliente-group',
+            label: 'Cliente',
+            icon: Building2,
+            items: clientSubmenuItems,
+            isOpen: clientMenuOpen,
+            onToggle: () => setClientMenuOpen(!clientMenuOpen),
+          })}
+
+        {cmdbGroupVisible &&
+          renderNavGroup({
+            key: 'cmdb-group',
+            label: 'CMDB',
+            icon: Server,
+            items: cmdbSubmenuItems,
+            isOpen: cmdbMenuOpen,
+            onToggle: () => setCmdbMenuOpen(!cmdbMenuOpen),
+          })}
+
+        {changesGroupVisible &&
+          renderNavGroup({
+            key: 'changes-group',
+            label: 'Gestão de Mudanças',
+            icon: GitBranch,
+            items: changesSubmenuItems,
+            isOpen: changesMenuOpen,
+            onToggle: () => setChangesMenuOpen(!changesMenuOpen),
+          })}
+
+        {problemsGroupVisible &&
+          renderNavGroup({
+            key: 'problems-group',
+            label: 'Gestão de Problemas',
+            icon: Bug,
+            items: problemsSubmenuItems,
+            isOpen: problemsMenuOpen,
+            onToggle: () => setProblemsMenuOpen(!problemsMenuOpen),
+          })}
+
+        {knowledgeGroupVisible &&
+          renderNavGroup({
+            key: 'knowledge-group',
+            label: 'Base de Conhecimento',
+            icon: BookOpen,
+            items: knowledgeSubmenuItems,
+            isOpen: knowledgeMenuOpen,
+            onToggle: () => setKnowledgeMenuOpen(!knowledgeMenuOpen),
+          })}
+
+        {visitsN2GroupVisible &&
+          renderNavGroup({
+            key: 'visits-n2-group',
+            label: 'Gestão de Visitas',
+            icon: MapPin,
+            items: visitsN2SubmenuItems,
+            isOpen: visitsN2MenuOpen,
+            onToggle: () => setVisitsN2MenuOpen(!visitsN2MenuOpen),
+          })}
+
+        {relatoriosGroupVisible &&
+          renderNavGroup({
+            key: 'relatorios-group',
+            label: 'Relatórios',
+            icon: FileBarChart,
+            items: relatoriosSubmenuItems,
+            isOpen: relatoriosMenuOpen,
+            onToggle: () => setRelatoriosMenuOpen(!relatoriosMenuOpen),
+          })}
+
         {navAfterClient.map(renderNavItem)}
 
-        {/* Grupo Administração (Operadores e Perfis de Acesso) */}
-        {adminGroupVisible && (
-          <div key="administracao-group" className="my-0.5">
-            <div className="flex items-center px-2">
-              <button
-                onClick={() => setAdminMenuOpen(!adminMenuOpen)}
-                data-nav-active={
-                  adminSubmenuItems.some((i) => i.show && location.pathname === i.path)
-                    ? 'true'
-                    : undefined
-                }
-                style={
-                  adminSubmenuItems.some((i) => i.show && location.pathname === i.path)
-                    ? {
-                        color: activeItemColor,
-                        backgroundColor: 'rgba(217, 119, 6, 0.14)',
-                      }
-                    : {
-                        color: customSidebarText,
-                      }
-                }
-                className={`flex flex-1 items-center gap-3 px-3 py-2 text-[13px] font-medium rounded-lg transition-all duration-200 ${
-                  adminSubmenuItems.some((i) => i.show && location.pathname === i.path)
-                    ? 'text-primary bg-primary/10 font-semibold'
-                    : 'text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground'
-                }`}
-              >
-                <Shield
-                  className="h-4 w-4 shrink-0 text-primary"
-                  style={{
-                    color: adminSubmenuItems.some((i) => i.show && location.pathname === i.path)
-                      ? activeItemColor
-                      : customSidebarText || undefined,
-                  }}
-                />
-                <span className="truncate">Administração</span>
-                {adminMenuOpen ? (
-                  <ChevronDown
-                    className="ml-auto h-3.5 w-3.5 opacity-75"
-                    style={{
-                      color: adminSubmenuItems.some((i) => i.show && location.pathname === i.path)
-                        ? activeItemColor
-                        : customSidebarText || undefined,
-                    }}
-                  />
-                ) : (
-                  <ChevronRight
-                    className="ml-auto h-3.5 w-3.5 opacity-75"
-                    style={{
-                      color: adminSubmenuItems.some((i) => i.show && location.pathname === i.path)
-                        ? activeItemColor
-                        : customSidebarText || undefined,
-                    }}
-                  />
-                )}
-              </button>
-            </div>
-            {adminMenuOpen && (
-              <div className="ml-4 pl-2 my-1 border-l border-sidebar-border/70 space-y-0.5">
-                {adminSubmenuItems.filter((i) => i.show).map((sub) => renderSubItem(sub))}
-              </div>
-            )}
-          </div>
-        )}
+        {adminGroupVisible &&
+          renderNavGroup({
+            key: 'administracao-group',
+            label: 'Administração',
+            icon: Shield,
+            items: adminSubmenuItems,
+            isOpen: adminMenuOpen,
+            onToggle: () => setAdminMenuOpen(!adminMenuOpen),
+          })}
 
-        {configuracoesGroupVisible && (
-          <div key="configuracoes-group" className="my-0.5">
-            <div className="flex items-center px-2">
-              <button
-                onClick={() => setConfiguracoesMenuOpen(!configuracoesMenuOpen)}
-                data-nav-active={
-                  configuracoesSubmenuItems.some((i) => i.show && location.pathname === i.path)
-                    ? 'true'
-                    : undefined
-                }
-                style={
-                  configuracoesSubmenuItems.some((i) => i.show && location.pathname === i.path)
-                    ? {
-                        color: activeItemColor,
-                        backgroundColor: 'rgba(217, 119, 6, 0.14)',
-                      }
-                    : {
-                        color: customSidebarText,
-                      }
-                }
-                className={`flex flex-1 items-center gap-3 px-3 py-2 text-[13px] font-medium rounded-lg transition-all duration-200 ${
-                  configuracoesSubmenuItems.some((i) => i.show && location.pathname === i.path)
-                    ? 'text-primary bg-primary/10 font-semibold'
-                    : 'text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground'
-                }`}
-              >
-                <Settings
-                  className="h-4 w-4 shrink-0 text-primary"
-                  style={{
-                    color: configuracoesSubmenuItems.some(
-                      (i) => i.show && location.pathname === i.path,
-                    )
-                      ? activeItemColor
-                      : customSidebarText || undefined,
-                  }}
-                />
-                <span className="truncate">Configurações</span>
-                {configuracoesMenuOpen ? (
-                  <ChevronDown
-                    className="ml-auto h-3.5 w-3.5 opacity-75"
-                    style={{
-                      color: configuracoesSubmenuItems.some(
-                        (i) => i.show && location.pathname === i.path,
-                      )
-                        ? activeItemColor
-                        : customSidebarText || undefined,
-                    }}
-                  />
-                ) : (
-                  <ChevronRight
-                    className="ml-auto h-3.5 w-3.5 opacity-75"
-                    style={{
-                      color: configuracoesSubmenuItems.some(
-                        (i) => i.show && location.pathname === i.path,
-                      )
-                        ? activeItemColor
-                        : customSidebarText || undefined,
-                    }}
-                  />
-                )}
-              </button>
-            </div>
-            {configuracoesMenuOpen && (
-              <div className="ml-4 pl-2 my-1 border-l border-sidebar-border/70 space-y-0.5">
-                {configuracoesSubmenuItems.filter((i) => i.show).map((sub) => renderSubItem(sub))}
-              </div>
-            )}
-          </div>
-        )}
+        {configuracoesGroupVisible &&
+          renderNavGroup({
+            key: 'configuracoes-group',
+            label: 'Configurações',
+            icon: Settings,
+            items: configuracoesSubmenuItems,
+            isOpen: configuracoesMenuOpen,
+            onToggle: () => setConfiguracoesMenuOpen(!configuracoesMenuOpen),
+          })}
       </nav>
 
+      {/* Rodapé da sidebar */}
       <div
-        className="px-4 py-3 border-t border-sidebar-border/80 flex items-center justify-between"
+        className={`border-t border-sidebar-border/80 flex items-center ${
+          isCollapsed ? 'flex-col justify-center px-1 py-2.5 gap-2' : 'justify-between px-4 py-3'
+        }`}
         style={{
           backgroundColor: customSidebarBg ? `${customSidebarBg}cc` : undefined,
         }}
       >
-        <p
-          className="text-[10px] font-mono font-medium opacity-80"
-          style={{ color: customSidebarText }}
-        >
-          Lógos AITILSM
-        </p>
-        <span
-          className="inline-flex items-center gap-1.5 text-[10px] font-mono font-medium"
-          style={{ color: customSidebarText }}
-        >
-          <span
-            className="h-2 w-2 rounded-full animate-pulse"
-            style={{
-              backgroundColor: '#10B981',
-              boxShadow: '0 0 8px rgba(16, 185, 129, 0.8)',
-            }}
-          />
-          ONLINE
-        </span>
+        {isCollapsed ? (
+          <>
+            <Tooltip delayDuration={150}>
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  onClick={toggleSidebarCollapse}
+                  className="p-1.5 rounded-md hover:bg-sidebar-accent text-amber-500 transition-colors"
+                  aria-label="Expandir barra lateral"
+                >
+                  <PanelLeftOpen className="h-4 w-4" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="right">
+                <p className="text-xs">Expandir barra de opções</p>
+              </TooltipContent>
+            </Tooltip>
+            <span
+              className="h-2 w-2 rounded-full animate-pulse"
+              title="Online"
+              style={{
+                backgroundColor: '#10B981',
+                boxShadow: '0 0 8px rgba(16, 185, 129, 0.8)',
+              }}
+            />
+          </>
+        ) : (
+          <>
+            <p
+              className="text-[10px] font-mono font-medium opacity-80"
+              style={{ color: customSidebarText }}
+            >
+              Lógos AITILSM
+            </p>
+            <span
+              className="inline-flex items-center gap-1.5 text-[10px] font-mono font-medium"
+              style={{ color: customSidebarText }}
+            >
+              <span
+                className="h-2 w-2 rounded-full animate-pulse"
+                style={{
+                  backgroundColor: '#10B981',
+                  boxShadow: '0 0 8px rgba(16, 185, 129, 0.8)',
+                }}
+              />
+              ONLINE
+            </span>
+          </>
+        )}
       </div>
     </div>
   )
@@ -1669,7 +1313,11 @@ export default function Layout() {
   return (
     <div className="flex min-h-screen bg-background text-foreground selection:bg-primary/30 selection:text-primary">
       {!isMobile && (
-        <aside className="sticky top-0 h-screen w-64 flex-shrink-0 border-r border-sidebar-border shadow-xl shadow-black/20 z-30">
+        <aside
+          className={`sticky top-0 h-screen flex-shrink-0 border-r border-sidebar-border shadow-xl shadow-black/20 z-30 transition-all duration-300 ease-in-out ${
+            sidebarCollapsed ? 'w-[68px]' : 'w-64'
+          }`}
+        >
           {navContent}
         </aside>
       )}
@@ -1677,7 +1325,7 @@ export default function Layout() {
       <div className="flex flex-1 flex-col min-w-0">
         <header className="sticky top-0 z-20 flex h-16 items-center justify-between border-b border-border/80 bg-card/80 backdrop-blur-md px-4 md:px-6 transition-colors duration-300 shadow-xs">
           <div className="flex items-center gap-3">
-            {isMobile && (
+            {isMobile ? (
               <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
                 <SheetTrigger asChild>
                   <Button variant="ghost" size="icon" className="hover:bg-sidebar-accent">
@@ -1691,6 +1339,33 @@ export default function Layout() {
                   {navContent}
                 </SheetContent>
               </Sheet>
+            ) : (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={toggleSidebarCollapse}
+                    className="relative transition-colors duration-200 text-muted-foreground hover:text-foreground hover:bg-secondary"
+                    aria-label={
+                      sidebarCollapsed ? 'Expandir barra lateral' : 'Recolher barra lateral'
+                    }
+                  >
+                    {sidebarCollapsed ? (
+                      <PanelLeftOpen className="h-5 w-5 text-amber-500 hover:text-amber-400 transition-transform duration-200" />
+                    ) : (
+                      <PanelLeftClose className="h-5 w-5 hover:text-primary transition-transform duration-200" />
+                    )}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom">
+                  <p className="text-xs">
+                    {sidebarCollapsed
+                      ? 'Expandir barra de opções lateral'
+                      : 'Recolher barra de opções lateral (ganhar mais espaço)'}
+                  </p>
+                </TooltipContent>
+              </Tooltip>
             )}
             <div className="flex items-center gap-2.5">
               {designSettings?.logo_url ? (

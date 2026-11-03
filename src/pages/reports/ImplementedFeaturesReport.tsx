@@ -627,6 +627,13 @@ const FEATURE_CATEGORIES: FeatureCategory[] = [
         tag: 'Proteção de Acesso',
       },
       {
+        id: 'prf-sidebar-collapse',
+        title: 'Barra lateral retrátil com ganho de tela e persistência',
+        description:
+          'Controle no topo da barra e no cabeçalho para recolher e expandir o menu lateral. Quando recolhida, exibe ícones com dica de ferramenta e flyout de submenus sem perda de navegação, ampliando significativamente a área de trabalho das filas e relatórios com persistência automática no navegador.',
+        tag: 'Ergonomia & Layout',
+      },
+      {
         id: 'prf-6',
         title: 'Renderização condicional de botões de ação',
         description:
