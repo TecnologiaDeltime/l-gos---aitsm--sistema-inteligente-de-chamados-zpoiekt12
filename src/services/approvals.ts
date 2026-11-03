@@ -17,6 +17,8 @@ export interface ApprovalRecord {
   stage?: number
   escalation_deadline?: string
   approval_config?: string
+  approval_role?: 'client' | 'internal' | 'general'
+  rejection_reason?: string
   approved_at?: string
   rejected_at?: string
   approver_comment?: string
@@ -105,10 +107,14 @@ export const getApprovalByToken = (token: string) =>
 export const decideApproval = (
   token: string,
   decision: 'approved' | 'rejected',
-  comment?: string,
+  commentOrReason?: string,
 ) =>
   pb.send<any>(`/backend/v1/approvals/${token}/decide`, {
     method: 'POST',
-    body: JSON.stringify({ decision, comment }),
+    body: JSON.stringify({
+      decision,
+      comment: commentOrReason,
+      rejection_reason: commentOrReason,
+    }),
     headers: { 'Content-Type': 'application/json' },
   })

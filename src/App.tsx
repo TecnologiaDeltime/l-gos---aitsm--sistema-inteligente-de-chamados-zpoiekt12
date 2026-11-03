@@ -194,7 +194,14 @@ const App = () => (
                 <Route path="/tickets/retained" element={<RetainedTickets />} />
                 <Route path="/tickets/:id" element={<TicketDetail />} />
                 <Route path="/chamados/novo" element={<TicketCreate />} />
-                <Route path="/tickets/approvals" element={<TicketApprovalsPage />} />
+                <Route
+                  path="/tickets/approvals"
+                  element={
+                    <ProtectedRoute requiredModule="tickets" requiredItem="tickets_approval_flow">
+                      <TicketApprovalsPage />
+                    </ProtectedRoute>
+                  }
+                />
                 <Route path="/categorias" element={<CategoryManagement />} />
                 <Route path="/catalogo" element={<ActivityCatalog />} />
                 <Route path="/clients" element={<ClientList />} />

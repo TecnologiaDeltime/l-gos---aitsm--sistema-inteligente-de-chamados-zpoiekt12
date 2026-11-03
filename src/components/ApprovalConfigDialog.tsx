@@ -67,6 +67,10 @@ export function ApprovalConfigDialog({
   const [escalationTimeoutMinutes, setEscalationTimeoutMinutes] = useState<number>(60)
   const [focalPoints, setFocalPoints] = useState<string[]>([])
   const [internalApprovers, setInternalApprovers] = useState<string[]>([])
+  const [requestTypes, setRequestTypes] = useState<string[]>([])
+  const [requireHighPriority, setRequireHighPriority] = useState<boolean>(true)
+  const [requireClientApproval, setRequireClientApproval] = useState<boolean>(true)
+  const [requireInternalApproval, setRequireInternalApproval] = useState<boolean>(false)
   const [description, setDescription] = useState<string>('')
   const [active, setActive] = useState<boolean>(true)
   const [saving, setSaving] = useState<boolean>(false)
@@ -102,6 +106,10 @@ export function ApprovalConfigDialog({
       setEscalationTimeoutMinutes(editingConfig.escalation_timeout_minutes || 60)
       setFocalPoints(editingConfig.focal_points || [])
       setInternalApprovers(editingConfig.internal_approvers || [])
+      setRequestTypes(Array.isArray(editingConfig.request_types) ? editingConfig.request_types : [])
+      setRequireHighPriority(editingConfig.require_high_priority !== false)
+      setRequireClientApproval(editingConfig.require_client_approval !== false)
+      setRequireInternalApproval(editingConfig.require_internal_approval === true)
       setDescription(editingConfig.description || '')
       setActive(editingConfig.active !== false)
     } else {
@@ -111,6 +119,10 @@ export function ApprovalConfigDialog({
       setEscalationTimeoutMinutes(60)
       setFocalPoints([])
       setInternalApprovers([])
+      setRequestTypes(['Incidente', 'Requisição de Serviço'])
+      setRequireHighPriority(true)
+      setRequireClientApproval(true)
+      setRequireInternalApproval(false)
       setDescription('')
       setActive(true)
     }
@@ -166,6 +178,16 @@ export function ApprovalConfigDialog({
     }
   }
 
+  const availableRequestTypes = ['Incidente', 'Requisição de Serviço', 'Dúvida', 'Visita Técnica']
+
+  const handleToggleRequestType = (type: string) => {
+    if (requestTypes.includes(type)) {
+      setRequestTypes(requestTypes.filter((t) => t !== type))
+    } else {
+      setRequestTypes([...requestTypes, type])
+    }
+  }
+
   const handleSave = async () => {
     if (!activityId) {
       toast({
@@ -194,6 +216,10 @@ export function ApprovalConfigDialog({
         escalation_timeout_minutes: Number(escalationTimeoutMinutes) || 60,
         focal_points: focalPoints,
         internal_approvers: internalApprovers,
+        request_types: requestTypes,
+        require_high_priority: requireHighPriority,
+        require_client_approval: requireClientApproval,
+        require_internal_approval: requireInternalApproval,
         description,
         active,
       }
@@ -258,9 +284,117 @@ export function ApprovalConfigDialog({
             </p>
           </div>
 
+          {/* Gatilho: Tipo de Solicitação + Prioridade Alta */}
+          <div className="space-y-3 rounded-lg border p-3.5 bg-blue-50/40 dark:bg-slate-800/40">
+            <div>
+              <Label className="text-xs font-semibold text-slate-800 dark:text-slate-200">
+                Gatilho do Fluxo de Aprovação (Regra de Disparo)
+              </Label>
+              <p className="text-[11px] text-slate-500 mt-0.5">
+                A aprovação é exigida apenas quando o tipo de solicitação coincidir com os tipos
+                selecionados E a prioridade for alta (Alta ou Crítica).
+              </p>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-[11px] font-semibold text-slate-600 dark:text-slate-300">
+                Tipos de Solicitação que exigem aprovação:
+              </Label>
+              <div className="flex flex-wrap gap-2 pt-1">
+                {availableRequestTypes.map((t) => {
+                  const isChecked = requestTypes.includes(t)
+                  return (
+                    <Badge
+                      key={t}
+                      variant={isChecked ? 'default' : 'outline'}
+                      className={`cursor-pointer text-xs py-1 px-2.5 transition-colors ${
+                        isChecked
+                          ? 'bg-blue-600 text-white hover:bg-blue-700'
+                          : 'bg-white text-slate-700 hover:bg-slate-100 border-slate-300'
+                      }`}
+                      onClick={() => handleToggleRequestType(t)}
+                    >
+                      {isChecked ? '✓ ' : '+ '}
+                      {t}
+                    </Badge>
+                  )
+                })}
+              </div>
+              <p className="text-[10px] text-slate-500">
+                Se nenhum for selecionado, a aprovação se aplicará a todos os tipos de chamado.
+              </p>
+            </div>
+
+            <div className="flex items-center justify-between pt-2 border-t border-slate-200 dark:border-slate-700">
+              <div className="space-y-0.5 pr-2">
+                <Label
+                  htmlFor="require-high-priority"
+                  className="text-xs font-semibold cursor-pointer"
+                >
+                  Exigir prioridade alta (Alta ou Crítica)
+                </Label>
+                <p className="text-[11px] text-slate-500">
+                  Quando ativo, chamados com prioridade Baixa ou Média são liberados sem reter em
+                  aprovação.
+                </p>
+              </div>
+              <Switch
+                id="require-high-priority"
+                checked={requireHighPriority}
+                onCheckedChange={setRequireHighPriority}
+              />
+            </div>
+          </div>
+
+          {/* Instâncias de Aprovação Obrigatórias: Cliente e/ou Interno */}
+          <div className="space-y-3 rounded-lg border p-3.5 bg-slate-50/50 dark:bg-slate-800/30">
+            <Label className="text-xs font-semibold text-slate-800 dark:text-slate-200">
+              Instâncias de Aprovação Necessárias (Fluxo Duplo)
+            </Label>
+            <div className="grid sm:grid-cols-2 gap-3">
+              <div className="flex items-start justify-between p-2.5 rounded border bg-white dark:bg-slate-900">
+                <div className="space-y-0.5 pr-2">
+                  <Label htmlFor="req-client" className="text-xs font-medium cursor-pointer">
+                    Aprovação do Cliente (Ponto Focal)
+                  </Label>
+                  <p className="text-[10px] text-slate-500">
+                    Exige validação do ponto focal do cliente
+                  </p>
+                </div>
+                <Switch
+                  id="req-client"
+                  checked={requireClientApproval}
+                  onCheckedChange={setRequireClientApproval}
+                />
+              </div>
+
+              <div className="flex items-start justify-between p-2.5 rounded border bg-white dark:bg-slate-900">
+                <div className="space-y-0.5 pr-2">
+                  <Label htmlFor="req-internal" className="text-xs font-medium cursor-pointer">
+                    Aprovação Interna (Operador / Gestor)
+                  </Label>
+                  <p className="text-[10px] text-slate-500">
+                    Exige autorização da equipe interna de TI
+                  </p>
+                </div>
+                <Switch
+                  id="req-internal"
+                  checked={requireInternalApproval}
+                  onCheckedChange={setRequireInternalApproval}
+                />
+              </div>
+            </div>
+            {requireClientApproval && requireInternalApproval && (
+              <p className="text-[11px] text-amber-700 bg-amber-50 dark:bg-amber-950/30 p-2 rounded border border-amber-200 text-center font-medium">
+                Fluxo Duplo Ativo: o chamado ficará em "Aguardando Aprovação" até que AMBOS (cliente
+                e equipe interna) aprovem. Se qualquer um reprovar, o chamado é cancelado.
+              </p>
+            )}
+          </div>
+
           {/* Modo de Aprovação */}
           <div className="space-y-1.5">
-            <Label className="text-xs font-semibold">Modo de Aprovação *</Label>
+            <Label className="text-xs font-semibold">Modo de Avaliação dos Aprovadores *</Label>
             <Select value={mode} onValueChange={(v: ApprovalMode) => setMode(v)}>
               <SelectTrigger>
                 <SelectValue />

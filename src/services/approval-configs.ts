@@ -10,6 +10,10 @@ export interface ApprovalConfigRecord {
   escalation_timeout_minutes?: number
   focal_points?: string[]
   internal_approvers?: string[]
+  request_types?: string[]
+  require_high_priority?: boolean
+  require_client_approval?: boolean
+  require_internal_approval?: boolean
   description?: string
   active: boolean
   created: string

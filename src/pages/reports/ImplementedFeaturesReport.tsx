@@ -158,6 +158,13 @@ const FEATURE_CATEGORIES: FeatureCategory[] = [
           'Horas de acompanhamento manual (logs) debitam da franquia contratual do cliente; tempo de play/pause do cronômetro acumula na produtividade/horas de trabalho do operador, com registro automático do cumprimento do SLA de Resposta no primeiro play.',
         tag: 'Regra de Horas / SLA',
       },
+      {
+        id: 'tk-approval-flow',
+        title: 'Fluxo de Aprovação de Chamados com Dupla Instância',
+        description:
+          'Gatilho condicional exigindo aprovação quando o tipo de solicitação configurado e a prioridade alta (Alta/Crítica) coincidirem juntos. O chamado é retido em "Aguardando Aprovação", podendo exigir aprovação do cliente (Ponto Focal no Portal) e/ou aprovadores internos da TI. A transição para status "Novo" só ocorre com ambas aprovadas; recusa em qualquer instância cancela o chamado e exige justificativa obrigatória registrada no histórico.',
+        tag: 'Governança & ITIL',
+      },
     ],
   },
   {

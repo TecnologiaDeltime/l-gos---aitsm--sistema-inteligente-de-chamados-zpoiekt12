@@ -109,6 +109,13 @@ const BASE_SYSTEM_MODULES: GranularModuleDefinition[] = [
         path: '/tickets/approvals',
       },
       {
+        key: 'tickets_approval_flow',
+        label: 'Fluxo de Aprovação de Chamados',
+        description:
+          'Configuração de regras de aprovação por tipo de chamado, prioridade alta e aprovadores duplos (cliente e interno)',
+        path: '/tickets/approvals',
+      },
+      {
         key: 'tickets_ai_reply',
         label: 'Resposta com IA em Chamados',
         description:

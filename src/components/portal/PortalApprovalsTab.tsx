@@ -220,9 +220,29 @@ export default function PortalApprovalsTab({
                         >
                           {app.status}
                         </Badge>
+                        <Badge
+                          variant="outline"
+                          className={`text-xs font-medium ${
+                            app.approval_role === 'internal'
+                              ? 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/40'
+                              : 'bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-950/40'
+                          }`}
+                        >
+                          {app.approval_role === 'internal'
+                            ? 'Instância Interna (TI)'
+                            : 'Instância do Cliente (Ponto Focal)'}
+                        </Badge>
                         <Badge variant="secondary" className="text-xs">
                           {app.type || 'Aprovação'}
                         </Badge>
+                        {ticket?.status && (
+                          <Badge
+                            variant="outline"
+                            className="text-[10px] bg-orange-50 text-orange-700 border-orange-200 font-medium"
+                          >
+                            Status: {ticket.status}
+                          </Badge>
+                        )}
                         {app.mode && (
                           <span className="text-[11px] text-muted-foreground">
                             • Modo: {app.mode}
@@ -292,10 +312,16 @@ export default function PortalApprovalsTab({
                   </div>
 
                   {/* Parecer do aprovador se já decidido */}
-                  {app.approver_comment && !isPending && (
+                  {(app.approver_comment || app.rejection_reason) && !isPending && (
                     <div className="p-2.5 rounded-md bg-muted/60 text-xs text-muted-foreground space-y-0.5">
-                      <span className="font-semibold text-foreground">Parecer registrado:</span>
-                      <p>{app.approver_comment}</p>
+                      <span className="font-semibold text-foreground">
+                        {app.status === 'Reprovado'
+                          ? 'Motivo da recusa registrado:'
+                          : 'Parecer registrado:'}
+                      </span>
+                      <p className="text-foreground font-medium">
+                        {app.rejection_reason || app.approver_comment}
+                      </p>
                       <span className="text-[11px] block pt-1">
                         Decidido em:{' '}
                         {app.approved_at
@@ -365,8 +391,8 @@ export default function PortalApprovalsTab({
               <span className="font-semibold text-foreground">Impacto da Decisão:</span>
               <p>
                 {decisionType === 'approved'
-                  ? 'Ao aprovar, o chamado avançará imediatamente para o status "Novo" e entrará na fila de atendimento da equipe de suporte.'
-                  : 'Ao reprovar, o chamado será cancelado definitivamente e o solicitante será informado.'}
+                  ? 'Ao aprovar, sua instância será marcada como Aprovada. Se houver fluxo duplo com equipe interna, o chamado aguardará a aprovação de ambas as partes antes de ser liberado como "Novo".'
+                  : 'Ao reprovar, o chamado será cancelado definitivamente e o motivo da recusa será gravado no histórico.'}
               </p>
             </div>
 

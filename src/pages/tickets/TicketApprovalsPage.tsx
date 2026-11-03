@@ -40,14 +40,41 @@ import { getApprovals, ApprovalRecord } from '@/services/approvals'
 import { useRealtime } from '@/hooks/use-realtime'
 import { useToast } from '@/hooks/use-toast'
 import { usePermissions } from '@/hooks/use-permissions'
+import { useAuth } from '@/hooks/use-auth'
+import { decideApproval } from '@/services/approvals'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import { Textarea } from '@/components/ui/textarea'
+import { Label } from '@/components/ui/label'
 import { Link } from 'react-router-dom'
 
 export default function TicketApprovalsPage() {
   const { toast } = useToast()
-  const { isAdmin, isGestor } = usePermissions()
-  const canManage = isAdmin || isGestor
+  const { user } = useAuth()
+  const { isAdmin, isGestor, canView, canEdit, canConfigure } = usePermissions()
+  const canManage =
+    isAdmin ||
+    isGestor ||
+    canConfigure('tickets.tickets_approval_flow') ||
+    canConfigure('tickets.tickets_aprovacoes')
+  const canDecide =
+    isAdmin ||
+    isGestor ||
+    canEdit('tickets.tickets_approval_flow') ||
+    canEdit('tickets.tickets_aprovacoes')
 
-  const [activeTab, setActiveTab] = useState<'rules' | 'history'>('rules')
+  const [activeTab, setActiveTab] = useState<'pending' | 'rules' | 'history'>('pending')
+  const [decisionModalOpen, setDecisionModalOpen] = useState(false)
+  const [selectedApproval, setSelectedApproval] = useState<ApprovalRecord | null>(null)
+  const [decisionAction, setDecisionAction] = useState<'approved' | 'rejected'>('approved')
+  const [rejectionReason, setRejectionReason] = useState('')
+  const [deciding, setDeciding] = useState(false)
   const [configs, setConfigs] = useState<ApprovalConfigRecord[]>([])
   const [approvalsHistory, setApprovalsHistory] = useState<ApprovalRecord[]>([])
   const [loading, setLoading] = useState(true)
@@ -122,6 +149,81 @@ export default function TicketApprovalsPage() {
     })
   }, [configs, searchTerm])
 
+  // Aprovações pendentes internas (e todas as pendentes visíveis)
+  const pendingApprovals = useMemo(() => {
+    return approvalsHistory.filter((a) => {
+      if (a.status !== 'Pendente') return false
+      // Se for aprovador direto ou admin/gestor, pode ver
+      const ticketNum = a.expand?.ticket?.number || ''
+      const title = a.expand?.ticket?.title?.toLowerCase() || ''
+      const reqName = a.expand?.requester?.name?.toLowerCase() || ''
+      const targetName = a.expand?.approver?.name?.toLowerCase() || ''
+      const term = searchTerm.toLowerCase()
+      return (
+        ticketNum.includes(term) ||
+        title.includes(term) ||
+        reqName.includes(term) ||
+        targetName.includes(term)
+      )
+    })
+  }, [approvalsHistory, searchTerm])
+
+  const openDecisionModal = (app: ApprovalRecord, action: 'approved' | 'rejected') => {
+    setSelectedApproval(app)
+    setDecisionAction(action)
+    setRejectionReason('')
+    setDecisionModalOpen(true)
+  }
+
+  const handleConfirmDecision = async () => {
+    if (!selectedApproval) return
+
+    if (decisionAction === 'rejected' && !rejectionReason.trim()) {
+      toast({
+        title: 'Motivo obrigatório',
+        description: 'Informe o motivo da recusa para registrar no histórico do chamado.',
+        variant: 'destructive',
+      })
+      return
+    }
+
+    setDeciding(true)
+    try {
+      if (selectedApproval.token) {
+        await decideApproval(selectedApproval.token, decisionAction, rejectionReason)
+      } else {
+        // Fallback direto via service/update se token não estiver presente
+        const { updateApproval } = await import('@/services/approvals')
+        await updateApproval(selectedApproval.id, {
+          status: decisionAction === 'approved' ? 'Aprovado' : 'Reprovado',
+          approver_comment: rejectionReason,
+          rejection_reason: rejectionReason,
+          approved_at: decisionAction === 'approved' ? new Date().toISOString() : undefined,
+          rejected_at: decisionAction === 'rejected' ? new Date().toISOString() : undefined,
+          approver: user?.id,
+        })
+      }
+
+      toast({
+        title: decisionAction === 'approved' ? 'Chamado aprovado com sucesso!' : 'Chamado recusado',
+        description:
+          decisionAction === 'approved'
+            ? 'Aprovação interna registrada com sucesso.'
+            : 'Recusa registrada e chamado atualizado.',
+      })
+      setDecisionModalOpen(false)
+      loadData()
+    } catch (err: any) {
+      toast({
+        title: 'Erro ao registrar decisão',
+        description: err?.message || 'Tente novamente.',
+        variant: 'destructive',
+      })
+    } finally {
+      setDeciding(false)
+    }
+  }
+
   // Filtro do histórico de aprovações
   const filteredApprovals = useMemo(() => {
     return approvalsHistory.filter((a) => {
@@ -169,13 +271,17 @@ export default function TicketApprovalsPage() {
       <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)} className="space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b pb-3">
           <TabsList className="bg-slate-100 dark:bg-slate-800">
+            <TabsTrigger value="pending" className="gap-1.5 text-xs font-semibold">
+              <AlertCircle className="h-3.5 w-3.5 text-amber-500" />
+              Fila de Pendências ({pendingApprovals.length})
+            </TabsTrigger>
             <TabsTrigger value="rules" className="gap-1.5 text-xs font-semibold">
               <ListTree className="h-3.5 w-3.5" />
               Regras Configuradas ({configs.length})
             </TabsTrigger>
             <TabsTrigger value="history" className="gap-1.5 text-xs font-semibold">
               <Clock className="h-3.5 w-3.5" />
-              Histórico de Solicitações ({approvalsHistory.length})
+              Histórico Geral ({approvalsHistory.length})
             </TabsTrigger>
           </TabsList>
 
@@ -190,6 +296,138 @@ export default function TicketApprovalsPage() {
             />
           </div>
         </div>
+
+        {/* TAB 0: FILA DE PENDÊNCIAS (APROVADOR INTERNO) */}
+        <TabsContent value="pending" className="space-y-4 m-0">
+          <Card className="bg-white dark:bg-slate-900 overflow-hidden">
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-slate-50 dark:bg-slate-800/50">
+                  <TableHead className="w-28">Chamado</TableHead>
+                  <TableHead>Assunto / Motivo</TableHead>
+                  <TableHead>Instância</TableHead>
+                  <TableHead>Aprovador Responsável</TableHead>
+                  <TableHead>Status Chamado</TableHead>
+                  <TableHead>Data Solicitação</TableHead>
+                  <TableHead className="text-right">Decisão</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {pendingApprovals.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center py-10 text-slate-400 text-xs">
+                      <CheckCircle2 className="h-8 w-8 text-green-500 mx-auto mb-2 opacity-70" />
+                      Nenhuma solicitação de aprovação pendente no momento.
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  pendingApprovals.map((app) => {
+                    const tkt = app.expand?.ticket
+                    const targetName =
+                      app.expand?.target_contact?.full_name ||
+                      app.expand?.approver?.name ||
+                      app.target_email ||
+                      'Não identificado'
+                    const isInternal =
+                      app.approval_role === 'internal' ||
+                      (!app.approval_role && !app.target_contact && !!app.approver)
+
+                    return (
+                      <TableRow key={app.id} className="text-xs">
+                        <TableCell className="font-bold text-blue-600">
+                          {tkt?.id ? (
+                            <Link to={`/tickets/${tkt.id}`} className="hover:underline">
+                              #{tkt.number}
+                            </Link>
+                          ) : (
+                            '-'
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <div className="font-medium text-slate-800 dark:text-slate-100 line-clamp-1">
+                            {tkt?.title || 'Sem título'}
+                          </div>
+                          <div className="text-[11px] text-slate-500 line-clamp-1">
+                            {app.justification || tkt?.description}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge
+                            variant="outline"
+                            className={`text-[10px] font-semibold ${
+                              isInternal
+                                ? 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/40'
+                                : 'bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-950/40'
+                            }`}
+                          >
+                            {isInternal ? 'Interna (TI)' : 'Cliente (Ponto Focal)'}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <div className="font-medium text-slate-800 dark:text-slate-200">
+                            {targetName}
+                          </div>
+                          {app.target_email && (
+                            <div className="text-[10px] text-slate-400 flex items-center gap-1">
+                              <Mail className="h-3 w-3" /> {app.target_email}
+                            </div>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <Badge
+                            variant="outline"
+                            className="text-[10px] bg-orange-50 text-orange-700 border-orange-200 font-medium"
+                          >
+                            {tkt?.status || 'Aguardando Aprovação'}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-slate-500">
+                          {new Date(app.created).toLocaleString('pt-BR', {
+                            dateStyle: 'short',
+                            timeStyle: 'short',
+                          })}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex items-center justify-end gap-1.5">
+                            {canDecide && (
+                              <>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="h-7 text-xs bg-emerald-50 text-emerald-700 border-emerald-300 hover:bg-emerald-100"
+                                  onClick={() => openDecisionModal(app, 'approved')}
+                                >
+                                  <CheckCircle2 className="h-3.5 w-3.5 mr-1" />
+                                  Aprovar
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="h-7 text-xs bg-rose-50 text-rose-700 border-rose-300 hover:bg-rose-100"
+                                  onClick={() => openDecisionModal(app, 'rejected')}
+                                >
+                                  <XCircle className="h-3.5 w-3.5 mr-1" />
+                                  Recusar
+                                </Button>
+                              </>
+                            )}
+                            {app.token && (
+                              <Button asChild size="sm" variant="ghost" className="h-7 text-xs">
+                                <Link to={`/approval/${app.token}`} target="_blank">
+                                  Link
+                                </Link>
+                              </Button>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    )
+                  })
+                )}
+              </TableBody>
+            </Table>
+          </Card>
+        </TabsContent>
 
         {/* TAB 1: REGRAS DE APROVAÇÃO */}
         <TabsContent value="rules" className="space-y-4 m-0">
@@ -496,6 +734,80 @@ export default function TicketApprovalsPage() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Diálogo de Confirmação de Decisão (Aprovar / Recusar com Motivo) */}
+      <Dialog open={decisionModalOpen} onOpenChange={setDecisionModalOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              {decisionAction === 'approved' ? (
+                <>
+                  <CheckCircle2 className="h-5 w-5 text-emerald-600" />
+                  Aprovar Chamado
+                </>
+              ) : (
+                <>
+                  <XCircle className="h-5 w-5 text-rose-600" />
+                  Recusar Chamado
+                </>
+              )}
+            </DialogTitle>
+            <DialogDescription>
+              {decisionAction === 'approved'
+                ? `Confirmar aprovação interna para o chamado #${selectedApproval?.expand?.ticket?.number || ''}?`
+                : `Ao recusar o chamado #${selectedApproval?.expand?.ticket?.number || ''}, ele será cancelado e o motivo ficará registrado no histórico.`}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-3 py-2">
+            <div className="space-y-1.5">
+              <Label className="text-xs font-semibold">
+                {decisionAction === 'approved'
+                  ? 'Observações da aprovação (opcional)'
+                  : 'Motivo da recusa (obrigatório) *'}
+              </Label>
+              <Textarea
+                placeholder={
+                  decisionAction === 'approved'
+                    ? 'Ex: Verificado com a coordenação de TI, aprovado para execução.'
+                    : 'Ex: Solicitação fora da política interna de segurança da informação.'
+                }
+                value={rejectionReason}
+                onChange={(e) => setRejectionReason(e.target.value)}
+                rows={3}
+                className="text-xs"
+              />
+            </div>
+          </div>
+
+          <DialogFooter className="gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setDecisionModalOpen(false)}
+              disabled={deciding}
+            >
+              Cancelar
+            </Button>
+            <Button
+              size="sm"
+              onClick={handleConfirmDecision}
+              disabled={deciding || (decisionAction === 'rejected' && !rejectionReason.trim())}
+              className={
+                decisionAction === 'approved'
+                  ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                  : 'bg-rose-600 hover:bg-rose-700 text-white'
+              }
+            >
+              {deciding
+                ? 'Processando...'
+                : decisionAction === 'approved'
+                  ? 'Confirmar Aprovação'
+                  : 'Confirmar Recusa'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Dialog de Criação/Edição de Regra */}
       <ApprovalConfigDialog
