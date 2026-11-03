@@ -290,16 +290,18 @@ cronAdd('sla_response_alerts', '* * * * *', function () {
       var htmlBody = ''
       if (typeof globalThis.itsmRenderBaseEmailTemplate === 'function') {
         htmlBody = globalThis.itsmRenderBaseEmailTemplate({
+          variant: 'warning',
           preheader:
             'Alerta de SLA prestes a vencer para o chamado #' +
             ticketNumber +
             ' (' +
             remainingMin +
             ' min restantes)',
-          badgeText: 'Alerta de SLA',
-          badgeColor: '#dc2626',
+          badgeText: 'SLA a Vencer (' + remainingMin + ' min)',
+          badgeColor: '#eab308',
           title: 'SLA de Resposta Prestes a Vencer',
-          subtitle: 'Chamado #' + ticketNumber + ' requer atendimento imediato',
+          subtitle:
+            'Chamado #' + ticketNumber + ' requer atendimento antes do vencimento contratual',
           contentHtml: contentHtml,
           footerNote:
             'Este é um alerta operacional gerado automaticamente para operadores e gestores de serviço ITSM.',

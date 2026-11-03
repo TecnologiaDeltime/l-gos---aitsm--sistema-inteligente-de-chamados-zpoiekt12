@@ -366,119 +366,12 @@ cronAdd('approval_escalation_cron', '* * * * *', function () {
       } catch (_) {}
     }
     opts = opts || {}
-    var preheader = esc(opts.preheader || '')
-    var badgeText = esc(opts.badgeText || 'Aprovação Pendente')
-    var badgeColor = opts.badgeColor || '#eab308'
-    var title = esc(opts.title || 'Solicitação de Aprovação de Chamado')
-    var subtitle = esc(opts.subtitle || '')
-    var contentHtml = opts.contentHtml || ''
-    var actionHtml = opts.actionHtml || ''
-    var footerNote = esc(
-      opts.footerNote ||
-        'Você pode interagir diretamente através dos botões deste e-mail sem precisar efetuar login no sistema.',
-    )
-
     return (
-      '<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">\n' +
-      '<html xmlns="http://www.w3.org/1999/xhtml" lang="pt-BR">\n' +
-      '<head>\n' +
-      '  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />\n' +
-      '  <meta name="viewport" content="width=device-width, initial-scale=1.0" />\n' +
-      '  <title>' +
-      title +
-      '</title>\n' +
-      '  <style type="text/css">\n' +
-      '    body { margin: 0; padding: 0; background-color: #f1f5f9; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; color: #1e293b; }\n' +
-      '    table { border-collapse: collapse; }\n' +
-      '    a { color: #0284c7; text-decoration: none; }\n' +
-      '  </style>\n' +
-      '</head>\n' +
-      '<body style="margin: 0; padding: 0; background-color: #f1f5f9;">\n' +
-      (preheader
-        ? '  <div style="display: none; font-size: 1px; color: #f1f5f9; line-height: 1px; max-height: 0px; opacity: 0; overflow: hidden;">' +
-          preheader +
-          '</div>\n'
-        : '') +
-      '  <table border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #f1f5f9;">\n' +
-      '    <tr>\n' +
-      '      <td align="center" style="padding: 30px 15px 40px 15px;">\n' +
-      '        <table border="0" cellpadding="0" cellspacing="0" width="600" style="width: 600px; max-width: 600px; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); border: 1px solid #e2e8f0;">\n' +
-      '          <!-- CABEÇALHO INSTITUCIONAL COM LOGO -->\n' +
-      '          <tr>\n' +
-      '            <td style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); background-color: #0f172a; padding: 26px 32px; border-bottom: 3px solid #0284c7;">\n' +
-      '              <table border="0" cellpadding="0" cellspacing="0" width="100%">\n' +
-      '                <tr>\n' +
-      '                  <td valign="middle">\n' +
-      '                    <table border="0" cellpadding="0" cellspacing="0">\n' +
-      '                      <tr>\n' +
-      '                        <td style="background-color: #0284c7; width: 40px; height: 40px; border-radius: 8px; text-align: center; vertical-align: middle; color: #ffffff; font-weight: bold; font-size: 20px; font-family: Arial, sans-serif;">\n' +
-      '                          ⚡\n' +
-      '                        </td>\n' +
-      '                        <td style="padding-left: 14px; vertical-align: middle;">\n' +
-      '                          <div style="font-size: 20px; font-weight: 800; color: #ffffff; letter-spacing: -0.5px; line-height: 22px;">Lógos <span style="color: #fbbf24; font-weight: 600;">AITILSM</span></div>\n' +
-      '                          <div style="font-size: 11px; color: #94a3b8; font-weight: 500; text-transform: uppercase; letter-spacing: 0.8px; margin-top: 2px;">Gestão de Serviços de TI</div>\n' +
-      '                        </td>\n' +
-      '                      </tr>\n' +
-      '                    </table>\n' +
-      '                  </td>\n' +
-      '                  <td align="right" valign="middle">\n' +
-      '                    <span style="display: inline-block; background-color: rgba(255, 255, 255, 0.12); color: #e2e8f0; font-size: 11px; font-weight: 600; padding: 4px 10px; border-radius: 9999px; text-transform: uppercase; letter-spacing: 0.5px; border: 1px solid rgba(255, 255, 255, 0.15);">' +
-      badgeText +
-      '</span>\n' +
-      '                  </td>\n' +
-      '                </tr>\n' +
-      '              </table>\n' +
-      '            </td>\n' +
-      '          </tr>\n' +
-      '          <!-- TÍTULO -->\n' +
-      '          <tr>\n' +
-      '            <td style="padding: 28px 32px 12px 32px;">\n' +
-      '              <table border="0" cellpadding="0" cellspacing="0" width="100%">\n' +
-      '                <tr>\n' +
-      '                  <td style="border-left: 4px solid ' +
-      badgeColor +
-      '; padding-left: 14px;">\n' +
-      '                    <h1 style="margin: 0; font-size: 20px; font-weight: 700; color: #0f172a; line-height: 26px;">' +
-      title +
-      '</h1>\n' +
-      (subtitle
-        ? '                    <div style="margin-top: 4px; font-size: 13px; color: #64748b; line-height: 18px;">' +
-          subtitle +
-          '</div>\n'
-        : '') +
-      '                  </td>\n' +
-      '                </tr>\n' +
-      '              </table>\n' +
-      '            </td>\n' +
-      '          </tr>\n' +
-      '          <!-- CONTEÚDO -->\n' +
-      '          <tr>\n' +
-      '            <td style="padding: 12px 32px 28px 32px;">\n' +
-      contentHtml +
-      (actionHtml
-        ? '              <div style="margin-top: 28px; padding-top: 24px; border-top: 1px solid #e2e8f0; text-align: center;">\n' +
-          actionHtml +
-          '              </div>\n'
-        : '') +
-      '            </td>\n' +
-      '          </tr>\n' +
-      '          <!-- RODAPÉ -->\n' +
-      '          <tr>\n' +
-      '            <td style="background-color: #f8fafc; padding: 22px 32px; border-top: 1px solid #e2e8f0; text-align: center;">\n' +
-      '              <p style="margin: 0 0 8px 0; font-size: 11px; color: #64748b; line-height: 16px;">' +
-      footerNote +
-      '</p>\n' +
-      '              <p style="margin: 0; font-size: 11px; color: #94a3b8;">© ' +
-      new Date().getFullYear() +
-      ' Lógos AITILSM • Plataforma de Gestão de Incidentes e Requisições</p>\n' +
-      '            </td>\n' +
-      '          </tr>\n' +
-      '        </table>\n' +
-      '      </td>\n' +
-      '    </tr>\n' +
-      '  </table>\n' +
-      '</body>\n' +
-      '</html>'
+      '<div style="font-family: Arial, sans-serif; padding: 20px;">' +
+      (opts.title ? '<h2>' + esc(opts.title) + '</h2>' : '') +
+      (opts.contentHtml || '') +
+      (opts.actionHtml ? '<div style="margin-top: 20px;">' + opts.actionHtml + '</div>' : '') +
+      '</div>'
     )
   }
 
@@ -699,9 +592,10 @@ cronAdd('approval_escalation_cron', '* * * * *', function () {
         '[Escalonamento] Aprovação Necessária: Chamado #' + ticketNumber + ' - ' + ticketTitle
 
       var htmlEmail = renderApprovalEmailTemplate({
+        variant: 'warning',
         preheader: 'Escalonamento de contingência para o chamado #' + ticketNumber,
         badgeText: 'Escalonamento (Nível ' + nextStage + ')',
-        badgeColor: '#f97316',
+        badgeColor: '#eab308',
         title: 'Aprovação de Chamado por Contingência',
         subtitle: 'Chamado #' + ticketNumber + ' escalonado para você',
         contentHtml: contentHtml,
