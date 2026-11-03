@@ -101,38 +101,56 @@ export default function PortalNewTicketDialog({
   // é oferecido como opção extra no seletor e enviado no campo "equipment" do chamado.
   const [extraEquipment, setExtraEquipment] = useState<EquipmentRecord | null>(null)
 
-  // Carrega setores e colaboradores da empresa
+  // Carrega setores e colaboradores da empresa.
+  // Depende apenas de open/companyId — NUNCA do objeto `user`, que o pai recria
+  // a cada render (literal no JSX); depender dele apagava a seleção do cliente.
   useEffect(() => {
-    if (open && companyId) {
-      getCompanyDepartments(companyId)
-        .then((depts) => setDepartments(depts))
-        .catch((e) => console.warn('Erro ao carregar setores:', e))
+    if (!open || !companyId) return
 
-      setContactsLoading(true)
-      setContactsLoadError(false)
-      getClientContacts(companyId)
-        .then((ctts) => {
-          setContacts(ctts)
-          setContactsLoadError(false)
-        })
-        .catch((e) => {
-          console.warn('Erro ao carregar contatos da empresa:', e)
-          setContacts([])
-          setContactsLoadError(true)
-        })
-        .finally(() => setContactsLoading(false))
+    getCompanyDepartments(companyId)
+      .then((depts) => setDepartments(depts))
+      .catch((e) => console.warn('Erro ao carregar setores:', e))
 
-      // Reseta para o usuário logado
-      setContactName(user?.name || '')
-      setContactEmail(user?.email || '')
-      setContactPhone(user?.phone || '')
-      setSelectedSector('none')
-      setPreferredContactId('')
-      setSelectedFile(null)
-      setExtraEquipment(null)
-      setSelectedAsset(initialAssetId || 'none')
-    }
-  }, [open, companyId, user])
+    setContactsLoading(true)
+    setContactsLoadError(false)
+    getClientContacts(companyId)
+      .then((ctts) => {
+        setContacts(ctts)
+        setContactsLoadError(false)
+      })
+      .catch((e) => {
+        console.warn('Erro ao carregar contatos da empresa:', e)
+        setContacts([])
+        setContactsLoadError(true)
+      })
+      .finally(() => setContactsLoading(false))
+  }, [open, companyId])
+
+  // Referência sempre atualizada do usuário: permite ler os dados dele dentro do
+  // efeito de reset sem colocá-lo nas dependências (a identidade do objeto muda
+  // a cada render do pai e não deve reiniciar o formulário).
+  const userRef = useRef(user)
+  userRef.current = user
+
+  // Reseta o formulário SOMENTE na transição fechado -> aberto. Um re-render do
+  // pai com o diálogo aberto (atualização de dados, refresh silencioso) não pode
+  // apagar o setor e o contato que o cliente já escolheu.
+  const wasOpenRef = useRef(false)
+  useEffect(() => {
+    const justOpened = open && !wasOpenRef.current
+    wasOpenRef.current = open
+    if (!justOpened) return
+
+    // Reseta para o usuário logado
+    const currentUser = userRef.current
+    setContactName(currentUser?.name || '')
+    setContactEmail(currentUser?.email || '')
+    setContactPhone(currentUser?.phone || '')
+    setSelectedSector('none')
+    setPreferredContactId('')
+    setSelectedFile(null)
+    setExtraEquipment(null)
+  }, [open])
 
   // Colaboradores exibidos no campo "Nome do contato":
   // sem setor -> todos os colaboradores da empresa; com setor -> somente os daquele setor.
