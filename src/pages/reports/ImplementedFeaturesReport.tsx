@@ -193,7 +193,7 @@ const FEATURE_CATEGORIES: FeatureCategory[] = [
         id: 'portal-4',
         title: 'Abertura rápida de chamados no Portal',
         description:
-          'Formulário simplificado com seleção em cascata de setor, contato por setor, categoria, assunto, descrição e upload de anexos.',
+          'Formulário simplificado com seleção em cascata de setor (escolha registrada no chamado), contato filtrado automaticamente aos colaboradores do setor escolhido (lista refeita a cada troca, padrão: usuário logado), categoria, assunto, descrição e upload de anexos.',
         tag: 'Self-Service',
       },
       {

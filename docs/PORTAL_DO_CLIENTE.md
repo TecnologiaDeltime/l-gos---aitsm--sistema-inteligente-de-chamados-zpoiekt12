@@ -87,6 +87,7 @@ _Observação:_ No Modo Suporte do Administrador, ao alternar a empresa no selet
 - Dialog `PortalNewTicketDialog` integrado ao topo da tela.
 - Amarra automaticamente o chamado à empresa (`company: companyId`) e unidade do cliente logado.
 - Permite informar tipo (Incidente, Requisição, Dúvida, Visita Técnica), categoria, urgência, equipamento do CMDB envolvido, título e descrição detalhada.
+- **Seleção de Setor e Contato em Cascata:** o seletor "Selecionar o Setor" registra a escolha normalmente (o chamado é criado com `department` do setor escolhido). Ao selecionar um setor, o campo "Nome do contato" lista SOMENTE os colaboradores do cadastro do cliente vinculados àquele setor (`client_contacts.departments` contém o setor); a lista é refeita a cada troca de setor, o valor selecionado anteriormente é limpo e o padrão permanece "quem está logado" (`logged_user`). Sem setor específico ("Geral"), a lista mostra todos os colaboradores da empresa. Se o setor não tiver colaboradores cadastrados, o contato permanece o usuário logado e um aviso orienta o cliente.
 - O chamado nasce com `source: "Portal"` e entra imediatamente na fila de atendimento com status "Novo".
 
 ### Módulo C: Aprovações dos Pontos Focais

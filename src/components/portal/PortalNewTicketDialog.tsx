@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useMemo, useRef } from 'react'
 import { PlusCircle, Paperclip, ShieldCheck, Building2, User, X, FileIcon } from 'lucide-react'
 import {
   Dialog,
@@ -73,7 +73,10 @@ export default function PortalNewTicketDialog({
   // Setores e Contatos da empresa
   const [departments, setDepartments] = useState<CompanyDepartmentRecord[]>([])
   const [contacts, setContacts] = useState<ClientContactRecord[]>([])
+  const [contactsLoading, setContactsLoading] = useState(false)
+  const [contactsLoadError, setContactsLoadError] = useState(false)
   const [selectedSector, setSelectedSector] = useState<string>('none')
+  const [preferredContactId, setPreferredContactId] = useState<string>('')
   const [contactName, setContactName] = useState<string>(user?.name || '')
   const [contactEmail, setContactEmail] = useState<string>(user?.email || '')
   const [contactPhone, setContactPhone] = useState<string>(user?.phone || '')
@@ -89,38 +92,46 @@ export default function PortalNewTicketDialog({
         .then((depts) => setDepartments(depts))
         .catch((e) => console.warn('Erro ao carregar setores:', e))
 
+      setContactsLoading(true)
+      setContactsLoadError(false)
       getClientContacts(companyId)
-        .then((ctts) => setContacts(ctts))
-        .catch((e) => console.warn('Erro ao carregar contatos da empresa:', e))
+        .then((ctts) => {
+          setContacts(ctts)
+          setContactsLoadError(false)
+        })
+        .catch((e) => {
+          console.warn('Erro ao carregar contatos da empresa:', e)
+          setContacts([])
+          setContactsLoadError(true)
+        })
+        .finally(() => setContactsLoading(false))
 
       // Reseta para o usuário logado
       setContactName(user?.name || '')
       setContactEmail(user?.email || '')
       setContactPhone(user?.phone || '')
       setSelectedSector('none')
+      setPreferredContactId('')
       setSelectedFile(null)
     }
   }, [open, companyId, user])
 
-  // Colaboradores filtrados por setor
-  const collaboratorsForSector = contacts.filter((c) => {
-    if (selectedSector === 'none' || !selectedSector) return true
-    // Se o contato tiver departamentos vinculados, confere
-    if (c.departments && Array.isArray(c.departments)) {
-      return c.departments.includes(selectedSector)
-    }
-    return true
-  })
+  // Colaboradores exibidos no campo "Nome do contato":
+  // sem setor -> todos os colaboradores da empresa; com setor -> somente os daquele setor.
+  const collaboratorsForSector = useMemo(() => {
+    if (selectedSector === 'none' || !selectedSector) return contacts
+    return contacts.filter((c) => (c.departments || []).includes(selectedSector))
+  }, [contacts, selectedSector])
 
-  // Ao selecionar um setor
+  // Ao selecionar um setor: grava a escolha e refaz a lista de contatos do setor
   const handleSelectSector = (sectorId: string) => {
     setSelectedSector(sectorId)
-    // Se o setor tiver colaboradores, o usuário pode selecionar ou manter
-    // Caso haja apenas 1 colaborador daquele setor, pode sugerir, caso contrário mantém
+    setPreferredContactId('')
   }
 
-  // Ao selecionar um contato da lista do setor
+  // Ao selecionar um contato da lista
   const handleSelectContactOption = (contactId: string) => {
+    setPreferredContactId(contactId)
     if (contactId === 'logged_user') {
       setContactName(user.name || '')
       setContactEmail(user.email || '')
@@ -213,6 +224,7 @@ export default function PortalNewTicketDialog({
       setType('Incidente')
       setSelectedAsset('')
       setSelectedSector('none')
+      setPreferredContactId('')
       setSelectedFile(null)
       if (fileInputRef.current) fileInputRef.current.value = ''
 
@@ -318,38 +330,46 @@ export default function PortalNewTicketDialog({
                 </span>
               </label>
 
-              {/* Se há colaboradores cadastrados no setor, permite selecionar da lista ou digitar */}
-              {collaboratorsForSector.length > 0 ? (
-                <div className="space-y-1.5">
-                  <Select onValueChange={handleSelectContactOption}>
-                    <SelectTrigger className="text-xs h-9">
-                      <SelectValue placeholder="Escolher colaborador do setor..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="logged_user">{user.name} (Meu usuário logado)</SelectItem>
-                      {collaboratorsForSector.map((collab) => (
-                        <SelectItem key={collab.id} value={collab.id}>
-                          {collab.full_name} {collab.email ? `(${collab.email})` : ''}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <Input
-                    placeholder="Nome do colaborador / contato"
-                    value={contactName}
-                    onChange={(e) => setContactName(e.target.value)}
-                    className="text-xs h-8"
-                  />
-                </div>
-              ) : (
+              <div className="space-y-1.5">
+                <Select value={preferredContactId} onValueChange={handleSelectContactOption}>
+                  <SelectTrigger className="text-xs h-9">
+                    <SelectValue
+                      placeholder={
+                        selectedSector !== 'none' &&
+                        !contactsLoading &&
+                        collaboratorsForSector.length === 0
+                          ? 'Nenhum colaborador no setor — contato será o usuário logado'
+                          : 'Escolher colaborador do setor...'
+                      }
+                    />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="logged_user">{user.name} (Meu usuário logado)</SelectItem>
+                    {collaboratorsForSector.map((collab) => (
+                      <SelectItem key={collab.id} value={collab.id}>
+                        {collab.full_name} {collab.email ? `(${collab.email})` : ''}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
                 <Input
-                  required
-                  placeholder="Nome do contato para este chamado"
+                  placeholder="Nome do colaborador / contato"
                   value={contactName}
                   onChange={(e) => setContactName(e.target.value)}
-                  className="text-xs h-9"
+                  className="text-xs h-8"
                 />
-              )}
+
+                {selectedSector !== 'none' &&
+                  !contactsLoading &&
+                  collaboratorsForSector.length === 0 && (
+                    <p className="text-[10px] text-amber-600 dark:text-amber-400 text-center leading-snug">
+                      {contactsLoadError
+                        ? 'Não foi possível carregar os colaboradores deste setor.'
+                        : 'Nenhum colaborador cadastrado neste setor — o contato será o usuário logado.'}
+                    </p>
+                  )}
+              </div>
             </div>
           </div>
 
