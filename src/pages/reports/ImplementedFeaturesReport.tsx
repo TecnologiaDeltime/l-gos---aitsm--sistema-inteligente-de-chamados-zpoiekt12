@@ -245,6 +245,20 @@ const FEATURE_CATEGORIES: FeatureCategory[] = [
           'Acesso administrativo ao Portal do Cliente sem necessidade de senha, permitindo alternar e simular a experiência de qualquer empresa cliente em tempo real.',
         tag: 'Administração / Suporte',
       },
+      {
+        id: 'portal-11',
+        title: 'Formulário de chamados do Portal refinado (seletor de setor definitivo)',
+        description:
+          'Correção definitiva do seletor de setor (componente 100% controlado, sobrevive a re-renders), contato filtrado automaticamente pelos colaboradores do setor escolhido e reordenação do formulário: Setor → Nome do contato → Equipamento → Tipo da solicitação.',
+        tag: 'UX / Correção',
+      },
+      {
+        id: 'portal-12',
+        title: 'Atalho "Meu chamado" no Portal com permissão dedicada',
+        description:
+          'Botão que preenche automaticamente setor, contato e equipamento com os dados do usuário logado. O equipamento é reconhecido pelo vínculo (ID) ou pelo nome do responsável (inclusive na coleção de equipamentos da empresa), e não quebra quando o usuário não tem ativo. Item próprio "Atalho Meu chamado (Portal)" na matriz de Perfis de Acesso com os 3 níveis (Visualizar/Editar/Configurar).',
+        tag: 'Automação / Permissões',
+      },
     ],
   },
   {

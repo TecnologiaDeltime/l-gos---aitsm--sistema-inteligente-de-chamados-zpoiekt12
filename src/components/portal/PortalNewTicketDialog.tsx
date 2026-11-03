@@ -33,7 +33,9 @@ import { createTicket } from '@/services/tickets'
 import { getCompanyDepartments, CompanyDepartmentRecord } from '@/services/companies'
 import { getClientContacts, ClientContactRecord } from '@/services/client-contacts'
 import { uploadAttachment } from '@/services/attachments'
+import { getEquipments, EquipmentRecord } from '@/services/equipments'
 import { useToast } from '@/hooks/use-toast'
+import { usePermissions } from '@/hooks/use-permissions'
 
 interface PortalNewTicketDialogProps {
   open: boolean
@@ -46,6 +48,7 @@ interface PortalNewTicketDialogProps {
     email: string
     unit?: string
     phone?: string
+    company_id?: string
   }
   assets: ConfigurationItemRecord[]
   initialAssetId?: string
@@ -63,6 +66,9 @@ export default function PortalNewTicketDialog({
   onSuccess,
 }: PortalNewTicketDialogProps) {
   const { toast } = useToast()
+  const { canView } = usePermissions()
+  // Guard do catálogo de permissões: item "Atalho Meu chamado (Portal)" — nível Visualizar exibe o botão
+  const canUseMyTicketShortcut = canView('tickets.tickets_portal_meu_chamado')
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const [title, setTitle] = useState('')
@@ -90,6 +96,10 @@ export default function PortalNewTicketDialog({
   // Arquivo anexo vinculado
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [submitting, setSubmitting] = useState(false)
+
+  // Equipamento localizado na coleção equipments que não consta nos assets (configuration_items):
+  // é oferecido como opção extra no seletor e enviado no campo "equipment" do chamado.
+  const [extraEquipment, setExtraEquipment] = useState<EquipmentRecord | null>(null)
 
   // Carrega setores e colaboradores da empresa
   useEffect(() => {
@@ -119,6 +129,8 @@ export default function PortalNewTicketDialog({
       setSelectedSector('none')
       setPreferredContactId('')
       setSelectedFile(null)
+      setExtraEquipment(null)
+      setSelectedAsset(initialAssetId || 'none')
     }
   }, [open, companyId, user])
 
@@ -154,24 +166,63 @@ export default function PortalNewTicketDialog({
   }
 
   // Botão "Meu chamado": preenche automaticamente os dados do usuário logado
-  const handleAutoFillMyTicket = () => {
+  const handleAutoFillMyTicket = async () => {
     setSelectedSector('none')
     setPreferredContactId('logged_user')
     setContactName(user.name || '')
     setContactEmail(user.email || '')
     setContactPhone(user.phone || '')
 
-    // Equipamento/ativo vinculado ao próprio usuário, se houver
-    const myAsset =
-      assets.find(
-        (a) =>
-          (a as any).responsible_user === user.id ||
-          (a as any).custodian === user.id ||
-          (a as any).owner === user.id ||
-          (a as any).user === user.id,
-      ) || assets.find((a) => (a as any).unit && (a as any).unit === user.unit)
-    setSelectedAsset(myAsset ? myAsset.id : 'none')
+    // Normaliza texto para comparação tolerante (nomes em equipments.responsible_user são TEXTO)
+    const normalize = (v?: string | null) =>
+      (v || '')
+        .toString()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase()
+        .replace(/\s+/g, ' ')
+        .trim()
 
+    const userName = normalize(user.name)
+    const matchesUser = (responsible?: string | null): boolean => {
+      if (!responsible) return false
+      const value = responsible.toString().trim()
+      if (!value) return false
+      // Casar por ID do usuário OU por nome (campo texto do cadastro de equipamentos)
+      return value === user.id || normalize(value) === userName
+    }
+
+    // 1) Equipamento/ativo vinculado ao próprio usuário nos assets do CMDB (configuration_items),
+    //    comparando por ID e por nome, com fallback pela unidade.
+    const myAsset =
+      assets.find((a) => matchesUser((a as any).responsible_user)) ||
+      assets.find((a) => matchesUser((a as any).custodian)) ||
+      assets.find((a) => matchesUser((a as any).owner)) ||
+      assets.find((a) => matchesUser((a as any).user)) ||
+      assets.find((a) => (a as any).unit && (a as any).unit === user.unit)
+
+    if (myAsset) {
+      setSelectedAsset(myAsset.id)
+      return
+    }
+
+    // 2) Fallback: busca na coleção equipments da empresa (responsible_user/owner são TEXTO com o nome)
+    try {
+      const companyIdToSearch = user.company_id || companyId
+      const equipments = companyIdToSearch
+        ? await getEquipments({ company: companyIdToSearch })
+        : await getEquipments()
+      const myEquipment = equipments.find(
+        (eq) => matchesUser(eq.responsible_user) || matchesUser(eq.owner),
+      )
+      if (myEquipment) {
+        setExtraEquipment(myEquipment)
+        setSelectedAsset(myEquipment.id)
+      }
+    } catch (e) {
+      // Sem equipamento localizado: mantém o campo vazio normalmente
+      console.warn('Erro ao buscar equipamento do usuário em equipments:', e)
+    }
     toast({
       title: 'Dados preenchidos',
       description: 'Setor, contato e equipamento foram preenchidos com os seus dados.',
@@ -227,7 +278,12 @@ export default function PortalNewTicketDialog({
         requester_phone: contactPhone.trim() || user.phone || undefined,
         source: 'Portal',
         sla_status: 'Dentro do Prazo',
-        configuration_item: selectedAsset && selectedAsset !== 'none' ? selectedAsset : undefined,
+        configuration_item:
+          selectedAsset && selectedAsset !== 'none' && assets.some((a) => a.id === selectedAsset)
+            ? selectedAsset
+            : undefined,
+        equipment:
+          extraEquipment && selectedAsset === extraEquipment.id ? extraEquipment.id : undefined,
       } as any)
 
       // Se houver anexo, faz o upload vinculado ao chamado criado
@@ -254,6 +310,7 @@ export default function PortalNewTicketDialog({
       setDescription('')
       setType('Incidente')
       setSelectedAsset('none')
+      setExtraEquipment(null)
       setSelectedSector('none')
       setPreferredContactId('')
       setSelectedFile(null)
@@ -287,19 +344,21 @@ export default function PortalNewTicketDialog({
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4 pt-1">
-          {/* Atalho: Meu chamado */}
-          <div className="flex justify-end">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={handleAutoFillMyTicket}
-              className="text-xs gap-1.5 h-8 border-amber-500/50 text-amber-700 dark:text-amber-400 hover:bg-amber-500/10"
-            >
-              <UserCheck className="h-3.5 w-3.5" />
-              Meu chamado
-            </Button>
-          </div>
+          {/* Atalho: Meu chamado (visível apenas com a permissão "Atalho Meu chamado (Portal)" concedida) */}
+          {canUseMyTicketShortcut && (
+            <div className="flex justify-end">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleAutoFillMyTicket}
+                className="text-xs gap-1.5 h-8 border-amber-500/50 text-amber-700 dark:text-amber-400 hover:bg-amber-500/10"
+              >
+                <UserCheck className="h-3.5 w-3.5" />
+                Meu chamado
+              </Button>
+            </div>
+          )}
 
           {/* Linha 1: Selecionar o Setor e Nome do Contato */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -397,6 +456,12 @@ export default function PortalNewTicketDialog({
                       {a.name} {a.serial_number ? `(${a.serial_number})` : ''}
                     </SelectItem>
                   ))}
+                  {extraEquipment && !assets.some((a) => a.id === extraEquipment.id) && (
+                    <SelectItem key={extraEquipment.id} value={extraEquipment.id}>
+                      {extraEquipment.name}{' '}
+                      {extraEquipment.serial_number ? `(${extraEquipment.serial_number})` : ''}
+                    </SelectItem>
+                  )}
                 </SelectContent>
               </Select>
             </div>

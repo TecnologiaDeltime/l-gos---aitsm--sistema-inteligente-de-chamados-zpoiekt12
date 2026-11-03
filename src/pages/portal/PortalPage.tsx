@@ -1040,6 +1040,7 @@ export default function PortalPage() {
           email: user?.email || '',
           unit: user?.unit,
           phone: user?.phone,
+          company_id: user?.company || effectiveCompanyId,
         }}
         assets={data?.configurationItems || []}
         initialAssetId={ticketInitialAssetId}

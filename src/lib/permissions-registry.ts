@@ -73,6 +73,12 @@ const BASE_SYSTEM_MODULES: GranularModuleDefinition[] = [
         path: '/chamados/novo',
       },
       {
+        key: 'tickets_portal_meu_chamado',
+        label: 'Atalho Meu chamado (Portal)',
+        description:
+          'Atalho no formulário de abertura de chamados do Portal do Cliente que preenche automaticamente setor, contato e equipamento com os dados do usuário logado',
+      },
+      {
         key: 'tickets_scheduled',
         label: 'Tickets Programados',
         description: 'Chamados recorrentes agendados automaticamente',
