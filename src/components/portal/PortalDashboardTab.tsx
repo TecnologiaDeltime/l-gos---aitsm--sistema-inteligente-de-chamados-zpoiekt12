@@ -43,6 +43,7 @@ import {
   PortalTopActivity,
   PortalTopRequester,
 } from '@/services/client-portal-dashboard'
+import { formatHours } from '@/lib/duration'
 
 interface PortalDashboardTabProps {
   metrics: PortalDashboardMetrics | null
@@ -420,15 +421,15 @@ export default function PortalDashboardTab({
             </div>
             <div className="flex items-baseline justify-between mt-1">
               <span className="text-2xl sm:text-3xl font-extrabold font-mono text-amber-600 dark:text-amber-400">
-                {metrics?.currentMonthConsumedHours || 0}h
+                {formatHours(metrics?.currentMonthConsumedHours || 0)}
               </span>
               <span className="text-xs text-muted-foreground">
-                de {metrics?.currentMonthContractedHours || 0}h
+                de {formatHours(metrics?.currentMonthContractedHours || 0)}
               </span>
             </div>
           </CardHeader>
           <CardContent className="p-4 pt-0 text-[11px] text-muted-foreground flex items-center justify-between border-t border-border/40 mt-2">
-            <span>Saldo: {metrics?.currentMonthBalanceHours || 0}h</span>
+            <span>Saldo: {formatHours(metrics?.currentMonthBalanceHours || 0)}</span>
             <span className="text-amber-500 flex items-center font-semibold gap-0.5">
               Extrato <ArrowUpRight className="h-3 w-3" />
             </span>
@@ -453,7 +454,7 @@ export default function PortalDashboardTab({
               </span>
               <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-0.5">
                 <span className="font-mono font-bold text-amber-500">
-                  {topSector ? `${topSector.hours}h` : '0h'}
+                  {topSector ? formatHours(topSector.hours) : '00:00:00'}
                 </span>
                 <span>• {topSector?.ticketCount || 0} chamado(s)</span>
               </div>
@@ -531,7 +532,7 @@ export default function PortalDashboardTab({
                           <div className="rounded-lg border bg-popover p-2.5 text-xs shadow-md space-y-1 text-popover-foreground">
                             <p className="font-bold text-sm text-foreground">{d.fullName}</p>
                             <p className="text-amber-500 font-semibold font-mono">
-                              Horas Consumidas: {d.Horas}h ({d.percent}%)
+                              Horas Consumidas: {formatHours(d.Horas)} ({d.percent}%)
                             </p>
                             <p className="text-muted-foreground">
                               Chamados Registrados: {d.Chamados}
@@ -551,7 +552,7 @@ export default function PortalDashboardTab({
                       <LabelList
                         dataKey="Horas"
                         position="top"
-                        formatter={(val: any) => (val > 0 ? `${val}h` : '')}
+                        formatter={(val: any) => (val > 0 ? formatHours(val) : '')}
                         style={{ fontSize: '10px', fill: 'currentColor', fontWeight: 600 }}
                       />
                       {sectorChartData.map((item, idx) => (
@@ -624,12 +625,14 @@ export default function PortalDashboardTab({
                           <div className="rounded-lg border bg-popover p-2.5 text-xs shadow-md space-y-1 text-popover-foreground">
                             <p className="font-bold text-sm text-foreground">{d.name}</p>
                             <p className="text-amber-500 font-semibold font-mono">
-                              Consumidas: {d.Consumidas}h
+                              Consumidas: {formatHours(d.Consumidas)}
                             </p>
                             <p className="text-stone-400 font-semibold font-mono">
-                              Contratadas: {d.Contratadas}h
+                              Contratadas: {formatHours(d.Contratadas)}
                             </p>
-                            <p className="text-emerald-500 font-mono">Saldo: {d.Saldo}h</p>
+                            <p className="text-emerald-500 font-mono">
+                              Saldo: {formatHours(d.Saldo)}
+                            </p>
                             <p className="text-muted-foreground pt-1 border-t text-[11px]">
                               Chamados: {d.Abertos} abertos / {d.Fechados} fechados
                             </p>
@@ -648,7 +651,7 @@ export default function PortalDashboardTab({
                       <LabelList
                         dataKey="Contratadas"
                         position="top"
-                        formatter={(val: any) => (val > 0 ? `${val}h` : '')}
+                        formatter={(val: any) => (val > 0 ? formatHours(val) : '')}
                         style={{ fontSize: '10px', fill: 'currentColor', fontWeight: 600 }}
                       />
                     </Bar>
@@ -662,7 +665,7 @@ export default function PortalDashboardTab({
                       <LabelList
                         dataKey="Consumidas"
                         position="top"
-                        formatter={(val: any) => (val > 0 ? `${val}h` : '')}
+                        formatter={(val: any) => (val > 0 ? formatHours(val) : '')}
                         style={{ fontSize: '10px', fill: 'currentColor', fontWeight: 600 }}
                       />
                     </Bar>
@@ -675,7 +678,7 @@ export default function PortalDashboardTab({
             <div className="mt-2 pt-2 border-t text-[11px] text-muted-foreground flex items-center justify-between">
               <span>Série temporal dos últimos 3 meses consolidados</span>
               <span className="font-mono text-xs text-foreground">
-                Mês corrente: {metrics?.currentMonthConsumedHours || 0}h utilizadas
+                Mês corrente: {formatHours(metrics?.currentMonthConsumedHours || 0)} utilizadas
               </span>
             </div>
           </CardContent>
@@ -741,7 +744,7 @@ export default function PortalDashboardTab({
                           </Badge>
                         </td>
                         <td className="p-2.5 text-right font-mono text-amber-600 dark:text-amber-400 font-semibold">
-                          {act.hours > 0 ? `${act.hours}h` : '—'}
+                          {act.hours > 0 ? formatHours(act.hours) : '—'}
                         </td>
                       </tr>
                     ))}
@@ -812,7 +815,7 @@ export default function PortalDashboardTab({
                           </Badge>
                         </td>
                         <td className="p-2.5 text-right font-mono text-amber-600 dark:text-amber-400 font-semibold">
-                          {req.hours > 0 ? `${req.hours}h` : '—'}
+                          {req.hours > 0 ? formatHours(req.hours) : '—'}
                         </td>
                       </tr>
                     ))}

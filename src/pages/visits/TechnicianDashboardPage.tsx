@@ -900,12 +900,10 @@ export default function TechnicianDashboardPage() {
           </CardHeader>
           <CardContent className="pt-2">
             <div className="flex items-baseline gap-3">
-              <span className="text-3xl font-extrabold tracking-tight text-slate-900 dark:text-slate-100">
+              <span className="text-3xl font-extrabold tracking-tight font-mono text-slate-900 dark:text-slate-100">
                 {formatMinutes(avgResolutionMinutes)}
               </span>
-              <span className="text-xs text-slate-500">
-                ({(avgResolutionMinutes / 60).toFixed(1)}h para solucionar)
-              </span>
+              <span className="text-xs text-slate-500">(tempo médio para solucionar)</span>
             </div>
             <p className="text-xs text-slate-500 mt-2">
               Calculado sobre {filteredResolvedTickets.length} chamado(s) solucionados no período.

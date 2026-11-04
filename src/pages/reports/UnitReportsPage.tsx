@@ -16,6 +16,7 @@ import { getCompanies, CompanyRecord } from '@/services/companies'
 import { getCompanyUnitsByCompany, CompanyUnitRecord } from '@/services/company-units'
 import { getTickets, TicketRecord } from '@/services/tickets'
 import { getTimeEntriesByFilter, type TimeEntryRecord } from '@/services/time_entries'
+import { formatMinutes } from '@/lib/duration'
 
 export default function UnitReportsPage() {
   const permissions = usePermissions()
@@ -83,6 +84,7 @@ export default function UnitReportsPage() {
         : 0
 
     return {
+      totalMinutes,
       totalHours,
       openCount: openTickets.length,
       resolvedCount: resolvedTickets.length,
@@ -203,10 +205,13 @@ export default function UnitReportsPage() {
               <CardHeader className="pb-2">
                 <CardTitle className="flex items-center gap-1.5 text-xs">
                   <Clock className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" /> Horas
+                  (HH:MM:SS)
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-xl font-bold">{reportData.totalHours.toFixed(1)}h</p>
+                <p className="text-xl font-bold font-mono">
+                  {formatMinutes(reportData.totalMinutes)}
+                </p>
               </CardContent>
             </Card>
             <Card>
@@ -252,11 +257,13 @@ export default function UnitReportsPage() {
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="flex items-center gap-1.5 text-xs">
-                  <Timer className="h-3.5 w-3.5 text-purple-600" /> Resp. (min)
+                  <Timer className="h-3.5 w-3.5 text-purple-600" /> Resp. (HH:MM:SS)
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-xl font-bold">{reportData.avgResponse.toFixed(0)}</p>
+                <p className="text-xl font-bold font-mono">
+                  {formatMinutes(reportData.avgResponse)}
+                </p>
               </CardContent>
             </Card>
           </div>

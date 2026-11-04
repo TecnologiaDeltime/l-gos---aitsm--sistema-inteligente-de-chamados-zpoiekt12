@@ -455,7 +455,7 @@ export default function PortalReportsTab({
                         Horas Contratadas
                       </span>
                       <span className="text-lg font-bold font-mono text-foreground">
-                        {Number(viewingReport.report_data.totalContractedHours || 0).toFixed(1)}h
+                        {formatHours(Number(viewingReport.report_data.totalContractedHours || 0))}
                       </span>
                     </div>
                     <div className="p-3 rounded-lg border bg-muted/20">
@@ -463,7 +463,7 @@ export default function PortalReportsTab({
                         Horas Consumidas
                       </span>
                       <span className="text-lg font-bold font-mono text-amber-600 dark:text-amber-400">
-                        {Number(viewingReport.report_data.totalUsedHours || 0).toFixed(1)}h
+                        {formatHours(Number(viewingReport.report_data.totalUsedHours || 0))}
                       </span>
                     </div>
                     <div className="p-3 rounded-lg border bg-muted/20">
@@ -471,7 +471,7 @@ export default function PortalReportsTab({
                         Saldo Contratual
                       </span>
                       <span className="text-lg font-bold font-mono text-foreground">
-                        {Number(viewingReport.report_data.totalBalanceHours || 0).toFixed(1)}h
+                        {formatHours(Number(viewingReport.report_data.totalBalanceHours || 0))}
                       </span>
                     </div>
                     <div className="p-3 rounded-lg border bg-muted/20">
@@ -505,7 +505,7 @@ export default function PortalReportsTab({
                                   <td className="p-2 font-medium text-foreground">{sec.name}</td>
                                   <td className="p-2 text-right font-mono">{sec.ticketCount}</td>
                                   <td className="p-2 text-right font-mono font-bold text-amber-600 dark:text-amber-400">
-                                    {Number(sec.usedHours || 0).toFixed(1)}h
+                                    {formatHours(Number(sec.usedHours || 0))}
                                   </td>
                                   <td className="p-2 text-right font-mono">{sec.percentTotal}%</td>
                                 </tr>
@@ -544,7 +544,7 @@ export default function PortalReportsTab({
                                     </td>
                                     <td className="p-2 text-right font-mono">{act.ticketCount}</td>
                                     <td className="p-2 text-right font-mono font-bold text-amber-600 dark:text-amber-400">
-                                      {Number(act.usedHours || 0).toFixed(1)}h
+                                      {formatHours(Number(act.usedHours || 0))}
                                     </td>
                                   </tr>
                                 ))}

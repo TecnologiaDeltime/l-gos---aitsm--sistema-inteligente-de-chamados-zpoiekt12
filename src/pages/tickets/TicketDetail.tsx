@@ -106,7 +106,7 @@ import { computeSlaResponseStatus, computeSlaSolutionStatus } from '@/lib/sla-st
 import { VisitDialog } from '@/components/VisitDialog'
 import { SlaPauseDialog, STATUS_BY_REASON } from '@/components/SlaPauseDialog'
 import { AccompanimentDialog } from '@/components/AccompanimentDialog'
-import { formatMinutes } from '@/lib/duration'
+import { formatMinutes, formatSeconds } from '@/lib/duration'
 import {
   handleTimeSpentMask,
   handleTimeSpentKeyDown,
@@ -577,10 +577,7 @@ export default function TicketDetail({
         (res.response_met ? 'Em conformidade' : 'Fora de conformidade')
       let respMsg = 'Contando cada segundo para Horas Trabalhadas.'
       if (respTimeSec > 0) {
-        const rH = Math.floor(respTimeSec / 3600)
-        const rM = Math.floor((respTimeSec % 3600) / 60)
-        const rS = respTimeSec % 60
-        const formattedResp = `${rH > 0 ? `${rH}h ` : ''}${rM > 0 || rH > 0 ? `${rM}min ` : ''}${rS}s`
+        const formattedResp = formatSeconds(respTimeSec)
         respMsg = `Tempo de resposta: ${formattedResp} — SLA Resposta parado: ${compliance}.`
       }
       toast({
@@ -1539,10 +1536,10 @@ export default function TicketDetail({
                   <span className="text-[11px] text-muted-foreground block font-medium">
                     Tempo Total em Pausa
                   </span>
-                  <span className="font-semibold text-foreground">
+                  <span className="font-semibold text-foreground font-mono">
                     {ticket.sla_pause_total_minutes
-                      ? `${ticket.sla_pause_total_minutes} min`
-                      : '0 min'}
+                      ? formatMinutes(ticket.sla_pause_total_minutes)
+                      : '00:00:00'}
                   </span>
                   <p className="text-[10px] text-muted-foreground">
                     Prorrogado no prazo de solução
@@ -1576,9 +1573,9 @@ export default function TicketDetail({
                           {pause.resumed_at ? (
                             <Badge
                               variant="outline"
-                              className="bg-emerald-50 text-emerald-700 border-emerald-300 dark:bg-emerald-950 dark:text-emerald-300"
+                              className="bg-emerald-50 text-emerald-700 border-emerald-300 dark:bg-emerald-950 dark:text-emerald-300 font-mono"
                             >
-                              Retomado ({pause.duration_minutes || 0} min)
+                              Retomado ({formatMinutes(pause.duration_minutes || 0)})
                             </Badge>
                           ) : (
                             <Badge
@@ -1849,13 +1846,13 @@ export default function TicketDetail({
                   <span className="text-muted-foreground">
                     Resp:{' '}
                     {categoryData.sla_response_minutes
-                      ? `${categoryData.sla_response_minutes}min`
+                      ? formatMinutes(categoryData.sla_response_minutes)
                       : 'Não definido'}
                   </span>
                   <span className="text-muted-foreground">
                     Sol:{' '}
                     {categoryData.sla_solution_minutes
-                      ? `${categoryData.sla_solution_minutes}min`
+                      ? formatMinutes(categoryData.sla_solution_minutes)
                       : 'Não definido'}
                   </span>
                 </div>
