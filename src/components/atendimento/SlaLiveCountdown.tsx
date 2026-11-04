@@ -18,10 +18,8 @@ function formatDuration(diffMs: number) {
 
   const pad = (n: number) => n.toString().padStart(2, '0')
 
-  if (hours > 0) {
-    return `${isNegative ? '-' : ''}${hours}h ${pad(minutes)}m ${pad(seconds)}s`
-  }
-  return `${isNegative ? '-' : ''}${pad(minutes)}:${pad(seconds)}`
+  // Padrão do sistema: HH:MM:SS (ex.: 00:00:00)
+  return `${isNegative ? '-' : ''}${pad(hours)}:${pad(minutes)}:${pad(seconds)}`
 }
 
 export function SlaLiveCountdown({ label, deadline, completedAt, compact = false }: SlaTimerProps) {

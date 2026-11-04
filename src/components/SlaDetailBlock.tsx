@@ -1,5 +1,6 @@
 import { Clock, PauseCircle, AlertTriangle, CheckCircle2, XCircle, MinusCircle } from 'lucide-react'
 import { formatRemainingTime, formatDeadline } from '@/lib/sla-status'
+import { formatSeconds, formatMinutes } from '@/lib/duration'
 
 interface SlaDetailBlockProps {
   type: 'response' | 'solution'
@@ -94,23 +95,15 @@ export function SlaDetailBlock({
   // Cálculo do tempo decorrido
   let elapsedText = ''
   if (type === 'response' && responseTimeSeconds !== undefined && responseTimeSeconds > 0) {
-    const rH = Math.floor(responseTimeSeconds / 3600)
-    const rM = Math.floor((responseTimeSeconds % 3600) / 60)
-    const rS = responseTimeSeconds % 60
-    const parts: string[] = []
-    if (rH > 0) parts.push(`${rH}h`)
-    if (rM > 0 || rH > 0) parts.push(`${rM}min`)
-    parts.push(`${rS}s`)
-    elapsedText = `Tempo de Resposta: ${parts.join(' ')}`
+    // Padrão do sistema: HH:MM:SS
+    elapsedText = `Tempo de Resposta: ${formatSeconds(responseTimeSeconds)}`
   } else if (createdAt) {
     const startMs = new Date(createdAt).getTime()
     const endMs = completedAt ? new Date(completedAt).getTime() : Date.now()
     const grossMinutes = Math.max(0, Math.floor((endMs - startMs) / 60000))
     const netMinutes =
       type === 'solution' ? Math.max(0, grossMinutes - (totalPauseMinutes || 0)) : grossMinutes
-    const hours = Math.floor(netMinutes / 60)
-    const mins = netMinutes % 60
-    elapsedText = hours > 0 ? `${hours}h ${mins}min decorridos` : `${mins}min decorridos`
+    elapsedText = `${formatMinutes(netMinutes)} decorridos`
   }
 
   return (
@@ -161,7 +154,9 @@ export function SlaDetailBlock({
             <span>{elapsedText}</span>
           )}
           {type === 'solution' && totalPauseMinutes > 0 && (
-            <span className="text-amber-600/90 font-medium">Pausas: {totalPauseMinutes}min</span>
+            <span className="text-amber-600/90 font-medium">
+              Pausas: {formatMinutes(totalPauseMinutes)}
+            </span>
           )}
           {startedAt && elapsedText && <span>{elapsedText}</span>}
         </div>

@@ -11,6 +11,15 @@ export function formatHours(hours: number | string | undefined | null): string {
 }
 
 /**
+ * Formata um valor em HORAS fracionadas (number) no formato HH:MM:SS.
+ * Alias semântico para formatHours, usado onde o dado de origem é "horas"
+ * (ex.: média histórica do Agente de Consumo, totais do relatório mensal).
+ */
+export function formatHoursToHHMMSS(hours: number | string | undefined | null): string {
+  return formatHours(hours)
+}
+
+/**
  * Formata um total de SEGUNDOS no formato HH:MM:SS.
  * Usado para exibição de saldos calculados a partir de segundos.
  */
@@ -69,4 +78,43 @@ export function parseDurationToSeconds(value: string | number | null | undefined
 export function parseDurationToHours(value: string | number | null | undefined): number | null {
   const seconds = parseDurationToSeconds(value)
   return seconds === null ? null : seconds / 3600
+}
+
+/**
+ * Converte um valor no formato HH:MM:SS (ou compatível) para MINUTOS.
+ * Usado onde o banco persiste minutos (ex.: sla_response_minutes das atividades).
+ * Retorna null quando vazio ou inválido.
+ */
+export function parseDurationToMinutes(value: string | number | null | undefined): number | null {
+  const seconds = parseDurationToSeconds(value)
+  return seconds === null ? null : seconds / 60
+}
+
+/**
+ * Máscara leve para inputs de duração no formato 00:00:00: aceita apenas
+ * dígitos (até 6) e reconstrói com dois pontos fixos.
+ */
+export function maskHHMMSSInput(raw: string): string {
+  const digits = raw.replace(/\D/g, '').slice(0, 6)
+  if (!digits) return ''
+  const hh = digits.slice(0, 2).padEnd(2, '0')
+  const mm = (digits.slice(2, 4) || '00').padEnd(2, '0')
+  const ss = (digits.slice(4, 6) || '00').padEnd(2, '0')
+  return `${hh}:${mm}:${ss}`
+}
+
+/**
+ * Validador para o formato 00:00:00 (horas:minutos:segundos).
+ * Retorna string vazia quando válido, ou a mensagem de erro.
+ */
+export function validateHHMMSS(value: string, required = false): string {
+  const v = (value || '').trim()
+  if (!v) return required ? 'Informe o valor no formato 00:00:00.' : ''
+  if (!/^\d{1,3}:\d{2}:\d{2}$/.test(v)) {
+    return 'Formato inválido. Use 00:00:00 (horas:minutos:segundos).'
+  }
+  const [h, m, s] = v.split(':').map(Number)
+  if (m > 59 || s > 59) return 'Minutos e segundos inválidos (máximo 59).'
+  if (required && h * 3600 + m * 60 + s <= 0) return 'O valor deve ser maior que 00:00:00.'
+  return ''
 }

@@ -22,7 +22,12 @@ import { getQueues, QueueRecord } from '@/services/queues'
 import { computePriority, IMPACT_VALUES, URGENCY_VALUES } from '@/lib/itil-matrix'
 import { PriorityBadge } from '@/components/PriorityBadge'
 import { useToast } from '@/hooks/use-toast'
-import { formatMinutes } from '@/lib/duration'
+import {
+  formatMinutes,
+  maskHHMMSSInput,
+  parseDurationToSeconds,
+  validateHHMMSS,
+} from '@/lib/duration'
 import { Users } from 'lucide-react'
 
 interface ActivityCatalogDialogProps {
@@ -55,6 +60,7 @@ export function ActivityCatalogDialog({
   const [slaSolution, setSlaSolution] = useState('')
   const [active, setActive] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [slaError, setSlaError] = useState('')
 
   useEffect(() => {
     getQueues()
@@ -72,12 +78,17 @@ export function ActivityCatalogDialog({
       setImpact(editingCategory?.impact || '')
       setUrgency(editingCategory?.urgency || '')
       setSlaResponse(
-        editingCategory?.sla_response_minutes ? String(editingCategory.sla_response_minutes) : '',
+        editingCategory?.sla_response_minutes
+          ? formatMinutes(editingCategory.sla_response_minutes)
+          : '',
       )
       setSlaSolution(
-        editingCategory?.sla_solution_minutes ? String(editingCategory.sla_solution_minutes) : '',
+        editingCategory?.sla_solution_minutes
+          ? formatMinutes(editingCategory.sla_solution_minutes)
+          : '',
       )
       setActive(editingCategory?.active ?? true)
+      setSlaError('')
     }
   }, [open, editingCategory, presetParent])
 
@@ -89,8 +100,27 @@ export function ActivityCatalogDialog({
       toast({ title: 'Nome é obrigatório', variant: 'destructive' })
       return
     }
-    const resp = slaResponse ? parseInt(slaResponse, 10) : undefined
-    const sol = slaSolution ? parseInt(slaSolution, 10) : undefined
+    const respSeconds = slaResponse ? parseDurationToSeconds(slaResponse) : null
+    const solSeconds = slaSolution ? parseDurationToSeconds(slaSolution) : null
+    // Banco persiste minutos (sla_response_minutes / sla_solution_minutes)
+    const resp = respSeconds !== null ? Math.round(respSeconds / 60) : undefined
+    const sol = solSeconds !== null ? Math.round(solSeconds / 60) : undefined
+    if (slaResponse && respSeconds === null) {
+      setSlaError('SLA Resposta inválida. Use o formato 00:00:00.')
+      return
+    }
+    if (slaSolution && solSeconds === null) {
+      setSlaError('SLA Solução inválida. Use o formato 00:00:00.')
+      return
+    }
+    const slaValidationError =
+      validateHHMMSS(slaResponse, isSub) || validateHHMMSS(slaSolution, isSub)
+    if (slaValidationError) {
+      setSlaError(slaValidationError)
+      toast({ title: slaValidationError, variant: 'destructive' })
+      return
+    }
+    setSlaError('')
 
     if (isSub) {
       if (!impact || !urgency) {
@@ -100,12 +130,18 @@ export function ActivityCatalogDialog({
         })
         return
       }
-      if (!resp || resp < 1) {
-        toast({ title: 'SLA Resposta deve ser um inteiro positivo', variant: 'destructive' })
+      if (!respSeconds || respSeconds < 60) {
+        toast({
+          title: 'SLA Resposta deve ser maior que 00:00:00',
+          variant: 'destructive',
+        })
         return
       }
-      if (!sol || sol < 1) {
-        toast({ title: 'SLA Solução deve ser um inteiro positivo', variant: 'destructive' })
+      if (!solSeconds || solSeconds < 60) {
+        toast({
+          title: 'SLA Solução deve ser maior que 00:00:00',
+          variant: 'destructive',
+        })
         return
       }
     }
@@ -292,32 +328,31 @@ export function ActivityCatalogDialog({
                 </p>
                 <div className="grid grid-cols-2 gap-3 pt-1">
                   <div className="space-y-1">
-                    <Label className="text-xs">SLA Resposta (minutos) *</Label>
+                    <Label className="text-xs">SLA Resposta *</Label>
                     <Input
-                      type="number"
-                      min={1}
                       value={slaResponse}
-                      onChange={(e) => setSlaResponse(e.target.value)}
-                      placeholder="30"
+                      onChange={(e) => setSlaResponse(maskHHMMSSInput(e.target.value))}
+                      placeholder="00:30:00"
+                      className="font-mono"
                     />
                     <span className="text-[10px] text-muted-foreground">
-                      Até Iniciar Atendimento
+                      Até Iniciar Atendimento (00:00:00)
                     </span>
                   </div>
                   <div className="space-y-1">
-                    <Label className="text-xs">SLA Solução (minutos) *</Label>
+                    <Label className="text-xs">SLA Solução *</Label>
                     <Input
-                      type="number"
-                      min={1}
                       value={slaSolution}
-                      onChange={(e) => setSlaSolution(e.target.value)}
-                      placeholder="240"
+                      onChange={(e) => setSlaSolution(maskHHMMSSInput(e.target.value))}
+                      placeholder="04:00:00"
+                      className="font-mono"
                     />
                     <span className="text-[10px] text-muted-foreground">
-                      Até a Resolução do Chamado
+                      Até a Resolução do Chamado (00:00:00)
                     </span>
                   </div>
                 </div>
+                {slaError && <p className="text-[11px] text-red-500">{slaError}</p>}
               </div>
             </>
           ) : (
@@ -336,23 +371,21 @@ export function ActivityCatalogDialog({
               </p>
               <div className="grid grid-cols-2 gap-3 pt-1">
                 <div className="space-y-1">
-                  <Label className="text-xs">SLA Resposta (min)</Label>
+                  <Label className="text-xs">SLA Resposta</Label>
                   <Input
-                    type="number"
-                    min={1}
                     value={slaResponse}
-                    onChange={(e) => setSlaResponse(e.target.value)}
-                    placeholder="Ex: 30"
+                    onChange={(e) => setSlaResponse(maskHHMMSSInput(e.target.value))}
+                    placeholder="00:30:00"
+                    className="font-mono"
                   />
                 </div>
                 <div className="space-y-1">
-                  <Label className="text-xs">SLA Solução (min)</Label>
+                  <Label className="text-xs">SLA Solução</Label>
                   <Input
-                    type="number"
-                    min={1}
                     value={slaSolution}
-                    onChange={(e) => setSlaSolution(e.target.value)}
-                    placeholder="Ex: 240"
+                    onChange={(e) => setSlaSolution(maskHHMMSSInput(e.target.value))}
+                    placeholder="04:00:00"
+                    className="font-mono"
                   />
                 </div>
               </div>

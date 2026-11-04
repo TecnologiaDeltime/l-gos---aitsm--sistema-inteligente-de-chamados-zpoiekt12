@@ -1,3 +1,5 @@
+import { formatSeconds } from '@/lib/duration'
+
 interface SlaTicketData {
   sla_paused?: boolean
   sla_response_deadline?: string
@@ -99,22 +101,9 @@ export function formatRemainingTime(deadline?: string): string {
   const diff = dl - now
 
   if (diff <= 0) {
-    const overdue = Math.abs(diff)
-    const days = Math.floor(overdue / 86400000)
-    const hours = Math.floor((overdue % 86400000) / 3600000)
-    const minutes = Math.floor((overdue % 3600000) / 60000)
-    if (days > 0) return `Vencido há ${days}d ${hours}h`
-    if (hours > 0) return `Vencido há ${hours}h ${minutes}min`
-    return `Vencido há ${minutes}min`
+    return `Vencido há ${formatSeconds(Math.abs(diff) / 1000)}`
   }
-
-  const days = Math.floor(diff / 86400000)
-  const hours = Math.floor((diff % 86400000) / 3600000)
-  const minutes = Math.floor((diff % 3600000) / 60000)
-
-  if (days > 0) return `${days}d ${hours}h restantes`
-  if (hours > 0) return `${hours}h ${minutes}min restantes`
-  return `${minutes}min restantes`
+  return `${formatSeconds(diff / 1000)} restantes`
 }
 
 export function formatDeadline(deadline?: string): string {

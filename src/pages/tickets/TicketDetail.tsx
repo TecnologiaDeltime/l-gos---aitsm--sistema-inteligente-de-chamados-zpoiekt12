@@ -169,7 +169,7 @@ export default function TicketDetail({
   const [contracts, setContracts] = useState<ContractRecord[]>([])
   const [timerRunning, setTimerRunning] = useState(false)
   const [timerStart, setTimerStart] = useState<Date | null>(null)
-  const [timerDisplay, setTimerDisplay] = useState('00:00')
+  const [timerDisplay, setTimerDisplay] = useState('00:00:00')
   const [deleteTarget, setDeleteTarget] = useState<any | null>(null)
   const [deleting, setDeleting] = useState(false)
   const [editTarget, setEditTarget] = useState<any | null>(null)
@@ -350,7 +350,8 @@ export default function TicketDetail({
       const elapsed = Math.floor((Date.now() - timerStart.getTime()) / 1000)
       const h = String(Math.floor(elapsed / 3600)).padStart(2, '0')
       const m = String(Math.floor((elapsed % 3600) / 60)).padStart(2, '0')
-      setTimerDisplay(`${h}:${m}`)
+      const s = String(elapsed % 60).padStart(2, '0')
+      setTimerDisplay(`${h}:${m}:${s}`)
     }, 1000)
     return () => clearInterval(interval)
   }, [timerRunning, timerStart])
@@ -400,22 +401,23 @@ export default function TicketDetail({
   const handleStartTimer = () => {
     setTimerStart(new Date())
     setTimerRunning(true)
-    setTimerDisplay('00:00')
+    setTimerDisplay('00:00:00')
   }
 
   const handleStopTimer = () => {
     if (!timerStart) return
-    const elapsed = Math.floor((Date.now() - timerStart.getTime()) / 60000)
-    const h = String(Math.min(99, Math.floor(elapsed / 60))).padStart(2, '0')
-    const m = String(elapsed % 60).padStart(2, '0')
-    setTimeSpent(`${h}:${m}`)
+    const elapsed = Math.floor((Date.now() - timerStart.getTime()) / 1000)
+    const h = String(Math.floor(elapsed / 3600)).padStart(2, '0')
+    const m = String(Math.floor((elapsed % 3600) / 60)).padStart(2, '0')
+    const s = String(elapsed % 60).padStart(2, '0')
+    setTimeSpent(`${h}:${m}:${s}`)
     setTimerRunning(false)
     setTimerStart(null)
-    setTimerDisplay('00:00')
+    setTimerDisplay('00:00:00')
     setTimeError('')
   }
 
-  // Máscara com dois pontos (:) fixos no formato 00:00
+  // Máscara com dois pontos (:) fixos no formato 00:00:00
   const handleTimeSpentChange = (rawInput: string) => {
     const formatted = handleTimeSpentMask(rawInput, timeSpent)
     setTimeSpent(formatted)
@@ -427,9 +429,11 @@ export default function TicketDetail({
   }
 
   const parseTimeToMinutes = (value: string): number => {
-    const match = value.trim().match(/^(\d{1,2}):(\d{2})$/)
+    const match = value.trim().match(/^(\d{1,3}):(\d{2}):(\d{2})$/)
     if (!match) return 0
-    return parseInt(match[1], 10) * 60 + parseInt(match[2], 10)
+    return Math.round(
+      (parseInt(match[1], 10) * 3600 + parseInt(match[2], 10) * 60 + parseInt(match[3], 10)) / 60,
+    )
   }
 
   const handleSendComment = async () => {
@@ -1211,11 +1215,11 @@ export default function TicketDetail({
                     onChange={(e) => setComment(e.target.value)}
                   />
                   <div className="space-y-1 max-w-sm">
-                    <Label className="text-xs text-muted-foreground">Tempo Gasto (00:00)</Label>
+                    <Label className="text-xs text-muted-foreground">Tempo Gasto (00:00:00)</Label>
                     <div className="flex gap-2 items-center">
                       <div className="relative flex items-center">
                         <Input
-                          placeholder="00:00"
+                          placeholder="00:00:00"
                           value={timeSpent}
                           onChange={(e) => handleTimeSpentChange(e.target.value)}
                           onKeyDown={(e) =>
@@ -1227,8 +1231,8 @@ export default function TicketDetail({
                               validateTimeSpent,
                             )
                           }
-                          maxLength={5}
-                          className="h-8 w-28 text-center font-mono text-sm tracking-wider"
+                          maxLength={8}
+                          className="h-8 w-32 text-center font-mono text-sm tracking-wider"
                         />
                       </div>
                       {timerRunning && (
@@ -1248,7 +1252,7 @@ export default function TicketDetail({
                       <p className="text-xs text-red-500">{timeError}</p>
                     ) : (
                       <p className="text-[11px] text-muted-foreground">
-                        Digite os dígitos das horas e minutos — os dois pontos ficam fixos (00:00).
+                        Digite os dígitos — os dois pontos ficam fixos (00:00:00).
                       </p>
                     )}
                   </div>

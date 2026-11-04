@@ -36,6 +36,7 @@ import {
   HelpCircle,
 } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
+import { formatHoursToHHMMSS } from '@/lib/duration'
 import { getCompanies, type CompanyRecord } from '@/services/companies'
 import {
   getAllClientConsumptionAgents,
@@ -443,14 +444,16 @@ export function ClientConsumptionAgentTab({
                       <div className="bg-slate-50 dark:bg-slate-800/60 p-2.5 rounded-lg border border-slate-100 dark:border-slate-800 text-center">
                         <p className="text-[11px] text-slate-500 font-medium">Média Aprendida</p>
                         <p className="text-sm font-bold text-slate-900 dark:text-slate-100">
-                          {item.averageHours > 0 ? `${item.averageHours.toFixed(1)}h/mês` : '—'}
+                          {item.averageHours > 0
+                            ? formatHoursToHHMMSS(item.averageHours) + '/mês'
+                            : '—'}
                         </p>
                       </div>
 
                       <div className="bg-slate-50 dark:bg-slate-800/60 p-2.5 rounded-lg border border-slate-100 dark:border-slate-800 text-center">
                         <p className="text-[11px] text-slate-500 font-medium">Mês Atual</p>
                         <p className="text-sm font-bold text-slate-900 dark:text-slate-100">
-                          {item.currentHours.toFixed(1)}h
+                          {formatHoursToHHMMSS(item.currentHours)}
                         </p>
                       </div>
 

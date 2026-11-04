@@ -23,6 +23,7 @@ import {
   RefreshCw,
 } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
+import { formatHoursToHHMMSS } from '@/lib/duration'
 import {
   getClientConsumptionAgentByCompany,
   saveClientConsumptionAgent,
@@ -179,7 +180,7 @@ export function ClientConsumptionSection({
                 <p className="text-xs text-slate-500 font-medium">Média Histórica Aprendida</p>
                 <p className="text-lg font-bold text-slate-900 dark:text-slate-100">
                   {agent && agent.learned_average_hours > 0
-                    ? `${agent.learned_average_hours.toFixed(1)}h / mês`
+                    ? `${formatHoursToHHMMSS(agent.learned_average_hours)} / mês`
                     : 'Aguardando avaliação'}
                 </p>
                 <p className="text-[11px] text-slate-400 mt-1 flex items-center gap-1">
@@ -192,8 +193,8 @@ export function ClientConsumptionSection({
                 <p className="text-xs text-slate-500 font-medium">Consumo no Mês Atual</p>
                 <p className="text-lg font-bold text-slate-900 dark:text-slate-100">
                   {agent?.current_period_consumed_hours !== undefined
-                    ? `${agent.current_period_consumed_hours.toFixed(1)}h`
-                    : '0.0h'}
+                    ? formatHoursToHHMMSS(agent.current_period_consumed_hours)
+                    : '00:00:00'}
                 </p>
                 <p className="text-[11px] text-slate-400 mt-1">Débito de franquia acumulado</p>
               </div>

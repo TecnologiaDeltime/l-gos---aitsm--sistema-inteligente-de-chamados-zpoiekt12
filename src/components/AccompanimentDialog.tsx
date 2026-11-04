@@ -59,9 +59,9 @@ export function AccompanimentDialog({
   }
 
   const parseTimeToSeconds = (val: string): number => {
-    const match = val.trim().match(/^(\d{1,2}):(\d{2})$/)
+    const match = val.trim().match(/^(\d{1,3}):(\d{2}):(\d{2})$/)
     if (!match) return 0
-    return (parseInt(match[1], 10) * 60 + parseInt(match[2], 10)) * 60
+    return parseInt(match[1], 10) * 3600 + parseInt(match[2], 10) * 60 + parseInt(match[3], 10)
   }
 
   const handleSubmit = async () => {
@@ -142,22 +142,22 @@ export function AccompanimentDialog({
           </div>
 
           <div className="space-y-1 max-w-xs">
-            <Label className="text-xs font-medium">Tempo Gasto (00:00) *</Label>
+            <Label className="text-xs font-medium">Tempo Gasto (00:00:00) *</Label>
             <Input
-              placeholder="00:00"
+              placeholder="00:00:00"
               value={timeSpent}
               onChange={(e) => handleTimeSpentChange(e.target.value)}
               onKeyDown={(e) =>
                 handleTimeSpentKeyDown(e, timeSpent, setTimeSpent, setTimeError, validateTimeSpent)
               }
-              maxLength={5}
-              className="h-8 w-28 text-center font-mono text-sm tracking-wider"
+              maxLength={8}
+              className="h-8 w-32 text-center font-mono text-sm tracking-wider"
             />
             {timeError ? (
               <p className="text-[11px] text-red-500">{timeError}</p>
             ) : (
               <p className="text-[10px] text-muted-foreground">
-                Digite os números — os dois pontos ficam fixos (00:00).
+                Digite os números — os dois pontos ficam fixos (00:00:00).
               </p>
             )}
           </div>
