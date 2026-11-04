@@ -1,6 +1,11 @@
 import pb from '@/lib/pocketbase/client'
 import { getCompanies, type CompanyRecord } from '@/services/companies'
-import { getContracts, type ContractRecord, CONTRACT_HOURS_LEVELS } from '@/services/contracts'
+import {
+  getContracts,
+  getContractServiceLevelKeys,
+  type ContractRecord,
+  CONTRACT_HOURS_LEVELS,
+} from '@/services/contracts'
 import { getCategories, type CategoryRecord } from '@/services/categories'
 import { getQueues, type QueueRecord } from '@/services/queues'
 import { getMonthRange } from '@/services/client-hours'
@@ -619,7 +624,11 @@ export async function fetchMonthlyClientReportData(
   let totalContractedHours = 0
 
   if (activeContract) {
-    CONTRACT_HOURS_LEVELS.forEach((level) => {
+    // Contrato pode abranger MÚLTIPLOS níveis de atendimento: a tabela de
+    // acordos lista cada nível selecionado no contrato (legado: deriva dos
+    // acordos base com horas > 0).
+    const selectedKeys = getContractServiceLevelKeys(activeContract)
+    CONTRACT_HOURS_LEVELS.filter((l) => selectedKeys.includes(l.key)).forEach((level) => {
       // Verifica se o nível não foi removido pelo usuário
       const isRemoved =
         Array.isArray(activeContract.removed_levels) &&

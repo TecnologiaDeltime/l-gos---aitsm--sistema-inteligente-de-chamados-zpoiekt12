@@ -104,6 +104,12 @@ export default function ContractDetail() {
       levelPayload[key] = null
     })
 
+    // Níveis de atendimento selecionados: acordos base marcados no formulário
+    // (permite MÚLTIPLOS níveis por contrato).
+    const serviceLevels = CONTRACT_HOURS_LEVELS.filter(
+      (level) => hoursByLevel[level.key] !== '' && hoursByLevel[level.key] != null,
+    ).map((level) => level.key)
+
     await createContract({
       number,
       company,
@@ -119,6 +125,7 @@ export default function ContractDetail() {
         return { ...a, hours: parsed }
       }),
       removed_levels: removedLevels,
+      service_levels: serviceLevels,
     })
 
     toast({ title: 'Contrato salvo com sucesso!' })

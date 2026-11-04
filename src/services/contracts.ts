@@ -40,6 +40,10 @@ export interface ContractRecord {
   // usuário removeu do formulário de contrato. Permite ocultá-los sem excluir
   // as colunas físicas, mantendo compatibilidade com relatórios e dados antigos.
   removed_levels?: string[] | null
+  // Chaves (ContractHoursLevel.key) dos acordos de atendimento base que
+  // compõem este contrato. Um contrato pode abranger MÚLTIPLOS níveis.
+  // Contratos antigos (sem o campo) herdam os níveis com horas > 0.
+  service_levels?: string[] | null
   created: string
   updated: string
   expand?: any
@@ -104,6 +108,24 @@ export const QUEUE_LEVEL_TO_HOURS_KEY: Record<string, ContractHoursLevel['key']>
   Consultoria: 'hours_consultoria',
   Backoffice: 'hours_backoffice',
   Administrativo: 'hours_administrativo',
+}
+
+/**
+ * Retorna as chaves dos níveis de atendimento selecionados no contrato.
+ * - Contratos novos: usa o campo `service_levels` (lista explícita).
+ * - Contratos antigos (campo vazio): deriva dos acordos base com horas > 0,
+ *   preservando o comportamento de contratos com um único nível.
+ */
+export const getContractServiceLevelKeys = (
+  c: Pick<ContractRecord, 'service_levels'> & Record<string, any>,
+): ContractHoursLevel['key'][] => {
+  const explicit = Array.isArray(c.service_levels)
+    ? c.service_levels.filter((k: string) =>
+        CONTRACT_HOURS_LEVELS.some((l) => l.key === (k as ContractHoursLevel['key'])),
+      )
+    : []
+  if (explicit.length > 0) return explicit as ContractHoursLevel['key'][]
+  return CONTRACT_HOURS_LEVELS.filter((l) => Number(c[l.key]) > 0).map((l) => l.key)
 }
 
 // Gera um slug estável a partir do nome do acordo (sem acentos, espaços → _).

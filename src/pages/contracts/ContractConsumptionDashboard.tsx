@@ -11,7 +11,12 @@ import {
 import { Button } from '@/components/ui/button'
 import { ChartContainer, type ChartConfig } from '@/components/ui/chart'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, LabelList } from 'recharts'
-import { getContracts, ContractRecord, CONTRACT_HOURS_LEVELS } from '@/services/contracts'
+import {
+  getContracts,
+  getContractServiceLevelKeys,
+  ContractRecord,
+  CONTRACT_HOURS_LEVELS,
+} from '@/services/contracts'
 import { getContractPeriods, ContractPeriodRecord } from '@/services/contract-periods'
 import { getQueues, QueueRecord } from '@/services/queues'
 import { PeriodFilter, usePeriodFilter } from '@/components/contracts/PeriodFilter'
@@ -142,8 +147,13 @@ export default function ContractConsumptionDashboard() {
       const balance = Math.round((contracted - consumed) * 100) / 100
       const pct = contracted > 0 ? (consumed / contracted) * 100 : 0
 
-      // Cálculo por nível: horas contratadas vs consumidas no período filtrado
-      const levels: LevelConsumption[] = CONTRACT_HOURS_LEVELS.map((lvl) => {
+      // Cálculo por nível: horas contratadas vs consumidas no período filtrado.
+      // Somente os níveis de atendimento SELECIONADOS no contrato entram na
+      // correlação — filas cujo nível está entre os níveis do contrato.
+      const selectedKeys = getContractServiceLevelKeys(c)
+      const levels: LevelConsumption[] = CONTRACT_HOURS_LEVELS.filter((l) =>
+        selectedKeys.includes(l.key),
+      ).map((lvl) => {
         const contractedHours = Number((c as any)[lvl.key]) || 0
         const contractedSeconds = Math.round(contractedHours * 3600)
 

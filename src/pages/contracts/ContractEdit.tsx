@@ -241,6 +241,11 @@ export default function ContractEdit() {
         return { ...a, hours: parsed }
       })
       payload.removed_levels = removedLevels
+      // Níveis de atendimento selecionados: acordos base marcados no formulário
+      // (permite MÚLTIPLOS níveis por contrato).
+      payload.service_levels = CONTRACT_HOURS_LEVELS.filter(
+        (l) => form[l.key] !== '' && form[l.key] !== undefined && form[l.key] !== null,
+      ).map((l) => l.key)
       await updateContract(id, payload)
       toast({ title: 'Contrato atualizado com sucesso!' })
       navigate('/contracts')

@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-04T18:58:35.013Z",
+  "generatedAt": "2026-11-04T19:37:06.789Z",
   "collections": [
     {
       "name": "users",
@@ -760,6 +760,12 @@
             "Atendimento Avulso",
             "Híbrido"
           ]
+        },
+        {
+          "name": "service_levels",
+          "type": "json",
+          "required": false,
+          "system": false
         }
       ],
       "indexes": [

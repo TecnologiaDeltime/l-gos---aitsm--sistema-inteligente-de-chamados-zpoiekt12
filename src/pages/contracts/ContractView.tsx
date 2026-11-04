@@ -2,10 +2,12 @@ import { useEffect, useState, useCallback } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { ArrowLeft, FileDown, Pencil, AlertTriangle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import {
   getContract,
   getContractTickets,
+  getContractServiceLevelKeys,
   ContractRecord,
   CONTRACT_HOURS_LEVELS,
 } from '@/services/contracts'
@@ -126,6 +128,11 @@ export default function ContractView() {
       hours: contract[lvl.key],
     }),
   )
+  // Níveis de atendimento selecionados no contrato (múltiplos níveis suportados)
+  const selectedLevelKeys = getContractServiceLevelKeys(contract)
+  const selectedLevelLabels = CONTRACT_HOURS_LEVELS.filter((l) =>
+    selectedLevelKeys.includes(l.key),
+  ).map((l) => l.label)
   const activeCustomAgreements = (contract.custom_agreements ?? []).filter((a) => a.active)
   const distributionRows = [
     ...baseLevels.map((b) => ({ label: b.label, hours: b.hours })),
@@ -250,6 +257,19 @@ export default function ContractView() {
           ))}
         </div>
       </div>
+
+      {selectedLevelLabels.length > 0 && (
+        <div className="rounded-xl border bg-white p-6 dark:bg-slate-900">
+          <h3 className="text-sm font-semibold mb-3">Níveis de Atendimento do Contrato</h3>
+          <div className="flex flex-wrap gap-2">
+            {selectedLevelLabels.map((label) => (
+              <Badge key={label} variant="secondary" className="text-xs">
+                {label}
+              </Badge>
+            ))}
+          </div>
+        </div>
+      )}
 
       {showDistribution && (
         <div className="rounded-xl border bg-white p-6 dark:bg-slate-900">
