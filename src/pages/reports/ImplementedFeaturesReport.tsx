@@ -78,6 +78,13 @@ const FEATURE_CATEGORIES: FeatureCategory[] = [
         tag: 'Unificação & Catálogo',
       },
       {
+        id: 'tk-activity-type-derivation-and-safe-delete',
+        title: 'Classificação Automática por Atividade e Exclusão Segura no Catálogo',
+        description:
+          'Remoção do seletor manual de "Tipo" na abertura de chamados (interno, agendado e portal) — o tipo (Incidente, Requisição, Dúvida ou Visita Técnica) passa a ser derivado automaticamente da atividade configurada no Catálogo. Implementada também a exclusão segura de atividades com permissão granular (tickets_catalogo_delete): atividades com histórico de chamados são arquivadas de forma transparente sem quebrar referências anteriores, e sem histórico são removidas fisicamente.',
+        tag: 'Catálogo & Governança',
+      },
+      {
         id: 'tk-2',
         title: 'Preenchimento automático do contrato',
         description: 'Auto-preenchimento ao selecionar a empresa vinculada.',

@@ -9,65 +9,85 @@ export const getActivityCatalog = async () => {
   }
 }
 
-export const checkSubcategoryHasTickets = async (subcategoryId: string) => {
+export const countTicketsForActivity = async (activityId: string): Promise<number> => {
   try {
     const result = await pb.collection('tickets').getList(1, 1, {
-      filter: `subcategory = "${subcategoryId}" || category = "${subcategoryId}"`,
+      filter: `subcategory = "${activityId}" || category = "${activityId}"`,
     })
-    return result.totalItems > 0
+    return result.totalItems
   } catch {
-    return false
+    return 0
   }
+}
+
+export const checkSubcategoryHasTickets = async (subcategoryId: string): Promise<boolean> => {
+  const count = await countTicketsForActivity(subcategoryId)
+  return count > 0
+}
+
+export interface DeleteActivitySafelyResult {
+  mode: 'soft' | 'hard'
+  ticketsCount: number
 }
 
 /**
  * Exclusão segura de atividade ou subatividade:
  * Se existirem chamados vinculados (como subcategory ou category), marca deleted = true e active = false (soft delete)
  * para preservar a integridade referencial dos chamados antigos e o nome da atividade no histórico.
- * Se não houver chamados vinculados e for subatividade sem filhos, realiza a exclusão física.
+ * Se não houver chamados vinculados, realiza a exclusão física.
  */
-export const safeDeleteCategory = async (cat: CategoryRecord): Promise<{ soft: boolean }> => {
-  const hasTickets = await checkSubcategoryHasTickets(cat.id)
+export const deleteActivitySafely = async (
+  activityIdOrCategory: string | CategoryRecord,
+): Promise<DeleteActivitySafelyResult> => {
+  const cat: CategoryRecord =
+    typeof activityIdOrCategory === 'string'
+      ? await pb.collection('tkt_categories').getOne<CategoryRecord>(activityIdOrCategory)
+      : activityIdOrCategory
 
-  // Se tem filhos (atividade principal com subatividades ativas), desativa/marca deleted também nos filhos
+  let totalTickets = await countTicketsForActivity(cat.id)
+
+  // Se for categoria principal (sem parent), verifica filhos também
   if (!cat.parent) {
     const children = await pb.collection('tkt_categories').getFullList<CategoryRecord>({
       filter: `parent = "${cat.id}"`,
     })
-    // Se algum filho tem chamados ou o próprio pai tem
-    let anyChildHasTickets = hasTickets
+
     for (const child of children) {
-      if (!anyChildHasTickets) {
-        const childHas = await checkSubcategoryHasTickets(child.id)
-        if (childHas) anyChildHasTickets = true
-      }
+      const childCount = await countTicketsForActivity(child.id)
+      totalTickets += childCount
     }
 
-    if (anyChildHasTickets) {
-      // Soft delete no pai e nos filhos
+    if (totalTickets > 0) {
+      // Soft delete no pai e nos filhos para preservar integridade
       await pb.collection('tkt_categories').update(cat.id, { deleted: true, active: false })
       for (const child of children) {
         await pb.collection('tkt_categories').update(child.id, { deleted: true, active: false })
       }
-      return { soft: true }
+      return { mode: 'soft', ticketsCount: totalTickets }
     } else {
       // Exclui fisicamente filhos primeiro, depois pai
       for (const child of children) {
         await pb.collection('tkt_categories').delete(child.id)
       }
       await pb.collection('tkt_categories').delete(cat.id)
-      return { soft: false }
+      return { mode: 'hard', ticketsCount: 0 }
     }
   }
 
   // É subatividade
-  if (hasTickets) {
+  if (totalTickets > 0) {
     await pb.collection('tkt_categories').update(cat.id, { deleted: true, active: false })
-    return { soft: true }
+    return { mode: 'soft', ticketsCount: totalTickets }
   } else {
     await pb.collection('tkt_categories').delete(cat.id)
-    return { soft: false }
+    return { mode: 'hard', ticketsCount: 0 }
   }
+}
+
+// Alias de retrocompatibilidade caso alguém importe safeDeleteCategory
+export const safeDeleteCategory = async (cat: CategoryRecord): Promise<{ soft: boolean }> => {
+  const res = await deleteActivitySafely(cat)
+  return { soft: res.mode === 'soft' }
 }
 
 export {

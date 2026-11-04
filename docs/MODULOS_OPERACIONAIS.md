@@ -30,8 +30,8 @@ Formulário dinâmico estruturado para captura estruturada de incidentes e requi
 - **Seleção de Cliente / Empresa**: carrega em cascata as filiais, setores e solicitantes vinculados.
 - **Dados do Solicitante**: seleção do colaborador solicitante com exibição instantânea de telefone, e-mail e departamento. Possui botão para cadastro rápido de novo solicitante caso não exista.
 - **Equipamento do CMDB**: seletor de ativo de TI associado ao cliente/solicitante, exibindo número de série e hostname.
-- **Tipo de Chamado e Urgência**: Incidente, Requisição, Dúvida ou Problema, combinados com Matriz de Prioridade ITIL (Impacto × Urgência).
-- **Catálogo de Atividades**: árvore de atividades e subatividades com prioridades ITIL e pré-carregamento de SLA configurado.
+- **Catálogo de Atividades e Derivação do Tipo**: seleção da atividade/subatividade no Catálogo (/catalogo). O **Tipo do Chamado** (Incidente, Requisição de Serviço, Dúvida ou Visita Técnica) é derivado de forma 100% automática a partir da configuração da atividade cadastrada no catálogo, eliminando a seleção manual redundante. A prioridade ITIL (Impacto × Urgência) e os SLAs são pré-carregados automaticamente.
+- **Gestão do Catálogo com Exclusão Segura**: gerenciamento de atividades principais e subatividades com proteção de integridade referencial — itens vinculados a chamados são arquivados logicamente (preservando o histórico), enquanto itens sem vínculo podem ser excluídos fisicamente pelo administrador.
 - **Título e Descrição Formatada**: editor de texto rico com suporte a anexos (imagens, documentos e logs).
 - **Campos Opcionais**: data limite de atendimento, observações internas e envio de confirmação imediata por e-mail ao solicitante.
 

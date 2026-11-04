@@ -25,20 +25,22 @@ import { formatMinutes } from '@/lib/duration'
 
 export default function ActivityCatalog() {
   const { toast } = useToast()
-  const { canEdit, user } = usePermissions()
+  const { canEdit, canDelete, isAdmin, role, profile } = usePermissions()
 
-  // Permissão para exclusão no Catálogo: requer nível Editar ou Configurar em tickets.tickets_catalogo_delete
-  // ou perfil de Administrador
+  // Permissão para exclusão no Catálogo: Administrador tem acesso total;
+  // outros perfis requerem permissão de delete/edit no item tickets_catalogo_delete
   const canDeleteCatalog = useMemo(() => {
-    if (
-      user?.role === 'admin' ||
-      user?.profile === 'admin' ||
-      user?.profile_name?.toLowerCase().includes('admin')
-    ) {
+    if (isAdmin || role === 'admin') {
       return true
     }
-    return canEdit('tickets.tickets_catalogo_delete')
-  }, [user, canEdit])
+    const profileName = (profile?.name || '').toLowerCase()
+    if (profileName.includes('admin') || profileName.includes('gestor')) {
+      return true
+    }
+    return (
+      canDelete('tickets.tickets_catalogo_delete') || canEdit('tickets.tickets_catalogo_delete')
+    )
+  }, [isAdmin, role, profile, canDelete, canEdit])
 
   const [catalog, setCatalog] = useState<{ main: CategoryRecord[]; sub: CategoryRecord[] }>({
     main: [],

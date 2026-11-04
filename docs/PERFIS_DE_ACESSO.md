@@ -86,9 +86,9 @@ Os guardas dos 3 níveis estão aplicados de forma consistente nas seguintes ár
    - _Observação_: Funcionalidades descontinuadas/removidas temporariamente para futura reconstrução: Agenda de Operadores, Visitas Técnicas legadas fora de Gestão de Visitas, Dashboard de Visitas, Relatórios Gerenciais, Relatório por Filial, Dashboard de SLA, Metas de SLA e Relatórios Agendados.
 
 7. **Configurações Gerais e Catálogo de Atividades** (`ActivityCatalog.tsx`, `ProfilesPage.tsx`):
-   - _Visualizar_: consulta do catálogo de atividades e perfis.
-   - _Editar_: criação e edição de atividades principais e subatividades.
-   - _Configurar_: exclusão/desativação de atividades e alteração da matriz de permissões.
+   - _Visualizar_: consulta do catálogo de atividades (`tickets_catalogo`) e perfis.
+   - _Editar_: criação e edição de atividades principais e subatividades com definição de tipo (Incidente, Requisição, Dúvida, Visita Técnica), SLAs e prioridade ITIL.
+   - _Configurar_: exclusão segura de atividades (`tickets_catalogo_delete`) — com preservação transparente de histórico para atividades já utilizadas em chamados — e alteração da matriz de permissões de perfis.
 
 8. **Base de Conhecimento e IA (Geração de Rascunhos & Cura)** (`KnowledgeBase.tsx`, `DraftsReviewPanel.tsx`, `KnowledgeCurationPanel.tsx`):
    - _Visualizar_ (`knowledge_base`, `knowledge_drafts`, `knowledge_curation`): consulta aos artigos publicados, acompanhamento da fila de rascunhos de IA e leitura dos diagnósticos de cura e sugestões algorítmicas sem permissão de mutação.
