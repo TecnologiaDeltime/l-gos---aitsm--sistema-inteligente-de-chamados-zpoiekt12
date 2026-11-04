@@ -817,7 +817,6 @@ export default function TicketCreate() {
                 <span className="font-medium">Resumo:</span> {type} ·{' '}
                 {autoPriority || 'Sem prioridade'}
                 {subActivity && ' · Atividade selecionada'}
-                {contract && ' · Contrato vinculado'}
                 {queueId && ' · Fila vinculada'}
                 {itemType === 'asset' && equipment && (
                   <> · Ativo: {equipments.find((e) => e.id === equipment)?.name || 'Selecionado'}</>

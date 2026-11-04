@@ -78,6 +78,14 @@ const FEATURE_CATEGORIES: FeatureCategory[] = [
         tag: 'Unificação & Catálogo',
       },
       {
+        id: 'tk-queue-responsavel-and-no-contract-on-create',
+        title:
+          'Equipe Responsável Obrigatória por Atividade, Operador Opcional e Remoção de Contrato na Abertura',
+        description:
+          'Evolução da abertura de chamados (interno, agendado e portal do cliente): a equipe responsável (fila de atendimento) agora é obrigatória e pré-selecionada automaticamente a partir da atividade cadastrada no Catálogo de Atividades, permitindo troca. A atribuição de operador específico na abertura passou a ser opcional (o chamado aguarda na fila da equipe se não atribuído). O campo Contrato foi removido da abertura operacional (evitando bloqueios burocráticos), mantendo o histórico de contratos de chamados antigos 100% preservado no banco e nas telas de detalhe.',
+        tag: 'Abertura & Roteamento',
+      },
+      {
         id: 'tk-activity-type-derivation-and-safe-delete',
         title: 'Classificação Automática por Atividade e Exclusão Segura no Catálogo',
         description:
@@ -86,16 +94,10 @@ const FEATURE_CATEGORIES: FeatureCategory[] = [
       },
       {
         id: 'tk-2',
-        title: 'Preenchimento automático do contrato',
-        description: 'Auto-preenchimento ao selecionar a empresa vinculada.',
-        tag: 'Automação',
-      },
-      {
-        id: 'tk-3',
-        title: 'Bloqueio de abertura para empresas sem contrato ativo',
+        title: 'Vínculo histórico de contratos em chamados legados',
         description:
-          'Validação preventiva no formulário impedindo chamados sem cobertura contratual.',
-        tag: 'Regra de Negócio',
+          'Preservação de contratos em chamados existentes, histórico e relatórios de consumo.',
+        tag: 'Contratos / Histórico',
       },
       {
         id: 'tk-4',

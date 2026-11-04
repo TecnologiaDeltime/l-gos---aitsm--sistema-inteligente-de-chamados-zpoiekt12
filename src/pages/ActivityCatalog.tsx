@@ -18,6 +18,7 @@ import {
   CategoryRecord,
 } from '@/services/activity-catalog'
 import { updateCategory } from '@/services/categories'
+import { getQueues, QueueRecord } from '@/services/queues'
 import { useRealtime } from '@/hooks/use-realtime'
 import { useToast } from '@/hooks/use-toast'
 import { usePermissions } from '@/hooks/use-permissions'

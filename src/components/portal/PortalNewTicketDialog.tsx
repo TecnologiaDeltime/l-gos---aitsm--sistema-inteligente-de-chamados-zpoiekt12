@@ -36,8 +36,10 @@ import { getClientContacts, ClientContactRecord } from '@/services/client-contac
 import { uploadAttachment } from '@/services/attachments'
 import { getEquipments, EquipmentRecord } from '@/services/equipments'
 import { getCategories, CategoryRecord } from '@/services/categories'
+import { getQueues, QueueRecord } from '@/services/queues'
 import { useToast } from '@/hooks/use-toast'
 import { usePermissions } from '@/hooks/use-permissions'
+import { Users, Inbox } from 'lucide-react'
 
 interface PortalNewTicketDialogProps {
   open: boolean
@@ -79,15 +81,18 @@ export default function PortalNewTicketDialog({
   const [selectedActivity, setSelectedActivity] = useState<string>('none')
   const [activities, setActivities] = useState<CategoryRecord[]>([])
   const [selectedAsset, setSelectedAsset] = useState<string>(initialAssetId || 'none')
+  const [queueId, setQueueId] = useState<string>('')
+  const [queues, setQueues] = useState<QueueRecord[]>([])
 
   useEffect(() => {
     if (open) {
       setSelectedAsset(initialAssetId || 'none')
-      getCategories()
-        .then((cats) => {
-          setActivities(cats.filter((c) => c.active !== false))
-        })
-        .catch((e) => console.warn('Erro ao carregar catálogo de atividades:', e))
+      Promise.all([getCategories().catch(() => []), getQueues().catch(() => [])]).then(
+        ([cats, qs]) => {
+          setActivities((cats as CategoryRecord[]).filter((c) => c.active !== false))
+          setQueues((qs as QueueRecord[]).filter((q) => q.active !== false))
+        },
+      )
     }
   }, [open, initialAssetId])
 
@@ -158,6 +163,7 @@ export default function PortalNewTicketDialog({
     setSelectedSector('none')
     setPreferredContactId('')
     setSelectedActivity('none')
+    setQueueId('')
     setSelectedFile(null)
     setExtraEquipment(null)
   }, [open])
@@ -324,6 +330,12 @@ export default function PortalNewTicketDialog({
       if (act?.type) {
         setType(act.type)
       }
+      // Pré-seleção da equipe responsável vinculada à atividade ou à atividade pai
+      const designatedQueue =
+        act?.queue || (act?.parent ? activities.find((c) => c.id === act.parent)?.queue : undefined)
+      if (designatedQueue) {
+        setQueueId(designatedQueue)
+      }
     }
   }
 
@@ -333,6 +345,15 @@ export default function PortalNewTicketDialog({
       toast({
         title: 'Empresa não vinculada',
         description: 'Seu usuário precisa estar associado a uma empresa para abrir chamados.',
+        variant: 'destructive',
+      })
+      return
+    }
+
+    if (!queueId) {
+      toast({
+        title: 'Selecione a equipe responsável',
+        description: 'É necessário direcionar o chamado para uma equipe de atendimento.',
         variant: 'destructive',
       })
       return
@@ -359,6 +380,7 @@ export default function PortalNewTicketDialog({
         type: ticketType,
         category: ticketCategory,
         subcategory: ticketSubcategory,
+        queue: queueId || undefined,
         impact: ticketImpact,
         urgency: ticketUrgency,
         priority: ticketPriority as any,
@@ -411,6 +433,8 @@ export default function PortalNewTicketDialog({
       setExtraEquipment(null)
       setSelectedSector('none')
       setPreferredContactId('')
+      setSelectedActivity('none')
+      setQueueId('')
       setSelectedFile(null)
       if (fileInputRef.current) fileInputRef.current.value = ''
 
@@ -567,7 +591,7 @@ export default function PortalNewTicketDialog({
             <div className="space-y-1.5">
               <label className="text-xs font-semibold text-foreground flex items-center gap-1.5">
                 <Tag className="h-3.5 w-3.5 text-amber-500" />
-                Atividade / Assunto
+                Tipo da solicitação (Atividade do Catálogo)
               </label>
               <Select value={selectedActivity} onValueChange={handleSelectActivity}>
                 <SelectTrigger className="text-xs h-9">
@@ -583,6 +607,36 @@ export default function PortalNewTicketDialog({
                 </SelectContent>
               </Select>
             </div>
+          </div>
+
+          {/* Linha 2.1: Equipe Responsável (Obrigatória, pré-selecionada pela atividade) */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+              <Users className="h-3.5 w-3.5 text-amber-500" />
+              Equipe Responsável (Fila de Atendimento) *
+            </label>
+            {queues.length === 0 ? (
+              <div className="flex items-center gap-2 h-9 px-3 rounded-md border border-amber-200 bg-amber-50 dark:bg-amber-950/30 text-xs text-amber-700 dark:text-amber-300">
+                <Inbox className="h-3.5 w-3.5 shrink-0" />
+                Nenhuma equipe cadastrada em Gerenciamento de Filas
+              </div>
+            ) : (
+              <Select value={queueId} onValueChange={setQueueId}>
+                <SelectTrigger className="text-xs h-9">
+                  <SelectValue placeholder="Selecione a equipe responsável *" />
+                </SelectTrigger>
+                <SelectContent>
+                  {queues.map((q) => (
+                    <SelectItem key={q.id} value={q.id}>
+                      {q.name} {q.level ? `(${q.level})` : ''}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+            <p className="text-[11px] text-muted-foreground">
+              Pré-selecionada automaticamente ao escolher a atividade do catálogo, permitindo troca.
+            </p>
           </div>
 
           {/* Linha 3: Título */}

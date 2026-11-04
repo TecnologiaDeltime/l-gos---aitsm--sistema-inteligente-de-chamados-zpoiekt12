@@ -87,7 +87,7 @@ Os guardas dos 3 níveis estão aplicados de forma consistente nas seguintes ár
 
 7. **Configurações Gerais e Catálogo de Atividades** (`ActivityCatalog.tsx`, `ProfilesPage.tsx`):
    - _Visualizar_: consulta do catálogo de atividades (`tickets_catalogo`) e perfis.
-   - _Editar_: criação e edição de atividades principais e subatividades com definição de tipo (Incidente, Requisição, Dúvida, Visita Técnica), SLAs e prioridade ITIL.
+   - _Editar_: criação e edição de atividades principais e subatividades com definição de tipo (Incidente, Requisição, Dúvida, Visita Técnica), atribuição de Equipe Responsável padrão da fila (`tickets_catalogo_queue`), SLAs e prioridade ITIL.
    - _Configurar_: exclusão segura de atividades (`tickets_catalogo_delete`) — com preservação transparente de histórico para atividades já utilizadas em chamados — e alteração da matriz de permissões de perfis.
 
 8. **Base de Conhecimento e IA (Geração de Rascunhos & Cura)** (`KnowledgeBase.tsx`, `DraftsReviewPanel.tsx`, `KnowledgeCurationPanel.tsx`):
