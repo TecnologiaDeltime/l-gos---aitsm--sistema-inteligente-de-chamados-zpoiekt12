@@ -107,6 +107,7 @@ Item registrado na coleção `profile_permissions` e no catálogo oficial:
 - **Módulo**: `settings` (Configurações)
 - **Item**: `settings_consumption_agent`
 - **Nome**: `Agente de Consumo Médio (Qualidade & Gestão)`
+- **Versão de Liberação**: v0.0.321 / v0.0.322
 - **Níveis**:
   - `view`: visualiza os diagnósticos e médias aprendidas.
   - `edit`: altera margens e ativa/desativa monitoramento por cliente.
