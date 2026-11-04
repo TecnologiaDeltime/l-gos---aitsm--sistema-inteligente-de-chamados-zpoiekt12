@@ -55,10 +55,6 @@ export default function QueueManagement() {
       toast({ title: 'Selecione o nível de atendimento', variant: 'destructive' })
       return
     }
-    if (!companyId) {
-      toast({ title: 'Selecione a empresa', variant: 'destructive' })
-      return
-    }
     setCreating(true)
     try {
       await createQueue({
@@ -67,7 +63,9 @@ export default function QueueManagement() {
         active: true,
         distribution_rule: 'Disponibilidade',
         level,
-        company: companyId,
+        // Cliente é opcional: filas globais (sem empresa) atendem todos os clientes.
+        // O vínculo cliente ↔ fila passa pelo contrato (distribuição de horas).
+        company: companyId || undefined,
       })
       setName('')
       setDescription('')
@@ -132,13 +130,17 @@ export default function QueueManagement() {
             </div>
             <div className="space-y-1">
               <label className="text-xs font-semibold">
-                Empresa <span className="text-red-500">*</span>
+                Cliente (opcional — deixe vazio para fila global)
               </label>
-              <Select value={companyId} onValueChange={setCompanyId}>
+              <Select
+                value={companyId || '__global__'}
+                onValueChange={(v) => setCompanyId(v === '__global__' ? '' : v)}
+              >
                 <SelectTrigger>
-                  <SelectValue placeholder="Selecione a empresa" />
+                  <SelectValue placeholder="Global (todos os clientes)" />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="__global__">Global (todos os clientes)</SelectItem>
                   {companies.map((c) => (
                     <SelectItem key={c.id} value={c.id}>
                       {c.trade_name}
@@ -146,6 +148,9 @@ export default function QueueManagement() {
                   ))}
                 </SelectContent>
               </Select>
+              <p className="text-[11px] text-slate-400">
+                O vínculo do cliente com a fila é feito no contrato (distribuição de horas).
+              </p>
             </div>
             <Button
               type="submit"
@@ -201,6 +206,14 @@ export default function QueueManagement() {
                       {companyName && (
                         <Badge variant="outline" className="text-xs">
                           {companyName}
+                        </Badge>
+                      )}
+                      {!companyName && (
+                        <Badge
+                          variant="outline"
+                          className="text-xs border-emerald-300 bg-emerald-50 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300"
+                        >
+                          Global
                         </Badge>
                       )}
                       {!q.active && (

@@ -96,10 +96,6 @@ export function QueueEditDialog({ queue, open, onOpenChange, onSaved }: QueueEdi
       setFieldErrors({ level: 'Selecione o nível de atendimento.' })
       return
     }
-    if (!companyId) {
-      setFieldErrors({ company: 'Selecione a empresa.' })
-      return
-    }
     setSaving(true)
     setFieldErrors({})
     try {
@@ -112,6 +108,7 @@ export function QueueEditDialog({ queue, open, onOpenChange, onSaved }: QueueEdi
         members,
         categories,
         level,
+        // Cliente é opcional: '' limpa o vínculo, transformando a fila em global.
         company: companyId,
       })
       toast({ title: 'Fila atualizada com sucesso!' })
@@ -180,13 +177,17 @@ export function QueueEditDialog({ queue, open, onOpenChange, onSaved }: QueueEdi
 
             <div className="space-y-1.5">
               <Label className="text-sm font-semibold">
-                Empresa <span className="text-red-500">*</span>
+                Cliente (opcional — fila global se vazio)
               </Label>
-              <Select value={companyId} onValueChange={setCompanyId}>
+              <Select
+                value={companyId || '__global__'}
+                onValueChange={(v) => setCompanyId(v === '__global__' ? '' : v)}
+              >
                 <SelectTrigger>
-                  <SelectValue placeholder="Selecione a empresa" />
+                  <SelectValue placeholder="Global (todos os clientes)" />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="__global__">Global (todos os clientes)</SelectItem>
                   {allCompanies.map((c) => (
                     <SelectItem key={c.id} value={c.id}>
                       {c.trade_name}
@@ -194,7 +195,9 @@ export function QueueEditDialog({ queue, open, onOpenChange, onSaved }: QueueEdi
                   ))}
                 </SelectContent>
               </Select>
-              {fieldErrors.company && <p className="text-xs text-red-500">{fieldErrors.company}</p>}
+              <p className="text-[11px] text-slate-400">
+                O vínculo cliente ↔ fila é feito no contrato (distribuição de horas).
+              </p>
             </div>
           </div>
 
