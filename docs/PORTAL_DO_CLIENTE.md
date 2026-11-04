@@ -89,6 +89,7 @@ _Observação:_ No Modo Suporte do Administrador, ao alternar a empresa no selet
 - Permite informar tipo (Incidente, Requisição, Dúvida, Visita Técnica), categoria, urgência, equipamento do CMDB envolvido, título e descrição detalhada.
 - **Seleção de Setor e Contato em Cascata:** o seletor "Selecionar o Setor" registra a escolha normalmente (o chamado é criado com `department` do setor escolhido). Ao selecionar um setor, o campo "Nome do contato" lista SOMENTE os colaboradores do cadastro do cliente vinculados àquele setor (`client_contacts.departments` contém o setor); a lista é refeita a cada troca de setor, o valor selecionado anteriormente é limpo e o padrão permanece "quem está logado" (`logged_user`). Sem setor específico ("Geral"), a lista mostra todos os colaboradores da empresa. Se o setor não tiver colaboradores cadastrados, o contato permanece o usuário logado e um aviso orienta o cliente.
 - **Nova Ordem dos Campos:** o formulário segue a sequência corporativa **Setor → Nome do contato → Equipamento → Tipo da solicitação**, seguida de categoria, assunto, descrição e anexos.
+- **Vínculo Automático Contato → Equipamento:** ao selecionar qualquer colaborador no campo "Nome do contato", o sistema busca automaticamente no CMDB/equipamentos os ativos cujo "Usuário responsável" corresponda àquele contato (por ID ou por nome, inclusive suportando o formato `"Nome — Departamento"` e texto livre de ativos legados) e pré-seleciona a máquina que ele usa no campo Equipamento.
 - **Atalho "Meu chamado":** botão destacado no topo do formulário que preenche automaticamente setor, contato (nome, e-mail e telefone) e equipamento com os dados do usuário logado. O equipamento é reconhecido pelo vínculo do responsável (ID) ou pelo nome do responsável cadastrado no ativo — inclusive consultando a coleção `equipments` da empresa quando o CMDB não casa — e, se o usuário não tiver nenhum ativo, o formulário continua normalmente com o equipamento vazio. O atalho respeita a permissão **"Atalho Meu chamado (Portal)"** da matriz de Perfis de Acesso (módulo Chamados, níveis Visualizar/Editar/Configurar): só aparece para quem tiver o item concedido.
 - O chamado nasce com `source: "Portal"` e entra imediatamente na fila de atendimento com status "Novo".
 
@@ -103,7 +104,7 @@ _Observação:_ No Modo Suporte do Administrador, ao alternar a empresa no selet
 
 ### Módulo D: Inventário de TI (CMDB do Cliente)
 
-- Lista de todos os itens de configuração e equipamentos da coleção `configuration_items` vinculados à empresa do cliente selecionada.
+- Lista de todos os itens de configuração e equipamentos vinculados à empresa do cliente selecionada, unificando registros cadastrados nas coleções de ativos (`equipments` e `configuration_items`).
 - **Resumo no Topo:** Indicadores interativos com contagem total de ativos, quantidade e percentual em operação, ativos em manutenção e sobressalentes/reserva. O clique nos cards de resumo aplica filtro imediato.
 - **Filtros e Busca Textual:**
   - Busca em tempo real por nome do equipamento, número de série, marca, modelo e localização.

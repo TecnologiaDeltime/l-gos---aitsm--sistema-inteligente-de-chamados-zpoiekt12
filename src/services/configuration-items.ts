@@ -14,6 +14,8 @@ export interface ConfigurationItemRecord {
   unit?: string | null
   responsible_user?: string
   owner?: string
+  availability_status?: string
+  source_collection?: 'configuration_items' | 'equipments'
   created: string
   updated: string
   expand?: {

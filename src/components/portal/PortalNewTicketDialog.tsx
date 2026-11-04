@@ -165,13 +165,103 @@ export default function PortalNewTicketDialog({
     setPreferredContactId('')
   }
 
+  // Normaliza texto para comparação tolerante (nomes de responsáveis em ativos podem conter traço, departamento ou acentos)
+  const normalizeText = (v?: string | null) =>
+    (v || '')
+      .toString()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .replace(/\s+/g, ' ')
+      .trim()
+
+  // Extrai o nome limpo descartando qualquer sufixo " — Departamento" ou " - Departamento"
+  const cleanResponsibleName = (raw?: string | null): string => {
+    if (!raw) return ''
+    const parts = raw.split(/\s+[—–-]\s+/)
+    return parts[0].trim()
+  }
+
+  // Verifica se o responsável do ativo bate com o contato selecionado (por id, nome exato ou primeiro+último nome)
+  const matchAssetToContact = (
+    asset: ConfigurationItemRecord | EquipmentRecord,
+    targetId: string,
+    targetName: string,
+  ): boolean => {
+    if (!targetName && !targetId) return false
+    const rawResp = (
+      (asset as any).responsible_user ||
+      (asset as any).owner ||
+      (asset as any).custodian ||
+      (asset as any).user ||
+      ''
+    )
+      .toString()
+      .trim()
+    if (!rawResp) return false
+
+    // Se o campo guarda o ID do contato/usuário
+    if (targetId && rawResp === targetId) return true
+
+    const normTarget = normalizeText(targetName)
+    const normRaw = normalizeText(rawResp)
+    const normClean = normalizeText(cleanResponsibleName(rawResp))
+
+    // Casamento exato ou do nome limpo antes do travessão do departamento
+    if (normTarget && (normRaw === normTarget || normClean === normTarget)) return true
+
+    // Casamento se o nome do contato estiver contido no responsável (ex: "Nome (Kairós)")
+    if (normTarget && normTarget.length >= 4) {
+      if (normClean.includes(normTarget) || normTarget.includes(normClean)) {
+        return true
+      }
+    }
+
+    return false
+  }
+
+  // Busca e seleciona o ativo vinculado a uma pessoa (pelo id e/ou nome)
+  const findAndSelectAssetForPerson = async (personId: string, personName: string) => {
+    if (!personName && !personId) return
+
+    // 1) Busca nos ativos já carregados da empresa (props.assets)
+    const matchedAsset = assets.find((a) => matchAssetToContact(a, personId, personName))
+    if (matchedAsset) {
+      setSelectedAsset(matchedAsset.id)
+      return
+    }
+
+    // 2) Fallback: busca na coleção equipments da empresa
+    try {
+      const companyIdToSearch = companyId || user.company_id
+      if (companyIdToSearch) {
+        const equipments = await getEquipments({ company: companyIdToSearch })
+        const matchedEquipment = equipments.find((eq) =>
+          matchAssetToContact(eq, personId, personName),
+        )
+        if (matchedEquipment) {
+          setExtraEquipment(matchedEquipment)
+          setSelectedAsset(matchedEquipment.id)
+          return
+        }
+      }
+    } catch (e) {
+      console.warn('Erro ao buscar equipamento do contato em equipments:', e)
+    }
+
+    // Se não encontrou ativo específico para a pessoa, limpa o ativo apenas se havia sido selecionado anteriormente
+    setSelectedAsset('none')
+  }
+
   // Ao selecionar um contato da lista
   const handleSelectContactOption = (contactId: string) => {
     setPreferredContactId(contactId)
     if (contactId === 'logged_user') {
-      setContactName(user.name || '')
+      const uName = user.name || ''
+      setContactName(uName)
       setContactEmail(user.email || '')
       setContactPhone(user.phone || '')
+      findAndSelectAssetForPerson(user.id, uName)
       return
     }
 
@@ -180,6 +270,7 @@ export default function PortalNewTicketDialog({
       setContactName(found.full_name)
       setContactEmail(found.email || user.email || '')
       setContactPhone(found.phone || found.cell_phone || user.phone || '')
+      findAndSelectAssetForPerson(found.id, found.full_name)
     }
   }
 
@@ -187,60 +278,13 @@ export default function PortalNewTicketDialog({
   const handleAutoFillMyTicket = async () => {
     setSelectedSector('none')
     setPreferredContactId('logged_user')
-    setContactName(user.name || '')
+    const uName = user.name || ''
+    setContactName(uName)
     setContactEmail(user.email || '')
     setContactPhone(user.phone || '')
 
-    // Normaliza texto para comparação tolerante (nomes em equipments.responsible_user são TEXTO)
-    const normalize = (v?: string | null) =>
-      (v || '')
-        .toString()
-        .normalize('NFD')
-        .replace(/[\u0300-\u036f]/g, '')
-        .toLowerCase()
-        .replace(/\s+/g, ' ')
-        .trim()
+    await findAndSelectAssetForPerson(user.id, uName)
 
-    const userName = normalize(user.name)
-    const matchesUser = (responsible?: string | null): boolean => {
-      if (!responsible) return false
-      const value = responsible.toString().trim()
-      if (!value) return false
-      // Casar por ID do usuário OU por nome (campo texto do cadastro de equipamentos)
-      return value === user.id || normalize(value) === userName
-    }
-
-    // 1) Equipamento/ativo vinculado ao próprio usuário nos assets do CMDB (configuration_items),
-    //    comparando por ID e por nome, com fallback pela unidade.
-    const myAsset =
-      assets.find((a) => matchesUser((a as any).responsible_user)) ||
-      assets.find((a) => matchesUser((a as any).custodian)) ||
-      assets.find((a) => matchesUser((a as any).owner)) ||
-      assets.find((a) => matchesUser((a as any).user)) ||
-      assets.find((a) => (a as any).unit && (a as any).unit === user.unit)
-
-    if (myAsset) {
-      setSelectedAsset(myAsset.id)
-      return
-    }
-
-    // 2) Fallback: busca na coleção equipments da empresa (responsible_user/owner são TEXTO com o nome)
-    try {
-      const companyIdToSearch = user.company_id || companyId
-      const equipments = companyIdToSearch
-        ? await getEquipments({ company: companyIdToSearch })
-        : await getEquipments()
-      const myEquipment = equipments.find(
-        (eq) => matchesUser(eq.responsible_user) || matchesUser(eq.owner),
-      )
-      if (myEquipment) {
-        setExtraEquipment(myEquipment)
-        setSelectedAsset(myEquipment.id)
-      }
-    } catch (e) {
-      // Sem equipamento localizado: mantém o campo vazio normalmente
-      console.warn('Erro ao buscar equipamento do usuário em equipments:', e)
-    }
     toast({
       title: 'Dados preenchidos',
       description: 'Setor, contato e equipamento foram preenchidos com os seus dados.',
@@ -297,11 +341,19 @@ export default function PortalNewTicketDialog({
         source: 'Portal',
         sla_status: 'Dentro do Prazo',
         configuration_item:
-          selectedAsset && selectedAsset !== 'none' && assets.some((a) => a.id === selectedAsset)
+          selectedAsset &&
+          selectedAsset !== 'none' &&
+          assets.some((a) => a.id === selectedAsset && a.source_collection !== 'equipments')
             ? selectedAsset
             : undefined,
         equipment:
-          extraEquipment && selectedAsset === extraEquipment.id ? extraEquipment.id : undefined,
+          selectedAsset && selectedAsset !== 'none'
+            ? extraEquipment && selectedAsset === extraEquipment.id
+              ? extraEquipment.id
+              : assets.some((a) => a.id === selectedAsset && a.source_collection === 'equipments')
+                ? selectedAsset
+                : undefined
+            : undefined,
       } as any)
 
       // Se houver anexo, faz o upload vinculado ao chamado criado

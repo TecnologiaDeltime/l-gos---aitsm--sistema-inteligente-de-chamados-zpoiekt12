@@ -109,6 +109,8 @@ export default function PortalAssetsTab({
     const term = searchTerm.trim().toLowerCase()
 
     return assets.filter((item) => {
+      const respUser = (item.responsible_user || item.owner || '').toLowerCase()
+      const deptName = item.expand?.department?.name?.toLowerCase() || ''
       const matchesSearch =
         !term ||
         item.name?.toLowerCase().includes(term) ||
@@ -117,6 +119,8 @@ export default function PortalAssetsTab({
         item.model?.toLowerCase().includes(term) ||
         item.location?.toLowerCase().includes(term) ||
         item.type?.toLowerCase().includes(term) ||
+        respUser.includes(term) ||
+        deptName.includes(term) ||
         item.expand?.unit?.name?.toLowerCase().includes(term)
 
       const matchesType = selectedType === 'todos' || item.type === selectedType

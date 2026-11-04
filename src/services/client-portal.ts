@@ -197,16 +197,80 @@ export async function decideClientApproval(
  */
 export async function getClientPortalAssets(companyId: string): Promise<ConfigurationItemRecord[]> {
   if (!companyId) return []
-  return pb.collection('configuration_items').getFullList<ConfigurationItemRecord>({
-    filter: `company = "${companyId}"`,
-    sort: 'name',
-    expand: 'unit,department',
+
+  // Busca em paralelo tanto na coleção configuration_items quanto na coleção equipments (onde ativos do CMDB são cadastrados)
+  const [ciList, eqList] = await Promise.all([
+    pb
+      .collection('configuration_items')
+      .getFullList<ConfigurationItemRecord>({
+        filter: `company = "${companyId}"`,
+        sort: 'name',
+        expand: 'unit,department',
+      })
+      .catch((err) => {
+        console.warn('Erro ao carregar configuration_items no portal:', err)
+        return [] as ConfigurationItemRecord[]
+      }),
+    pb
+      .collection('equipments')
+      .getFullList<any>({
+        filter: `company = "${companyId}"`,
+        sort: 'name',
+        expand: 'unit,department,company',
+      })
+      .catch((err) => {
+        console.warn('Erro ao carregar equipments no portal:', err)
+        return [] as any[]
+      }),
+  ])
+
+  // Normaliza registros de equipments para a interface ConfigurationItemRecord
+  const mappedEquipments: ConfigurationItemRecord[] = eqList.map((eq) => {
+    return {
+      id: eq.id,
+      name: eq.name || eq.hostname || 'Equipamento',
+      type: (eq.device_type || eq.type || 'Notebook') as any,
+      brand: eq.manufacturer || eq.brand || '',
+      model: eq.model || '',
+      serial_number: eq.serial_number || eq.patrimony_number || '',
+      location: eq.location || '',
+      status: (eq.status || 'Ativo') as any,
+      availability_status: eq.availability_status || '',
+      observations: eq.notes || eq.observations || '',
+      company: eq.company,
+      unit: eq.unit || null,
+      responsible_user: eq.responsible_user || eq.owner || '',
+      owner: eq.owner || eq.responsible_user || '',
+      created: eq.created,
+      updated: eq.updated,
+      source_collection: 'equipments',
+      expand: {
+        company: eq.expand?.company,
+        unit: eq.expand?.unit,
+        department: eq.expand?.department,
+      },
+    } as ConfigurationItemRecord
   })
+
+  // Evita duplicatas se algum ID existir em ambas as coleções
+  const existingIds = new Set(ciList.map((ci) => ci.id))
+  const merged = [...ciList]
+  for (const eqItem of mappedEquipments) {
+    if (!existingIds.has(eqItem.id)) {
+      merged.push(eqItem)
+      existingIds.add(eqItem.id)
+    }
+  }
+
+  // Ordena alfabeticamente por nome
+  return merged.sort((a, b) =>
+    (a.name || '').localeCompare(b.name || '', 'pt-BR', { sensitivity: 'base' }),
+  )
 }
 
 /**
  * Busca o histórico de manutenção (chamados e atendimentos vinculados) de um ativo específico.
- * Filtra estritamente pela empresa (respeitando o modo suporte do administrador) e pelo configuration_item.
+ * Filtra estritamente pela empresa (respeitando o modo suporte do administrador) e pelo configuration_item ou equipment.
  * Ordena do mais recente para o mais antigo (-created).
  * Para cada chamado, carrega a última interação pública / resumo do atendimento.
  */
@@ -216,7 +280,8 @@ export async function getAssetMaintenanceHistory(
 ): Promise<AssetMaintenanceItem[]> {
   if (!assetId) return []
 
-  const filterParts = [`configuration_item = "${assetId}"`]
+  const assetFilter = `(configuration_item = "${assetId}" || equipment = "${assetId}")`
+  const filterParts = [assetFilter]
   if (companyId) {
     filterParts.push(`company = "${companyId}"`)
   }
