@@ -256,9 +256,7 @@ export default function Layout() {
       path: '/catalogo',
       icon: ListTree,
       show:
-        (permissions.canAccessItem('tickets', 'tickets_catalogo') ||
-          permissions.canAccessItem('tickets', 'tickets_categorias')) &&
-        permissions.canManageCategories,
+        permissions.canAccessItem('tickets', 'tickets_catalogo') && permissions.canManageCategories,
     },
     {
       label: 'Aprovações',

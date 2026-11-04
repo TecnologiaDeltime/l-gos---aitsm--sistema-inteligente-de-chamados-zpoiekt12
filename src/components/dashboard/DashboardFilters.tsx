@@ -83,7 +83,7 @@ export function DashboardFilters({ filters, options, onUpdate, onClear }: Dashbo
           options={PRIORITIES.map((p) => ({ value: p, label: p }))}
         />
         <FilterSelect
-          label="Categoria"
+          label="Atividade"
           value={filters.categoryId}
           onChange={(v) => onUpdate('categoryId', v)}
           options={options?.categories.map((c) => ({ value: c.id, label: c.name })) || []}

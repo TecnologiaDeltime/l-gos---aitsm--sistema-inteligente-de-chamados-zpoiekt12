@@ -157,13 +157,13 @@ export function ActivityCatalogDialog({
             />
           </div>
           <div className="space-y-1">
-            <Label className="text-xs">Categoria Principal</Label>
+            <Label className="text-xs">Atividade Principal Agrupadora</Label>
             <Select value={parent} onValueChange={setParent}>
-              <SelectTrigger className="h-9 text-sm">
-                <SelectValue placeholder="Nenhuma (categoria principal)" />
+              <SelectTrigger>
+                <SelectValue placeholder="Nenhuma (atividade principal)" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Nenhuma (categoria principal)</SelectItem>
+                <SelectItem value="">Nenhuma (atividade principal)</SelectItem>{' '}
                 {mainCategories.map((c) => (
                   <SelectItem key={c.id} value={c.id}>
                     {c.name}
@@ -261,7 +261,7 @@ export function ActivityCatalogDialog({
             <div className="rounded-lg border border-slate-200 dark:border-slate-800 p-3 space-y-2 bg-slate-50/50 dark:bg-slate-900/50">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-semibold text-slate-700 dark:text-slate-300 block">
-                  SLA Padrão da Categoria (opcional)
+                  SLA Padrão da Atividade Principal (opcional)
                 </span>
                 <span className="text-[10px] uppercase font-bold text-slate-500 bg-slate-200 dark:bg-slate-800 px-1.5 py-0.5 rounded">
                   1º na Precedência

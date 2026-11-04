@@ -100,7 +100,7 @@ export default function ActivityCatalog() {
           </p>
         </div>
         <Button onClick={handleAddMain} className="bg-blue-600 hover:bg-blue-700" size="sm">
-          <Plus className="mr-1 h-4 w-4" /> Nova Categoria
+          <Plus className="mr-1 h-4 w-4" /> Nova Atividade Principal
         </Button>
       </div>
 
@@ -214,7 +214,7 @@ export default function ActivityCatalog() {
         ))}
         {catalog.main.length === 0 && (
           <p className="text-center text-sm text-slate-500 py-8">
-            Nenhuma categoria encontrada. Clique em "Nova Categoria" para começar.
+            Nenhuma atividade encontrada. Clique em "Nova Atividade Principal" para começar.
           </p>
         )}
       </div>

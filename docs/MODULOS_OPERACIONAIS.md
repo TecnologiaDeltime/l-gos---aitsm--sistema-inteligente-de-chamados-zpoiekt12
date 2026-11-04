@@ -12,9 +12,9 @@ O módulo de chamados é o núcleo do sistema ITSM, cobrindo o ciclo completo de
 
 A tela principal de chamados permite a visualização em dois modos comutáveis:
 
-- **Modo Tabela**: listagem corporativa com paginação, ordenação e colunas de identificação rápida: Número do Ticket, Título, Cliente, Solicitante, Categoria, Prioridade, Status, Operador Responsável, SLA e Ações.
+- **Modo Tabela**: listagem corporativa com paginação, ordenação e colunas de identificação rápida: Número do Ticket, Título, Cliente, Solicitante, Prioridade, Status, Operador Responsável, SLA e Ações.
 - **Modo Kanban**: visualização por cartões organizada pelas colunas de status operacionais (_Novo, Em Andamento, Aguardando Solicitante, Aguardando Terceiro, Pendente Aprovação, Resolvido, Fechado_).
-- **Filtros Avançados**: busca textual (número, título, conteúdo), filtro por Empresa/Cliente, Unidade/Filial, Categoria, Operador, Prioridade, Status e visualização de chamados sob minha responsabilidade.
+- **Filtros Avançados**: busca textual (número, título, conteúdo), filtro por Empresa/Cliente, Unidade/Filial, Atividade, Operador, Prioridade, Status e visualização de chamados sob minha responsabilidade.
 - **Ações em Lote**: seleção múltipla para delegação em lote (_Batch Delegate_) e resolução em lote com justificativa padronizada (_Batch Resolve_).
 
 _[print: tela de listagem de chamados em modo tabela]_
@@ -31,12 +31,12 @@ Formulário dinâmico estruturado para captura estruturada de incidentes e requi
 - **Dados do Solicitante**: seleção do colaborador solicitante com exibição instantânea de telefone, e-mail e departamento. Possui botão para cadastro rápido de novo solicitante caso não exista.
 - **Equipamento do CMDB**: seletor de ativo de TI associado ao cliente/solicitante, exibindo número de série e hostname.
 - **Tipo de Chamado e Urgência**: Incidente, Requisição, Dúvida ou Problema, combinados com Matriz de Prioridade ITIL (Impacto × Urgência).
-- **Categoria e Catálogo de Atividades**: árvore de categorias com pré-carregamento de SLA configurado.
+- **Catálogo de Atividades**: árvore de atividades e subatividades com prioridades ITIL e pré-carregamento de SLA configurado.
 - **Título e Descrição Formatada**: editor de texto rico com suporte a anexos (imagens, documentos e logs).
 - **Campos Opcionais**: data limite de atendimento, observações internas e envio de confirmação imediata por e-mail ao solicitante.
 
 _[print: tela de abertura de novo chamado com seleção de cliente e solicitante]_
-_[print: seleção de equipamento do CMDB e categoria no novo chamado]_
+_[print: seleção de equipamento do CMDB e atividade no novo chamado]_
 
 ---
 

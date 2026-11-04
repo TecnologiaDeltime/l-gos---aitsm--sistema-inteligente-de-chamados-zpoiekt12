@@ -71,6 +71,13 @@ const FEATURE_CATEGORIES: FeatureCategory[] = [
         tag: 'Workflow',
       },
       {
+        id: 'tk-unify-catalog',
+        title: 'Unificação Definitiva: Catálogo de Atividades em substituição à Categoria',
+        description:
+          'Remoção completa da opção redundante "Categoria" em menus, seletores, filtros e rotas, consolidando toda a classificação de atendimento no Catálogo de Atividades (/catalogo) com subatividades, matriz de impacto/urgência e SLAs automáticos. Registros antigos mantêm compatibilidade transparente.',
+        tag: 'Unificação & Catálogo',
+      },
+      {
         id: 'tk-2',
         title: 'Preenchimento automático do contrato',
         description: 'Auto-preenchimento ao selecionar a empresa vinculada.',
@@ -200,7 +207,7 @@ const FEATURE_CATEGORIES: FeatureCategory[] = [
         id: 'portal-4',
         title: 'Abertura rápida de chamados no Portal',
         description:
-          'Formulário simplificado com seleção em cascata de setor (escolha registrada no chamado), contato filtrado automaticamente aos colaboradores do setor escolhido (lista refeita a cada troca, padrão: usuário logado), categoria, assunto, descrição e upload de anexos.',
+          'Formulário simplificado com seleção em cascata de setor (escolha registrada no chamado), contato filtrado automaticamente aos colaboradores do setor escolhido (lista refeita a cada troca, padrão: usuário logado), assunto, descrição e upload de anexos.',
         tag: 'Self-Service',
       },
       {

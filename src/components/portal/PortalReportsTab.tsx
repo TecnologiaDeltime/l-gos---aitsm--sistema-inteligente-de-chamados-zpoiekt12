@@ -527,7 +527,7 @@ export default function PortalReportsTab({
                             <thead className="bg-muted text-muted-foreground font-semibold">
                               <tr>
                                 <th className="p-2 text-left">Atividade / Serviço</th>
-                                <th className="p-2 text-left">Categoria</th>
+                                <th className="p-2 text-left">Atividade</th>
                                 <th className="p-2 text-right">Chamados</th>
                                 <th className="p-2 text-right">Horas</th>
                               </tr>

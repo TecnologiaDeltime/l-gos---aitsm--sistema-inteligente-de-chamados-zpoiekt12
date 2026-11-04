@@ -957,7 +957,7 @@ export default function PortalPage() {
                           </span>
                           {ticket.expand?.category?.name && (
                             <span>
-                              Categoria: <strong>{ticket.expand.category.name}</strong>
+                              Atividade: <strong>{ticket.expand.category.name}</strong>
                             </span>
                           )}
                           {ticket.requester_name && (

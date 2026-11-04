@@ -37,7 +37,7 @@ export function DrillDownDialog({ open, onClose, title, tickets }: DrillDownDial
                 <TableHead className="text-xs">Cliente</TableHead>
                 <TableHead className="text-xs">Solicitante</TableHead>
                 <TableHead className="text-xs">Operador</TableHead>
-                <TableHead className="text-xs">Categoria</TableHead>
+                <TableHead className="text-xs">Atividade</TableHead>
                 <TableHead className="text-xs">Prioridade</TableHead>
                 <TableHead className="text-xs">Status</TableHead>
                 <TableHead className="text-xs">Abertura</TableHead>

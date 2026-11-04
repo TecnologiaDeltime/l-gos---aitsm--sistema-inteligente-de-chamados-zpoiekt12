@@ -11,7 +11,7 @@ A documentação adota o formato **Híbrido**: texto descritivo detalhado em con
 O conjunto documental está dividido em módulos temáticos para facilitar a consulta por gestores, operadores, auditores e administradores:
 
 1. **[Módulos Operacionais](MODULOS_OPERACIONAIS.md)**
-   - **Central de Chamados / Tickets**: Abertura, Fila de Tickets, Kanban, Play/Pause do Operador, Timeline, Atividades e Categorias, Encerramento e Solução, Reabertura com Prazo Configurável e Motivo Obrigatório, Pesquisa de Satisfação com Estrelas.
+   - **Central de Chamados / Tickets**: Abertura, Fila de Tickets, Kanban, Play/Pause do Operador, Timeline, Catálogo de Atividades, Encerramento e Solução, Reabertura com Prazo Configurável e Motivo Obrigatório, Pesquisa de Satisfação com Estrelas.
    - **Atendimento Omnichannel (`/atendimento`)**: Console de conversas simultâneas, SLA Live Countdown, Triagem, Dossiê de Handoff com IA, Nova Conversa e Vinculação de Chamados.
    - **Clientes e Estrutura Organizacional**: Empresas Clientes, Filiais, Setores/Departamentos, Colaboradores e Pontos Focais.
    - **CMDB & Gestão de Ativos**: Cadastro Completo de Ativos e Itens de Configuração, Dono do Equipamento, Usuário Responsável, Status de Disponibilidade (_Em uso, Obsoleto, Descartado, Disponível, Em Estoque_), Importação em lote e Tipos de CI.

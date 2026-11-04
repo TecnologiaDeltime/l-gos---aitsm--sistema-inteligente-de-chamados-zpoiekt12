@@ -716,7 +716,7 @@ export default function PortalDashboardTab({
                     <tr>
                       <th className="p-2.5 text-center w-10">#</th>
                       <th className="p-2.5 text-left">Atividade / Serviço</th>
-                      <th className="p-2.5 text-left hidden sm:table-cell">Categoria</th>
+                      <th className="p-2.5 text-left hidden sm:table-cell">Atividade</th>
                       <th className="p-2.5 text-right">Chamados</th>
                       <th className="p-2.5 text-right">Horas</th>
                     </tr>

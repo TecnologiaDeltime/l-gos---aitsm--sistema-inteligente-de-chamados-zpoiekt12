@@ -838,7 +838,7 @@ export default function TicketDetail({
                     ticket.triage_suggestions.category) && (
                     <div className="bg-card/80 p-2.5 rounded-lg border border-border/70">
                       <span className="text-muted-foreground block text-[10px] uppercase font-mono">
-                        Categoria Sugerida
+                        Atividade Sugerida
                       </span>
                       <span className="font-semibold text-foreground">
                         {ticket.triage_suggestions.category_name ||

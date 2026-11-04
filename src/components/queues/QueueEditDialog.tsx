@@ -266,10 +266,10 @@ export function QueueEditDialog({ queue, open, onOpenChange, onSaved }: QueueEdi
           </div>
 
           <div className="space-y-1.5">
-            <Label className="text-sm font-semibold">Categorias</Label>
+            <Label className="text-sm font-semibold">Atividades Atendidas</Label>
             <div className="flex flex-wrap gap-1.5 min-h-[28px] p-2 rounded-md border">
               {categoryNames.length === 0 && (
-                <span className="text-xs text-slate-400">Nenhuma categoria selecionada</span>
+                <span className="text-xs text-slate-400">Nenhuma atividade selecionada</span>
               )}
               {categoryNames.map((c) => (
                 <Badge key={c.id} variant="secondary" className="gap-1">
