@@ -378,6 +378,10 @@ export default function TicketCreate() {
       } else {
         setMainCategory(sub.id)
       }
+      // O tipo do chamado é derivado da atividade cadastrada no catálogo
+      if (sub.type) {
+        setType(sub.type)
+      }
       setAutoImpact(sub.impact || '')
       setAutoUrgency(sub.urgency || '')
       setAutoPriority(sub.priority || computePriority(sub.impact || '', sub.urgency || ''))
@@ -397,10 +401,6 @@ export default function TicketCreate() {
       }
     }
     if (step === 1) {
-      if (!type) {
-        toast({ title: 'Selecione o tipo', variant: 'destructive' })
-        return false
-      }
       if (!subActivity) {
         toast({ title: 'Selecione uma atividade', variant: 'destructive' })
         return false
@@ -615,21 +615,9 @@ export default function TicketCreate() {
                 Classificação
               </h2>
               <p className="text-sm text-slate-500 dark:text-slate-400">
-                Selecione a atividade para preencher impacto, urgência e prioridade automaticamente
+                Selecione a atividade do catálogo para definir tipo, impacto, urgência e prioridade
+                automaticamente
               </p>
-            </div>
-            <div className="space-y-2">
-              <FieldLabel>Tipo</FieldLabel>
-              <Select value={type} onValueChange={setType}>
-                <SelectTrigger className="rounded-lg">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Incidente">Incidente</SelectItem>
-                  <SelectItem value="Requisição de Serviço">Requisição de Serviço</SelectItem>
-                  <SelectItem value="Dúvida">Dúvida</SelectItem>
-                </SelectContent>
-              </Select>
             </div>
             <div className="space-y-2">
               <FieldLabel>Atividade do Catálogo *</FieldLabel>
@@ -650,17 +638,23 @@ export default function TicketCreate() {
               </Select>
             </div>
             {subActivity && (
-              <div className="grid gap-4 sm:grid-cols-3 rounded-lg bg-slate-50 p-4 dark:bg-slate-800/50">
+              <div className="grid gap-4 sm:grid-cols-4 rounded-lg bg-slate-50 p-4 dark:bg-slate-800/50">
+                <div className="space-y-1">
+                  <FieldLabel>Tipo</FieldLabel>
+                  <Badge variant="secondary" className="text-xs font-semibold">
+                    {type || 'Incidente'}
+                  </Badge>
+                </div>
                 <div className="space-y-1">
                   <FieldLabel>Impacto</FieldLabel>
                   <Badge variant="outline" className="text-xs">
-                    {autoImpact}
+                    {autoImpact || '—'}
                   </Badge>
                 </div>
                 <div className="space-y-1">
                   <FieldLabel>Urgência</FieldLabel>
                   <Badge variant="outline" className="text-xs">
-                    {autoUrgency}
+                    {autoUrgency || '—'}
                   </Badge>
                 </div>
                 <div className="space-y-1">

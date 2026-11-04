@@ -258,6 +258,9 @@ export const ScheduledTicketDialog: React.FC<ScheduledTicketDialogProps> = ({
       } else {
         setCategoryId(selectedSub.id)
       }
+      if (selectedSub.type) {
+        setType(selectedSub.type)
+      }
       const imp = selectedSub.impact || 'Médio'
       const urg = selectedSub.urgency || 'Média'
       const prio = selectedSub.priority || computePriority(imp, urg)
@@ -475,23 +478,13 @@ export const ScheduledTicketDialog: React.FC<ScheduledTicketDialogProps> = ({
 
               <div>
                 <Label className="text-xs font-semibold uppercase text-muted-foreground">
-                  Tipo de Chamado
+                  Tipo (definido pela atividade)
                 </Label>
-                <Select value={type} onValueChange={setType}>
-                  <SelectTrigger className="mt-1 bg-background">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Requisição de Serviço">Requisição de Serviço</SelectItem>
-                    <SelectItem value="Mudança">Mudança</SelectItem>
-                    <SelectItem value="Projeto">Projeto</SelectItem>
-                    <SelectItem value="Tarefa Interna">Tarefa Interna</SelectItem>
-                    <SelectItem value="Visita Técnica">Visita Técnica</SelectItem>
-                    <SelectItem value="Dúvida">Dúvida</SelectItem>
-                  </SelectContent>
-                </Select>
+                <div className="mt-1 flex h-10 items-center rounded-md border border-input bg-muted/40 px-3 text-xs font-semibold">
+                  {type || 'Requisição de Serviço'}
+                </div>
                 <span className="text-[11px] text-muted-foreground">
-                  Chamados programáveis (Incidente e Problema não se aplicam a agendamento).
+                  O tipo é determinado automaticamente pela atividade selecionada no catálogo.
                 </span>
               </div>
             </div>

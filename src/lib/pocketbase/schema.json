@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-04T16:03:07.218Z",
+  "generatedAt": "2026-11-04T17:35:29.192Z",
   "collections": [
     {
       "name": "users",
@@ -847,6 +847,19 @@
         {
           "name": "sla_solution_minutes",
           "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "type",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["Incidente", "Requisição de Serviço", "Dúvida", "Visita Técnica"]
+        },
+        {
+          "name": "deleted",
+          "type": "bool",
           "required": false,
           "system": false
         }

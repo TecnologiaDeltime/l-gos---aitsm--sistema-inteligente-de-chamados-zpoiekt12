@@ -1,11 +1,15 @@
 import pb from '@/lib/pocketbase/client'
 
+export type ActivityTicketType = 'Incidente' | 'Requisição de Serviço' | 'Dúvida' | 'Visita Técnica'
+
 export interface CategoryRecord {
   id: string
   name: string
   description?: string
   parent?: string
   active?: boolean
+  deleted?: boolean
+  type?: ActivityTicketType | string
   impact?: string
   urgency?: string
   priority?: string
@@ -14,8 +18,12 @@ export interface CategoryRecord {
   expand?: any
 }
 
-export const getCategories = () =>
-  pb.collection('tkt_categories').getFullList<CategoryRecord>({ sort: 'name', expand: 'parent' })
+export const getCategories = (includeDeleted: boolean = false) =>
+  pb.collection('tkt_categories').getFullList<CategoryRecord>({
+    filter: includeDeleted ? '' : 'deleted != true',
+    sort: 'name',
+    expand: 'parent',
+  })
 
 export const getCategoryById = (id: string) =>
   pb.collection('tkt_categories').getOne<CategoryRecord>(id)

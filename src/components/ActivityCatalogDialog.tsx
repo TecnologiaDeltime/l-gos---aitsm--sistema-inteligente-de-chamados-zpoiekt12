@@ -44,6 +44,7 @@ export function ActivityCatalogDialog({
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
   const [parent, setParent] = useState('')
+  const [type, setType] = useState<string>('Incidente')
   const [impact, setImpact] = useState('')
   const [urgency, setUrgency] = useState('')
   const [slaResponse, setSlaResponse] = useState('')
@@ -56,6 +57,7 @@ export function ActivityCatalogDialog({
       setName(editingCategory?.name || '')
       setDescription(editingCategory?.description || '')
       setParent(editingCategory?.parent || presetParent || '')
+      setType(editingCategory?.type || 'Incidente')
       setImpact(editingCategory?.impact || '')
       setUrgency(editingCategory?.urgency || '')
       setSlaResponse(
@@ -103,6 +105,7 @@ export function ActivityCatalogDialog({
         description,
         parent: parent || undefined,
         active,
+        type: type || 'Incidente',
         ...(isSub
           ? {
               impact,
@@ -156,6 +159,27 @@ export function ActivityCatalogDialog({
               placeholder="Descrição opcional"
             />
           </div>
+          <div className="space-y-1">
+            <Label className="text-xs">Tipo do Chamado (Classificação) *</Label>
+            <Select value={type} onValueChange={setType}>
+              <SelectTrigger>
+                <SelectValue placeholder="Selecione o tipo do chamado" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Incidente">Incidente (Falha / Indisponibilidade)</SelectItem>
+                <SelectItem value="Requisição de Serviço">
+                  Requisição de Serviço (Solicitação / Pedido)
+                </SelectItem>
+                <SelectItem value="Dúvida">Dúvida / Esclarecimento</SelectItem>
+                <SelectItem value="Visita Técnica">Visita Técnica</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-[11px] text-muted-foreground">
+              Define automaticamente se o chamado é Incidente, Requisição ou Dúvida ao selecionar
+              esta atividade.
+            </p>
+          </div>
+
           <div className="space-y-1">
             <Label className="text-xs">Atividade Principal Agrupadora</Label>
             <Select value={parent} onValueChange={setParent}>

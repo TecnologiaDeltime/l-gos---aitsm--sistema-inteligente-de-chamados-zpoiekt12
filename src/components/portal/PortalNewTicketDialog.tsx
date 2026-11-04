@@ -9,6 +9,7 @@ import {
   FileIcon,
   UserCheck,
   Laptop,
+  Tag,
 } from 'lucide-react'
 import {
   Dialog,
@@ -34,6 +35,7 @@ import { getCompanyDepartments, CompanyDepartmentRecord } from '@/services/compa
 import { getClientContacts, ClientContactRecord } from '@/services/client-contacts'
 import { uploadAttachment } from '@/services/attachments'
 import { getEquipments, EquipmentRecord } from '@/services/equipments'
+import { getCategories, CategoryRecord } from '@/services/categories'
 import { useToast } from '@/hooks/use-toast'
 import { usePermissions } from '@/hooks/use-permissions'
 
@@ -74,11 +76,18 @@ export default function PortalNewTicketDialog({
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [type, setType] = useState('Incidente')
+  const [selectedActivity, setSelectedActivity] = useState<string>('none')
+  const [activities, setActivities] = useState<CategoryRecord[]>([])
   const [selectedAsset, setSelectedAsset] = useState<string>(initialAssetId || 'none')
 
   useEffect(() => {
     if (open) {
       setSelectedAsset(initialAssetId || 'none')
+      getCategories()
+        .then((cats) => {
+          setActivities(cats.filter((c) => c.active !== false))
+        })
+        .catch((e) => console.warn('Erro ao carregar catálogo de atividades:', e))
     }
   }, [open, initialAssetId])
 
@@ -148,6 +157,7 @@ export default function PortalNewTicketDialog({
     setContactPhone(currentUser?.phone || '')
     setSelectedSector('none')
     setPreferredContactId('')
+    setSelectedActivity('none')
     setSelectedFile(null)
     setExtraEquipment(null)
   }, [open])
@@ -307,6 +317,16 @@ export default function PortalNewTicketDialog({
     }
   }
 
+  const handleSelectActivity = (activityId: string) => {
+    setSelectedActivity(activityId)
+    if (activityId && activityId !== 'none') {
+      const act = activities.find((a) => a.id === activityId)
+      if (act?.type) {
+        setType(act.type)
+      }
+    }
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!companyId) {
@@ -321,7 +341,14 @@ export default function PortalNewTicketDialog({
     try {
       setSubmitting(true)
 
-      // Cria chamado SEM urgência (padrão Média) e SEM categoria (categorização será feita por IA/operador)
+      const act = activities.find((a) => a.id === selectedActivity)
+      const ticketCategory = act ? (act.parent ? act.parent : act.id) : undefined
+      const ticketSubcategory = act && act.parent ? act.id : undefined
+      const ticketType = act?.type || type || 'Incidente'
+      const ticketImpact = act?.impact || 'Médio'
+      const ticketUrgency = act?.urgency || 'Média'
+      const ticketPriority = act?.priority || 'Média'
+
       const createdTicket = await createTicket({
         number: 'PENDENTE',
         company: companyId,
@@ -329,11 +356,12 @@ export default function PortalNewTicketDialog({
         department: selectedSector !== 'none' ? selectedSector : undefined,
         title: title.trim(),
         description: description.trim(),
-        type,
-        category: undefined, // Sem categoria no portal
-        impact: 'Médio',
-        urgency: 'Média', // Sem campo de urgência no portal
-        priority: 'Média' as any,
+        type: ticketType,
+        category: ticketCategory,
+        subcategory: ticketSubcategory,
+        impact: ticketImpact,
+        urgency: ticketUrgency,
+        priority: ticketPriority as any,
         status: 'Novo',
         requester_name: contactName.trim() || user.name || 'Solicitante do Portal',
         requester_email: contactEmail.trim() || user.email,
@@ -508,7 +536,7 @@ export default function PortalNewTicketDialog({
             </div>
           </div>
 
-          {/* Linha 2: Equipamento/Ativo Envolvido e Tipo de Solicitação */}
+          {/* Linha 2: Equipamento/Ativo Envolvido e Atividade do Catálogo */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <label className="text-xs font-semibold text-foreground flex items-center gap-1.5">
@@ -537,18 +565,21 @@ export default function PortalNewTicketDialog({
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-foreground">Tipo de Solicitação</label>
-              <Select value={type} onValueChange={setType}>
+              <label className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+                <Tag className="h-3.5 w-3.5 text-amber-500" />
+                Atividade / Assunto
+              </label>
+              <Select value={selectedActivity} onValueChange={handleSelectActivity}>
                 <SelectTrigger className="text-xs h-9">
-                  <SelectValue />
+                  <SelectValue placeholder="Selecione a atividade (opcional)" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Incidente">Incidente (Algo parou de funcionar)</SelectItem>
-                  <SelectItem value="Requisição de Serviço">
-                    Requisição de Serviço (Solicitar algo novo)
-                  </SelectItem>
-                  <SelectItem value="Dúvida">Dúvida / Esclarecimento</SelectItem>
-                  <SelectItem value="Visita Técnica">Visita Técnica Presencial</SelectItem>
+                  <SelectItem value="none">Geral / Selecionar depois pelo atendente</SelectItem>
+                  {activities.map((act) => (
+                    <SelectItem key={act.id} value={act.id}>
+                      {act.name} {act.type ? `(${act.type})` : ''}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>

@@ -97,6 +97,13 @@ const BASE_SYSTEM_MODULES: GranularModuleDefinition[] = [
         path: '/catalogo',
       },
       {
+        key: 'tickets_catalogo_delete',
+        label: 'Excluir Atividades do Catálogo',
+        description:
+          'Permite ao administrador excluir atividades e subatividades do catálogo com confirmação',
+        path: '/catalogo',
+      },
+      {
         key: 'tickets_aprovacoes',
         label: 'Aprovações de Chamados',
         description: 'Fila de pendências e deliberações de aprovação',
