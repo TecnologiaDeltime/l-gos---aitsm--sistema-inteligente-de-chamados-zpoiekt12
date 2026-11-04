@@ -70,8 +70,8 @@ const MONTH_SHORT = [
 function formatHoursNumberLabel(value: any): string {
   if (value === undefined || value === null) return ''
   const n = Number(value)
-  if (isNaN(n) || n === 0) return '0h'
-  return `${n.toFixed(1)}h`
+  if (isNaN(n) || n === 0) return '00:00:00'
+  return formatHours(n)
 }
 
 export default function TechnicianDashboardPage() {
@@ -663,7 +663,7 @@ export default function TechnicianDashboardPage() {
               Horas Acumuladas
             </p>
             <p className="text-2xl font-bold tracking-tight text-amber-950 dark:text-amber-100">
-              {formatHours(filteredInteractionsMinutes / 60)}
+              {formatMinutes(filteredInteractionsMinutes)}
             </p>
             <p className="text-[10px] text-amber-700/80 dark:text-amber-300/80 mt-0.5 truncate">
               {activeMonthRange.label}
@@ -955,10 +955,7 @@ export default function TechnicianDashboardPage() {
                     tickLine={false}
                   />
                   <Tooltip
-                    formatter={(v: any) => [
-                      `${Number(v).toFixed(2)}h (${formatHours(Number(v))})`,
-                      'Horas Trabalhadas',
-                    ]}
+                    formatter={(v: any) => [formatHours(Number(v)), 'Horas Trabalhadas']}
                     contentStyle={{
                       backgroundColor: 'rgba(255, 255, 255, 0.95)',
                       borderRadius: '8px',
@@ -984,7 +981,7 @@ export default function TechnicianDashboardPage() {
                 <div key={m.key} className="space-y-0.5">
                   <p className="text-[10px] text-slate-500 font-medium">{m.label}</p>
                   <p className="text-sm font-bold text-slate-900 dark:text-slate-100">
-                    {m.hours.toFixed(1)}h
+                    {formatHours(m.hours)}
                   </p>
                   <p className="text-[9px] text-slate-400">{m.interactionsCount} interação(ões)</p>
                 </div>

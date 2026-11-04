@@ -19,6 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { formatHoursToHHMMSS } from '@/lib/duration'
 
 interface PortalHoursTabProps {
   hoursData: {
@@ -154,7 +155,7 @@ export default function PortalHoursTab({
               </div>
             </CardDescription>
             <CardTitle className="text-3xl font-black text-foreground pt-1 tracking-tight">
-              {loading ? '...' : `${hoursData.contractedHours}h`}
+              {loading ? '...' : formatHoursToHHMMSS(hoursData.contractedHours)}
             </CardTitle>
           </CardHeader>
           <CardContent className="p-5 pt-1 text-xs text-muted-foreground font-medium">
@@ -172,7 +173,7 @@ export default function PortalHoursTab({
               </div>
             </CardDescription>
             <CardTitle className="text-3xl font-black text-[#D97706] dark:text-[#FCD34D] pt-1 tracking-tight">
-              {loading ? '...' : `${hoursData.consumedHours}h`}
+              {loading ? '...' : formatHoursToHHMMSS(hoursData.consumedHours)}
             </CardTitle>
           </CardHeader>
           <CardContent className="p-5 pt-1 text-xs text-muted-foreground font-medium">
@@ -208,7 +209,7 @@ export default function PortalHoursTab({
                   : 'text-emerald-600 dark:text-emerald-400'
               }`}
             >
-              {loading ? '...' : `${hoursData.balanceHours}h`}
+              {loading ? '...' : formatHoursToHHMMSS(hoursData.balanceHours)}
             </CardTitle>
           </CardHeader>
           <CardContent className="p-5 pt-1 text-xs text-muted-foreground font-medium">
@@ -239,11 +240,12 @@ export default function PortalHoursTab({
         </div>
 
         <div className="flex items-center justify-between text-[11px] text-muted-foreground pt-1">
-          <span>0h</span>
+          <span>00:00:00</span>
           <span>
-            {hoursData.consumedHours}h de {hoursData.contractedHours}h
+            {formatHoursToHHMMSS(hoursData.consumedHours)} de{' '}
+            {formatHoursToHHMMSS(hoursData.contractedHours)}
           </span>
-          <span>{hoursData.contractedHours}h</span>
+          <span>{formatHoursToHHMMSS(hoursData.contractedHours)}</span>
         </div>
       </Card>
 

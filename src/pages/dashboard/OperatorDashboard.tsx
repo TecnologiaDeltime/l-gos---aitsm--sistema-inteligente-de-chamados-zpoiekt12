@@ -71,8 +71,8 @@ const MONTH_SHORT = [
 function formatHoursNumberLabel(value: any): string {
   if (value === undefined || value === null) return ''
   const n = Number(value)
-  if (isNaN(n) || n === 0) return '0h'
-  return `${n.toFixed(1)}h`
+  if (isNaN(n) || n === 0) return '00:00:00'
+  return formatHours(n)
 }
 
 export default function OperatorDashboard() {
@@ -902,7 +902,7 @@ export default function OperatorDashboard() {
                 {formatMinutes(avgAttendanceMinutes)}
               </span>
               <span className="text-xs text-muted-foreground">
-                ({(avgAttendanceMinutes / 60).toFixed(1)}h média / chamado)
+                ({formatMinutes(avgAttendanceMinutes)} média / chamado)
               </span>
             </div>
             <p className="text-xs text-muted-foreground mt-2">
@@ -933,7 +933,7 @@ export default function OperatorDashboard() {
                 {formatMinutes(avgResolutionMinutes)}
               </span>
               <span className="text-xs text-muted-foreground">
-                ({(avgResolutionMinutes / 60).toFixed(1)}h para solucionar)
+                ({formatMinutes(avgResolutionMinutes)} para solucionar)
               </span>
             </div>
             <p className="text-xs text-muted-foreground mt-2">
@@ -986,7 +986,7 @@ export default function OperatorDashboard() {
                   />
                   <Tooltip
                     formatter={(v: any, name: any) => [
-                      `${Number(v).toFixed(2)}h (${formatHours(Number(v))})`,
+                      formatHours(Number(v)),
                       name === 'Trabalhadas'
                         ? 'Horas Trabalhadas (Play/Pause)'
                         : 'Acompanhamento (Franquia)',
@@ -1037,10 +1037,10 @@ export default function OperatorDashboard() {
               {last3MonthsData.map((m) => (
                 <div key={m.key} className="space-y-0.5">
                   <p className="text-[10px] text-muted-foreground font-medium">{m.label}</p>
-                  <p className="text-sm font-bold text-foreground">{m.horasTotais.toFixed(1)}h</p>
+                  <p className="text-sm font-bold text-foreground">{formatHours(m.horasTotais)}</p>
                   <p className="text-[9px] text-muted-foreground">
-                    Play: {m.horasTrabalhadas.toFixed(1)}h · Acomp:{' '}
-                    {m.horasAcompanhamento.toFixed(1)}h
+                    Play: {formatHours(m.horasTrabalhadas)} · Acomp:{' '}
+                    {formatHours(m.horasAcompanhamento)}
                   </p>
                 </div>
               ))}
