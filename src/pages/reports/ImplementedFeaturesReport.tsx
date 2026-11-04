@@ -378,6 +378,13 @@ const FEATURE_CATEGORIES: FeatureCategory[] = [
         tag: 'Automação & Colaboradores',
       },
       {
+        id: 'cmdb-responsible-user-combobox',
+        title: 'Busca inteligente de Colaborador Responsável no cadastro e edição de Ativos',
+        description:
+          'Campo de Usuário Responsável com seletor pesquisável (combobox com filtro por nome e e-mail) no cadastro de novo ativo (/cmdb/assets/new) e na edição de ativos existentes (/cmdb/assets/:id). Carrega automaticamente a lista de colaboradores cadastrados na empresa cliente, exibe badges de Ponto Focal e mantém total compatibilidade com valores de texto livre legados já gravados no banco de dados e com as automações de ciclo de vida.',
+        tag: 'CMDB & Ativos',
+      },
+      {
         id: 'cmdb-bulk-import',
         title: 'Importação em massa de Ativos (CMDB) via CSV/XLSX',
         description:

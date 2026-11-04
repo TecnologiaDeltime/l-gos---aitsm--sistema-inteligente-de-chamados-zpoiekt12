@@ -181,7 +181,7 @@ O CMDB (Configuration Management Database) gerencia o inventário de hardware, s
 - **Localização Física**: Filial, Andar, Sala e Departamento.
 - **Responsáveis**:
   - **Dono do Equipamento (`owner`)**: pessoa física ou jurídica titular do ativo.
-  - **Usuário Responsável (`responsible_user`)**: operador ou colaborador que está utilizando o equipamento no dia a dia.
+  - **Usuário Responsável (`responsible_user`)**: operador ou colaborador que está utilizando o equipamento no dia a dia. Tanto no cadastro (`/cmdb/assets/new`) quanto na edição (`/cmdb/assets/:id`), o campo conta com seletor pesquisável inteligente (`ResponsibleUserCombobox`) com busca em tempo real por nome e e-mail dos colaboradores da empresa cliente, exibição de badge de Ponto Focal e suporte a texto livre legado.
 - **Status Operacional Tradicional**: Ativo, Em Manutenção, Reserva, Inativo, Descartado.
 - **Novo Campo: Status de Disponibilidade (`availability_status`)**:
   - `Em uso`: equipamento alocado e em utilização ativa por um colaborador.

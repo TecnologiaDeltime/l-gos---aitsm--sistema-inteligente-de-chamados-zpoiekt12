@@ -27,6 +27,8 @@ import {
 } from '@/services/equipments'
 import { AvailabilityStatusBadge } from '@/components/AvailabilityStatusBadge'
 import { getCompanies, getCompanyUnits, getCompanyDepartments } from '@/services/companies'
+import { getClientContacts, type ClientContactRecord } from '@/services/client-contacts'
+import { ResponsibleUserCombobox } from '@/components/cmdb/ResponsibleUserCombobox'
 import { extractFieldErrors, type FieldErrors } from '@/lib/pocketbase/errors'
 import { deleteEquipment } from '@/services/equipments'
 import { createAssetAutomationLog } from '@/services/asset-automation-logs'
@@ -60,6 +62,8 @@ export function CiDetailInfo({
   const [companies, setCompanies] = useState<any[]>([])
   const [units, setUnits] = useState<any[]>([])
   const [departments, setDepartments] = useState<any[]>([])
+  const [contacts, setContacts] = useState<ClientContactRecord[]>([])
+  const [loadingContacts, setLoadingContacts] = useState(false)
   const [showDiscard, setShowDiscard] = useState(false)
   const [justification, setJustification] = useState('')
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({})
@@ -77,12 +81,21 @@ export function CiDetailInfo({
   }, [])
   useEffect(() => {
     if (form.company) {
+      setLoadingContacts(true)
       getCompanyUnits(form.company)
         .then(setUnits)
         .catch(() => {})
       getCompanyDepartments(form.company)
         .then(setDepartments)
         .catch(() => {})
+      getClientContacts(form.company)
+        .then(setContacts)
+        .catch(() => setContacts([]))
+        .finally(() => setLoadingContacts(false))
+    } else {
+      setUnits([])
+      setDepartments([])
+      setContacts([])
     }
   }, [form.company])
 
@@ -493,11 +506,21 @@ export function CiDetailInfo({
           </div>
           <div>
             <Label className="text-xs">Usuário responsável</Label>
-            <Input
-              className={inputCls}
+            <ResponsibleUserCombobox
+              contacts={contacts}
               value={form.responsible_user || ''}
-              onChange={(e) => set('responsible_user', e.target.value)}
+              onChange={(fullName) => set('responsible_user', fullName)}
+              placeholder={
+                loadingContacts
+                  ? 'Carregando colaboradores...'
+                  : 'Buscar colaborador responsável...'
+              }
+              disabled={loadingContacts}
+              companyName={companies.find((c) => c.id === form.company)?.trade_name}
             />
+            <p className="text-[11px] text-muted-foreground mt-1">
+              Busque pelo nome ou e-mail do colaborador cadastrado na empresa.
+            </p>
           </div>
           <div>
             <Label className="text-xs">Empresa</Label>

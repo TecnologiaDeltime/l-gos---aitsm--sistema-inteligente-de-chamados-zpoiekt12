@@ -20,6 +20,7 @@ import {
 } from '@/services/equipments'
 import { getCompanies, getCompanyUnits, getCompanyDepartments } from '@/services/companies'
 import { getClientContacts, type ClientContactRecord } from '@/services/client-contacts'
+import { ResponsibleUserCombobox } from '@/components/cmdb/ResponsibleUserCombobox'
 import { useToast } from '@/hooks/use-toast'
 import { extractFieldErrors, type FieldErrors } from '@/lib/pocketbase/errors'
 import { buildSectorTree, flattenSectorTree, getSectorIndent } from '@/lib/sector-hierarchy'
@@ -33,7 +34,6 @@ export default function CiCreate() {
   const [departments, setDepartments] = useState<any[]>([])
   const [contacts, setContacts] = useState<ClientContactRecord[]>([])
   const [selectedOwnerId, setSelectedOwnerId] = useState('')
-  const [selectedResponsibleId, setSelectedResponsibleId] = useState('')
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({})
   const [saving, setSaving] = useState(false)
   const [loadingDeps, setLoadingDeps] = useState(false)
@@ -105,7 +105,6 @@ export default function CiCreate() {
       setDepartments([])
     }
     setSelectedOwnerId('')
-    setSelectedResponsibleId('')
     setForm((p) => ({ ...p, owner: '', responsible_user: '', department: '', unit: '' }))
   }, [form.company])
 
@@ -129,14 +128,12 @@ export default function CiCreate() {
     }))
   }
 
-  const handleResponsibleSelect = (contactId: string) => {
-    const contact = contacts.find((c) => c.id === contactId)
-    setSelectedResponsibleId(contactId)
+  const handleResponsibleChange = (fullName: string, contact?: ClientContactRecord) => {
     const deptId = contact?.departments?.[0] || ''
     setForm((p) => ({
       ...p,
-      responsible_user: contact?.full_name || '',
-      department: deptId,
+      responsible_user: fullName,
+      ...(deptId && !p.department ? { department: deptId } : {}),
     }))
   }
 
@@ -417,18 +414,17 @@ export default function CiCreate() {
                 </div>
                 <div className="space-y-1">
                   <Label className="text-xs">Usuário responsável</Label>
-                  <Select value={selectedResponsibleId} onValueChange={handleResponsibleSelect}>
-                    <SelectTrigger className={inputCls}>
-                      <SelectValue placeholder="Selecione um colaborador" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {contacts.map((c) => (
-                        <SelectItem key={c.id} value={c.id}>
-                          {c.full_name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <ResponsibleUserCombobox
+                    contacts={contacts}
+                    value={form.responsible_user}
+                    onChange={handleResponsibleChange}
+                    placeholder="Buscar colaborador responsável..."
+                    disabled={!companySelected}
+                    companyName={companies.find((c) => c.id === form.company)?.trade_name}
+                  />
+                  <p className="text-[11px] text-muted-foreground">
+                    Selecione um colaborador cadastrado na empresa ou digite o nome.
+                  </p>
                 </div>
                 <div className="space-y-1">
                   <Label className="text-xs">Departamento</Label>
