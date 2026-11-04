@@ -25,6 +25,7 @@ import { ChartContainer, type ChartConfig } from '@/components/ui/chart'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts'
 import { useToast } from '@/hooks/use-toast'
 import { getErrorMessage } from '@/lib/pocketbase/errors'
+import { formatMinutes } from '@/lib/duration'
 import { getTickets } from '@/services/tickets'
 import { getCategories } from '@/services/categories'
 import { getCompanies } from '@/services/companies'
@@ -113,8 +114,8 @@ export default function RecurrentActivities() {
         'Atividade Principal': r.mainActivity,
         Subatividade: r.subactivity,
         'Total de Chamados': r.total,
-        'Média SLA Resposta (min)': r.avgResponseMin || '-',
-        'Média SLA Solução (min)': r.avgSolutionMin || '-',
+        'Média SLA Resposta (HH:MM:SS)': r.avgResponseMin ? formatMinutes(r.avgResponseMin) : '-',
+        'Média SLA Solução (HH:MM:SS)': r.avgSolutionMin ? formatMinutes(r.avgSolutionMin) : '-',
         '% do Total': r.pctOfTotal.toFixed(1) + '%',
         'Período Anterior': r.previousCount,
         Tendência: r.trend === 'up' ? '↑' : r.trend === 'down' ? '↓' : '→',
@@ -123,8 +124,8 @@ export default function RecurrentActivities() {
         'Atividade Principal',
         'Subatividade',
         'Total de Chamados',
-        'Média SLA Resposta (min)',
-        'Média SLA Solução (min)',
+        'Média SLA Resposta (HH:MM:SS)',
+        'Média SLA Solução (HH:MM:SS)',
         '% do Total',
         'Período Anterior',
         'Tendência',
@@ -241,8 +242,8 @@ export default function RecurrentActivities() {
                       <TableHead className="text-xs">Atividade Principal</TableHead>
                       <TableHead className="text-xs">Subatividade</TableHead>
                       <TableHead className="text-xs text-center">Total</TableHead>
-                      <TableHead className="text-xs text-center">SLA Resp. (min)</TableHead>
-                      <TableHead className="text-xs text-center">SLA Sol. (min)</TableHead>
+                      <TableHead className="text-xs text-center">SLA Resp. (HH:MM:SS)</TableHead>
+                      <TableHead className="text-xs text-center">SLA Sol. (HH:MM:SS)</TableHead>
                       <TableHead className="text-xs text-center">% do Total</TableHead>
                       <TableHead className="text-xs">Proporção</TableHead>
                       <TableHead className="text-xs text-center">Tendência</TableHead>
@@ -256,11 +257,11 @@ export default function RecurrentActivities() {
                         <TableCell className="text-xs text-center font-semibold">
                           {r.total}
                         </TableCell>
-                        <TableCell className="text-xs text-center">
-                          {r.avgResponseMin || '-'}
+                        <TableCell className="text-xs text-center font-mono">
+                          {r.avgResponseMin ? formatMinutes(r.avgResponseMin) : '-'}
                         </TableCell>
-                        <TableCell className="text-xs text-center">
-                          {r.avgSolutionMin || '-'}
+                        <TableCell className="text-xs text-center font-mono">
+                          {r.avgSolutionMin ? formatMinutes(r.avgSolutionMin) : '-'}
                         </TableCell>
                         <TableCell className="text-xs text-center">
                           {r.pctOfTotal.toFixed(1)}%

@@ -123,9 +123,7 @@ function formatMonthLabel(monthKey: string): string {
 
 function formatHoursLabel(value: any): string {
   if (value === null || value === undefined || isNaN(Number(value))) return ''
-  const num = Number(value)
-  if (num === 0) return '0h'
-  return `${num.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}h`
+  return formatHours(value)
 }
 
 function formatCountLabel(value: any): string {
@@ -805,7 +803,7 @@ export default function MonthlyClientReportPage() {
               <CardContent className="p-4">
                 <p className="text-xs font-medium text-muted-foreground">Horas Contratadas</p>
                 <p className="text-2xl font-bold font-mono text-foreground mt-1">
-                  {reportData.totalContractedHours.toFixed(1)}h
+                  {formatHours(reportData.totalContractedHours)}
                 </p>
                 <p className="text-[11px] text-muted-foreground mt-0.5">Franquia do mês</p>
               </CardContent>
@@ -814,7 +812,7 @@ export default function MonthlyClientReportPage() {
               <CardContent className="p-4">
                 <p className="text-xs font-medium text-muted-foreground">Horas Utilizadas</p>
                 <p className="text-2xl font-bold font-mono text-amber-600 dark:text-amber-400 mt-1">
-                  {reportData.totalUsedHours.toFixed(1)}h
+                  {formatHours(reportData.totalUsedHours)}
                 </p>
                 <p className="text-[11px] text-muted-foreground mt-0.5">Total apurado</p>
               </CardContent>
@@ -827,7 +825,8 @@ export default function MonthlyClientReportPage() {
                     reportData.totalBalanceHours < 0 ? 'text-red-600' : 'text-emerald-600'
                   }`}
                 >
-                  {reportData.totalBalanceHours.toFixed(1)}h
+                  {reportData.totalBalanceHours < 0 ? '-' : ''}
+                  {formatHours(Math.abs(reportData.totalBalanceHours))}
                 </p>
                 <p className="text-[11px] text-muted-foreground mt-0.5">
                   {reportData.totalBalanceHours < 0 ? 'Horas excedentes' : 'Saldo disponível'}
@@ -907,7 +906,7 @@ export default function MonthlyClientReportPage() {
                       }}
                     />
                     <Tooltip
-                      formatter={(v: any) => [`${Number(v).toFixed(2)}h`, '']}
+                      formatter={(v: any) => [formatHours(v), '']}
                       contentStyle={{
                         fontSize: 12,
                         backgroundColor: '#17181C',
@@ -972,10 +971,10 @@ export default function MonthlyClientReportPage() {
                       <TableRow key={ag.key}>
                         <TableCell className="text-xs font-medium">{ag.name}</TableCell>
                         <TableCell className="text-xs text-right font-mono">
-                          {ag.contractedHours.toFixed(2)}h
+                          {formatHours(ag.contractedHours)}
                         </TableCell>
                         <TableCell className="text-xs text-right font-mono font-semibold text-amber-600 dark:text-amber-400">
-                          {ag.usedHours.toFixed(2)}h
+                          {formatHours(ag.usedHours)}
                         </TableCell>
                         <TableCell
                           className={`text-xs text-right font-mono ${
@@ -984,7 +983,8 @@ export default function MonthlyClientReportPage() {
                               : 'text-emerald-700 dark:text-emerald-400'
                           }`}
                         >
-                          {ag.balanceHours.toFixed(2)}h
+                          {ag.balanceHours < 0 ? '-' : ''}
+                          {formatHours(Math.abs(ag.balanceHours))}
                         </TableCell>
                         <TableCell className="text-xs text-right font-mono">
                           <span
@@ -1005,17 +1005,18 @@ export default function MonthlyClientReportPage() {
                     <TableRow className="bg-muted/40 font-bold border-t-2">
                       <TableCell className="text-xs">TOTAL CONSOLIDADO</TableCell>
                       <TableCell className="text-xs text-right font-mono">
-                        {reportData.totalContractedHours.toFixed(2)}h
+                        {formatHours(reportData.totalContractedHours)}
                       </TableCell>
                       <TableCell className="text-xs text-right font-mono text-amber-600 dark:text-amber-400">
-                        {reportData.totalUsedHours.toFixed(2)}h
+                        {formatHours(reportData.totalUsedHours)}
                       </TableCell>
                       <TableCell
                         className={`text-xs text-right font-mono ${
                           reportData.totalBalanceHours < 0 ? 'text-red-600' : 'text-emerald-700'
                         }`}
                       >
-                        {reportData.totalBalanceHours.toFixed(2)}h
+                        {reportData.totalBalanceHours < 0 ? '-' : ''}
+                        {formatHours(Math.abs(reportData.totalBalanceHours))}
                       </TableCell>
                       <TableCell className="text-xs text-right font-mono text-amber-600 dark:text-amber-400 font-bold">
                         {reportData.totalContractedHours > 0
@@ -1084,7 +1085,7 @@ export default function MonthlyClientReportPage() {
                         />
                         <Tooltip
                           formatter={(v: any, name: any) => [
-                            name === 'Horas' ? `${Number(v).toFixed(2)}h` : v,
+                            name === 'Horas' ? formatHours(v) : v,
                             name,
                           ]}
                           contentStyle={{
@@ -1140,7 +1141,7 @@ export default function MonthlyClientReportPage() {
                             <TableCell className="text-xs font-medium">{s.name}</TableCell>
                             <TableCell className="text-xs text-center">{s.ticketCount}</TableCell>
                             <TableCell className="text-xs text-right font-mono font-semibold">
-                              {s.usedHours.toFixed(2)}h
+                              {formatHours(s.usedHours)}
                             </TableCell>
                             <TableCell className="text-xs text-right font-mono">
                               {s.percentTotal.toFixed(1)}%
@@ -1216,7 +1217,7 @@ export default function MonthlyClientReportPage() {
                           }}
                         />
                         <Tooltip
-                          formatter={(v: any) => [`${Number(v).toFixed(2)}h`, 'Horas Consumidas']}
+                          formatter={(v: any) => [formatHours(v), 'Horas Consumidas']}
                           contentStyle={{
                             fontSize: 12,
                             backgroundColor: '#17181C',
@@ -1277,7 +1278,7 @@ export default function MonthlyClientReportPage() {
                             </TableCell>
                             <TableCell className="text-xs text-center">{r.ticketCount}</TableCell>
                             <TableCell className="text-xs text-right font-mono font-semibold">
-                              {r.usedHours.toFixed(2)}h
+                              {formatHours(r.usedHours)}
                             </TableCell>
                             <TableCell className="text-xs text-right font-mono">
                               {r.percentTotal.toFixed(1)}%
@@ -1342,7 +1343,7 @@ export default function MonthlyClientReportPage() {
                         <YAxis tick={{ fontSize: 10, fill: 'currentColor' }} />
                         <Tooltip
                           formatter={(v: any, name: any) => [
-                            name === 'Horas' ? `${Number(v).toFixed(2)}h` : v,
+                            name === 'Horas' ? formatHours(Number(v)) : v,
                             name === 'Horas' ? 'Horas Gastas' : 'Qtd. Chamados',
                           ]}
                           contentStyle={{
@@ -1421,7 +1422,7 @@ export default function MonthlyClientReportPage() {
                               {a.ticketCount}
                             </TableCell>
                             <TableCell className="text-xs text-right font-mono">
-                              {a.usedHours.toFixed(2)}h
+                              {formatHours(a.usedHours)}
                             </TableCell>
                             <TableCell className="text-xs text-right font-mono">
                               {a.percentTotal.toFixed(1)}%
@@ -1462,7 +1463,7 @@ export default function MonthlyClientReportPage() {
                   {reportData.study.topSector?.name || 'N/A'}
                 </p>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  {reportData.study.topSector?.hours.toFixed(1)}h (
+                  {formatHours(reportData.study.topSector?.hours || 0)} (
                   {reportData.study.topSector?.pct.toFixed(1)}% do esforço)
                 </p>
               </div>
@@ -1475,7 +1476,7 @@ export default function MonthlyClientReportPage() {
                   {reportData.study.topRequester?.name || 'N/A'}
                 </p>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  {reportData.study.topRequester?.hours.toFixed(1)}h em{' '}
+                  {formatHours(reportData.study.topRequester?.hours || 0)} em{' '}
                   {reportData.study.topRequester?.ticketCount} chamados
                 </p>
               </div>
@@ -1488,7 +1489,7 @@ export default function MonthlyClientReportPage() {
                   {reportData.study.topAgreement?.name || 'N/A'}
                 </p>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  {reportData.study.topAgreement?.hours.toFixed(1)}h consumidas
+                  {formatHours(reportData.study.topAgreement?.hours || 0)} consumidas
                 </p>
               </div>
 
@@ -1497,7 +1498,7 @@ export default function MonthlyClientReportPage() {
                   Média de Horas por Chamado
                 </span>
                 <p className="text-sm font-semibold text-foreground mt-1">
-                  {reportData.study.avgTicketHours.toFixed(2)}h / ticket
+                  {formatHours(reportData.study.avgTicketHours)} / ticket
                 </p>
                 <p className="text-xs text-muted-foreground mt-0.5">
                   {reportData.study.totalTickets} chamado(s) no mês
@@ -1843,7 +1844,7 @@ export default function MonthlyClientReportPage() {
                         />
                         <Tooltip
                           formatter={(v: any, name: any) => [
-                            name === 'Horas Utilizadas' ? `${Number(v).toFixed(2)}h` : v,
+                            name === 'Horas Utilizadas' ? formatHours(v) : v,
                             name,
                           ]}
                           contentStyle={{
@@ -1893,7 +1894,7 @@ export default function MonthlyClientReportPage() {
                             Horas Utilizadas (HH:MM:SS)
                           </TableHead>
                           <TableHead className="text-xs font-bold text-right">
-                            Horas (Decimal)
+                            Horas (HH:MM:SS)
                           </TableHead>
                           <TableHead className="text-xs font-bold text-center">
                             Chamados Abertos
@@ -1939,7 +1940,7 @@ export default function MonthlyClientReportPage() {
                                 {row.horasUtilizadasFormatted}
                               </TableCell>
                               <TableCell className="text-xs text-right font-mono text-muted-foreground">
-                                {row.horasUtilizadasDecimal.toFixed(2)}h
+                                {formatHours(row.horasUtilizadasDecimal)}
                               </TableCell>
                               <TableCell className="text-xs text-center font-mono">
                                 {row.chamadosAbertos}
@@ -1988,7 +1989,7 @@ export default function MonthlyClientReportPage() {
                             {formatHours(reportData.comparison.totalHours6Months)}
                           </TableCell>
                           <TableCell className="text-xs text-right font-mono text-primary font-semibold">
-                            {reportData.comparison.totalHours6Months.toFixed(2)}h
+                            {formatHours(reportData.comparison.totalHours6Months)}
                           </TableCell>
                           <TableCell className="text-xs text-center font-mono">
                             {reportData.comparison.totalOpened6Months}
@@ -1997,7 +1998,7 @@ export default function MonthlyClientReportPage() {
                             {reportData.comparison.totalResolved6Months}
                           </TableCell>
                           <TableCell className="text-xs text-right font-mono text-muted-foreground text-[11px]">
-                            Média: {reportData.comparison.averageHours.toFixed(1)}h/mês
+                            Média: {formatHours(reportData.comparison.averageHours)}/mês
                           </TableCell>
                         </TableRow>
                       </TableBody>

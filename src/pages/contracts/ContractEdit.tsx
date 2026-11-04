@@ -38,6 +38,7 @@ import {
   parseDurationToHours,
   formatSeconds,
   formatHours,
+  maskHHMMSSInput,
 } from '@/lib/duration'
 
 const SECTIONS = [
@@ -412,11 +413,14 @@ export default function ContractEdit() {
                   className={inputCls}
                   placeholder="HH:MM:SS"
                   inputMode="numeric"
+                  maxLength={8}
                   value={form.monthly_hours ?? ''}
                   disabled={!hoursEnabled}
-                  onChange={(e) => set('monthly_hours', e.target.value)}
+                  onChange={(e) => set('monthly_hours', maskHHMMSSInput(e.target.value))}
                   onBlur={(e) => {
-                    const s = parseDurationToSeconds(e.target.value)
+                    const val = e.target.value.trim()
+                    if (!val) return
+                    const s = parseDurationToSeconds(val)
                     if (s !== null) set('monthly_hours', formatSeconds(s))
                   }}
                 />
@@ -569,11 +573,14 @@ export default function ContractEdit() {
                           className={cn(inputCls, !active && 'opacity-40 pointer-events-none')}
                           placeholder="HH:MM:SS"
                           inputMode="numeric"
+                          maxLength={8}
                           value={form[level.key] ?? ''}
                           disabled={!active}
-                          onChange={(e) => set(level.key, e.target.value)}
+                          onChange={(e) => set(level.key, maskHHMMSSInput(e.target.value))}
                           onBlur={(e) => {
-                            const s = parseDurationToSeconds(e.target.value)
+                            const val = (e.target.value || '').trim()
+                            if (!val) return
+                            const s = parseDurationToSeconds(val)
                             if (s !== null) set(level.key, formatSeconds(s))
                           }}
                         />
@@ -630,23 +637,26 @@ export default function ContractEdit() {
                       className={cn(inputCls, !ag.active && 'opacity-40 pointer-events-none')}
                       placeholder="HH:MM:SS"
                       inputMode="numeric"
+                      maxLength={8}
                       value={ag.hours ?? ''}
                       disabled={!ag.active}
-                      onChange={(e) =>
+                      onChange={(e) => {
+                        const masked = maskHHMMSSInput(e.target.value)
                         setCustomAgreements((prev) =>
                           prev.map((a, i) =>
                             i === idx
                               ? {
                                   ...a,
-                                  hours: e.target.value === '' ? null : e.target.value,
+                                  hours: masked === '' ? null : masked,
                                 }
                               : a,
                           ),
                         )
-                      }
+                      }}
                       onBlur={(e) => {
-                        if (e.target.value === '') return
-                        const s = parseDurationToSeconds(e.target.value)
+                        const val = (e.target.value || '').trim()
+                        if (val === '') return
+                        const s = parseDurationToSeconds(val)
                         if (s !== null) {
                           setCustomAgreements((prev) =>
                             prev.map((a, i) => (i === idx ? { ...a, hours: formatSeconds(s) } : a)),

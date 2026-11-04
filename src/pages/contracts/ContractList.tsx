@@ -15,7 +15,7 @@ import { Badge } from '@/components/ui/badge'
 import { getContracts, ContractRecord } from '@/services/contracts'
 import { useRealtime } from '@/hooks/use-realtime'
 import { cn } from '@/lib/utils'
-import { formatHours } from '@/lib/duration'
+import { formatHours, formatMinutes } from '@/lib/duration'
 
 const statusColor: Record<string, string> = {
   Ativo: 'bg-green-100 text-green-700 border-green-200',
@@ -112,8 +112,8 @@ export default function ContractList() {
                 </p>
                 <p className="flex items-center gap-1.5">
                   <ShieldCheck className="h-3 w-3" />
-                  <span className="font-semibold">SLA Solução:</span> {ct.sla_solution_time || 240}{' '}
-                  min
+                  <span className="font-semibold">SLA Solução:</span>{' '}
+                  {formatMinutes(ct.sla_solution_time || 240)}
                 </p>
                 {ct.start_date && ct.end_date && (
                   <p className="flex items-center gap-1.5">

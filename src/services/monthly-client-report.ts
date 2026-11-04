@@ -9,7 +9,7 @@ import {
 import { getCategories, type CategoryRecord } from '@/services/categories'
 import { getQueues, type QueueRecord } from '@/services/queues'
 import { getMonthRange } from '@/services/client-hours'
-import { formatMinutes } from '@/lib/duration'
+import { formatHours, formatMinutes } from '@/lib/duration'
 
 export interface MonthlyComparisonItem {
   monthKey: string
@@ -324,11 +324,11 @@ export async function fetchMonthlyComparison(
     )
   } else {
     summarySentences.push(
-      `Na análise evolutiva dos últimos ${months} meses, a organização acumulou um consumo de ${totalHours6Months.toFixed(
-        1,
-      )} horas de suporte técnico e ${totalOpened6Months} chamado(s) aberto(s), com média mensal de ${averageHours.toFixed(
-        1,
-      )} horas.`,
+      `Na análise evolutiva dos últimos ${months} meses, a organização acumulou um consumo de ${formatHours(
+        totalHours6Months,
+      )} de suporte técnico e ${totalOpened6Months} chamado(s) aberto(s), com média mensal de ${formatHours(
+        averageHours,
+      )}.`,
     )
 
     if (referenceMonth) {
@@ -337,25 +337,23 @@ export async function fetchMonthlyComparison(
           summarySentences.push(
             `No mês de referência (${referenceMonth.label}), houve elevação de ${referenceMonth.variacaoPercent.toFixed(
               1,
-            )}% no consumo de horas em relação ao mês anterior, totalizando ${referenceMonth.horasUtilizadasDecimal.toFixed(
-              1,
-            )}h.`,
+            )}% no consumo de horas em relação ao mês anterior, totalizando ${formatHours(
+              referenceMonth.horasUtilizadasDecimal,
+            )}.`,
           )
         } else if (referenceMonth.variacaoPercent < 0) {
           summarySentences.push(
             `No mês de referência (${referenceMonth.label}), observou-se redução de ${Math.abs(
               referenceMonth.variacaoPercent,
-            ).toFixed(
-              1,
-            )}% na utilização de horas frente ao mês anterior, registrando ${referenceMonth.horasUtilizadasDecimal.toFixed(
-              1,
-            )}h.`,
+            ).toFixed(1)}% na utilização de horas frente ao mês anterior, registrando ${formatHours(
+              referenceMonth.horasUtilizadasDecimal,
+            )}.`,
           )
         } else {
           summarySentences.push(
-            `No mês de referência (${referenceMonth.label}), o consumo de horas manteve-se estável em relação ao mês anterior, totalizando ${referenceMonth.horasUtilizadasDecimal.toFixed(
-              1,
-            )}h.`,
+            `No mês de referência (${referenceMonth.label}), o consumo de horas manteve-se estável em relação ao mês anterior, totalizando ${formatHours(
+              referenceMonth.horasUtilizadasDecimal,
+            )}.`,
           )
         }
       }
@@ -381,9 +379,9 @@ export async function fetchMonthlyComparison(
 
     if (peakMonth && peakMonth.horasUtilizadasDecimal > 0) {
       summarySentences.push(
-        `O pico de consumo técnico do período ocorreu em ${peakMonth.label}, atingindo ${peakMonth.horasUtilizadasDecimal.toFixed(
-          1,
-        )}h (${peakMonth.chamadosAbertos} chamados abertos).`,
+        `O pico de consumo técnico do período ocorreu em ${peakMonth.label}, atingindo ${formatHours(
+          peakMonth.horasUtilizadasDecimal,
+        )} (${peakMonth.chamadosAbertos} chamados abertos).`,
       )
     }
   }
@@ -840,16 +838,16 @@ export async function fetchMonthlyClientReportData(
   const companyName = company.trade_name || company.legal_name
 
   lines.push(
-    `No período analisado, o cliente ${companyName} registrou um volume total de ${totalUsedHours.toFixed(
-      1,
-    )} horas de suporte técnico distribuídas em ${totalTicketsInPeriod} atendimento(s).`,
+    `No período analisado, o cliente ${companyName} registrou um volume total de ${formatHours(
+      totalUsedHours,
+    )} de suporte técnico distribuídas em ${totalTicketsInPeriod} atendimento(s).`,
   )
 
   if (topSector && topSector.usedHours > 0) {
     lines.push(
-      `O setor com maior concentração de demanda técnica foi o "${topSector.name}", respondendo por ${topSector.usedHours.toFixed(
-        1,
-      )}h (${topSector.percentTotal.toFixed(1)}% do total apurado) e ${topSector.ticketCount} chamado(s).`,
+      `O setor com maior concentração de demanda técnica foi o "${topSector.name}", respondendo por ${formatHours(
+        topSector.usedHours,
+      )} (${topSector.percentTotal.toFixed(1)}% do total apurado) e ${topSector.ticketCount} chamado(s).`,
     )
   }
 
@@ -857,7 +855,7 @@ export async function fetchMonthlyClientReportData(
     lines.push(
       `No nível individual de colaboradores, o usuário com maior requisição de horas foi ${topRequester.name}${
         topRequester.sectorName ? ` (${topRequester.sectorName})` : ''
-      }, somando ${topRequester.usedHours.toFixed(1)}h em ${topRequester.ticketCount} solicitação(ões).`,
+      }, somando ${formatHours(topRequester.usedHours)} em ${topRequester.ticketCount} solicitação(ões).`,
     )
   }
 
@@ -865,17 +863,17 @@ export async function fetchMonthlyClientReportData(
     lines.push(
       `A atividade de catálogo mais demandada no mês foi "${topActivity.name}" (${topActivity.categoryName}), com ${
         topActivity.ticketCount
-      } ocorrência(s)${topActivity.usedHours > 0 ? ` e ${topActivity.usedHours.toFixed(1)}h consumidas` : ''}.`,
+      } ocorrência(s)${topActivity.usedHours > 0 ? ` e ${formatHours(topActivity.usedHours)} consumidas` : ''}.`,
     )
   }
 
   if (topAgreement && topAgreement.usedHours > 0) {
     lines.push(
-      `Quanto à especialidade técnica (acordo de atendimento), o nível mais acionado foi o "${topAgreement.name}", com consumo de ${topAgreement.usedHours.toFixed(
-        1,
-      )}h${
+      `Quanto à especialidade técnica (acordo de atendimento), o nível mais acionado foi o "${topAgreement.name}", com consumo de ${formatHours(
+        topAgreement.usedHours,
+      )}${
         topAgreement.contractedHours > 0
-          ? ` frente a ${topAgreement.contractedHours.toFixed(1)}h contratadas (${topAgreement.percentUsed.toFixed(1)}% de utilização)`
+          ? ` frente a ${formatHours(topAgreement.contractedHours)} contratadas (${topAgreement.percentUsed.toFixed(1)}% de utilização)`
           : ''
       }.`,
     )

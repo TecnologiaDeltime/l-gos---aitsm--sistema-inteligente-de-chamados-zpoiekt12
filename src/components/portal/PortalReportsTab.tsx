@@ -24,6 +24,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { formatDateTime } from '@/lib/date-format'
+import { formatHours } from '@/lib/duration'
 import { ClientMonthlyReportRecord, evaluateMonthlyReport } from '@/services/client-monthly-reports'
 import { Textarea } from '@/components/ui/textarea'
 import { useToast } from '@/hooks/use-toast'
@@ -174,11 +175,11 @@ export default function PortalReportsTab({
             const data = report.report_data || {}
             const totalHours =
               data.totalUsedHours || data.totalContractedHours
-                ? `${Number(data.totalUsedHours || 0).toFixed(1)}h`
+                ? formatHours(Number(data.totalUsedHours || 0))
                 : null
             const balanceHours =
               data.totalBalanceHours !== undefined
-                ? `${Number(data.totalBalanceHours).toFixed(1)}h`
+                ? formatHours(Number(data.totalBalanceHours))
                 : null
 
             return (

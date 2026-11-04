@@ -1,9 +1,10 @@
 import { Link } from 'react-router-dom'
-import { User } from 'lucide-react'
+import { User, Clock } from 'lucide-react'
 import { TicketRecord } from '@/services/tickets'
 import { PriorityBadge } from '@/components/PriorityBadge'
 import { SLA_DOT_COLORS } from '@/lib/kanban-constants'
 import { cn } from '@/lib/utils'
+import { formatRemainingTime } from '@/lib/sla-status'
 
 interface KanbanCardProps {
   ticket: TicketRecord
@@ -56,9 +57,19 @@ export function KanbanCard({
         </span>
         <span
           className={cn('h-2.5 w-2.5 rounded-full flex-shrink-0', slaColor)}
-          title={`SLA: ${ticket.sla_status || 'N/A'}`}
+          title={`SLA: ${ticket.sla_status || 'N/A'}${
+            ticket.sla_solution_deadline
+              ? ` • ${formatRemainingTime(ticket.sla_solution_deadline)}`
+              : ''
+          }`}
         />
       </div>
+      {ticket.sla_solution_deadline && (
+        <div className="flex items-center gap-1 text-[11px] font-mono text-slate-500 dark:text-slate-400 mt-1.5 pt-1.5 border-t border-slate-100 dark:border-slate-800">
+          <Clock className="h-3 w-3 shrink-0 text-amber-500" />
+          <span className="truncate">{formatRemainingTime(ticket.sla_solution_deadline)}</span>
+        </div>
+      )}
       {(ticket.expand?.subcategory?.name || ticket.expand?.category?.name) && (
         <p className="text-xs text-slate-400 mt-1.5 truncate">
           {ticket.expand?.subcategory?.name || ticket.expand?.category?.name}

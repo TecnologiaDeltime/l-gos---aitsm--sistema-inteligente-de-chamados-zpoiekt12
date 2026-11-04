@@ -23,7 +23,12 @@ import { getCompanies, CompanyRecord } from '@/services/companies'
 import { HoursBalanceBar } from '@/components/contracts/HoursBalance'
 import { useToast } from '@/hooks/use-toast'
 import { cn } from '@/lib/utils'
-import { parseDurationToSeconds, parseDurationToHours, formatSeconds } from '@/lib/duration'
+import {
+  parseDurationToSeconds,
+  parseDurationToHours,
+  formatSeconds,
+  maskHHMMSSInput,
+} from '@/lib/duration'
 
 export default function ContractDetail() {
   const [number, setNumber] = useState(`CT-2024-${Math.floor(100 + Math.random() * 900)}`)
@@ -185,16 +190,20 @@ export default function ContractDetail() {
             </div>
 
             <div className="space-y-1">
-              <Label className="text-xs font-semibold">Horas Mensais</Label>
+              <Label className="text-xs">Horas Mensais</Label>
               <div className="flex items-center gap-2">
                 <Input
+                  className="h-9 text-sm"
                   placeholder="HH:MM:SS"
                   inputMode="numeric"
+                  maxLength={8}
                   value={hours}
                   disabled={!hoursEnabled}
-                  onChange={(e) => setHours(e.target.value)}
+                  onChange={(e) => setHours(maskHHMMSSInput(e.target.value))}
                   onBlur={(e) => {
-                    const s = parseDurationToSeconds(e.target.value)
+                    const val = (e.target.value || '').trim()
+                    if (!val) return
+                    const s = parseDurationToSeconds(val)
                     if (s !== null) setHours(formatSeconds(s))
                   }}
                 />
@@ -209,7 +218,7 @@ export default function ContractDetail() {
                   <Check className="mr-1 h-4 w-4" /> Aplicar
                 </Button>
               </div>
-              <p className="text-[11px] text-muted-foreground">
+              <p className="text-[11px] text-slate-500 dark:text-slate-400">
                 Clique em “Aplicar” para fixar o total de horas contratadas e acompanhar o saldo.
                 Formato HH:MM:SS (ex.: 00:01:36 = 1min36s).
               </p>
@@ -276,16 +285,20 @@ export default function ContractDetail() {
                           className={cn('h-9 text-sm', !active && 'opacity-40 pointer-events-none')}
                           placeholder="HH:MM:SS"
                           inputMode="numeric"
+                          maxLength={8}
                           value={hoursByLevel[level.key] ?? ''}
                           disabled={!active}
-                          onChange={(e) =>
+                          onChange={(e) => {
+                            const masked = maskHHMMSSInput(e.target.value)
                             setHoursByLevel((prev) => ({
                               ...prev,
-                              [level.key]: e.target.value,
+                              [level.key]: masked,
                             }))
-                          }
+                          }}
                           onBlur={(e) => {
-                            const s = parseDurationToSeconds(e.target.value)
+                            const val = (e.target.value || '').trim()
+                            if (!val) return
+                            const s = parseDurationToSeconds(val)
                             if (s !== null) {
                               setHoursByLevel((prev) => ({
                                 ...prev,
@@ -347,23 +360,26 @@ export default function ContractDetail() {
                       className={cn('h-9 text-sm', !ag.active && 'opacity-40 pointer-events-none')}
                       placeholder="HH:MM:SS"
                       inputMode="numeric"
+                      maxLength={8}
                       value={ag.hours ?? ''}
                       disabled={!ag.active}
-                      onChange={(e) =>
+                      onChange={(e) => {
+                        const masked = maskHHMMSSInput(e.target.value)
                         setCustomAgreements((prev) =>
                           prev.map((a, i) =>
                             i === idx
                               ? {
                                   ...a,
-                                  hours: e.target.value === '' ? null : e.target.value,
+                                  hours: masked === '' ? null : masked,
                                 }
                               : a,
                           ),
                         )
-                      }
+                      }}
                       onBlur={(e) => {
-                        if (e.target.value === '') return
-                        const s = parseDurationToSeconds(e.target.value)
+                        const val = (e.target.value || '').trim()
+                        if (val === '') return
+                        const s = parseDurationToSeconds(val)
                         if (s !== null) {
                           setCustomAgreements((prev) =>
                             prev.map((a, i) => (i === idx ? { ...a, hours: formatSeconds(s) } : a)),

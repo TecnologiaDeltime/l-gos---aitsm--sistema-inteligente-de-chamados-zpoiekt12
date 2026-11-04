@@ -29,6 +29,7 @@ import { getCategories } from '@/services/categories'
 import { getCompanies } from '@/services/companies'
 import { getSlaGoals } from '@/services/sla-goals'
 import { useRealtime } from '@/hooks/use-realtime'
+import { formatMinutes } from '@/lib/duration'
 import {
   buildDateFilter,
   formatDate,
@@ -194,8 +195,8 @@ export default function SlaDashboard() {
                     <TableHead className="text-xs text-center">Meta Resp.</TableHead>
                     <TableHead className="text-xs text-center">SLA Solução</TableHead>
                     <TableHead className="text-xs text-center">Meta Sol.</TableHead>
-                    <TableHead className="text-xs text-center">Tempo Resp. (min)</TableHead>
-                    <TableHead className="text-xs text-center">Tempo Sol. (min)</TableHead>
+                    <TableHead className="text-xs text-center">Tempo Resp. (HH:MM:SS)</TableHead>
+                    <TableHead className="text-xs text-center">Tempo Sol. (HH:MM:SS)</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -211,11 +212,11 @@ export default function SlaDashboard() {
                         {r.solutionMet}/{r.total} ({r.solutionPct.toFixed(1)}%)
                       </TableCell>
                       {renderGoalCell(r.techId, 'Solução', r.solutionPct)}
-                      <TableCell className="text-xs text-center">
-                        {r.avgResponseMin || '-'}
+                      <TableCell className="text-xs text-center font-mono">
+                        {r.avgResponseMin ? formatMinutes(r.avgResponseMin) : '-'}
                       </TableCell>
-                      <TableCell className="text-xs text-center">
-                        {r.avgSolutionMin || '-'}
+                      <TableCell className="text-xs text-center font-mono">
+                        {r.avgSolutionMin ? formatMinutes(r.avgSolutionMin) : '-'}
                       </TableCell>
                     </TableRow>
                   ))}
