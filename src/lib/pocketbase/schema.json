@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-04T17:35:29.192Z",
+  "generatedAt": "2026-11-04T18:07:19.369Z",
   "collections": [
     {
       "name": "users",
@@ -862,6 +862,13 @@
           "type": "bool",
           "required": false,
           "system": false
+        },
+        {
+          "name": "queue",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "queues"
         }
       ],
       "indexes": ["CREATE INDEX idx_categories_active ON tkt_categories (active)"]

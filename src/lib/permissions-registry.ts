@@ -104,6 +104,13 @@ const BASE_SYSTEM_MODULES: GranularModuleDefinition[] = [
         path: '/catalogo',
       },
       {
+        key: 'tickets_equipe_responsavel',
+        label: 'Equipe Responsável por Atividade',
+        description:
+          'Definição e direcionamento de equipe/fila responsável vinculada ao catálogo de atividades e abertura de chamados',
+        path: '/catalogo',
+      },
+      {
         key: 'tickets_aprovacoes',
         label: 'Aprovações de Chamados',
         description: 'Fila de pendências e deliberações de aprovação',

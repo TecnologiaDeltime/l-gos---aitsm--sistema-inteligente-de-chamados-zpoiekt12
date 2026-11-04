@@ -15,6 +15,7 @@ export interface CategoryRecord {
   priority?: string
   sla_response_minutes?: number | null
   sla_solution_minutes?: number | null
+  queue?: string
   expand?: any
 }
 
@@ -22,7 +23,7 @@ export const getCategories = (includeDeleted: boolean = false) =>
   pb.collection('tkt_categories').getFullList<CategoryRecord>({
     filter: includeDeleted ? '' : 'deleted != true',
     sort: 'name',
-    expand: 'parent',
+    expand: 'parent,queue',
   })
 
 export const getCategoryById = (id: string) =>

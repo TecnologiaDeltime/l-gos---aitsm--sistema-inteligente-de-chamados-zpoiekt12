@@ -24,7 +24,7 @@ import { Badge } from '@/components/ui/badge'
 import { useToast } from '@/hooks/use-toast'
 import { cn } from '@/lib/utils'
 import { getCompanies, getCompanyDepartments, type CompanyRecord } from '@/services/companies'
-import { getContracts, type ContractRecord, QUEUE_LEVEL_TO_HOURS_KEY } from '@/services/contracts'
+
 import { getCategories, type CategoryRecord } from '@/services/categories'
 import { getEquipments, type EquipmentRecord } from '@/services/equipments'
 import {
@@ -108,7 +108,6 @@ export default function TicketCreate() {
   const { toast } = useToast()
 
   const [companies, setCompanies] = useState<CompanyRecord[]>([])
-  const [contracts, setContracts] = useState<ContractRecord[]>([])
   const { user } = useAuth()
   const [categories, setCategories] = useState<CategoryRecord[]>([])
   const [equipments, setEquipments] = useState<EquipmentRecord[]>([])
@@ -131,7 +130,6 @@ export default function TicketCreate() {
   const [itemType, setItemType] = useState<'none' | 'asset' | 'ci'>('none')
   const [equipment, setEquipment] = useState('')
   const [configurationItem, setConfigurationItem] = useState('')
-  const [contract, setContract] = useState('')
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [department, setDepartment] = useState('')
@@ -158,73 +156,46 @@ export default function TicketCreate() {
     if (subs.length > 0) return subs
     return categories.filter((c) => c.active !== false)
   }, [categories])
-  // Contratos filtrados pela empresa selecionada (client-side)
-  const availableContracts = useMemo(
-    () => contracts.filter((c) => c.company === company),
-    [contracts, company],
-  )
 
   /**
-   * Filas disponíveis para a empresa selecionada:
-   * - contract ativo da empresa encontrado
-   * - níveis com horas alocadas (> 0) no contrato
-   * - filas cujo `level` corresponde a um nível com horas E cuja `company` é a
-   *   empresa selecionada.
-   * Retorna { queues, hasContract, hasLevels } para exibição de mensagens.
+   * Filas/Equipes de atendimento ativas cadastradas em Gerenciamento de Filas.
+   * Se a fila tiver vínculo com empresa específica, filtra pela empresa selecionada (se houver);
+   * filas sem empresa definida ficam disponíveis globalmente para qualquer empresa.
    */
   const availableQueues = useMemo(() => {
-    if (!company) return { queues: [] as QueueRecord[], hasContract: false, hasLevels: false }
-    const activeContract = contracts.find(
-      (c) => c.company === company && (c.status || '').toLowerCase() === 'ativo',
-    )
-    if (!activeContract)
-      return { queues: [] as QueueRecord[], hasContract: false, hasLevels: false }
-
-    const levelsWithHours = new Set<string>()
-    QUEUE_LEVELS.forEach((lvl) => {
-      const key = QUEUE_LEVEL_TO_HOURS_KEY[lvl]
-      const hours = Number((activeContract as any)[key]) || 0
-      if (hours > 0) levelsWithHours.add(lvl)
-    })
-
-    if (levelsWithHours.size === 0) {
-      return { queues: [] as QueueRecord[], hasContract: true, hasLevels: false }
-    }
-
-    const filtered = allQueues.filter(
-      (q) => q.company === company && q.level && levelsWithHours.has(q.level),
-    )
-    return { queues: filtered, hasContract: true, hasLevels: true }
-  }, [company, contracts, allQueues])
+    const active = allQueues.filter((q) => q.active !== false)
+    if (!company) return active
+    return active.filter((q) => !q.company || q.company === company)
+  }, [company, allQueues])
 
   const handleCompanyChange = useCallback(
     (companyId: string) => {
       setCompany(companyId)
-      // Limpa o contrato, a fila e refaz o filtro pela nova empresa
-      setContract('')
-      setQueueId('')
-      if (!companyId) return
-      const filtered = contracts.filter((c) => c.company === companyId)
-      if (filtered.length === 0) return
-      // Prefere o primeiro contrato "Ativo"; se não houver, o primeiro disponível
-      const active = filtered.find((c) => (c.status || '').toLowerCase() === 'ativo')
-      setContract((active || filtered[0]).id)
+      // Ajusta a fila selecionada se ela não pertencer mais à empresa
+      if (companyId) {
+        setQueueId((prev) => {
+          if (!prev) return ''
+          const q = allQueues.find((item) => item.id === prev)
+          if (q && q.company && q.company !== companyId) {
+            return ''
+          }
+          return prev
+        })
+      }
     },
-    [contracts],
+    [allQueues],
   )
 
   useEffect(() => {
     const load = async () => {
-      const [comps, cats, conts, techs, queues] = await Promise.all([
+      const [comps, cats, techs, queues] = await Promise.all([
         getCompanies(),
         getCategories(),
-        getContracts().catch(() => []),
         getUsers("role='tecnico' || role='gestor' || role='admin'").catch(() => []),
         getQueues().catch(() => []),
       ])
       setCompanies(comps)
       setCategories(cats)
-      setContracts(conts as ContractRecord[])
       setTechnicians(techs as UserItem[])
       setAllQueues(queues as QueueRecord[])
     }
@@ -385,6 +356,13 @@ export default function TicketCreate() {
       setAutoImpact(sub.impact || '')
       setAutoUrgency(sub.urgency || '')
       setAutoPriority(sub.priority || computePriority(sub.impact || '', sub.urgency || ''))
+
+      // Pré-seleciona a Equipe Responsável cadastrada na atividade (ou herdada do pai)
+      const designatedQueue =
+        sub.queue || (sub.parent ? categories.find((c) => c.id === sub.parent)?.queue : undefined)
+      if (designatedQueue) {
+        setQueueId(designatedQueue)
+      }
     } else {
       setMainCategory('')
       setAutoImpact('')
@@ -402,13 +380,14 @@ export default function TicketCreate() {
     }
     if (step === 1) {
       if (!subActivity) {
-        toast({ title: 'Selecione uma atividade', variant: 'destructive' })
+        toast({ title: 'Selecione uma atividade do catálogo', variant: 'destructive' })
         return false
       }
-      if (!assignedTo) {
-        toast({ title: 'Selecione um operador', variant: 'destructive' })
+      if (!queueId) {
+        toast({ title: 'Selecione a equipe responsável', variant: 'destructive' })
         return false
       }
+      // Operador agora é opcional
     }
     if (step === 2) {
       if (!title.trim() || !description.trim()) {
@@ -451,13 +430,12 @@ export default function TicketCreate() {
         subcategory: subActivity || undefined,
         equipment: itemType === 'asset' && equipment ? equipment : undefined,
         configuration_item: itemType === 'ci' && configurationItem ? configurationItem : undefined,
-        contract: contract || undefined,
         queue: queueId || undefined,
         impact: autoImpact || 'Médio',
         urgency: autoUrgency || 'Média',
         priority: autoPriority || 'Média',
         status: 'Novo',
-        assigned_to: assignedTo,
+        assigned_to: assignedTo || undefined,
         requester_name: requesterName || 'Solicitante',
         requester_email: requesterEmail,
         requester_phone: requesterPhone,
@@ -752,35 +730,42 @@ export default function TicketCreate() {
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <FieldLabel>Contrato</FieldLabel>
-                <Select value={contract} onValueChange={setContract} disabled={!company}>
-                  <SelectTrigger className="rounded-lg">
-                    <SelectValue
-                      placeholder={
-                        company
-                          ? availableContracts.length
-                            ? 'Selecione o contrato (opcional)'
-                            : 'Nenhum contrato para esta empresa'
-                          : 'Selecione uma empresa primeiro'
-                      }
-                    />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {availableContracts.map((c) => (
-                      <SelectItem key={c.id} value={c.id}>
-                        {c.number} — {c.expand?.company?.trade_name || 'N/A'}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <FieldLabel>Equipe Responsável (Fila) *</FieldLabel>
+                {availableQueues.length === 0 ? (
+                  <div className="flex items-center gap-2 h-9 px-3 rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-950/30 text-xs text-amber-700 dark:text-amber-300">
+                    <Inbox className="h-3.5 w-3.5 shrink-0" />
+                    Nenhuma equipe cadastrada em Gerenciamento de Filas
+                  </div>
+                ) : (
+                  <Select value={queueId} onValueChange={setQueueId}>
+                    <SelectTrigger className="rounded-lg">
+                      <SelectValue placeholder="Selecione a equipe responsável *" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {availableQueues.map((q) => (
+                        <SelectItem key={q.id} value={q.id}>
+                          {q.name} {q.level ? `· ${q.level}` : ''}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+                <p className="text-[11px] text-slate-400">
+                  Obrigatório para direcionar o chamado para a equipe/fila responsável.
+                </p>
               </div>
+
               <div className="space-y-2">
-                <FieldLabel>Operador *</FieldLabel>
-                <Select value={assignedTo} onValueChange={setAssignedTo}>
+                <FieldLabel>Operador Designado (opcional)</FieldLabel>
+                <Select
+                  value={assignedTo || 'none'}
+                  onValueChange={(val) => setAssignedTo(val === 'none' ? '' : val)}
+                >
                   <SelectTrigger className="rounded-lg">
-                    <SelectValue placeholder="Selecione o operador" />
+                    <SelectValue placeholder="Nenhum (atribuir depois)" />
                   </SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="none">Nenhum operador (atribuir depois)</SelectItem>
                     {technicians.map((t) => (
                       <SelectItem key={t.id} value={t.id}>
                         {t.name}
@@ -788,38 +773,10 @@ export default function TicketCreate() {
                     ))}
                   </SelectContent>
                 </Select>
+                <p className="text-[11px] text-slate-400">
+                  Opcional. Se não selecionado, o chamado aguardará atribuição na fila da equipe.
+                </p>
               </div>
-            </div>
-
-            <div className="space-y-2">
-              <FieldLabel>Fila de Atendimento</FieldLabel>
-              {!company ? (
-                <div className="flex items-center gap-2 h-9 px-3 rounded-lg border bg-slate-50 dark:bg-slate-800 text-xs text-slate-400">
-                  <Inbox className="h-3.5 w-3.5" />
-                  Selecione uma empresa primeiro
-                </div>
-              ) : availableQueues.queues.length === 0 ? (
-                <div className="flex items-center gap-2 h-9 px-3 rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-950/30 text-xs text-amber-700 dark:text-amber-300">
-                  <Inbox className="h-3.5 w-3.5 shrink-0" />
-                  Nenhuma fila disponível para esta empresa. Verifique o contrato.
-                </div>
-              ) : (
-                <Select value={queueId} onValueChange={setQueueId}>
-                  <SelectTrigger className="rounded-lg">
-                    <SelectValue placeholder="Selecione a fila (opcional)" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {availableQueues.queues.map((q) => (
-                      <SelectItem key={q.id} value={q.id}>
-                        {q.name} {q.level ? `· ${q.level}` : ''}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
-              <p className="text-[11px] text-slate-400">
-                Filas filtradas pelo contrato ativo e pelos níveis com horas alocadas da empresa.
-              </p>
             </div>
           </div>
         )}

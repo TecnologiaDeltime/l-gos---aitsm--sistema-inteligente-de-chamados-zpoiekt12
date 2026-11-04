@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo } from 'react'
-import { ListTree, Plus, Pencil, Power, PowerOff, Trash2, AlertTriangle } from 'lucide-react'
+import { ListTree, Plus, Pencil, Power, PowerOff, Trash2, AlertTriangle, Users } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { PriorityBadge } from '@/components/PriorityBadge'
@@ -46,9 +46,16 @@ export default function ActivityCatalog() {
     main: [],
     sub: [],
   })
+  const [queues, setQueues] = useState<QueueRecord[]>([])
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editing, setEditing] = useState<CategoryRecord | null>(null)
   const [presetParent, setPresetParent] = useState<string>('')
+
+  const queuesById = useMemo(() => {
+    const map = new Map<string, QueueRecord>()
+    queues.forEach((q) => map.set(q.id, q))
+    return map
+  }, [queues])
 
   // Diálogo de confirmação de exclusão
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false)
@@ -62,6 +69,9 @@ export default function ActivityCatalog() {
 
   useEffect(() => {
     loadData()
+    getQueues()
+      .then(setQueues)
+      .catch((e) => console.warn('Erro ao carregar filas no catálogo:', e))
   }, [])
   useRealtime('tkt_categories', () => loadData())
 
@@ -165,6 +175,17 @@ export default function ActivityCatalog() {
                   </p>
                   <p className="text-xs text-slate-500">{main.description || 'Sem descrição'}</p>
                 </div>
+                {main.queue && (
+                  <Badge
+                    variant="outline"
+                    className="flex items-center gap-1 text-[11px] border-amber-300 bg-amber-50 text-amber-800 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-300"
+                  >
+                    <Users className="h-3 w-3" />
+                    {queuesById.get(main.queue)?.name ||
+                      main.expand?.queue?.name ||
+                      'Equipe vinculada'}
+                  </Badge>
+                )}
                 {!main.active && (
                   <Badge variant="outline" className="text-red-600">
                     Inativo
@@ -221,6 +242,24 @@ export default function ActivityCatalog() {
                     {sub.type && (
                       <Badge variant="secondary" className="text-[10px] uppercase font-mono">
                         {sub.type}
+                      </Badge>
+                    )}
+                    {(sub.queue || main.queue) && (
+                      <Badge
+                        variant="outline"
+                        className="flex items-center gap-1 text-[10px] border-amber-300 bg-amber-50 text-amber-800 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-300"
+                        title={
+                          sub.queue
+                            ? 'Equipe responsável específica da subatividade'
+                            : 'Equipe responsável herdada da atividade principal'
+                        }
+                      >
+                        <Users className="h-3 w-3" />
+                        {sub.queue
+                          ? queuesById.get(sub.queue)?.name ||
+                            sub.expand?.queue?.name ||
+                            'Equipe vinculada'
+                          : `${queuesById.get(main.queue || '')?.name || main.expand?.queue?.name || 'Equipe'} (herdada)`}
                       </Badge>
                     )}
                     {!sub.active && (

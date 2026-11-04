@@ -28,7 +28,7 @@ import {
 } from '@/services/scheduled-tickets'
 import { CompanyRecord, CompanyDepartmentRecord, getCompanyDepartments } from '@/services/companies'
 import { CompanyUnitRecord, getCompanyUnitsByCompany } from '@/services/company-units'
-import { ContractRecord, getContracts } from '@/services/contracts'
+
 import { CategoryRecord } from '@/services/categories'
 import { QueueRecord } from '@/services/queues'
 import { UserItem } from '@/services/users'
@@ -78,7 +78,6 @@ export const ScheduledTicketDialog: React.FC<ScheduledTicketDialogProps> = ({
   const [companyId, setCompanyId] = useState('')
   const [unitId, setUnitId] = useState('')
   const [departmentId, setDepartmentId] = useState('')
-  const [contractId, setContractId] = useState('')
   const [requesterName, setRequesterName] = useState('')
   const [requesterEmail, setRequesterEmail] = useState('')
   const [requesterPhone, setRequesterPhone] = useState('')
@@ -107,7 +106,6 @@ export const ScheduledTicketDialog: React.FC<ScheduledTicketDialogProps> = ({
   // Sub-entidades carregadas por empresa
   const [companyUnits, setCompanyUnits] = useState<CompanyUnitRecord[]>([])
   const [companyDepartments, setCompanyDepartments] = useState<CompanyDepartmentRecord[]>([])
-  const [companyContracts, setCompanyContracts] = useState<ContractRecord[]>([])
 
   // Inicialização ao abrir modal (criação vs edição)
   React.useEffect(() => {
@@ -119,7 +117,6 @@ export const ScheduledTicketDialog: React.FC<ScheduledTicketDialogProps> = ({
       setCompanyId(editingTicket.company || '')
       setUnitId(editingTicket.unit || '')
       setDepartmentId(editingTicket.department || '')
-      setContractId(editingTicket.contract || '')
       setRequesterName(editingTicket.requester_name || '')
       setRequesterEmail(editingTicket.requester_email || '')
       setRequesterPhone(editingTicket.requester_phone || '')
@@ -183,7 +180,6 @@ export const ScheduledTicketDialog: React.FC<ScheduledTicketDialogProps> = ({
       setCompanyId('')
       setUnitId('')
       setDepartmentId('')
-      setContractId('')
       setRequesterName(user?.name || '')
       setRequesterEmail(user?.email || '')
       setRequesterPhone('')
@@ -212,12 +208,11 @@ export const ScheduledTicketDialog: React.FC<ScheduledTicketDialogProps> = ({
     }
   }, [open, editingTicket, user])
 
-  // Atualizar dados de empresa (filiais, departamentos e contratos)
+  // Atualizar dados de empresa (filiais e departamentos)
   React.useEffect(() => {
     if (!companyId) {
       setCompanyUnits([])
       setCompanyDepartments([])
-      setCompanyContracts([])
       return
     }
 
@@ -228,10 +223,6 @@ export const ScheduledTicketDialog: React.FC<ScheduledTicketDialogProps> = ({
     getCompanyDepartments(companyId)
       .then(setCompanyDepartments)
       .catch(() => setCompanyDepartments([]))
-
-    getContracts(`company = "${companyId}" && status = "Ativo"`)
-      .then(setCompanyContracts)
-      .catch(() => setCompanyContracts([]))
   }, [companyId])
 
   const parentCategoryMap = React.useMemo(() => {
@@ -267,6 +258,16 @@ export const ScheduledTicketDialog: React.FC<ScheduledTicketDialogProps> = ({
       setImpact(imp)
       setUrgency(urg)
       setPriority(prio)
+
+      // Pré-seleciona a Equipe Responsável cadastrada na atividade (ou herdada do pai)
+      const designatedQueue =
+        selectedSub.queue ||
+        (selectedSub.parent
+          ? categories.find((c) => c.id === selectedSub.parent)?.queue
+          : undefined)
+      if (designatedQueue) {
+        setQueueId(designatedQueue)
+      }
     } else {
       setCategoryId('')
       setImpact('Médio')
@@ -310,6 +311,14 @@ export const ScheduledTicketDialog: React.FC<ScheduledTicketDialogProps> = ({
       toast({
         title: 'Atenção',
         description: 'Informe o nome do solicitante.',
+        variant: 'destructive',
+      })
+      return
+    }
+    if (!queueId) {
+      toast({
+        title: 'Atenção',
+        description: 'Selecione a equipe responsável para direcionar o chamado.',
         variant: 'destructive',
       })
       return
@@ -365,7 +374,6 @@ export const ScheduledTicketDialog: React.FC<ScheduledTicketDialogProps> = ({
         company: companyId,
         unit: unitId || undefined,
         department: departmentId || undefined,
-        contract: contractId || undefined,
         requester_name: requesterName.trim(),
         requester_email: requesterEmail.trim() || undefined,
         requester_phone: requesterPhone.trim() || undefined,
@@ -789,26 +797,6 @@ export const ScheduledTicketDialog: React.FC<ScheduledTicketDialogProps> = ({
                 />
               </div>
             </div>
-
-            {companyContracts.length > 0 && (
-              <div>
-                <Label className="text-xs font-semibold uppercase text-muted-foreground">
-                  Vincular ao Contrato Ativo
-                </Label>
-                <Select value={contractId} onValueChange={setContractId}>
-                  <SelectTrigger className="mt-1 bg-background">
-                    <SelectValue placeholder="Selecione o contrato (opcional)" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {companyContracts.map((c) => (
-                      <SelectItem key={c.id} value={c.id}>
-                        {c.number ? `Contrato #${c.number} (${c.type})` : `Contrato (${c.type})`}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
           </div>
 
           {/* Seção 5: Atribuição, Atividade do Catálogo e Prioridade Automática */}
@@ -821,31 +809,38 @@ export const ScheduledTicketDialog: React.FC<ScheduledTicketDialogProps> = ({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <Label className="text-xs font-semibold uppercase text-muted-foreground">
-                  Fila de Atendimento
+                  Equipe Responsável (Fila) *
                 </Label>
                 <Select value={queueId} onValueChange={setQueueId}>
                   <SelectTrigger className="mt-1 bg-background">
-                    <SelectValue placeholder="Selecione a fila" />
+                    <SelectValue placeholder="Selecione a equipe responsável *" />
                   </SelectTrigger>
                   <SelectContent>
                     {queues.map((q) => (
                       <SelectItem key={q.id} value={q.id}>
-                        {q.name}
+                        {q.name} {q.level ? `· ${q.level}` : ''}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
+                <p className="text-[11px] text-muted-foreground mt-1">
+                  Obrigatório para direcionar o chamado programado à equipe/fila correspondente.
+                </p>
               </div>
 
               <div>
                 <Label className="text-xs font-semibold uppercase text-muted-foreground">
-                  Responsável / Operador
+                  Responsável / Operador (opcional)
                 </Label>
-                <Select value={assignedTo} onValueChange={setAssignedTo}>
+                <Select
+                  value={assignedTo || 'none'}
+                  onValueChange={(val) => setAssignedTo(val === 'none' ? '' : val)}
+                >
                   <SelectTrigger className="mt-1 bg-background">
-                    <SelectValue placeholder="Selecione o operador" />
+                    <SelectValue placeholder="Nenhum (atribuir depois)" />
                   </SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="none">Nenhum operador (atribuir depois)</SelectItem>
                     {operators.map((op) => (
                       <SelectItem key={op.id} value={op.id}>
                         {op.name || op.email}
@@ -853,6 +848,9 @@ export const ScheduledTicketDialog: React.FC<ScheduledTicketDialogProps> = ({
                     ))}
                   </SelectContent>
                 </Select>
+                <p className="text-[11px] text-muted-foreground mt-1">
+                  Opcional. Se não selecionado, o chamado ficará na fila da equipe.
+                </p>
               </div>
 
               <div className="sm:col-span-2">

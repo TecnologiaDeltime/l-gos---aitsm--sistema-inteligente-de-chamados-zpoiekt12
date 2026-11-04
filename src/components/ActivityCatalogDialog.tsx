@@ -18,10 +18,12 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { CategoryRecord, createCategory, updateCategory } from '@/services/categories'
+import { getQueues, QueueRecord } from '@/services/queues'
 import { computePriority, IMPACT_VALUES, URGENCY_VALUES } from '@/lib/itil-matrix'
 import { PriorityBadge } from '@/components/PriorityBadge'
 import { useToast } from '@/hooks/use-toast'
 import { formatMinutes } from '@/lib/duration'
+import { Users } from 'lucide-react'
 
 interface ActivityCatalogDialogProps {
   open: boolean
@@ -45,6 +47,8 @@ export function ActivityCatalogDialog({
   const [description, setDescription] = useState('')
   const [parent, setParent] = useState('')
   const [type, setType] = useState<string>('Incidente')
+  const [queueId, setQueueId] = useState('')
+  const [queues, setQueues] = useState<QueueRecord[]>([])
   const [impact, setImpact] = useState('')
   const [urgency, setUrgency] = useState('')
   const [slaResponse, setSlaResponse] = useState('')
@@ -53,11 +57,18 @@ export function ActivityCatalogDialog({
   const [saving, setSaving] = useState(false)
 
   useEffect(() => {
+    getQueues()
+      .then((qs) => setQueues(qs.filter((q) => q.active !== false)))
+      .catch((e) => console.warn('Erro ao carregar filas de atendimento:', e))
+  }, [])
+
+  useEffect(() => {
     if (open) {
       setName(editingCategory?.name || '')
       setDescription(editingCategory?.description || '')
       setParent(editingCategory?.parent || presetParent || '')
       setType(editingCategory?.type || 'Incidente')
+      setQueueId(editingCategory?.queue || '')
       setImpact(editingCategory?.impact || '')
       setUrgency(editingCategory?.urgency || '')
       setSlaResponse(
@@ -106,6 +117,7 @@ export function ActivityCatalogDialog({
         parent: parent || undefined,
         active,
         type: type || 'Incidente',
+        queue: queueId || undefined,
         ...(isSub
           ? {
               impact,
@@ -177,6 +189,33 @@ export function ActivityCatalogDialog({
             <p className="text-[11px] text-muted-foreground">
               Define automaticamente se o chamado é Incidente, Requisição ou Dúvida ao selecionar
               esta atividade.
+            </p>
+          </div>
+
+          <div className="space-y-1">
+            <Label className="text-xs flex items-center gap-1.5">
+              <Users className="h-3.5 w-3.5 text-amber-500" />
+              Equipe Responsável (Fila de Atendimento)
+            </Label>
+            <Select
+              value={queueId || 'none'}
+              onValueChange={(val) => setQueueId(val === 'none' ? '' : val)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Selecione a equipe responsável" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Nenhuma (selecionar na abertura)</SelectItem>
+                {queues.map((q) => (
+                  <SelectItem key={q.id} value={q.id}>
+                    {q.name} {q.level ? `(${q.level})` : ''}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-[11px] text-muted-foreground">
+              Equipes cadastradas no módulo Gerenciamento de Filas. Na abertura do chamado, esta
+              equipe será pré-selecionada automaticamente.
             </p>
           </div>
 
