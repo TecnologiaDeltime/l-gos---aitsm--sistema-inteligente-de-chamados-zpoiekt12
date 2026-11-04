@@ -40,6 +40,11 @@ import {
   AVAILABILITY_STATUSES,
   CI_STATUSES,
 } from '@/services/equipments'
+import {
+  generateProfessionalXlsxTemplate,
+  InstructionItem,
+  TemplateColumn,
+} from '@/lib/bulk-import-templates'
 
 export interface AssetBulkImportDialogProps {
   open: boolean
@@ -181,30 +186,293 @@ export function AssetBulkImportDialog({
     }
   }, [open])
 
-  const handleDownloadTemplate = (format: 'xlsx' | 'csv') => {
-    const headers = COLUMNS.map((c) => c.label)
-    const exampleRow = COLUMNS.map((c) => c.example)
-    const instructionsRow = COLUMNS.map((c) => (c.required ? 'Obrigatório' : 'Opcional'))
-
-    const wsData = [headers, instructionsRow, exampleRow]
-    const ws = XLSX.utils.aoa_to_sheet(wsData)
-
-    // Ajusta larguras de coluna
-    ws['!cols'] = COLUMNS.map((c) => ({ wch: Math.max(c.label.length + 4, 18) }))
-
-    const wb = XLSX.utils.book_new()
-    XLSX.utils.book_append_sheet(wb, ws, 'Modelo_Ativos_CMDB')
-
+  const handleDownloadTemplate = (format: 'xlsx' | 'csv' = 'xlsx') => {
     const dateStr = new Date().toISOString().slice(0, 10)
-    if (format === 'xlsx') {
-      XLSX.writeFile(wb, `modelo_importacao_ativos_${dateStr}.xlsx`)
-    } else {
+
+    if (format === 'csv') {
+      const headers = COLUMNS.map((c) => c.label)
+      const exampleRow = COLUMNS.map((c) => c.example)
+      const instructionsRow = COLUMNS.map((c) => (c.required ? 'Obrigatório' : 'Opcional'))
+      const wsData = [headers, instructionsRow, exampleRow]
+      const ws = XLSX.utils.aoa_to_sheet(wsData)
+      const wb = XLSX.utils.book_new()
+      XLSX.utils.book_append_sheet(wb, ws, 'Modelo_Ativos_CMDB')
       XLSX.writeFile(wb, `modelo_importacao_ativos_${dateStr}.csv`, { bookType: 'csv' })
+    } else {
+      // Gera XLSX profissional completo com 2 abas e larguras calculadas
+      const exampleRows = [
+        {
+          nome: 'Notebook Dell Latitude 5420',
+          empresa: companies[0]?.trade_name || 'Empresa Exemplo LTDA',
+          hostname: 'NB-FIN-01',
+          tipo: 'Notebook',
+          marca: 'Dell',
+          modelo: 'Latitude 5420',
+          serial: 'BR12345678',
+          patrimonio: 'PAT-00452',
+          ip: '192.168.1.150',
+          so: 'Windows 11 Pro',
+          filial: 'Matriz',
+          setor: 'Financeiro',
+          localizacao: '2º Andar - Sala 204',
+          usuario_responsavel: 'Maria da Silva',
+          status_disponibilidade: 'Em uso',
+          status_operacional: 'Ativo',
+          processador: 'Intel Core i7 11th Gen',
+          memoria_ram: '16GB',
+          armazenamento: '512GB SSD',
+          tipo_armazenamento: 'SSD',
+          proprietario: 'TI Corporativa',
+          fornecedor: 'Dell Computadores',
+          observacoes: 'Adquirido em locação anual',
+        },
+        {
+          nome: 'Servidor Dell PowerEdge R750',
+          empresa: companies[0]?.trade_name || 'Empresa Exemplo LTDA',
+          hostname: 'SRV-DB-PROD01',
+          tipo: 'Servidor',
+          marca: 'Dell',
+          modelo: 'PowerEdge R750',
+          serial: 'SRV998877',
+          patrimonio: 'PAT-00010',
+          ip: '192.168.1.10',
+          so: 'Ubuntu Server 22.04 LTS',
+          filial: 'Matriz',
+          setor: 'TI / Infraestrutura',
+          localizacao: 'Data Center - Rack 03',
+          usuario_responsavel: 'Administrador de Redes',
+          status_disponibilidade: 'Em uso',
+          status_operacional: 'Ativo',
+          processador: 'Intel Xeon Silver 4314 (32 cores)',
+          memoria_ram: '128GB DDR4',
+          armazenamento: '2x 1.92TB NVMe RAID1',
+          tipo_armazenamento: 'SSD NVMe',
+          proprietario: 'TI Corporativa',
+          fornecedor: 'Dell Brasil',
+          observacoes: 'Servidor principal de banco de dados',
+        },
+        {
+          nome: 'Monitor Dell 27 4K P2723QE',
+          empresa: companies[0]?.trade_name || 'Empresa Exemplo LTDA',
+          hostname: '',
+          tipo: 'Monitor',
+          marca: 'Dell',
+          modelo: 'P2723QE',
+          serial: 'CN0M987654',
+          patrimonio: 'PAT-00890',
+          ip: '',
+          so: '',
+          filial: 'Matriz',
+          setor: 'Design / Marketing',
+          localizacao: 'Sala 102 - Ilha de Criação',
+          usuario_responsavel: 'João Designer',
+          status_disponibilidade: 'Disponível',
+          status_operacional: 'Ativo',
+          processador: '',
+          memoria_ram: '',
+          armazenamento: '',
+          tipo_armazenamento: '',
+          proprietario: 'TI Corporativa',
+          fornecedor: 'Dell Brasil',
+          observacoes: 'Monitor extra para design gráfico',
+        },
+      ]
+
+      const instructions: InstructionItem[] = [
+        {
+          campo: 'Nome do Ativo',
+          obrigatorio: 'Sim',
+          descricao: 'Nome legível que identifica o item no catálogo de ativos do CMDB.',
+          exemplo: 'Notebook Dell Latitude 5420',
+          valoresAceitos: 'Texto livre (obrigatório)',
+        },
+        {
+          campo: 'Empresa / Cliente',
+          obrigatorio: 'Sim',
+          descricao:
+            'Nome fantasia, razão social ou código da empresa cadastrada no Lógos AITILSM. A empresa DEVE existir previamente no sistema.',
+          exemplo: companies[0]?.trade_name || 'Empresa Exemplo LTDA',
+          valoresAceitos: 'Deve coincidir com um cliente cadastrado no sistema',
+        },
+        {
+          campo: 'Hostname',
+          obrigatorio: 'Não',
+          descricao:
+            'Nome de rede ou DNS do equipamento. Usado na regra de detecção de duplicidade (Hostname + Empresa).',
+          exemplo: 'NB-FIN-01',
+          valoresAceitos: 'Texto livre / nome de rede',
+        },
+        {
+          campo: 'Tipo / Dispositivo',
+          obrigatorio: 'Não',
+          descricao: 'Categoria ou classificação do dispositivo.',
+          exemplo: 'Notebook, Servidor, Desktop, Roteador, Switch, Impressora',
+          valoresAceitos:
+            'Texto livre (ex.: Notebook, Servidor, Desktop, Firewall, Switch, Impressora, Nobreak, Monitor)',
+        },
+        {
+          campo: 'Marca / Fabricante',
+          obrigatorio: 'Não',
+          descricao: 'Fabricante do hardware.',
+          exemplo: 'Dell, HP, Lenovo, Apple, Cisco, Fortinet',
+          valoresAceitos: 'Texto livre',
+        },
+        {
+          campo: 'Modelo',
+          obrigatorio: 'Não',
+          descricao: 'Modelo comercial específico do item.',
+          exemplo: 'Latitude 5420, ThinkPad T14, MacBook Pro 14',
+          valoresAceitos: 'Texto livre',
+        },
+        {
+          campo: 'Número de Série',
+          obrigatorio: 'Não',
+          descricao:
+            'Serial físico / Service Tag gravado no equipamento. Usado como chave primária de identificação de duplicados.',
+          exemplo: 'BR12345678, CN-0X9876, 5CD1234XYZ',
+          valoresAceitos: 'Alfanumérico / serial único',
+        },
+        {
+          campo: 'Patrimônio',
+          obrigatorio: 'Não',
+          descricao: 'Código da etiqueta patrimonial interna da empresa.',
+          exemplo: 'PAT-00452',
+          valoresAceitos: 'Texto livre',
+        },
+        {
+          campo: 'Endereço IP',
+          obrigatorio: 'Não',
+          descricao: 'Endereço IPv4 ou IPv6 fixo/reservado do dispositivo na rede.',
+          exemplo: '192.168.1.150',
+          valoresAceitos: 'Formato IP (ex.: 192.168.1.150)',
+        },
+        {
+          campo: 'Sistema Operacional',
+          obrigatorio: 'Não',
+          descricao: 'Sistema operacional e versão instalada no dispositivo.',
+          exemplo: 'Windows 11 Pro, Ubuntu 22.04 LTS, macOS Sonoma',
+          valoresAceitos: 'Texto livre',
+        },
+        {
+          campo: 'Filial / Unidade',
+          obrigatorio: 'Não',
+          descricao:
+            'Nome da filial/unidade do cliente cadastrada no sistema. Se informada, DEVE existir vinculada à empresa informada.',
+          exemplo: 'Matriz, Filial SP, Centro de Distribuição',
+          valoresAceitos: 'Deve coincidir com filial cadastrada do cliente (ou deixe em branco)',
+        },
+        {
+          campo: 'Setor / Departamento',
+          obrigatorio: 'Não',
+          descricao:
+            'Nome do setor/departamento cadastrado na empresa. Se informado, DEVE existir previamente no cadastro do cliente.',
+          exemplo: 'Financeiro, TI / Infraestrutura, RH, Operações',
+          valoresAceitos: 'Deve coincidir com setor cadastrado do cliente (ou deixe em branco)',
+        },
+        {
+          campo: 'Localização',
+          obrigatorio: 'Não',
+          descricao: 'Local físico onde o ativo reside (sala, andar, rack, baia).',
+          exemplo: '2º Andar - Sala 204, Rack 03 Data Center',
+          valoresAceitos: 'Texto livre',
+        },
+        {
+          campo: 'Usuário Responsável',
+          obrigatorio: 'Não',
+          descricao: 'Nome do colaborador ou usuário responsável pela custódia do equipamento.',
+          exemplo: 'Maria da Silva',
+          valoresAceitos: 'Texto livre',
+        },
+        {
+          campo: 'Status Disponibilidade',
+          obrigatorio: 'Não',
+          descricao: 'Estado de alocação/disponibilidade do item. Se vazio, o padrão é "Em uso".',
+          exemplo: 'Em uso',
+          valoresAceitos: AVAILABILITY_STATUSES.join(', '),
+        },
+        {
+          campo: 'Status Operacional',
+          obrigatorio: 'Não',
+          descricao: 'Situação de funcionamento do CI. Se vazio, o padrão é "Ativo".',
+          exemplo: 'Ativo',
+          valoresAceitos: CI_STATUSES.join(', '),
+        },
+        {
+          campo: 'Processador',
+          obrigatorio: 'Não',
+          descricao: 'Especificação da CPU.',
+          exemplo: 'Intel Core i7 11th Gen, AMD Ryzen 7 5800X',
+          valoresAceitos: 'Texto livre',
+        },
+        {
+          campo: 'Memória RAM',
+          obrigatorio: 'Não',
+          descricao: 'Capacidade de memória instalada.',
+          exemplo: '16GB, 32GB, 64GB DDR4',
+          valoresAceitos: 'Texto livre',
+        },
+        {
+          campo: 'Armazenamento',
+          obrigatorio: 'Não',
+          descricao: 'Capacidade do disco ou storage.',
+          exemplo: '512GB SSD, 1TB NVMe, 2x 2TB RAID1',
+          valoresAceitos: 'Texto livre',
+        },
+        {
+          campo: 'Tipo Armazenamento',
+          obrigatorio: 'Não',
+          descricao: 'Tecnologia do disco.',
+          exemplo: 'SSD, NVMe, HDD, Híbrido',
+          valoresAceitos: 'Texto livre',
+        },
+        {
+          campo: 'Dono / Proprietário',
+          obrigatorio: 'Não',
+          descricao: 'Área ou empresa proprietária do bem.',
+          exemplo: 'TI Corporativa, Locadora XYZ',
+          valoresAceitos: 'Texto livre',
+        },
+        {
+          campo: 'Fornecedor',
+          obrigatorio: 'Não',
+          descricao: 'Fornecedor ou revenda de compra/locação.',
+          exemplo: 'Dell Computadores, Kalunga, Lenovo Brasil',
+          valoresAceitos: 'Texto livre',
+        },
+        {
+          campo: 'Observações',
+          obrigatorio: 'Não',
+          descricao: 'Anotações complementares sobre contrato, garantia ou histórico.',
+          exemplo: 'Adquirido em locação anual com suporte 24x7',
+          valoresAceitos: 'Texto livre',
+        },
+      ]
+
+      const templateCols: TemplateColumn[] = COLUMNS.map((c) => ({
+        key: c.key,
+        label: c.label,
+        required: c.required,
+        example: c.example,
+      }))
+
+      generateProfessionalXlsxTemplate({
+        filename: `modelo_importacao_ativos_${dateStr}.xlsx`,
+        sheetName: 'Ativos_CMDB',
+        columns: templateCols,
+        exampleRows,
+        instructionsTitle: 'Importação em Massa de Ativos (CMDB)',
+        instructions,
+        extraNotes: [
+          '5. O arquivo possui duas abas: "Ativos_CMDB" para os dados e "Instruções e Valores" como referência.',
+          '6. Opções exatas de Status de Disponibilidade: ' + AVAILABILITY_STATUSES.join(' | '),
+          '7. Opções exatas de Status Operacional: ' + CI_STATUSES.join(' | '),
+        ],
+      })
     }
 
     toast({
-      title: 'Modelo baixado com sucesso!',
-      description: `Preencha o arquivo com seus ativos e envie para validação.`,
+      title: 'Modelo XLSX baixado com sucesso!',
+      description: `O arquivo contém as colunas organizadas, linhas de exemplo e aba de instruções com valores aceitos.`,
     })
   }
 
@@ -669,12 +937,12 @@ export function AssetBulkImportDialog({
                 <div className="flex items-center gap-2 shrink-0">
                   <Button
                     type="button"
-                    variant="outline"
                     size="sm"
-                    className="border-amber-300 hover:bg-amber-100 dark:border-amber-800 dark:hover:bg-amber-900/40 text-xs"
+                    className="bg-amber-600 hover:bg-amber-700 text-white font-medium text-xs shadow-sm"
                     onClick={() => handleDownloadTemplate('xlsx')}
                   >
-                    Baixar XLSX
+                    <FileSpreadsheet className="mr-1.5 h-4 w-4" />
+                    Baixar Modelo XLSX
                   </Button>
                   <Button
                     type="button"
@@ -682,6 +950,7 @@ export function AssetBulkImportDialog({
                     size="sm"
                     className="border-amber-300 hover:bg-amber-100 dark:border-amber-800 dark:hover:bg-amber-900/40 text-xs"
                     onClick={() => handleDownloadTemplate('csv')}
+                    title="Baixar em formato CSV caso prefira editar em modo texto"
                   >
                     Baixar CSV
                   </Button>

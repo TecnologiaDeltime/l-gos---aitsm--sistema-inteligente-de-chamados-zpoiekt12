@@ -38,6 +38,11 @@ import {
   updateClientContact,
   type ClientContactRecord,
 } from '@/services/client-contacts'
+import {
+  generateProfessionalXlsxTemplate,
+  InstructionItem,
+  TemplateColumn,
+} from '@/lib/bulk-import-templates'
 
 export interface CollaboratorBulkImportDialogProps {
   open: boolean
@@ -181,30 +186,157 @@ export function CollaboratorBulkImportDialog({
     }
   }, [open])
 
-  const handleDownloadTemplate = (format: 'xlsx' | 'csv') => {
-    // Se estiver em contexto de um cliente específico, preenche exemplo com ele
-    const exampleCompany = presetCompanyName || 'Empresa Exemplo LTDA'
-    const headers = COLUMNS.map((c) => c.label)
-    const exampleRow = COLUMNS.map((c) => (c.key === 'empresa' ? exampleCompany : c.example))
-    const instructionsRow = COLUMNS.map((c) => (c.required ? 'Obrigatório' : 'Opcional'))
-
-    const wsData = [headers, instructionsRow, exampleRow]
-    const ws = XLSX.utils.aoa_to_sheet(wsData)
-    ws['!cols'] = COLUMNS.map((c) => ({ wch: Math.max(c.label.length + 4, 20) }))
-
-    const wb = XLSX.utils.book_new()
-    XLSX.utils.book_append_sheet(wb, ws, 'Modelo_Colaboradores')
+  const handleDownloadTemplate = (format: 'xlsx' | 'csv' = 'xlsx') => {
+    const exampleCompany =
+      presetCompanyName ||
+      (presetCompanyId ? companies.find((c) => c.id === presetCompanyId)?.trade_name : null) ||
+      companies[0]?.trade_name ||
+      'Empresa Exemplo LTDA'
 
     const dateStr = new Date().toISOString().slice(0, 10)
-    if (format === 'xlsx') {
-      XLSX.writeFile(wb, `modelo_importacao_colaboradores_${dateStr}.xlsx`)
-    } else {
+
+    if (format === 'csv') {
+      const headers = COLUMNS.map((c) => c.label)
+      const exampleRow = COLUMNS.map((c) => (c.key === 'empresa' ? exampleCompany : c.example))
+      const instructionsRow = COLUMNS.map((c) => (c.required ? 'Obrigatório' : 'Opcional'))
+      const wsData = [headers, instructionsRow, exampleRow]
+      const ws = XLSX.utils.aoa_to_sheet(wsData)
+      const wb = XLSX.utils.book_new()
+      XLSX.utils.book_append_sheet(wb, ws, 'Modelo_Colaboradores')
       XLSX.writeFile(wb, `modelo_importacao_colaboradores_${dateStr}.csv`, { bookType: 'csv' })
+    } else {
+      const exampleRows = [
+        {
+          nome: 'Carlos Eduardo Oliveira',
+          email: 'carlos.oliveira@empresa.com.br',
+          empresa: exampleCompany,
+          cargo: 'Analista Financeiro Sênior',
+          telefone: '(11) 98765-4321',
+          filial: 'Matriz',
+          setor: 'Financeiro',
+          ponto_focal: 'Sim',
+          observacoes: 'Horário comercial das 08h às 17h. Ponto focal para aprovação de acessos.',
+        },
+        {
+          nome: 'Mariana Santos Costa',
+          email: 'mariana.costa@empresa.com.br',
+          empresa: exampleCompany,
+          cargo: 'Coordenadora de Recursos Humanos',
+          telefone: '(11) 91234-5678',
+          filial: 'Matriz',
+          setor: 'Recursos Humanos',
+          ponto_focal: 'Não',
+          observacoes: 'Responsável pela admissão de novos colaboradores',
+        },
+        {
+          nome: 'Rodrigo Albuquerque',
+          email: 'rodrigo.albuquerque@empresa.com.br',
+          empresa: exampleCompany,
+          cargo: 'Gerente de Operações',
+          telefone: '(11) 97777-8888',
+          filial: 'Matriz',
+          setor: 'Operações',
+          ponto_focal: 'Sim',
+          observacoes: 'Contato para autorização de manutenções fora de expediente',
+        },
+      ]
+
+      const instructions: InstructionItem[] = [
+        {
+          campo: 'Nome Completo',
+          obrigatorio: 'Sim',
+          descricao: 'Nome e sobrenome do colaborador / contato do cliente.',
+          exemplo: 'Carlos Eduardo Oliveira',
+          valoresAceitos: 'Texto livre (obrigatório)',
+        },
+        {
+          campo: 'E-mail',
+          obrigatorio: 'Sim',
+          descricao:
+            'Endereço de e-mail corporativo válido. Utilizado na checagem de duplicidade e para abertura/acompanhamento de chamados.',
+          exemplo: 'carlos.oliveira@empresa.com.br',
+          valoresAceitos: 'E-mail em formato válido (nome@dominio.com.br)',
+        },
+        {
+          campo: 'Empresa / Cliente',
+          obrigatorio: 'Sim',
+          descricao:
+            'Nome fantasia ou razão social da empresa contratante. Deve coincidir com uma empresa previamente cadastrada.',
+          exemplo: exampleCompany,
+          valoresAceitos: 'Deve coincidir com um cliente cadastrado no sistema',
+        },
+        {
+          campo: 'Cargo / Função',
+          obrigatorio: 'Não',
+          descricao: 'Cargo ou ocupação profissional exercida no cliente.',
+          exemplo: 'Analista Financeiro Sênior, Coordenador de TI, Diretor',
+          valoresAceitos: 'Texto livre',
+        },
+        {
+          campo: 'Telefone / Ramal',
+          obrigatorio: 'Não',
+          descricao: 'Telefone fixo, celular corporativo ou ramal de contato.',
+          exemplo: '(11) 98765-4321 ou Ramal 2045',
+          valoresAceitos: 'Texto livre / números',
+        },
+        {
+          campo: 'Filial / Unidade',
+          obrigatorio: 'Não',
+          descricao:
+            'Filial ou unidade onde o colaborador atua. Se informada, DEVE existir cadastrada na respectiva empresa cliente.',
+          exemplo: 'Matriz, Unidade Alphaville, Filial Rio',
+          valoresAceitos: 'Deve coincidir com filial cadastrada do cliente (ou deixe em branco)',
+        },
+        {
+          campo: 'Setor da Empresa',
+          obrigatorio: 'Não',
+          descricao:
+            'Setor ou departamento do colaborador. Se informado, DEVE existir cadastrado na respectiva empresa cliente.',
+          exemplo: 'Financeiro, Recursos Humanos, Tecnologia, Vendas',
+          valoresAceitos: 'Deve coincidir com setor cadastrado do cliente (ou deixe em branco)',
+        },
+        {
+          campo: 'Ponto Focal (Sim/Não)',
+          obrigatorio: 'Não',
+          descricao:
+            'Indica se este contato tem perfil de interlocutor/ponto focal para aprovações e relatórios executivos.',
+          exemplo: 'Sim ou Não',
+          valoresAceitos: 'Sim, Não (ou S / N / 1 / 0 / True / False)',
+        },
+        {
+          campo: 'Observações',
+          obrigatorio: 'Não',
+          descricao: 'Informações adicionais de atendimento, horários ou particularidades.',
+          exemplo: 'Horário das 08h às 17h. Ponto focal prioritário.',
+          valoresAceitos: 'Texto livre',
+        },
+      ]
+
+      const templateCols: TemplateColumn[] = COLUMNS.map((c) => ({
+        key: c.key,
+        label: c.label,
+        required: c.required,
+        example: c.key === 'empresa' ? exampleCompany : c.example,
+      }))
+
+      generateProfessionalXlsxTemplate({
+        filename: `modelo_importacao_colaboradores_${dateStr}.xlsx`,
+        sheetName: 'Colaboradores',
+        columns: templateCols,
+        exampleRows,
+        instructionsTitle: 'Importação em Massa de Colaboradores',
+        instructions,
+        extraNotes: [
+          '5. O arquivo possui duas abas: "Colaboradores" para os dados e "Instruções e Valores" como guia de preenchimento.',
+          '6. O tratamento de duplicados verifica o endereço de e-mail (case-insensitive). Se já existir, você escolhe se deseja atualizar ou pular no diálogo de importação.',
+        ],
+      })
     }
 
     toast({
-      title: 'Modelo baixado com sucesso!',
-      description: 'Preencha os dados dos colaboradores e envie a planilha para validação.',
+      title: 'Modelo XLSX baixado com sucesso!',
+      description:
+        'O arquivo contém colunas formatadas, exemplos claros e aba de instruções de preenchimento.',
     })
   }
 
@@ -604,12 +736,12 @@ export function CollaboratorBulkImportDialog({
                 <div className="flex items-center gap-2 shrink-0">
                   <Button
                     type="button"
-                    variant="outline"
                     size="sm"
-                    className="border-amber-300 hover:bg-amber-100 dark:border-amber-800 dark:hover:bg-amber-900/40 text-xs"
+                    className="bg-amber-600 hover:bg-amber-700 text-white font-medium text-xs shadow-sm"
                     onClick={() => handleDownloadTemplate('xlsx')}
                   >
-                    Baixar XLSX
+                    <FileSpreadsheet className="mr-1.5 h-4 w-4" />
+                    Baixar Modelo XLSX
                   </Button>
                   <Button
                     type="button"
@@ -617,6 +749,7 @@ export function CollaboratorBulkImportDialog({
                     size="sm"
                     className="border-amber-300 hover:bg-amber-100 dark:border-amber-800 dark:hover:bg-amber-900/40 text-xs"
                     onClick={() => handleDownloadTemplate('csv')}
+                    title="Baixar em formato CSV caso prefira editar em modo texto"
                   >
                     Baixar CSV
                   </Button>
