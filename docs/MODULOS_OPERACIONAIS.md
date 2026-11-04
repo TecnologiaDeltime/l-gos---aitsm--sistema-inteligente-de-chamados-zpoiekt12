@@ -215,6 +215,8 @@ _[print: histórico de manutenção do ativo com chamados vinculados]_
 - **Franquia Mensal de Horas (`monthly_hours`)**: saldo base creditado para o ciclo mensal de atendimento.
 - **Períodos Contratuais (`contract_periods`)**: controle do ciclo de apuração (data de início e fechamento da fatura).
 - **Dashboard de Consumo (`/contracts/consumption`)**: visão gráfica de alerta para empresas que atingiram 80%, 100% ou ultrapassaram a franquia no mês vigente.
+- **Múltiplos Níveis de Atendimento por Contrato (`service_levels`)**: cada contrato pode abranger MÚLTIPLOS acordos de atendimento base — Nível 1, Nível 2, Nível 3, Consultoria, Backoffice e Administrativo — escolhidos em seleção múltipla no cadastro/edição e exibidos como badges na visualização do contrato. A migração 0125 adicionou o campo `service_levels` à coleção `contracts` com backfill idempotente para contratos antigos (que herdam os níveis com horas > 0). O Dashboard de Consumo de Contratos e o Relatório Mensal do Cliente filtram e apuram horas apenas pelos níveis selecionados no contrato, correlacionando o campo `level` das filas de atendimento com os acordos do contrato (helper `getContractServiceLevelKeys()` em `src/services/contracts.ts`).
+- **Controle de Acesso**: a funcionalidade reutiliza as permissões existentes do módulo de Contratos (3 níveis: Visualizar / Editar / Configurar) — nenhum item novo foi criado no catálogo de Perfis de Acesso.
 
 _[print: tela de listagem e acompanhamento de contratos com saldo de franquia]_
 _[print: dashboard de consumo de contratos com alertas percentuais de utilização]_

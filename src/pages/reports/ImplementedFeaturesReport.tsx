@@ -584,6 +584,13 @@ const FEATURE_CATEGORIES: FeatureCategory[] = [
           'Painel analítico completo para consulta e rastreabilidade de todas as ações de automação entre usuários e equipamentos: exclusões de usuários com ativos virando "Disponível", exclusões de equipamentos com usuário vinculado, mudanças automáticas de status e cancelamentos pelo operador. Inclui métricas e contadores de total, filtros por período, tipo de ação e busca textual, escuta realtime via websocket, diálogo de detalhes técnicos e exportação em CSV.',
         tag: 'Auditoria & Automação',
       },
+      {
+        id: 'rep-multi-level-contracts',
+        title: 'Contratos com Múltiplos Níveis de Atendimento',
+        description:
+          'Cada contrato de cliente pode abranger MÚLTIPLOS acordos de atendimento base (Nível 1, Nível 2, Nível 3, Consultoria, Backoffice e Administrativo) com seleção múltipla no cadastro/edição e visualização do contrato, badges por nível, migração 0125 com campo `service_levels` e backfill idempotente para contratos antigos (herdam os níveis com horas > 0). O dashboard de consumo de contratos e o Relatório Mensal do Cliente filtram e apuram horas por nível selecionado, correlacionando as filas de atendimento (campo `level`) com os acordos do contrato.',
+        tag: 'Gestão de Contratos',
+      },
     ],
   },
   {

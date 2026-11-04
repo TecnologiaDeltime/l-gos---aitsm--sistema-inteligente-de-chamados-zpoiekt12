@@ -94,3 +94,7 @@ Os guardas dos 3 níveis estão aplicados de forma consistente nas seguintes ár
    - _Visualizar_ (`knowledge_base`, `knowledge_drafts`, `knowledge_curation`): consulta aos artigos publicados, acompanhamento da fila de rascunhos de IA e leitura dos diagnósticos de cura e sugestões algorítmicas sem permissão de mutação.
    - _Editar_: criação e edição de artigos, solicitação de geração de rascunho de IA via agente nativo Skip Cloud (`kb-curator-agent`), aprovação/edição/descarte de rascunhos, publicação de rascunhos na KB oficial, execução do diagnóstico de integridade de artigos e aplicação ou recusa das recomendações de melhoria.
    - _Configurar_: exclusão permanente de artigos oficiais, exclusão de registros de rascunhos e parametrizações avançadas de conhecimento.
+
+9. **Contratos — Múltiplos Níveis de Atendimento** (`ContractDetail.tsx`, `ContractEdit.tsx`, `ContractView.tsx`, `ContractConsumptionDashboard.tsx`):
+   - _Funcionalidade_: seleção múltipla dos acordos de atendimento base (Nível 1, Nível 2, Nível 3, Consultoria, Backoffice e Administrativo) por contrato, com consumo e apuração de horas filtrados pelos níveis selecionados.
+   - _Permissões Reutilizadas_: **nenhum item novo** foi criado no catálogo de Perfis de Acesso. A funcionalidade é totalmente governada pelas permissões já existentes do módulo de Contratos/Gestão de Contratos (3 níveis: Visualizar / Editar / Configurar), herdando automaticamente os mesmos guardas de rota e ocultação de botões.
