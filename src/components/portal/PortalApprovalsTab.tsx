@@ -10,6 +10,7 @@ import {
   Layers,
   ArrowRight,
   ShieldCheck,
+  RefreshCw,
 } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -136,8 +137,8 @@ export default function PortalApprovalsTab({
             variant={filterStatus === 'Pendente' ? 'default' : 'outline'}
             className={
               filterStatus === 'Pendente'
-                ? 'bg-amber-600 hover:bg-amber-700 text-white text-xs h-8'
-                : 'text-xs h-8'
+                ? 'bg-[#D97706] hover:bg-amber-600 text-white font-bold text-xs h-8.5 shadow-xs'
+                : 'text-xs h-8.5'
             }
             onClick={() => setFilterStatus('Pendente')}
           >
@@ -148,8 +149,8 @@ export default function PortalApprovalsTab({
             variant={filterStatus === 'Todos' ? 'default' : 'outline'}
             className={
               filterStatus === 'Todos'
-                ? 'bg-amber-600 hover:bg-amber-700 text-white text-xs h-8'
-                : 'text-xs h-8'
+                ? 'bg-[#D97706] hover:bg-amber-600 text-white font-bold text-xs h-8.5 shadow-xs'
+                : 'text-xs h-8.5'
             }
             onClick={() => setFilterStatus('Todos')}
           >
@@ -159,29 +160,32 @@ export default function PortalApprovalsTab({
       </div>
 
       {!isFocalPoint && pendingApprovals.length > 0 && (
-        <div className="rounded-lg bg-amber-500/10 border border-amber-500/20 p-3 text-xs text-amber-900 dark:text-amber-200 flex items-start gap-2.5">
+        <div className="rounded-xl bg-amber-500/10 border border-amber-500/25 p-3.5 text-xs text-amber-900 dark:text-amber-200 flex items-start gap-3">
           <AlertCircle className="h-4 w-4 text-amber-600 flex-shrink-0 mt-0.5" />
           <span>
             Seu perfil atual é <strong>Solicitante</strong>. As ações de aprovação/reprovação são
             reservadas aos <strong>Pontos Focais</strong> cadastrados. Se você é gestor da conta,
-            solicite à TI a elevação do seu usuário.
+            solicite à equipe de suporte a elevação do seu usuário.
           </span>
         </div>
       )}
 
       {loading ? (
-        <div className="py-12 text-center text-xs text-muted-foreground bg-card border rounded-xl">
-          Carregando aprovações...
+        <div className="py-16 text-center text-xs text-muted-foreground bg-card border rounded-2xl flex flex-col items-center justify-center gap-2">
+          <RefreshCw className="h-6 w-6 animate-spin text-amber-500" />
+          <p className="font-medium">Carregando aprovações...</p>
         </div>
       ) : displayApprovals.length === 0 ? (
-        <div className="py-12 text-center text-xs text-muted-foreground bg-card border rounded-xl space-y-2">
-          <CheckCircle2 className="h-8 w-8 text-emerald-500 mx-auto opacity-80" />
-          <p className="font-semibold text-sm text-foreground">
+        <div className="py-16 text-center text-xs text-muted-foreground bg-card border rounded-2xl space-y-2.5 px-4">
+          <div className="h-12 w-12 rounded-full bg-emerald-500/10 text-emerald-600 flex items-center justify-center mx-auto">
+            <CheckCircle2 className="h-6 w-6" />
+          </div>
+          <p className="font-bold text-base text-foreground">
             {filterStatus === 'Pendente'
               ? 'Nenhuma aprovação pendente no momento!'
               : 'Nenhum histórico de aprovações localizado.'}
           </p>
-          <p className="text-muted-foreground">
+          <p className="text-muted-foreground max-w-md mx-auto">
             Todos os chamados da sua empresa estão em andamento normal ou já foram decididos.
           </p>
         </div>
@@ -195,27 +199,27 @@ export default function PortalApprovalsTab({
             return (
               <Card
                 key={app.id}
-                className={`transition-colors ${
+                className={`transition-all duration-200 ${
                   isPending
-                    ? 'border-amber-500/40 bg-card hover:border-amber-500 shadow-2xs'
-                    : 'bg-card/70 opacity-90'
+                    ? 'border-amber-500/50 bg-card hover:border-amber-500 shadow-md ring-1 ring-amber-500/20'
+                    : 'bg-card/80 border-border/80 opacity-90'
                 }`}
               >
                 <CardHeader className="p-4 pb-2">
                   <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
-                    <div className="space-y-1">
+                    <div className="space-y-1.5">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-mono font-bold text-sm text-amber-600 dark:text-amber-400">
+                        <span className="font-mono font-bold text-sm text-[#D97706] dark:text-[#FCD34D] px-2 py-0.5 rounded-md bg-amber-500/10 border border-amber-500/25">
                           {ticket ? ticket.number : 'Chamado'}
                         </span>
                         <Badge
                           variant="outline"
                           className={
                             isPending
-                              ? 'bg-amber-500/15 text-amber-600 border-amber-500/30'
+                              ? 'bg-amber-500/20 text-amber-800 dark:text-amber-200 border-amber-500/40 font-bold'
                               : isApproved
-                                ? 'bg-emerald-500/15 text-emerald-600 border-emerald-500/30'
-                                : 'bg-rose-500/15 text-rose-600 border-rose-500/30'
+                                ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30 font-semibold'
+                                : 'bg-rose-500/15 text-rose-700 dark:text-rose-300 border-rose-500/30 font-semibold'
                           }
                         >
                           {app.status}

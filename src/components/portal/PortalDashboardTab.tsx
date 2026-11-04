@@ -11,6 +11,7 @@ import {
   ArrowUpRight,
   Star,
   Smile,
+  Sparkles,
 } from 'lucide-react'
 import {
   BarChart,
@@ -138,14 +139,11 @@ export default function PortalDashboardTab({
   if (loading) {
     return (
       <div className="space-y-6">
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          {[1, 2, 3, 4].map((i) => (
-            <Skeleton key={i} className="h-28 rounded-2xl" />
+        <Skeleton className="h-28 rounded-2xl" />
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+          {[1, 2, 3, 4, 5].map((i) => (
+            <Skeleton key={i} className="h-32 rounded-2xl" />
           ))}
-        </div>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <Skeleton className="h-80 rounded-2xl" />
-          <Skeleton className="h-80 rounded-2xl" />
         </div>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <Skeleton className="h-80 rounded-2xl" />
@@ -158,81 +156,82 @@ export default function PortalDashboardTab({
   return (
     <div className="space-y-6">
       {/* =========================================================================
-          BARRA DE FILTRO DE MÊS/ANO DO DASHBOARD
+          HERO DE BOAS-VINDAS E FILTRO DO PERÍODO
           ========================================================================= */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-card border rounded-xl p-4 shadow-2xs">
-        <div>
-          <div className="flex items-center gap-2">
-            <BarChart3 className="h-5 w-5 text-amber-500" />
-            <h3 className="font-bold text-base text-foreground">Dashboard Analítico do Cliente</h3>
-            {isCurrentMonth ? (
-              <Badge
-                variant="outline"
-                className="border-amber-500/40 text-amber-600 dark:text-amber-400 text-xs"
+      <div className="relative overflow-hidden rounded-2xl border border-amber-500/30 bg-gradient-to-br from-card via-card to-amber-500/5 p-5 sm:p-6 shadow-sm">
+        <div className="relative z-10 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+          <div className="space-y-1.5">
+            <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-amber-500/15 border border-amber-500/30 text-xs font-semibold text-[#D97706] dark:text-[#FCD34D]">
+              <Sparkles className="h-3.5 w-3.5" />
+              Visão Gerencial • {companyName}
+            </div>
+            <h2 className="text-xl sm:text-2xl font-black text-foreground tracking-tight">
+              Central de Atendimento & Governança de TI
+            </h2>
+            <p className="text-xs sm:text-sm text-muted-foreground max-w-2xl">
+              Acompanhe em tempo real o andamento de chamados, o consumo da franquia de suporte e os
+              indicadores de nível de serviço (SLA).
+            </p>
+          </div>
+
+          {/* Controles de Período com identidade do sistema */}
+          <div className="flex flex-wrap items-center gap-2 pt-2 lg:pt-0">
+            <div className="flex items-center gap-1.5 bg-background/80 backdrop-blur-xs border border-border/80 rounded-xl p-1 shadow-2xs">
+              <Calendar className="h-4 w-4 text-amber-500 ml-2" />
+              <Select
+                value={String(selectedMonth)}
+                onValueChange={(val) => onChangePeriod(Number(val), selectedYear)}
               >
-                Mês Atual (Padrão)
-              </Badge>
+                <SelectTrigger className="w-[125px] text-xs h-8 border-0 bg-transparent focus:ring-0">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {months.map((m) => (
+                    <SelectItem key={m.value} value={String(m.value)}>
+                      {m.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Select
+                value={String(selectedYear)}
+                onValueChange={(val) => onChangePeriod(selectedMonth, Number(val))}
+              >
+                <SelectTrigger className="w-[85px] text-xs h-8 border-0 bg-transparent focus:ring-0 font-mono">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {years.map((y) => (
+                    <SelectItem key={y} value={String(y)}>
+                      {y}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {!isCurrentMonth ? (
+              <Button
+                size="sm"
+                variant="outline"
+                className="text-xs h-10 border-amber-500/40 text-amber-600 dark:text-amber-400 hover:bg-amber-500/10"
+                onClick={() => {
+                  const now = new Date()
+                  onChangePeriod(now.getMonth() + 1, now.getFullYear())
+                }}
+              >
+                Voltar ao Mês Atual
+              </Button>
             ) : (
               <Badge
                 variant="outline"
-                className="border-amber-500/40 text-amber-600 dark:text-amber-400 text-xs"
+                className="border-amber-500/40 text-[#D97706] dark:text-[#FCD34D] bg-amber-500/10 text-xs py-1.5 px-3 font-semibold"
               >
-                Período Filtrado: {String(selectedMonth).padStart(2, '0')}/{selectedYear}
+                Mês Corrente
               </Badge>
             )}
           </div>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            Selecione o mês/ano para recalcular gráficos, consumo de horas e KPIs do período.
-          </p>
-        </div>
-
-        {/* Seletor de Mês e Ano */}
-        <div className="flex items-center gap-2 self-start sm:self-auto">
-          <Select
-            value={String(selectedMonth)}
-            onValueChange={(val) => onChangePeriod(Number(val), selectedYear)}
-          >
-            <SelectTrigger className="w-[130px] text-xs h-9">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {months.map((m) => (
-                <SelectItem key={m.value} value={String(m.value)}>
-                  {m.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          <Select
-            value={String(selectedYear)}
-            onValueChange={(val) => onChangePeriod(selectedMonth, Number(val))}
-          >
-            <SelectTrigger className="w-[90px] text-xs h-9">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {years.map((y) => (
-                <SelectItem key={y} value={String(y)}>
-                  {y}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          {!isCurrentMonth && (
-            <Button
-              size="sm"
-              variant="outline"
-              className="text-xs h-9"
-              onClick={() => {
-                const now = new Date()
-                onChangePeriod(now.getMonth() + 1, now.getFullYear())
-              }}
-            >
-              Mês Atual
-            </Button>
-          )}
         </div>
       </div>
 

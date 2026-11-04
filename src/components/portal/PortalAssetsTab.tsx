@@ -273,8 +273,8 @@ export default function PortalAssetsTab({
       {/* =========================================================================
           BARRA DE FERRAMENTAS: Busca por texto + Filtros + Alternador Cards/Tabela
           ========================================================================= */}
-      <div className="bg-card border rounded-xl p-4 shadow-2xs space-y-3">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+      <div className="bg-card/90 border border-border/80 rounded-2xl p-4 sm:p-5 shadow-sm space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div>
             <h3 className="font-bold text-base text-foreground flex items-center gap-2">
               <Server className="h-5 w-5 text-amber-500" />
@@ -288,20 +288,20 @@ export default function PortalAssetsTab({
 
           <div className="flex items-center gap-2 self-start sm:self-auto">
             {/* Alternador de visualização: Cards vs Tabela */}
-            <div className="flex items-center p-0.5 bg-muted rounded-lg border border-border/60">
+            <div className="flex items-center p-1 bg-muted/80 rounded-xl border border-border/70 shadow-2xs">
               <Button
                 type="button"
                 variant="ghost"
                 size="sm"
                 onClick={() => setViewMode('cards')}
-                className={`h-7 px-2.5 text-xs font-semibold rounded-md ${
+                className={`h-7.5 px-3 text-xs font-bold rounded-lg transition-all ${
                   viewMode === 'cards'
-                    ? 'bg-card text-foreground shadow-2xs'
+                    ? 'bg-card text-foreground shadow-xs'
                     : 'text-muted-foreground hover:text-foreground'
                 }`}
                 title="Visualização em Cards"
               >
-                <LayoutGrid className="h-3.5 w-3.5 mr-1" />
+                <LayoutGrid className="h-3.5 w-3.5 mr-1 text-amber-500" />
                 Cards
               </Button>
               <Button
@@ -309,21 +309,21 @@ export default function PortalAssetsTab({
                 variant="ghost"
                 size="sm"
                 onClick={() => setViewMode('table')}
-                className={`h-7 px-2.5 text-xs font-semibold rounded-md ${
+                className={`h-7.5 px-3 text-xs font-bold rounded-lg transition-all ${
                   viewMode === 'table'
-                    ? 'bg-card text-foreground shadow-2xs'
+                    ? 'bg-card text-foreground shadow-xs'
                     : 'text-muted-foreground hover:text-foreground'
                 }`}
                 title="Visualização em Tabela Detalhada"
               >
-                <TableIcon className="h-3.5 w-3.5 mr-1" />
+                <TableIcon className="h-3.5 w-3.5 mr-1 text-amber-500" />
                 Tabela
               </Button>
             </div>
 
             <Badge
               variant="outline"
-              className="border-amber-500/40 text-amber-600 dark:text-amber-400 font-mono text-xs"
+              className="border-amber-500/40 text-amber-700 dark:text-amber-300 bg-amber-500/10 font-mono text-xs font-bold h-8 px-2.5"
             >
               {filteredAssets.length} de {assets.length} ativos
             </Badge>

@@ -10,6 +10,7 @@ import {
   FileText,
   ArrowRight,
   ShieldCheck,
+  RefreshCw,
 } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -73,8 +74,8 @@ export default function PortalVisitsTab({ visits, loading, onOpenTicket }: Porta
             variant={filter === 'Agendadas' ? 'default' : 'outline'}
             className={
               filter === 'Agendadas'
-                ? 'bg-amber-600 hover:bg-amber-700 text-white text-xs h-8'
-                : 'text-xs h-8'
+                ? 'bg-[#D97706] hover:bg-amber-600 text-white font-bold text-xs h-8.5 shadow-xs'
+                : 'text-xs h-8.5'
             }
             onClick={() => setFilter('Agendadas')}
           >
@@ -85,8 +86,8 @@ export default function PortalVisitsTab({ visits, loading, onOpenTicket }: Porta
             variant={filter === 'Todas' ? 'default' : 'outline'}
             className={
               filter === 'Todas'
-                ? 'bg-amber-600 hover:bg-amber-700 text-white text-xs h-8'
-                : 'text-xs h-8'
+                ? 'bg-[#D97706] hover:bg-amber-600 text-white font-bold text-xs h-8.5 shadow-xs'
+                : 'text-xs h-8.5'
             }
             onClick={() => setFilter('Todas')}
           >
@@ -96,23 +97,26 @@ export default function PortalVisitsTab({ visits, loading, onOpenTicket }: Porta
       </div>
 
       {loading ? (
-        <div className="py-12 text-center text-xs text-muted-foreground bg-card border rounded-xl">
-          Carregando agenda de visitas técnicas...
+        <div className="py-16 text-center text-xs text-muted-foreground bg-card border rounded-2xl flex flex-col items-center justify-center gap-2">
+          <RefreshCw className="h-6 w-6 animate-spin text-amber-500" />
+          <p className="font-medium">Carregando agenda de visitas técnicas...</p>
         </div>
       ) : displayVisits.length === 0 ? (
-        <div className="py-12 text-center text-xs text-muted-foreground bg-card border rounded-xl space-y-2">
-          <CalendarDays className="h-8 w-8 text-muted-foreground mx-auto opacity-60" />
-          <p className="font-semibold text-sm text-foreground">
+        <div className="py-16 text-center text-xs text-muted-foreground bg-card border rounded-2xl space-y-2.5 px-4">
+          <div className="h-12 w-12 rounded-full bg-amber-500/10 text-amber-600 flex items-center justify-center mx-auto">
+            <CalendarDays className="h-6 w-6" />
+          </div>
+          <p className="font-bold text-base text-foreground">
             {filter === 'Agendadas'
               ? 'Nenhuma visita técnica agendada no momento'
               : 'Nenhum histórico de visitas registrado'}
           </p>
-          <p className="text-muted-foreground">
+          <p className="text-muted-foreground max-w-md mx-auto">
             Se precisar de atendimento presencial, abra um chamado solicitando visita técnica.
           </p>
         </div>
       ) : (
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div className="grid gap-4 sm:grid-cols-2">
           {displayVisits.map((visit) => {
             const ticket = visit.expand?.ticket
             const technician = visit.expand?.technician
@@ -126,12 +130,12 @@ export default function PortalVisitsTab({ visits, loading, onOpenTicket }: Porta
             return (
               <Card
                 key={visit.id}
-                className={`bg-card border transition-colors shadow-2xs ${
+                className={`bg-card/90 border rounded-2xl transition-all duration-200 shadow-sm hover:shadow-md ${
                   isInProgress
-                    ? 'border-emerald-500/50'
+                    ? 'border-emerald-500/60 ring-1 ring-emerald-500/20'
                     : isScheduled
-                      ? 'border-amber-500/40 hover:border-amber-500'
-                      : 'opacity-85'
+                      ? 'border-amber-500/50 hover:border-amber-500 ring-1 ring-amber-500/20'
+                      : 'border-border/80 opacity-90'
                 }`}
               >
                 <CardHeader className="p-4 pb-2 space-y-2">

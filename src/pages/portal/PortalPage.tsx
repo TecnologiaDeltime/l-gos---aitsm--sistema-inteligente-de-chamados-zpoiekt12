@@ -370,50 +370,59 @@ export default function PortalPage() {
       )}
 
       {/* =========================================================================
-          CABEÇALHO OFICIAL: Grafite #17181C com letras âmbar/brancas
+          CABEÇALHO OFICIAL: Grafite #17181C com letras âmbar/brancas e Lógos AITILSM
           ========================================================================= */}
       <header
-        className={`w-full border-b border-amber-500/20 bg-[#17181C] text-amber-100 shadow-md ${!isAdmin ? 'sticky top-0 z-40' : ''}`}
+        className={`w-full border-b border-amber-500/25 bg-[#17181C] text-amber-100 shadow-md backdrop-blur-sm ${!isAdmin ? 'sticky top-0 z-40' : ''}`}
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
           {/* Logo e Nome da Empresa */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 min-w-0">
             {designSettings?.logo_url ? (
               <img
                 src={designSettings.logo_url}
                 alt="Logo"
-                className="h-8 max-w-[120px] object-contain drop-shadow"
+                className="h-9 max-w-[140px] object-contain drop-shadow"
               />
             ) : (
-              <div className="p-1.5 bg-white border border-amber-500/30 rounded-lg flex items-center justify-center">
-                <LogosMonogram className="h-6 w-6" />
+              <div className="flex items-center gap-2.5 p-1 px-2 rounded-xl bg-white/5 border border-amber-500/30">
+                <div className="p-1 bg-white rounded-lg flex items-center justify-center shadow-xs">
+                  <LogosMonogram className="h-5 w-5" />
+                </div>
+                <div className="leading-tight hidden sm:block">
+                  <span className="text-[13px] font-black tracking-tight text-white">LÓGOS</span>
+                  <span className="text-[11px] font-extrabold text-[#FCD34D] ml-1 tracking-wider">
+                    AITILSM
+                  </span>
+                </div>
               </div>
             )}
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="font-mono text-sm font-bold tracking-wider text-amber-400 uppercase">
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="font-mono text-xs sm:text-sm font-bold tracking-wider text-[#FCD34D] uppercase">
                   Portal do Cliente
                 </span>
-                <span className="text-[10px] font-mono px-2 py-0.2 rounded-full border border-amber-500/40 bg-amber-500/10 text-amber-300">
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded-full border border-amber-500/40 bg-amber-500/15 text-amber-200 truncate max-w-[180px] sm:max-w-xs font-semibold">
                   {companyName}
                 </span>
               </div>
-              <p className="text-[11px] text-zinc-400 hidden sm:block">
-                Central Integrada de Chamados, Ativos, Visitas e Horas
+              <p className="text-[11px] text-zinc-400 hidden sm:block truncate">
+                Central de Chamados, Aprovações, Ativos, Visitas Técnicas e Franquia
               </p>
             </div>
           </div>
 
           {/* Ações do Topo */}
-          <div className="flex items-center gap-2 sm:gap-3">
+          <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
             {/* Botão Novo Chamado Destaque */}
             <Button
               size="sm"
               onClick={() => setNewTicketOpen(true)}
-              className="bg-amber-600 hover:bg-amber-700 text-white font-semibold text-xs shadow-sm shadow-amber-600/30 gap-1.5 h-8 sm:h-9"
+              className="bg-[#D97706] hover:bg-amber-600 text-white font-bold text-xs shadow-md shadow-amber-900/30 gap-1.5 h-8 sm:h-9 px-3 sm:px-4"
             >
               <Plus className="h-4 w-4" />
               <span className="hidden sm:inline">Abrir Chamado</span>
+              <span className="sm:hidden">Novo</span>
             </Button>
 
             {/* Alternador de tema oficial */}
@@ -421,10 +430,18 @@ export default function PortalPage() {
               variant="outline"
               size="icon"
               onClick={toggleTheme}
-              className="border-zinc-700 bg-zinc-800/80 text-amber-300 hover:bg-zinc-700 hover:text-amber-200 h-8 w-8 sm:h-9 sm:w-9"
-              title={theme === 'dark' ? 'Modo Claro' : 'Modo Escuro'}
+              className="border-zinc-700/80 bg-zinc-800/80 text-amber-300 hover:bg-zinc-700 hover:text-amber-200 h-8 w-8 sm:h-9 sm:w-9"
+              title={
+                theme === 'dark'
+                  ? 'Mudar para Modo Claro (Marrom & Branco)'
+                  : 'Mudar para Modo Escuro (Amber Alert)'
+              }
             >
-              {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+              {theme === 'dark' ? (
+                <Sun className="h-4 w-4 text-amber-400" />
+              ) : (
+                <Moon className="h-4 w-4 text-amber-300" />
+              )}
             </Button>
 
             {/* Recarregar dados */}
@@ -433,27 +450,27 @@ export default function PortalPage() {
               size="icon"
               onClick={() => loadPortalData(true)}
               disabled={refreshing}
-              className="border-zinc-700 bg-zinc-800/80 text-zinc-300 hover:bg-zinc-700 h-8 w-8 sm:h-9 sm:w-9"
+              className="border-zinc-700/80 bg-zinc-800/80 text-zinc-300 hover:bg-zinc-700 hover:text-white h-8 w-8 sm:h-9 sm:w-9"
               title="Atualizar Informações"
             >
               <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin text-amber-400' : ''}`} />
             </Button>
 
             {/* Usuário / Logout */}
-            <div className="flex items-center gap-2 pl-2 border-l border-zinc-700">
+            <div className="flex items-center gap-2 pl-2 sm:pl-3 border-l border-zinc-700/80">
               <div className="text-right hidden md:block">
-                <span className="text-xs font-semibold text-zinc-100 block leading-tight">
+                <span className="text-xs font-semibold text-zinc-100 block leading-tight max-w-[140px] truncate">
                   {user?.name || 'Cliente'}
                 </span>
-                <span className="text-[10px] text-amber-400">
-                  {isFocalPoint ? 'Ponto Focal' : 'Solicitante'}
+                <span className="text-[10px] text-[#FCD34D] font-medium">
+                  {isFocalPoint ? 'Ponto Focal Autorizado' : 'Solicitante'}
                 </span>
               </div>
               <Button
                 variant="ghost"
                 size="icon"
                 onClick={handleLogout}
-                className="text-zinc-400 hover:text-rose-400 hover:bg-zinc-800 h-8 w-8 sm:h-9 sm:w-9"
+                className="text-zinc-400 hover:text-rose-400 hover:bg-zinc-800/80 h-8 w-8 sm:h-9 sm:w-9"
                 title="Sair do Portal"
               >
                 <LogOut className="h-4 w-4" />
@@ -497,116 +514,165 @@ export default function PortalPage() {
           </div>
         )}
 
-        {/* Banner de Boas-vindas com Resumo Rápido */}
-        <div className="bg-card border rounded-2xl p-4 sm:p-5 shadow-2xs space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-            <div>
-              <h2 className="text-lg font-bold text-foreground">Olá, {user?.name || 'Cliente'}!</h2>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                Bem-vindo à área de atendimento da <strong>{companyName}</strong>. Aqui você
-                gerencia solicitações, valida aprovações e audita o consumo de horas.
+        {/* Banner de Boas-vindas com Resumo Rápido e Identidade Lógos AITILSM */}
+        <div className="relative overflow-hidden rounded-2xl border border-amber-500/25 bg-gradient-to-br from-card via-card to-amber-500/5 p-4 sm:p-5 shadow-xs space-y-4">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-radial from-amber-500/10 to-transparent pointer-events-none rounded-full blur-2xl -mr-20 -mt-20" />
+          <div className="relative flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                <span className="text-[11px] font-mono uppercase tracking-wider text-amber-600 dark:text-amber-400 font-bold">
+                  Painel de Autoatendimento
+                </span>
+              </div>
+              <h2 className="text-xl sm:text-2xl font-black text-foreground tracking-tight">
+                Olá, {user?.name || 'Cliente'}!
+              </h2>
+              <p className="text-xs text-muted-foreground max-w-2xl leading-relaxed">
+                Bem-vindo à central de atendimento da <strong>{companyName}</strong>. Acompanhe
+                chamados em tempo real, gerencie aprovações de solicitações, consulte o inventário e
+                audite a franquia de horas.
               </p>
             </div>
 
-            <div className="flex items-center gap-2 flex-wrap">
+            <div className="flex items-center gap-2 flex-wrap self-start sm:self-auto">
               <Badge
                 variant="outline"
-                className="border-amber-500/40 text-amber-600 dark:text-amber-400 py-1 px-2.5 text-xs font-semibold"
+                className="border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-300 py-1.5 px-3 text-xs font-bold gap-1.5 shadow-2xs"
               >
+                <ShieldCheck className="h-3.5 w-3.5 text-amber-500" />
                 {isFocalPoint ? 'Perfil: Ponto Focal Autorizado' : 'Perfil: Solicitante'}
               </Badge>
+              <Button
+                size="sm"
+                onClick={() => setNewTicketOpen(true)}
+                className="bg-[#D97706] hover:bg-amber-600 text-white font-bold text-xs gap-1.5 shadow-sm shadow-amber-900/20 h-8"
+              >
+                <Plus className="h-3.5 w-3.5" />
+                Abrir Chamado
+              </Button>
             </div>
           </div>
 
-          {/* Cards de atalho e contadores rápidos */}
-          <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 pt-2 border-t border-border/50">
+          {/* Cards de atalho e contadores rápidos com cards modernos */}
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5 sm:gap-3 pt-3 border-t border-border/60">
             <button
               onClick={() => setActiveTab('dashboard')}
-              className={`p-3 rounded-xl border text-left transition-all ${
+              className={`p-3 sm:p-3.5 rounded-xl border text-left transition-all duration-200 group ${
                 activeTab === 'dashboard'
-                  ? 'border-amber-500 bg-amber-500/10'
-                  : 'bg-muted/30 hover:bg-muted/60'
+                  ? 'border-amber-500 bg-amber-500/15 shadow-xs ring-1 ring-amber-500/40'
+                  : 'bg-card/60 hover:bg-card border-border/70 hover:border-amber-500/40 shadow-2xs'
               }`}
             >
-              <div className="flex items-center justify-between text-muted-foreground text-xs mb-1">
-                <span>Dashboard</span>
-                <BarChart3 className="h-4 w-4 text-amber-500" />
+              <div className="flex items-center justify-between text-muted-foreground text-xs mb-1.5">
+                <span className="font-semibold text-[11px] group-hover:text-foreground">
+                  Dashboard
+                </span>
+                <BarChart3 className="h-4 w-4 text-amber-500 transition-transform group-hover:scale-110" />
               </div>
-              <div className="flex items-center gap-1.5">
-                <span className="text-xl font-bold text-foreground">
+              <div className="flex items-baseline gap-1.5">
+                <span className="text-xl sm:text-2xl font-black text-foreground font-mono">
                   {dashboardMetrics?.resolutionRate || 0}%
                 </span>
-                <span className="text-[10px] text-muted-foreground">resolução</span>
+                <span className="text-[10px] text-muted-foreground font-medium">resolução</span>
               </div>
             </button>
 
             <button
               onClick={() => setActiveTab('tickets')}
-              className={`p-3 rounded-xl border text-left transition-all ${
+              className={`p-3 sm:p-3.5 rounded-xl border text-left transition-all duration-200 group ${
                 activeTab === 'tickets'
-                  ? 'border-amber-500 bg-amber-500/10'
-                  : 'bg-muted/30 hover:bg-muted/60'
+                  ? 'border-amber-500 bg-amber-500/15 shadow-xs ring-1 ring-amber-500/40'
+                  : 'bg-card/60 hover:bg-card border-border/70 hover:border-amber-500/40 shadow-2xs'
               }`}
             >
-              <div className="flex items-center justify-between text-muted-foreground text-xs mb-1">
-                <span>Chamados Ativos</span>
-                <LifeBuoy className="h-4 w-4 text-amber-500" />
+              <div className="flex items-center justify-between text-muted-foreground text-xs mb-1.5">
+                <span className="font-semibold text-[11px] group-hover:text-foreground">
+                  Chamados Ativos
+                </span>
+                <LifeBuoy className="h-4 w-4 text-amber-500 transition-transform group-hover:scale-110" />
               </div>
-              <span className="text-xl font-bold text-foreground">{activeTicketsCount}</span>
+              <div className="flex items-baseline gap-1.5">
+                <span className="text-xl sm:text-2xl font-black text-foreground font-mono">
+                  {activeTicketsCount}
+                </span>
+                <span className="text-[10px] text-muted-foreground font-medium">em aberto</span>
+              </div>
             </button>
 
             <button
               onClick={() => setActiveTab('approvals')}
-              className={`p-3 rounded-xl border text-left transition-all ${
+              className={`p-3 sm:p-3.5 rounded-xl border text-left transition-all duration-200 group ${
                 activeTab === 'approvals'
-                  ? 'border-amber-500 bg-amber-500/10'
-                  : 'bg-muted/30 hover:bg-muted/60'
+                  ? 'border-amber-500 bg-amber-500/15 shadow-xs ring-1 ring-amber-500/40'
+                  : 'bg-card/60 hover:bg-card border-border/70 hover:border-amber-500/40 shadow-2xs'
               }`}
             >
-              <div className="flex items-center justify-between text-muted-foreground text-xs mb-1">
-                <span>Aprovações</span>
-                <ShieldCheck className="h-4 w-4 text-amber-500" />
+              <div className="flex items-center justify-between text-muted-foreground text-xs mb-1.5">
+                <span className="font-semibold text-[11px] group-hover:text-foreground">
+                  Aprovações
+                </span>
+                <ShieldCheck className="h-4 w-4 text-amber-500 transition-transform group-hover:scale-110" />
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-xl font-bold text-foreground">{pendingApprovalsCount}</span>
-                {pendingApprovalsCount > 0 && (
-                  <Badge className="bg-amber-500 text-slate-900 text-[10px] px-1.5 py-0 font-bold">
+                <span className="text-xl sm:text-2xl font-black text-foreground font-mono">
+                  {pendingApprovalsCount}
+                </span>
+                {pendingApprovalsCount > 0 ? (
+                  <Badge className="bg-[#D97706] text-white text-[10px] px-1.5 py-0 font-bold">
                     Pendente
                   </Badge>
+                ) : (
+                  <span className="text-[10px] text-muted-foreground font-medium">em dia</span>
                 )}
               </div>
             </button>
 
             <button
               onClick={() => setActiveTab('visits')}
-              className={`p-3 rounded-xl border text-left transition-all ${
+              className={`p-3 sm:p-3.5 rounded-xl border text-left transition-all duration-200 group ${
                 activeTab === 'visits'
-                  ? 'border-amber-500 bg-amber-500/10'
-                  : 'bg-muted/30 hover:bg-muted/60'
+                  ? 'border-amber-500 bg-amber-500/15 shadow-xs ring-1 ring-amber-500/40'
+                  : 'bg-card/60 hover:bg-card border-border/70 hover:border-amber-500/40 shadow-2xs'
               }`}
             >
-              <div className="flex items-center justify-between text-muted-foreground text-xs mb-1">
-                <span>Visitas Agendadas</span>
-                <CalendarDays className="h-4 w-4 text-emerald-500" />
+              <div className="flex items-center justify-between text-muted-foreground text-xs mb-1.5">
+                <span className="font-semibold text-[11px] group-hover:text-foreground">
+                  Visitas Presenciais
+                </span>
+                <CalendarDays className="h-4 w-4 text-emerald-500 transition-transform group-hover:scale-110" />
               </div>
-              <span className="text-xl font-bold text-foreground">{scheduledVisitsCount}</span>
+              <div className="flex items-baseline gap-1.5">
+                <span className="text-xl sm:text-2xl font-black text-foreground font-mono">
+                  {scheduledVisitsCount}
+                </span>
+                <span className="text-[10px] text-muted-foreground font-medium">agendada(s)</span>
+              </div>
             </button>
 
             <button
               onClick={() => setActiveTab('hours')}
-              className={`p-3 rounded-xl border text-left transition-all ${
+              className={`p-3 sm:p-3.5 rounded-xl border text-left transition-all duration-200 group col-span-2 sm:col-span-1 ${
                 activeTab === 'hours'
-                  ? 'border-amber-500 bg-amber-500/10'
-                  : 'bg-muted/30 hover:bg-muted/60'
+                  ? 'border-amber-500 bg-amber-500/15 shadow-xs ring-1 ring-amber-500/40'
+                  : 'bg-card/60 hover:bg-card border-border/70 hover:border-amber-500/40 shadow-2xs'
               }`}
             >
-              <div className="flex items-center justify-between text-muted-foreground text-xs mb-1">
-                <span>Saldo de Horas</span>
-                <Clock className="h-4 w-4 text-purple-500" />
+              <div className="flex items-center justify-between text-muted-foreground text-xs mb-1.5">
+                <span className="font-semibold text-[11px] group-hover:text-foreground">
+                  Saldo Franquia
+                </span>
+                <Clock className="h-4 w-4 text-amber-500 transition-transform group-hover:scale-110" />
               </div>
-              <div className="flex items-center gap-1.5">
-                <span className="text-xl font-bold text-foreground">{hoursData.balanceHours}h</span>
-                <span className="text-[11px] text-muted-foreground">({hoursData.periodName})</span>
+              <div className="flex items-baseline gap-1.5">
+                <span
+                  className={`text-xl sm:text-2xl font-black font-mono ${hoursData.balanceHours < 0 ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600 dark:text-emerald-400'}`}
+                >
+                  {hoursData.balanceHours}h
+                </span>
+                <span className="text-[10px] text-muted-foreground font-medium truncate">
+                  ({hoursData.periodName})
+                </span>
               </div>
             </button>
           </div>
@@ -620,11 +686,11 @@ export default function PortalPage() {
           onValueChange={(val: any) => setActiveTab(val)}
           className="space-y-4"
         >
-          <div className="border-b border-border/80 overflow-x-auto">
-            <TabsList className="bg-transparent h-auto p-0 gap-2 sm:gap-4 flex justify-start">
+          <div className="border-b border-border/70 overflow-x-auto no-scrollbar bg-card/40 rounded-xl p-1 shadow-2xs">
+            <TabsList className="bg-transparent h-auto p-0 gap-1 sm:gap-2 flex justify-start min-w-max">
               <TabsTrigger
                 value="dashboard"
-                className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-amber-500 data-[state=active]:text-amber-600 dark:data-[state=active]:text-amber-400 rounded-none px-3 py-2.5 text-xs sm:text-sm font-semibold gap-2"
+                className="data-[state=active]:bg-amber-500/15 data-[state=active]:border data-[state=active]:border-amber-500/40 data-[state=active]:text-[#D97706] dark:data-[state=active]:text-[#FCD34D] data-[state=active]:shadow-2xs rounded-lg px-3.5 py-2 text-xs sm:text-sm font-semibold gap-2 transition-all"
               >
                 <BarChart3 className="h-4 w-4" />
                 Dashboard
@@ -632,20 +698,20 @@ export default function PortalPage() {
 
               <TabsTrigger
                 value="tickets"
-                className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-amber-500 data-[state=active]:text-amber-600 dark:data-[state=active]:text-amber-400 rounded-none px-3 py-2.5 text-xs sm:text-sm font-semibold gap-2"
+                className="data-[state=active]:bg-amber-500/15 data-[state=active]:border data-[state=active]:border-amber-500/40 data-[state=active]:text-[#D97706] dark:data-[state=active]:text-[#FCD34D] data-[state=active]:shadow-2xs rounded-lg px-3.5 py-2 text-xs sm:text-sm font-semibold gap-2 transition-all"
               >
                 <LifeBuoy className="h-4 w-4" />
-                Chamados da organização ({tickets.length})
+                Chamados ({tickets.length})
               </TabsTrigger>
 
               <TabsTrigger
                 value="approvals"
-                className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-amber-500 data-[state=active]:text-amber-600 dark:data-[state=active]:text-amber-400 rounded-none px-3 py-2.5 text-xs sm:text-sm font-semibold gap-2"
+                className="data-[state=active]:bg-amber-500/15 data-[state=active]:border data-[state=active]:border-amber-500/40 data-[state=active]:text-[#D97706] dark:data-[state=active]:text-[#FCD34D] data-[state=active]:shadow-2xs rounded-lg px-3.5 py-2 text-xs sm:text-sm font-semibold gap-2 transition-all"
               >
                 <ShieldCheck className="h-4 w-4" />
                 Aprovações
                 {pendingApprovalsCount > 0 && (
-                  <Badge className="bg-amber-500 text-slate-900 text-[10px] px-1.5 py-0 font-bold ml-1">
+                  <Badge className="bg-[#D97706] text-white text-[10px] px-1.5 py-0 font-bold ml-1">
                     {pendingApprovalsCount}
                   </Badge>
                 )}
@@ -653,23 +719,23 @@ export default function PortalPage() {
 
               <TabsTrigger
                 value="assets"
-                className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-amber-500 data-[state=active]:text-amber-600 dark:data-[state=active]:text-amber-400 rounded-none px-3 py-2.5 text-xs sm:text-sm font-semibold gap-2"
+                className="data-[state=active]:bg-amber-500/15 data-[state=active]:border data-[state=active]:border-amber-500/40 data-[state=active]:text-[#D97706] dark:data-[state=active]:text-[#FCD34D] data-[state=active]:shadow-2xs rounded-lg px-3.5 py-2 text-xs sm:text-sm font-semibold gap-2 transition-all"
               >
                 <Server className="h-4 w-4" />
-                Inventário de TI ({data?.configurationItems?.length || 0})
+                Inventário ({data?.configurationItems?.length || 0})
               </TabsTrigger>
 
               <TabsTrigger
                 value="visits"
-                className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-amber-500 data-[state=active]:text-amber-600 dark:data-[state=active]:text-amber-400 rounded-none px-3 py-2.5 text-xs sm:text-sm font-semibold gap-2"
+                className="data-[state=active]:bg-amber-500/15 data-[state=active]:border data-[state=active]:border-amber-500/40 data-[state=active]:text-[#D97706] dark:data-[state=active]:text-[#FCD34D] data-[state=active]:shadow-2xs rounded-lg px-3.5 py-2 text-xs sm:text-sm font-semibold gap-2 transition-all"
               >
                 <CalendarDays className="h-4 w-4" />
-                Visitas Técnicas ({data?.technicalVisits?.length || 0})
+                Visitas ({data?.technicalVisits?.length || 0})
               </TabsTrigger>
 
               <TabsTrigger
                 value="hours"
-                className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-amber-500 data-[state=active]:text-amber-600 dark:data-[state=active]:text-amber-400 rounded-none px-3 py-2.5 text-xs sm:text-sm font-semibold gap-2"
+                className="data-[state=active]:bg-amber-500/15 data-[state=active]:border data-[state=active]:border-amber-500/40 data-[state=active]:text-[#D97706] dark:data-[state=active]:text-[#FCD34D] data-[state=active]:shadow-2xs rounded-lg px-3.5 py-2 text-xs sm:text-sm font-semibold gap-2 transition-all"
               >
                 <Clock className="h-4 w-4" />
                 Horas e Franquia
@@ -677,12 +743,12 @@ export default function PortalPage() {
 
               <TabsTrigger
                 value="reports"
-                className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-amber-500 data-[state=active]:text-amber-600 dark:data-[state=active]:text-amber-400 rounded-none px-3 py-2.5 text-xs sm:text-sm font-semibold gap-2"
+                className="data-[state=active]:bg-amber-500/15 data-[state=active]:border data-[state=active]:border-amber-500/40 data-[state=active]:text-[#D97706] dark:data-[state=active]:text-[#FCD34D] data-[state=active]:shadow-2xs rounded-lg px-3.5 py-2 text-xs sm:text-sm font-semibold gap-2 transition-all"
               >
                 <FileText className="h-4 w-4" />
                 Relatórios
                 {releasedReports.length > 0 && (
-                  <Badge className="bg-emerald-500 text-slate-900 text-[10px] px-1.5 py-0 font-bold ml-1">
+                  <Badge className="bg-emerald-600 text-white text-[10px] px-1.5 py-0 font-bold ml-1">
                     {releasedReports.length}
                   </Badge>
                 )}
@@ -744,7 +810,7 @@ export default function PortalPage() {
               <Button
                 size="sm"
                 onClick={() => setNewTicketOpen(true)}
-                className="bg-amber-600 hover:bg-amber-700 text-white font-semibold text-xs gap-1.5 h-9"
+                className="bg-[#D97706] hover:bg-amber-600 text-white font-bold text-xs gap-1.5 h-9 shadow-sm"
               >
                 <Plus className="h-4 w-4" />
                 Abrir Novo Chamado
@@ -753,22 +819,25 @@ export default function PortalPage() {
 
             {/* Listagem de Chamados */}
             {loading ? (
-              <div className="py-12 text-center text-xs text-muted-foreground bg-card border rounded-xl">
-                Carregando chamados...
+              <div className="py-16 text-center text-xs text-muted-foreground bg-card border rounded-2xl flex flex-col items-center justify-center gap-2">
+                <RefreshCw className="h-6 w-6 animate-spin text-amber-500" />
+                <p className="font-medium">Carregando chamados da organização...</p>
               </div>
             ) : filteredTickets.length === 0 ? (
-              <div className="py-12 text-center text-xs text-muted-foreground bg-card border rounded-xl space-y-3">
-                <LifeBuoy className="h-8 w-8 text-muted-foreground mx-auto opacity-60" />
-                <p className="font-semibold text-sm text-foreground">Nenhum chamado localizado</p>
-                <p className="text-muted-foreground">
+              <div className="py-16 text-center text-xs text-muted-foreground bg-card border rounded-2xl space-y-3 px-4">
+                <div className="h-12 w-12 rounded-full bg-amber-500/10 text-amber-500 flex items-center justify-center mx-auto">
+                  <LifeBuoy className="h-6 w-6" />
+                </div>
+                <p className="font-bold text-base text-foreground">Nenhum chamado localizado</p>
+                <p className="text-muted-foreground max-w-md mx-auto">
                   {ticketSearch || ticketStatusFilter !== 'todos'
-                    ? 'Nenhum chamado corresponde aos filtros aplicados.'
-                    : 'Sua empresa ainda não possui chamados registrados.'}
+                    ? 'Nenhum chamado corresponde aos filtros aplicados. Tente ajustar os termos de busca.'
+                    : 'Sua empresa ainda não possui chamados registrados no portal.'}
                 </p>
                 <Button
                   size="sm"
                   onClick={() => setNewTicketOpen(true)}
-                  className="bg-amber-600 hover:bg-amber-700 text-white text-xs gap-1"
+                  className="bg-[#D97706] hover:bg-amber-600 text-white text-xs font-bold gap-1.5 shadow-sm"
                 >
                   <Plus className="h-4 w-4" /> Abrir Primeiro Chamado
                 </Button>
@@ -778,39 +847,42 @@ export default function PortalPage() {
                 {filteredTickets.map((ticket) => {
                   const isClosed = ticket.status === 'Resolvido' || ticket.status === 'Fechado'
                   const isWaitingClient = ticket.status === 'Aguardando Solicitante'
+                  const isWaitingApproval = ticket.status === 'Aguardando Aprovação'
 
                   return (
                     <Card
                       key={ticket.id}
                       onClick={() => setSelectedTicket(ticket)}
-                      className="cursor-pointer transition-all hover:border-amber-500/50 hover:shadow-sm bg-card"
+                      className="cursor-pointer transition-all duration-200 hover:border-amber-500/60 hover:shadow-md bg-card/90 border-border/80 group"
                     >
                       <CardHeader className="p-4 pb-2">
                         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
-                          <div className="space-y-1">
+                          <div className="space-y-1.5 flex-1 min-w-0">
                             <div className="flex items-center gap-2 flex-wrap">
-                              <span className="font-mono font-bold text-sm text-amber-600 dark:text-amber-400">
+                              <span className="font-mono font-bold text-sm text-[#D97706] dark:text-[#FCD34D] px-2 py-0.5 rounded-md bg-amber-500/10 border border-amber-500/25">
                                 #{ticket.number}
                               </span>
                               <Badge
                                 variant="outline"
                                 className={
                                   isClosed
-                                    ? 'bg-muted text-muted-foreground'
+                                    ? 'bg-muted text-muted-foreground border-border'
                                     : isWaitingClient
-                                      ? 'bg-amber-500/20 text-amber-700 dark:text-amber-300 border-amber-500/40 font-bold'
-                                      : 'bg-emerald-500/15 text-emerald-600 border-emerald-500/30'
+                                      ? 'bg-amber-500/20 text-amber-800 dark:text-amber-200 border-amber-500/50 font-bold animate-pulse'
+                                      : isWaitingApproval
+                                        ? 'bg-purple-500/15 text-purple-700 dark:text-purple-300 border-purple-500/40 font-bold'
+                                        : 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/40 font-semibold'
                                 }
                               >
                                 {ticket.status}
                               </Badge>
                               {ticket.type && (
-                                <Badge variant="secondary" className="text-xs">
+                                <Badge variant="secondary" className="text-[11px] font-medium">
                                   {ticket.type}
                                 </Badge>
                               )}
                               {ticket.priority && (
-                                <span className="text-[11px] text-muted-foreground">
+                                <span className="text-[11px] text-muted-foreground font-medium">
                                   Prioridade: <strong>{ticket.priority}</strong>
                                 </span>
                               )}

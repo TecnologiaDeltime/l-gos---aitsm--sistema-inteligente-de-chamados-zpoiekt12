@@ -121,10 +121,10 @@ export default function PortalReportsTab({
   return (
     <div className="space-y-4">
       {/* Topo Informativo */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-card border rounded-xl p-4 shadow-2xs">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-card/90 border border-border/80 rounded-2xl p-4 sm:p-5 shadow-sm">
         <div>
           <h3 className="text-base font-bold text-foreground flex items-center gap-2">
-            <FileText className="h-4 w-4 text-amber-500" />
+            <FileText className="h-5 w-5 text-amber-500" />
             Relatórios Mensais de Atendimento
           </h3>
           <p className="text-xs text-muted-foreground mt-0.5">
@@ -134,13 +134,13 @@ export default function PortalReportsTab({
         </div>
 
         {/* Busca */}
-        <div className="relative w-full sm:w-64">
-          <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
+        <div className="relative w-full sm:w-72">
+          <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Filtrar por mês ou responsável..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-8 text-xs h-8"
+            className="pl-9 text-xs h-9 rounded-xl"
           />
         </div>
       </div>

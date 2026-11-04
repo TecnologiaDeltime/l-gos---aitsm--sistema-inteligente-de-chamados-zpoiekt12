@@ -266,6 +266,13 @@ const FEATURE_CATEGORIES: FeatureCategory[] = [
           'Botão que preenche automaticamente setor, contato e equipamento com os dados do usuário logado. O equipamento é reconhecido pelo vínculo (ID) ou pelo nome do responsável (inclusive na coleção de equipamentos da empresa), e não quebra quando o usuário não tem ativo. Item próprio "Atalho Meu chamado (Portal)" na matriz de Perfis de Acesso com os 3 níveis (Visualizar/Editar/Configurar).',
         tag: 'Automação / Permissões',
       },
+      {
+        id: 'portal-13',
+        title: 'Redesign Moderno do Portal com Identidade Lógos AITILSM',
+        description:
+          'Modernização completa da interface do Portal do Cliente: barra superior oficial com paleta grafite/âmbar, alternador nativo de tema (Amber Alert escuro e Marrom & Branco claro), banner de boas-vindas sofisticado com cartões de acesso rápido, badges refinados, timeline interativa de histórico e interações públicas (com destaque para respostas da IA) e responsividade mobile caprichada.',
+        tag: 'Design & Identidade Visual',
+      },
     ],
   },
   {

@@ -145,33 +145,37 @@ export default function PortalHoursTab({
       {/* Cards de Métricas Principais */}
       <div className="grid gap-4 sm:grid-cols-3">
         {/* Card 1: Horas Contratadas */}
-        <Card className="bg-card border shadow-2xs">
-          <CardHeader className="p-4 pb-2">
-            <CardDescription className="text-xs font-semibold text-muted-foreground flex items-center justify-between">
+        <Card className="bg-card/90 border border-border/80 rounded-2xl shadow-sm hover:shadow-md transition-all">
+          <CardHeader className="p-5 pb-2">
+            <CardDescription className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center justify-between">
               <span>Franquia Contratada</span>
-              <Layers className="h-4 w-4 text-amber-500" />
+              <div className="h-8 w-8 rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center">
+                <Layers className="h-4 w-4" />
+              </div>
             </CardDescription>
-            <CardTitle className="text-2xl font-bold text-foreground pt-1">
+            <CardTitle className="text-3xl font-black text-foreground pt-1 tracking-tight">
               {loading ? '...' : `${hoursData.contractedHours}h`}
             </CardTitle>
           </CardHeader>
-          <CardContent className="p-4 pt-1 text-xs text-muted-foreground">
-            Período: {hoursData.periodName}
+          <CardContent className="p-5 pt-1 text-xs text-muted-foreground font-medium">
+            Período: <strong>{hoursData.periodName}</strong>
           </CardContent>
         </Card>
 
         {/* Card 2: Horas Consumidas */}
-        <Card className="bg-card border shadow-2xs">
-          <CardHeader className="p-4 pb-2">
-            <CardDescription className="text-xs font-semibold text-muted-foreground flex items-center justify-between">
+        <Card className="bg-card/90 border border-border/80 rounded-2xl shadow-sm hover:shadow-md transition-all">
+          <CardHeader className="p-5 pb-2">
+            <CardDescription className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center justify-between">
               <span>Horas Consumidas</span>
-              <Clock className="h-4 w-4 text-amber-500" />
+              <div className="h-8 w-8 rounded-lg bg-amber-500/10 text-[#D97706] dark:text-[#FCD34D] flex items-center justify-center">
+                <Clock className="h-4 w-4" />
+              </div>
             </CardDescription>
-            <CardTitle className="text-2xl font-bold text-amber-600 dark:text-amber-400 pt-1">
+            <CardTitle className="text-3xl font-black text-[#D97706] dark:text-[#FCD34D] pt-1 tracking-tight">
               {loading ? '...' : `${hoursData.consumedHours}h`}
             </CardTitle>
           </CardHeader>
-          <CardContent className="p-4 pt-1 text-xs text-muted-foreground">
+          <CardContent className="p-5 pt-1 text-xs text-muted-foreground font-medium">
             {hoursData.contractedHours > 0
               ? `${hoursData.percentUsed}% da franquia consumida`
               : 'Atendimento faturável sob demanda'}
@@ -179,18 +183,26 @@ export default function PortalHoursTab({
         </Card>
 
         {/* Card 3: Saldo Restante */}
-        <Card className="bg-card border shadow-2xs">
-          <CardHeader className="p-4 pb-2">
-            <CardDescription className="text-xs font-semibold text-muted-foreground flex items-center justify-between">
+        <Card className="bg-card/90 border border-border/80 rounded-2xl shadow-sm hover:shadow-md transition-all">
+          <CardHeader className="p-5 pb-2">
+            <CardDescription className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center justify-between">
               <span>Saldo Restante</span>
-              {isOverLimit ? (
-                <AlertTriangle className="h-4 w-4 text-rose-500" />
-              ) : (
-                <CheckCircle2 className="h-4 w-4 text-emerald-500" />
-              )}
+              <div
+                className={`h-8 w-8 rounded-lg flex items-center justify-center ${
+                  isOverLimit
+                    ? 'bg-rose-500/10 text-rose-600'
+                    : 'bg-emerald-500/10 text-emerald-600'
+                }`}
+              >
+                {isOverLimit ? (
+                  <AlertTriangle className="h-4 w-4" />
+                ) : (
+                  <CheckCircle2 className="h-4 w-4" />
+                )}
+              </div>
             </CardDescription>
             <CardTitle
-              className={`text-2xl font-bold pt-1 ${
+              className={`text-3xl font-black pt-1 tracking-tight ${
                 isOverLimit
                   ? 'text-rose-600 dark:text-rose-400'
                   : 'text-emerald-600 dark:text-emerald-400'
@@ -199,26 +211,28 @@ export default function PortalHoursTab({
               {loading ? '...' : `${hoursData.balanceHours}h`}
             </CardTitle>
           </CardHeader>
-          <CardContent className="p-4 pt-1 text-xs text-muted-foreground">
+          <CardContent className="p-5 pt-1 text-xs text-muted-foreground font-medium">
             {isOverLimit ? 'Atenção: Limite mensal excedido' : 'Saldo disponível para utilização'}
           </CardContent>
         </Card>
       </div>
 
       {/* Barra de Progresso do Consumo */}
-      <Card className="bg-card border shadow-2xs p-4 space-y-3">
+      <Card className="bg-card/90 border border-border/80 rounded-2xl shadow-sm p-5 space-y-3">
         <div className="flex items-center justify-between text-xs">
-          <span className="font-semibold text-foreground flex items-center gap-1.5">
+          <span className="font-bold text-foreground flex items-center gap-2">
             <TrendingUp className="h-4 w-4 text-amber-500" />
             Aproveitamento da Franquia no Mês ({hoursData.periodName})
           </span>
-          <span className="font-bold text-foreground">{hoursData.percentUsed}%</span>
+          <span className="font-extrabold text-foreground px-2 py-0.5 rounded-md bg-muted">
+            {hoursData.percentUsed}%
+          </span>
         </div>
 
-        <div className="h-3 w-full bg-muted rounded-full overflow-hidden">
+        <div className="h-3 w-full bg-muted/80 rounded-full overflow-hidden p-0.5">
           <div
-            className={`h-full transition-all duration-500 ${
-              isOverLimit ? 'bg-rose-500' : isNearLimit ? 'bg-amber-500' : 'bg-emerald-500'
+            className={`h-full rounded-full transition-all duration-500 ${
+              isOverLimit ? 'bg-rose-500' : isNearLimit ? 'bg-[#D97706]' : 'bg-emerald-500'
             }`}
             style={{ width: `${Math.min(100, hoursData.percentUsed)}%` }}
           />

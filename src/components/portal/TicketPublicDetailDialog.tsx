@@ -11,6 +11,7 @@ import {
   ThumbsUp,
   RotateCcw,
   AlertTriangle,
+  RefreshCw,
 } from 'lucide-react'
 import {
   Dialog,
@@ -300,18 +301,21 @@ export default function TicketPublicDetailDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col p-0 overflow-hidden">
-        <DialogHeader className="p-6 pb-4 border-b bg-card">
+      <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col p-0 overflow-hidden rounded-2xl border-border/80 shadow-2xl">
+        <DialogHeader className="p-5 sm:p-6 pb-4 border-b border-border/70 bg-gradient-to-r from-card to-amber-500/5">
           <div className="flex flex-wrap items-center justify-between gap-2 pr-6">
             <div className="flex items-center gap-2">
-              <span className="font-mono text-base font-bold text-amber-600 dark:text-amber-400">
+              <span className="font-mono text-sm font-extrabold text-[#D97706] dark:text-[#FCD34D] px-2 py-0.5 rounded-md bg-amber-500/10 border border-amber-500/25">
                 #{ticket.number}
               </span>
               <StatusBadge status={ticket.status} />
               <PriorityBadge priority={ticket.priority} />
             </div>
             <div className="flex items-center gap-2">
-              <Badge variant="outline" className="text-xs">
+              <Badge
+                variant="outline"
+                className="text-xs border-amber-500/30 text-amber-700 dark:text-amber-300 bg-amber-500/10 font-medium"
+              >
                 SLA: {ticket.sla_status || 'Dentro do Prazo'}
               </Badge>
 
@@ -325,9 +329,9 @@ export default function TicketPublicDetailDialog({
                     setReopenReason('')
                     setReopenModalOpen(true)
                   }}
-                  className={`text-xs gap-1.5 h-7 px-2.5 font-semibold ${
+                  className={`text-xs gap-1.5 h-8 px-3 font-bold transition-all ${
                     isWithinReopenWindow
-                      ? 'bg-amber-600 hover:bg-amber-700 text-white shadow-xs'
+                      ? 'bg-[#D97706] hover:bg-amber-600 text-white shadow-xs'
                       : 'opacity-60 cursor-not-allowed text-muted-foreground border-dashed'
                   }`}
                   title={
@@ -342,13 +346,18 @@ export default function TicketPublicDetailDialog({
               )}
             </div>
           </div>
-          <DialogTitle className="text-lg font-bold text-foreground mt-2 line-clamp-2">
+          <DialogTitle className="text-lg sm:text-xl font-black text-foreground mt-2.5 line-clamp-2 tracking-tight">
             {ticket.title}
           </DialogTitle>
-          <DialogDescription className="text-xs text-muted-foreground flex items-center gap-3 mt-1">
-            <span>Aberto em: {formatDateTime(ticket.created)}</span>
+          <DialogDescription className="text-xs text-muted-foreground flex flex-wrap items-center gap-2 sm:gap-3 mt-1.5">
+            <span className="inline-flex items-center gap-1">
+              <Clock className="h-3 w-3 text-amber-500" />
+              Aberto em {formatDateTime(ticket.created)}
+            </span>
             {ticket.expand?.category?.name && (
-              <span>• Categoria: {ticket.expand.category.name}</span>
+              <span className="text-foreground/80">
+                • Categoria: <strong>{ticket.expand.category.name}</strong>
+              </span>
             )}
           </DialogDescription>
         </DialogHeader>
@@ -537,7 +546,7 @@ export default function TicketPublicDetailDialog({
                   satisfactionScore === 0 ||
                   (satisfactionScore === 1 && !satisfactionComment.trim())
                 }
-                className="bg-amber-600 hover:bg-amber-700 text-white text-xs gap-1.5 h-8"
+                className="bg-[#D97706] hover:bg-amber-600 text-white text-xs font-bold gap-1.5 h-8 shadow-xs"
               >
                 <ThumbsUp className="h-3.5 w-3.5" />
                 {savingSatisfaction
@@ -562,15 +571,16 @@ export default function TicketPublicDetailDialog({
             </div>
 
             {loading ? (
-              <div className="py-8 text-center text-xs text-muted-foreground">
-                Carregando interações públicas...
+              <div className="py-8 text-center text-xs text-muted-foreground flex flex-col items-center justify-center gap-2">
+                <RefreshCw className="h-5 w-5 animate-spin text-amber-500" />
+                <span>Carregando interações públicas...</span>
               </div>
             ) : logs.length === 0 ? (
-              <div className="py-8 text-center border border-dashed rounded-lg text-xs text-muted-foreground">
+              <div className="py-8 text-center border border-dashed rounded-xl text-xs text-muted-foreground">
                 Nenhum log público registrado até o momento.
               </div>
             ) : (
-              <div className="relative pl-4 border-l-2 border-amber-500/20 space-y-4">
+              <div className="relative pl-4 border-l-2 border-amber-500/30 space-y-4">
                 {logs.map((log) => {
                   const authorRole = log.expand?.author?.role || ''
                   const isStaff =
@@ -578,28 +588,45 @@ export default function TicketPublicDetailDialog({
                     authorRole === 'gestor' ||
                     authorRole === 'operador' ||
                     authorRole === 'tecnico'
+                  const isAiResponse = log.content?.includes('[Resposta Automática por IA]')
+
                   return (
                     <div
                       key={log.id}
-                      className="relative bg-card border rounded-lg p-3.5 text-xs space-y-1.5 shadow-2xs"
+                      className={`relative rounded-xl p-4 text-xs space-y-2 shadow-2xs border transition-all ${
+                        isAiResponse
+                          ? 'bg-amber-500/5 border-amber-500/30 ring-1 ring-amber-500/20'
+                          : isStaff
+                            ? 'bg-card border-border/80'
+                            : 'bg-muted/30 border-border/60'
+                      }`}
                     >
                       <div className="flex items-center justify-between gap-2">
-                        <div className="flex items-center gap-1.5 font-semibold">
+                        <div className="flex items-center gap-2 font-semibold">
                           <span
                             className={
-                              log.content?.includes('[Resposta Automática por IA]')
-                                ? 'text-amber-500 font-bold'
+                              isAiResponse
+                                ? 'text-[#D97706] dark:text-[#FCD34D] font-bold flex items-center gap-1.5'
                                 : isStaff
-                                  ? 'text-amber-600 dark:text-amber-400'
+                                  ? 'text-amber-600 dark:text-amber-400 font-bold'
                                   : 'text-foreground'
                             }
                           >
-                            {log.content?.includes('[Resposta Automática por IA]')
-                              ? '🤖 Agente de IA'
+                            {isAiResponse
+                              ? '🤖 Agente de Inteligência Artificial'
                               : log.expand?.author?.name || 'Participante'}
                           </span>
-                          <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4">
-                            {log.content?.includes('[Resposta Automática por IA]')
+                          <Badge
+                            variant={isAiResponse ? 'default' : 'secondary'}
+                            className={`text-[10px] px-2 py-0.5 h-auto font-bold ${
+                              isAiResponse
+                                ? 'bg-[#D97706] text-white hover:bg-amber-600'
+                                : isStaff
+                                  ? 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30'
+                                  : 'text-muted-foreground'
+                            }`}
+                          >
+                            {isAiResponse
                               ? 'Resposta IA'
                               : isStaff
                                 ? 'Atendimento Suporte'
@@ -611,7 +638,7 @@ export default function TicketPublicDetailDialog({
                           {formatDateTime(log.created)}
                         </span>
                       </div>
-                      <p className="text-foreground whitespace-pre-wrap leading-relaxed">
+                      <p className="text-foreground whitespace-pre-wrap leading-relaxed text-xs">
                         {log.content}
                       </p>
                     </div>
@@ -623,25 +650,25 @@ export default function TicketPublicDetailDialog({
         </div>
 
         {/* Formulário de Novo Comentário Público */}
-        <div className="p-4 border-t bg-card">
+        <div className="p-4 sm:p-5 border-t border-border/80 bg-card/90">
           <form onSubmit={handleAddComment} className="space-y-3">
             <Textarea
               placeholder="Adicione uma resposta ou informação complementar ao chamado..."
               rows={2}
               value={commentText}
               onChange={(e) => setCommentText(e.target.value)}
-              className="text-xs resize-none"
+              className="text-xs resize-none rounded-xl"
             />
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-2">
               <p className="text-[11px] text-muted-foreground flex items-center gap-1">
-                <ShieldCheck className="h-3.5 w-3.5 text-emerald-500" />
-                Mensagem visível para a equipe de atendimento
+                <ShieldCheck className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
+                Mensagem pública visível para a equipe de atendimento
               </p>
               <Button
                 type="submit"
                 size="sm"
                 disabled={submitting || !commentText.trim()}
-                className="bg-amber-600 hover:bg-amber-700 text-white text-xs gap-1.5"
+                className="bg-[#D97706] hover:bg-amber-600 text-white font-bold text-xs gap-1.5 h-8.5 px-3.5 shadow-sm"
               >
                 <Send className="h-3.5 w-3.5" />
                 {submitting ? 'Enviando...' : 'Enviar Resposta'}
