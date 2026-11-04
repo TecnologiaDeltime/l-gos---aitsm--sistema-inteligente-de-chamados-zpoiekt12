@@ -18,6 +18,8 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { editInteractionWithRecalculation } from '@/services/ticket-interactions'
+import { DurationInput } from '@/components/ui/DurationInput'
+import { formatMinutes, parseDurationToMinutes, validateHHMMSS } from '@/lib/duration'
 import { getErrorMessage, extractFieldErrors, type FieldErrors } from '@/lib/pocketbase/errors'
 import { useToast } from '@/hooks/use-toast'
 import { Loader2 } from 'lucide-react'
@@ -38,26 +40,37 @@ export function InteractionEditDialog({
   const { toast } = useToast()
   const [content, setContent] = useState('')
   const [duration, setDuration] = useState('')
+  const [durationError, setDurationError] = useState('')
   const [saving, setSaving] = useState(false)
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({})
 
   useEffect(() => {
     if (interaction) {
       setContent(interaction.content || '')
-      setDuration(String(interaction.duration_minutes || 0))
+      setDuration(
+        interaction.duration_minutes != null
+          ? formatMinutes(interaction.duration_minutes)
+          : '00:00:00',
+      )
+      setDurationError('')
       setFieldErrors({})
     }
   }, [interaction])
 
   const handleSave = async () => {
     if (!interaction) return
+    const vErr = validateHHMMSS(duration, false)
+    if (vErr) {
+      setDurationError(vErr)
+      return
+    }
     setSaving(true)
     setFieldErrors({})
     try {
-      const durationNum = parseInt(duration, 10)
+      const minutes = duration ? parseDurationToMinutes(duration) : 0
       await editInteractionWithRecalculation(interaction.id, {
         content,
-        duration_minutes: isNaN(durationNum) ? 0 : durationNum,
+        duration_minutes: minutes != null ? Math.round(minutes) : 0,
         hour_type: interaction.hour_type || 'Contratada',
         billing_status: interaction.billing_status || 'Faturável',
       })
@@ -94,14 +107,18 @@ export function InteractionEditDialog({
             {fieldErrors.content && <p className="text-xs text-red-500">{fieldErrors.content}</p>}
           </div>
           <div className="space-y-1.5 max-w-xs">
-            <Label className="text-sm">Duração (min)</Label>
-            <Input
-              type="number"
-              min={0}
+            <Label className="text-sm">Duração (00:00:00)</Label>
+            <DurationInput
               value={duration}
-              onChange={(e) => setDuration(e.target.value)}
+              onChange={(val) => {
+                setDuration(val)
+                setDurationError('')
+              }}
               disabled={interaction?.origin === 'Cronômetro'}
+              placeholder="00:00:00"
+              className="h-8 w-32 text-center"
             />
+            {durationError && <p className="text-xs text-red-500">{durationError}</p>}
             {interaction?.origin === 'Cronômetro' && (
               <p className="text-xs text-muted-foreground">
                 Horas de cronômetro não podem ser editadas.

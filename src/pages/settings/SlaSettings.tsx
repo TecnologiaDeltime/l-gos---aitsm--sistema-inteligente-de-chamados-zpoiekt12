@@ -2,10 +2,11 @@ import { useEffect, useState } from 'react'
 import { Navigate } from 'react-router-dom'
 import { Save, Clock } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
+import { DurationInput } from '@/components/ui/DurationInput'
+import { formatMinutes, parseDurationToMinutes, validateHHMMSS } from '@/lib/duration'
 import { getCategories, updateCategory, CategoryRecord } from '@/services/categories'
 import { usePermissions } from '@/hooks/use-permissions'
 import { useRealtime } from '@/hooks/use-realtime'
@@ -28,8 +29,8 @@ export default function SlaSettings() {
         const editState: Record<string, { response: string; solution: string }> = {}
         active.forEach((c) => {
           editState[c.id] = {
-            response: c.sla_response_minutes ? String(c.sla_response_minutes) : '',
-            solution: c.sla_solution_minutes ? String(c.sla_solution_minutes) : '',
+            response: c.sla_response_minutes != null ? formatMinutes(c.sla_response_minutes) : '',
+            solution: c.sla_solution_minutes != null ? formatMinutes(c.sla_solution_minutes) : '',
           }
         })
         setEditing(editState)
@@ -50,12 +51,9 @@ export default function SlaSettings() {
   }
 
   const validateField = (value: string): string | undefined => {
-    if (value === '') return undefined
-    const num = Number(value)
-    if (!Number.isInteger(num) || num < 0) {
-      return 'Valor deve ser um número inteiro positivo.'
-    }
-    return undefined
+    if (!value || value.trim() === '') return undefined
+    const err = validateHHMMSS(value, false)
+    return err || undefined
   }
 
   const handleChange = (id: string, field: 'response' | 'solution', value: string) => {
@@ -84,9 +82,11 @@ export default function SlaSettings() {
     }
     setSaving(cat.id)
     try {
+      const respMinutes = edit.response ? parseDurationToMinutes(edit.response) : null
+      const solMinutes = edit.solution ? parseDurationToMinutes(edit.solution) : null
       await updateCategory(cat.id, {
-        sla_response_minutes: edit.response ? parseInt(edit.response, 10) : null,
-        sla_solution_minutes: edit.solution ? parseInt(edit.solution, 10) : null,
+        sla_response_minutes: respMinutes !== null ? Math.round(respMinutes) : null,
+        sla_solution_minutes: solMinutes !== null ? Math.round(solMinutes) : null,
       } as Partial<CategoryRecord>)
       toast({ title: `Prazos de SLA atualizados para ${cat.name}` })
       loadData()
@@ -135,10 +135,10 @@ export default function SlaSettings() {
                       Nome
                     </th>
                     <th className="pb-2 px-4 font-semibold text-slate-700 dark:text-slate-300">
-                      SLA Resposta (minutos)
+                      SLA Resposta (00:00:00)
                     </th>
                     <th className="pb-2 px-4 font-semibold text-slate-700 dark:text-slate-300">
-                      SLA Solução (minutos)
+                      SLA Solução (00:00:00)
                     </th>
                     <th className="pb-2 pl-4 font-semibold text-slate-700 dark:text-slate-300">
                       Ações
@@ -168,26 +168,22 @@ export default function SlaSettings() {
                           )}
                         </td>
                         <td className="py-3 px-4">
-                          <Input
-                            type="number"
-                            min={0}
+                          <DurationInput
                             value={edit.response}
-                            onChange={(e) => handleChange(cat.id, 'response', e.target.value)}
-                            placeholder="Não definido"
-                            className="w-32 h-8 text-sm"
+                            onChange={(val) => handleChange(cat.id, 'response', val)}
+                            placeholder="00:00:00"
+                            className="w-32 h-8 text-sm text-center"
                           />
                           {err.response && (
                             <p className="text-xs text-red-500 mt-1">{err.response}</p>
                           )}
                         </td>
                         <td className="py-3 px-4">
-                          <Input
-                            type="number"
-                            min={0}
+                          <DurationInput
                             value={edit.solution}
-                            onChange={(e) => handleChange(cat.id, 'solution', e.target.value)}
-                            placeholder="Não definido"
-                            className="w-32 h-8 text-sm"
+                            onChange={(val) => handleChange(cat.id, 'solution', val)}
+                            placeholder="00:00:00"
+                            className="w-32 h-8 text-sm text-center"
                           />
                           {err.solution && (
                             <p className="text-xs text-red-500 mt-1">{err.solution}</p>
