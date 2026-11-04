@@ -23,7 +23,8 @@ import { ClientNotificationSettingsTab } from '@/components/settings/ClientNotif
 import { DesignSettingsTab } from '@/components/settings/DesignSettingsTab'
 import ClientPortalSettingsTab from '@/components/settings/ClientPortalSettingsTab'
 import { AiTicketSettingsTab } from '@/components/settings/AiTicketSettingsTab'
-import { ShieldCheck, Globe, Shield, Bot } from 'lucide-react'
+import { ClientConsumptionAgentTab } from '@/components/settings/ClientConsumptionAgentTab'
+import { ShieldCheck, Globe, Shield, Bot, BrainCircuit } from 'lucide-react'
 import {
   getVoiceAlertsEnabled,
   setVoiceAlertsEnabled,
@@ -71,7 +72,9 @@ export default function SettingsPage() {
                 ? 'vault'
                 : searchParams.get('tab') === 'security'
                   ? 'security'
-                  : 'general'
+                  : searchParams.get('tab') === 'consumption_agent'
+                    ? 'consumption_agent'
+                    : 'general'
   const [mainTab, setMainTab] = useState<
     | 'general'
     | 'portal'
@@ -82,6 +85,7 @@ export default function SettingsPage() {
     | 'vault'
     | 'security'
     | 'profiles'
+    | 'consumption_agent'
   >(initialTab as any)
 
   const handleTabChange = (
@@ -94,7 +98,8 @@ export default function SettingsPage() {
       | 'email'
       | 'vault'
       | 'security'
-      | 'profiles',
+      | 'profiles'
+      | 'consumption_agent',
   ) => {
     setMainTab(tab)
     setSearchParams(
@@ -114,7 +119,9 @@ export default function SettingsPage() {
                     ? { tab: 'security' }
                     : tab === 'profiles'
                       ? { tab: 'profiles' }
-                      : {},
+                      : tab === 'consumption_agent'
+                        ? { tab: 'consumption_agent' }
+                        : {},
     )
   }
 
@@ -137,6 +144,8 @@ export default function SettingsPage() {
       setMainTab('security')
     } else if (tabFromUrl === 'profiles' && mainTab !== 'profiles') {
       setMainTab('profiles')
+    } else if (tabFromUrl === 'consumption_agent' && mainTab !== 'consumption_agent') {
+      setMainTab('consumption_agent')
     }
   }, [searchParams])
 
@@ -410,6 +419,23 @@ export default function SettingsPage() {
             </Button>
           )}
 
+          {permissions.canAccessItem('settings', 'settings_consumption_agent') && (
+            <Button
+              type="button"
+              size="sm"
+              variant={mainTab === 'consumption_agent' ? 'default' : 'ghost'}
+              onClick={() => handleTabChange('consumption_agent')}
+              className={`h-8 text-xs font-semibold rounded-lg transition-all ${
+                mainTab === 'consumption_agent'
+                  ? 'bg-amber-500/20 text-amber-500 border border-amber-500/30 shadow-xs shadow-amber-500/10'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              <BrainCircuit className="h-3.5 w-3.5 mr-1.5 text-amber-500" />
+              Agente de Consumo
+            </Button>
+          )}
+
           {permissions.canAccessItem('settings', 'settings_client_notif') && (
             <Button
               type="button"
@@ -508,6 +534,15 @@ export default function SettingsPage() {
       {mainTab === 'portal' && permissions.canAccessItem('settings', 'settings_portal') && (
         <ClientPortalSettingsTab />
       )}
+
+      {/* SEÇÃO AGENTE DE CONSUMO */}
+      {mainTab === 'consumption_agent' &&
+        permissions.canAccessItem('settings', 'settings_consumption_agent') && (
+          <ClientConsumptionAgentTab
+            canConfigure={permissions.canConfigure('settings_consumption_agent')}
+            canEdit={permissions.canEdit('settings_consumption_agent')}
+          />
+        )}
 
       {/* SEÇÃO DESIGN & APARÊNCIA */}
       {mainTab === 'design' && permissions.canAccessItem('settings', 'settings_design') && (

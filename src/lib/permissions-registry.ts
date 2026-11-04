@@ -715,6 +715,13 @@ const BASE_SYSTEM_MODULES: GranularModuleDefinition[] = [
           'Gestão dos modos do Agente Nativo de IA: sugestão de rascunhos, resposta automática ou ambos',
         path: '/settings?tab=ai_reply',
       },
+      {
+        key: 'settings_consumption_agent',
+        label: 'Agente de Consumo de Clientes',
+        description:
+          'Monitoramento preditivo do consumo médio de horas dos clientes e notificações automáticas para qualidade e gestores',
+        path: '/settings?tab=consumption_agent',
+      },
     ],
   },
 ]

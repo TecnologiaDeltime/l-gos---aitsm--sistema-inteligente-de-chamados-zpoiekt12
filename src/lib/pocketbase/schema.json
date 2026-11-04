@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-04T03:18:17.836Z",
+  "generatedAt": "2026-11-04T03:56:45.234Z",
   "collections": [
     {
       "name": "users",
@@ -11703,6 +11703,127 @@
         }
       ],
       "indexes": ["CREATE UNIQUE INDEX idx_ai_ticket_settings_scope ON ai_ticket_settings (scope)"]
+    },
+    {
+      "name": "client_consumption_agents",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != ''",
+        "view": "@request.auth.id != ''",
+        "create": "@request.auth.id != '' && (@request.auth.role = \"admin\" || @request.auth.role = \"gestor\")",
+        "update": "@request.auth.id != '' && (@request.auth.role = \"admin\" || @request.auth.role = \"gestor\")",
+        "delete": "@request.auth.id != '' && @request.auth.role = \"admin\""
+      },
+      "fields": [
+        {
+          "name": "company",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "companies"
+        },
+        {
+          "name": "enabled",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "deviation_high_pct",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "deviation_low_pct",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "learning_window_months",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "learned_average_hours",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "learned_average_seconds",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "learned_reference_period",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "learned_history_json",
+          "type": "json",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "last_evaluation_at",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "current_period_consumed_hours",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "current_period_deviation_pct",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "current_status",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "last_alerted_key",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "last_alerted_at",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": [
+        "CREATE UNIQUE INDEX idx_client_consumption_agent_company ON client_consumption_agents (company)"
+      ]
     }
   ]
 }

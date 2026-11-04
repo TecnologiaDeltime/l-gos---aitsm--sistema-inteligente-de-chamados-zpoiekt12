@@ -437,6 +437,13 @@ const FEATURE_CATEGORIES: FeatureCategory[] = [
         tag: 'Gestão Contratual',
       },
       {
+        id: 'sla-consumption-learning-agent',
+        title: 'Agente Inteligente de Aprendizado de Consumo Médio por Cliente',
+        description:
+          'Agente que aprende o consumo médio mensal de horas de franquia (horas de acompanhamento) com base no histórico de N meses de cada cliente, compara com o mês corrente e notifica automaticamente operadores com perfil de Qualidade e Gestor. Consumo elevado dispara alerta em tom vermelho (crítico) e consumo muito abaixo dispara alerta em tom amarelo (atenção). Totalmente configurável por cliente em Configurações > Agente de Consumo e na edição do cliente, com tolerâncias percentuais e janela histórica customizáveis, recalculo sob demanda e proteção anti-ruído.',
+        tag: 'AITILSM & Consumo Inteligente',
+      },
+      {
         id: 'sla-5',
         title: 'Configuração flexível de alertas em /settings',
         description:

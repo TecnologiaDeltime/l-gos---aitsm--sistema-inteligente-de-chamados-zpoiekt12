@@ -28,6 +28,7 @@ import { CollaboratorSection } from '@/components/clients/CollaboratorSection'
 import { BranchSection } from '@/components/clients/BranchSection'
 import { FocalPointSection } from '@/components/clients/FocalPointSection'
 import { EmailDomainSection } from '@/components/clients/EmailDomainSection'
+import { ClientConsumptionSection } from '@/components/clients/ClientConsumptionSection'
 
 const EMPTY_FORM = {
   code: '',
@@ -498,6 +499,11 @@ export default function ClientEdit() {
       <FocalPointSection clientId={id} />
       <BranchSection clientId={id} />
       <EmailDomainSection clientId={id} />
+      <ClientConsumptionSection
+        companyId={id}
+        companyName={original?.trade_name}
+        canEdit={canEditClients}
+      />
     </div>
   )
 }
