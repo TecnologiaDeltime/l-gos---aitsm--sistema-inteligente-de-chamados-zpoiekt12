@@ -377,6 +377,20 @@ const FEATURE_CATEGORIES: FeatureCategory[] = [
           'A regra de automação de ativos opera individualmente na exclusão de cada colaborador ou ponto focal vinculado a um cliente, e não apenas na exclusão da empresa inteira. Ao acionar a exclusão de um colaborador que possui ativos vinculados no CMDB (como responsável ou proprietário), sobe diálogo de confirmação com aviso ("este usuário possui ativo cadastrado em seu nome, o equipamento ficará como disponível") e botões Sim e Cancelar. Em "Sim", todos os ativos do colaborador têm seu status alterado para "Disponível", a exclusão do contato é concluída e auditada; em "Cancelar", a ação é abortada e auditada com registro de cancelamento. Regra garantida tanto no front-end quanto no hook server-side via API.',
         tag: 'Automação & Colaboradores',
       },
+      {
+        id: 'cmdb-bulk-import',
+        title: 'Importação em massa de Ativos (CMDB) via CSV/XLSX',
+        description:
+          'Diálogo de importação em massa na tela de Ativos/CMDB com download de modelo de planilha pré-formatado (todas as colunas oficiais do cadastro: nome, hostname, tipo, marca, modelo, serial, patrimônio, IP, SO, processador, memória, armazenamento, cliente/empresa, filial, setor, localização, usuário responsável, status operacional e status de disponibilidade), upload de CSV/XLSX, validação prévia com relatório de inconsistências (linha, coluna e motivo claro), casamento de empresa/filial/setor existentes por nome (com bloqueio e relatório para vínculos inexistentes), regra de duplicidade configurável (atualizar ativos existentes por serial ou hostname+cliente ou pular duplicados) e controle de permissão dedicado no catálogo de Perfis de Acesso.',
+        tag: 'CMDB & Carga em Massa',
+      },
+      {
+        id: 'clients-collaborator-bulk-import',
+        title: 'Importação em massa de Colaboradores via CSV/XLSX',
+        description:
+          'Carga massiva de colaboradores e contatos tanto na gestão de clientes quanto no detalhe de cada empresa cliente: download de modelo de planilha padronizado (nome completo, e-mail, cargo, empresa/cliente, filial, setor, telefone, celular, WhatsApp e ponto focal sim/não), upload de CSV ou XLSX, validação prévia de e-mails e vínculos por nome, tratamento de duplicidade por e-mail (atualizar existentes ou pular duplicados) e permissão específica no catálogo de Perfis de Acesso.',
+        tag: 'Clientes & Carga em Massa',
+      },
     ],
   },
   {

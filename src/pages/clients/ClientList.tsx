@@ -1,6 +1,15 @@
 import { useEffect, useState, useCallback } from 'react'
 import { Link } from 'react-router-dom'
-import { PlusCircle, Building2, Pencil, Loader2, Trash2, AlertTriangle } from 'lucide-react'
+import {
+  PlusCircle,
+  Building2,
+  Pencil,
+  Loader2,
+  Trash2,
+  AlertTriangle,
+  FileSpreadsheet,
+} from 'lucide-react'
+import { CollaboratorBulkImportDialog } from '@/components/clients/CollaboratorBulkImportDialog'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Badge } from '@/components/ui/badge'
@@ -32,9 +41,14 @@ export default function ClientList() {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [deleting, setDeleting] = useState(false)
 
-  const { canEdit, canDelete, canManageClients } = usePermissions()
+  const { canEdit, canDelete, canManageClients, canView } = usePermissions()
   const canEditClients = canEdit('clients_cadastro') || canEdit('clients') || canManageClients
   const canDeleteClients = canDelete('clients_cadastro') || canDelete('clients')
+  const canImportCollaborators =
+    canEdit('clients_collaborator_import') ||
+    canView('clients_collaborator_import') ||
+    canEditClients
+  const [bulkImportOpen, setBulkImportOpen] = useState(false)
   const { toast } = useToast()
 
   const [loadError, setLoadError] = useState<string | null>(null)
@@ -151,6 +165,16 @@ export default function ClientList() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          {canImportCollaborators && (
+            <Button
+              variant="outline"
+              onClick={() => setBulkImportOpen(true)}
+              className="border-amber-300 hover:bg-amber-50 dark:border-amber-800 dark:hover:bg-amber-950/40"
+            >
+              <FileSpreadsheet className="mr-2 h-4 w-4 text-amber-600 dark:text-amber-400" />{' '}
+              Importar Colaboradores
+            </Button>
+          )}
           {canDeleteClients && selectedIds.size > 0 && (
             <Button
               variant="destructive"
@@ -311,6 +335,12 @@ export default function ClientList() {
           Carregando clientes...
         </div>
       )}
+
+      <CollaboratorBulkImportDialog
+        open={bulkImportOpen}
+        onOpenChange={setBulkImportOpen}
+        onImportComplete={loadData}
+      />
 
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <AlertDialogContent>

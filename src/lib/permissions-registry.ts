@@ -174,6 +174,12 @@ const BASE_SYSTEM_MODULES: GranularModuleDefinition[] = [
         path: '/clients',
       },
       {
+        key: 'clients_import',
+        label: 'Importação de Colaboradores',
+        description: 'Importação em massa de colaboradores e contatos via planilha',
+        path: '/clients',
+      },
+      {
         key: 'clients_contrato',
         label: 'Gestão de Contratos',
         description: 'Contratos vigentes, franquias de horas e regras',

@@ -1,7 +1,8 @@
 import { useEffect, useState, useMemo } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { Search, Upload, ArrowUpDown, Plus } from 'lucide-react'
+import { Search, Upload, ArrowUpDown, Plus, FileSpreadsheet } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { AssetBulkImportDialog } from '@/components/cmdb/AssetBulkImportDialog'
 import { Input } from '@/components/ui/input'
 import {
   Select,
@@ -55,12 +56,14 @@ export default function CiList() {
   const [sortCol, setSortCol] = useState('updated')
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
 
-  const { canDelete } = usePermissions()
+  const { canDelete, canView, canEdit } = usePermissions()
   const canDeleteEquipment = canDelete('cmdb_assets') || canDelete('cmdb')
+  const canImportAssets = canEdit('cmdb_import') || canView('cmdb_import')
   const { toast } = useToast()
 
   const [deleteTarget, setDeleteTarget] = useState<EquipmentRecord | null>(null)
   const [deleting, setDeleting] = useState(false)
+  const [bulkImportOpen, setBulkImportOpen] = useState(false)
 
   const loadData = () => {
     getEquipments()
@@ -367,13 +370,24 @@ export default function CiList() {
           </Select>
         </div>
         <div className="flex items-center gap-2">
+          {canImportAssets && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="border-amber-300 hover:bg-amber-50 dark:border-amber-800 dark:hover:bg-amber-950/40"
+              onClick={() => setBulkImportOpen(true)}
+            >
+              <FileSpreadsheet className="mr-1.5 h-4 w-4 text-amber-600 dark:text-amber-400" />{' '}
+              Importar em massa
+            </Button>
+          )}
           <Link to="/cmdb/import">
             <Button variant="outline" size="sm">
               <Upload className="mr-1.5 h-4 w-4" /> Importar CSV
             </Button>
           </Link>
           <Link to="/cmdb/assets/new">
-            <Button size="sm">
+            <Button size="sm" className="bg-amber-600 hover:bg-amber-700 text-white">
               <Plus className="mr-1.5 h-4 w-4" /> Novo Ativo
             </Button>
           </Link>
@@ -466,6 +480,12 @@ export default function CiList() {
           </table>
         </div>
       </div>
+
+      <AssetBulkImportDialog
+        open={bulkImportOpen}
+        onOpenChange={setBulkImportOpen}
+        onImportComplete={loadData}
+      />
 
       {/* Regra 2: Diálogo de confirmação de exclusão do equipamento */}
       <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && handleCancelDelete()}>

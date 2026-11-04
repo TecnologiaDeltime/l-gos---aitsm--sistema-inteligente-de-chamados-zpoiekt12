@@ -44,6 +44,8 @@ import { useRealtime } from '@/hooks/use-realtime'
 import { useAuth } from '@/hooks/use-auth'
 import { useToast } from '@/hooks/use-toast'
 import { CollaboratorDialog } from '@/components/clients/CollaboratorDialog'
+import { CollaboratorBulkImportDialog } from '@/components/clients/CollaboratorBulkImportDialog'
+import { FileSpreadsheet } from 'lucide-react'
 
 interface Department {
   id: string
@@ -67,9 +69,14 @@ export function CollaboratorSection({ clientId }: { clientId?: string }) {
     Array<{ id: string; name: string; hostname?: string }>
   >([])
   const [search, setSearch] = useState('')
-  const { canEdit, canDelete, canManageClients } = usePermissions()
+  const { canEdit, canDelete, canManageClients, canView } = usePermissions()
   const canEditClients = canEdit('clients_cadastro') || canEdit('clients') || canManageClients
   const canDeleteClients = canDelete('clients_cadastro') || canDelete('clients')
+  const canImportCollaborators =
+    canEdit('clients_collaborator_import') ||
+    canView('clients_collaborator_import') ||
+    canEditClients
+  const [bulkImportOpen, setBulkImportOpen] = useState(false)
 
   const loadData = useCallback(async () => {
     if (!clientId) return
@@ -250,18 +257,31 @@ export function CollaboratorSection({ clientId }: { clientId?: string }) {
             </Badge>
           )}
         </div>
-        {canEditClients && (
-          <Button
-            size="sm"
-            className="bg-blue-600 hover:bg-blue-700 h-8"
-            onClick={() => {
-              setEditing(null)
-              setDialogOpen(true)
-            }}
-          >
-            <Plus className="h-4 w-4 mr-1" /> Novo Colaborador
-          </Button>
-        )}{' '}
+        <div className="flex items-center gap-2">
+          {canImportCollaborators && (
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-8 border-amber-300 hover:bg-amber-50 dark:border-amber-800 dark:hover:bg-amber-950/40"
+              onClick={() => setBulkImportOpen(true)}
+            >
+              <FileSpreadsheet className="h-4 w-4 mr-1 text-amber-600 dark:text-amber-400" />{' '}
+              Importar em massa
+            </Button>
+          )}
+          {canEditClients && (
+            <Button
+              size="sm"
+              className="bg-blue-600 hover:bg-blue-700 h-8"
+              onClick={() => {
+                setEditing(null)
+                setDialogOpen(true)
+              }}
+            >
+              <Plus className="h-4 w-4 mr-1" /> Novo Colaborador
+            </Button>
+          )}
+        </div>
       </div>
 
       {loading ? (
@@ -363,6 +383,13 @@ export function CollaboratorSection({ clientId }: { clientId?: string }) {
           )}
         </>
       )}
+
+      <CollaboratorBulkImportDialog
+        open={bulkImportOpen}
+        onOpenChange={setBulkImportOpen}
+        clientId={clientId}
+        onImportComplete={loadData}
+      />
 
       <CollaboratorDialog
         open={dialogOpen}
