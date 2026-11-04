@@ -38,8 +38,8 @@ import {
   parseDurationToHours,
   formatSeconds,
   formatHours,
-  maskHHMMSSInput,
 } from '@/lib/duration'
+import { DurationInput } from '@/components/ui/DurationInput'
 
 const SECTIONS = [
   { key: 'basic', label: 'Informações Básicas' },
@@ -409,20 +409,12 @@ export default function ContractEdit() {
             <div className="space-y-1">
               <Label className="text-xs">Horas Mensais</Label>
               <div className="flex items-center gap-2">
-                <Input
+                <DurationInput
                   className={inputCls}
-                  placeholder="HH:MM:SS"
-                  inputMode="numeric"
-                  maxLength={8}
+                  placeholder="00:00:00"
                   value={form.monthly_hours ?? ''}
                   disabled={!hoursEnabled}
-                  onChange={(e) => set('monthly_hours', maskHHMMSSInput(e.target.value))}
-                  onBlur={(e) => {
-                    const val = e.target.value.trim()
-                    if (!val) return
-                    const s = parseDurationToSeconds(val)
-                    if (s !== null) set('monthly_hours', formatSeconds(s))
-                  }}
+                  onChange={(val) => set('monthly_hours', val)}
                 />
                 <Button
                   type="button"
@@ -569,20 +561,12 @@ export default function ContractEdit() {
                         >
                           {level.label}
                         </label>
-                        <Input
+                        <DurationInput
                           className={cn(inputCls, !active && 'opacity-40 pointer-events-none')}
-                          placeholder="HH:MM:SS"
-                          inputMode="numeric"
-                          maxLength={8}
+                          placeholder="00:00:00"
                           value={form[level.key] ?? ''}
                           disabled={!active}
-                          onChange={(e) => set(level.key, maskHHMMSSInput(e.target.value))}
-                          onBlur={(e) => {
-                            const val = (e.target.value || '').trim()
-                            if (!val) return
-                            const s = parseDurationToSeconds(val)
-                            if (s !== null) set(level.key, formatSeconds(s))
-                          }}
+                          onChange={(val) => set(level.key, val)}
                         />
                         <Button
                           type="button"
@@ -633,35 +617,22 @@ export default function ContractEdit() {
                         )
                       }
                     />
-                    <Input
+                    <DurationInput
                       className={cn(inputCls, !ag.active && 'opacity-40 pointer-events-none')}
-                      placeholder="HH:MM:SS"
-                      inputMode="numeric"
-                      maxLength={8}
+                      placeholder="00:00:00"
                       value={ag.hours ?? ''}
                       disabled={!ag.active}
-                      onChange={(e) => {
-                        const masked = maskHHMMSSInput(e.target.value)
+                      onChange={(val) => {
                         setCustomAgreements((prev) =>
                           prev.map((a, i) =>
                             i === idx
                               ? {
                                   ...a,
-                                  hours: masked === '' ? null : masked,
+                                  hours: val === '' ? null : val,
                                 }
                               : a,
                           ),
                         )
-                      }}
-                      onBlur={(e) => {
-                        const val = (e.target.value || '').trim()
-                        if (val === '') return
-                        const s = parseDurationToSeconds(val)
-                        if (s !== null) {
-                          setCustomAgreements((prev) =>
-                            prev.map((a, i) => (i === idx ? { ...a, hours: formatSeconds(s) } : a)),
-                          )
-                        }
                       }}
                     />
                     <Button

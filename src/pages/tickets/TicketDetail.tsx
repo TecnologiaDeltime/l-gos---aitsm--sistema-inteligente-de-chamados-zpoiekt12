@@ -106,12 +106,9 @@ import { computeSlaResponseStatus, computeSlaSolutionStatus } from '@/lib/sla-st
 import { VisitDialog } from '@/components/VisitDialog'
 import { SlaPauseDialog, STATUS_BY_REASON } from '@/components/SlaPauseDialog'
 import { AccompanimentDialog } from '@/components/AccompanimentDialog'
-import { formatMinutes, formatSeconds } from '@/lib/duration'
-import {
-  handleTimeSpentMask,
-  handleTimeSpentKeyDown,
-  validateTimeSpentValue,
-} from '@/lib/time-mask'
+import { formatMinutes, formatSeconds, parseDurationToSeconds } from '@/lib/duration'
+import { DurationInput } from '@/components/ui/DurationInput'
+import { validateTimeSpentValue } from '@/lib/time-mask'
 import {
   Inbox,
   Sparkles,
@@ -417,23 +414,14 @@ export default function TicketDetail({
     setTimeError('')
   }
 
-  // Máscara com dois pontos (:) fixos no formato 00:00:00
-  const handleTimeSpentChange = (rawInput: string) => {
-    const formatted = handleTimeSpentMask(rawInput, timeSpent)
-    setTimeSpent(formatted)
-    setTimeError(validateTimeSpent(formatted))
-  }
-
   const validateTimeSpent = (value: string): string => {
     return validateTimeSpentValue(value, false)
   }
 
   const parseTimeToMinutes = (value: string): number => {
-    const match = value.trim().match(/^(\d{1,3}):(\d{2}):(\d{2})$/)
-    if (!match) return 0
-    return Math.round(
-      (parseInt(match[1], 10) * 3600 + parseInt(match[2], 10) * 60 + parseInt(match[3], 10)) / 60,
-    )
+    const s = parseDurationToSeconds(value)
+    if (s === null) return 0
+    return Math.round(s / 60)
   }
 
   const handleSendComment = async () => {
@@ -1215,20 +1203,13 @@ export default function TicketDetail({
                     <Label className="text-xs text-muted-foreground">Tempo Gasto (00:00:00)</Label>
                     <div className="flex gap-2 items-center">
                       <div className="relative flex items-center">
-                        <Input
+                        <DurationInput
                           placeholder="00:00:00"
                           value={timeSpent}
-                          onChange={(e) => handleTimeSpentChange(e.target.value)}
-                          onKeyDown={(e) =>
-                            handleTimeSpentKeyDown(
-                              e,
-                              timeSpent,
-                              setTimeSpent,
-                              setTimeError,
-                              validateTimeSpent,
-                            )
-                          }
-                          maxLength={8}
+                          onChange={(val) => {
+                            setTimeSpent(val)
+                            setTimeError(validateTimeSpent(val))
+                          }}
                           className="h-8 w-32 text-center font-mono text-sm tracking-wider"
                         />
                       </div>
@@ -1249,7 +1230,7 @@ export default function TicketDetail({
                       <p className="text-xs text-red-500">{timeError}</p>
                     ) : (
                       <p className="text-[11px] text-muted-foreground">
-                        Digite os dígitos — os dois pontos ficam fixos (00:00:00).
+                        Digite horas, minutos e segundos livremente (ex.: 02:00:00).
                       </p>
                     )}
                   </div>

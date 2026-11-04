@@ -21,11 +21,9 @@ import { Clock, Loader2 } from 'lucide-react'
 import { addAccompanimentHours } from '@/services/tickets'
 import { useToast } from '@/hooks/use-toast'
 import { getErrorMessage } from '@/lib/pocketbase/errors'
-import {
-  handleTimeSpentMask,
-  handleTimeSpentKeyDown,
-  validateTimeSpentValue,
-} from '@/lib/time-mask'
+import { parseDurationToSeconds } from '@/lib/duration'
+import { DurationInput } from '@/components/ui/DurationInput'
+import { validateTimeSpentValue } from '@/lib/time-mask'
 
 interface AccompanimentDialogProps {
   ticketId: string
@@ -47,21 +45,13 @@ export function AccompanimentDialog({
   const [isInternal, setIsInternal] = useState(true)
   const [submitting, setSubmitting] = useState(false)
 
-  // Máscara com dois pontos (:) fixos no formato 00:00
-  const handleTimeSpentChange = (rawInput: string) => {
-    const formatted = handleTimeSpentMask(rawInput, timeSpent)
-    setTimeSpent(formatted)
-    setTimeError(validateTimeSpent(formatted))
-  }
-
   const validateTimeSpent = (val: string): string => {
     return validateTimeSpentValue(val, true)
   }
 
   const parseTimeToSeconds = (val: string): number => {
-    const match = val.trim().match(/^(\d{1,3}):(\d{2}):(\d{2})$/)
-    if (!match) return 0
-    return parseInt(match[1], 10) * 3600 + parseInt(match[2], 10) * 60 + parseInt(match[3], 10)
+    const s = parseDurationToSeconds(val)
+    return s ?? 0
   }
 
   const handleSubmit = async () => {
@@ -143,21 +133,20 @@ export function AccompanimentDialog({
 
           <div className="space-y-1 max-w-xs">
             <Label className="text-xs font-medium">Tempo Gasto (00:00:00) *</Label>
-            <Input
+            <DurationInput
               placeholder="00:00:00"
               value={timeSpent}
-              onChange={(e) => handleTimeSpentChange(e.target.value)}
-              onKeyDown={(e) =>
-                handleTimeSpentKeyDown(e, timeSpent, setTimeSpent, setTimeError, validateTimeSpent)
-              }
-              maxLength={8}
+              onChange={(val) => {
+                setTimeSpent(val)
+                setTimeError(validateTimeSpent(val))
+              }}
               className="h-8 w-32 text-center font-mono text-sm tracking-wider"
             />
             {timeError ? (
               <p className="text-[11px] text-red-500">{timeError}</p>
             ) : (
               <p className="text-[10px] text-muted-foreground">
-                Digite os números — os dois pontos ficam fixos (00:00:00).
+                Digite horas, minutos e segundos livremente (ex.: 02:00:00).
               </p>
             )}
           </div>

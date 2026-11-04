@@ -173,14 +173,11 @@ export function handleTimeSpentKeyDown(
   if (/^\d$/.test(e.key)) {
     e.preventDefault()
 
-    // Campo vazio: começa preenchendo as horas
-    if (!timeSpent || timeSpent === EMPTY) {
-      const formatted = formatDigitsToTimeSpent(e.key)
-      setTimeSpent(formatted)
-      setTimeError?.(validator ? validator(formatted) : '')
-      setTimeout(() => {
-        input.setSelectionRange(COLON_1, COLON_1)
-      }, 0)
+    // Campo vazio ou seleção total: insere no início (posição 0) sem pular para o final
+    if (!timeSpent || timeSpent === EMPTY || (selStart === 0 && selEnd >= timeSpent.length)) {
+      const chars = EMPTY.split('')
+      chars[0] = e.key
+      applyUpdate(chars, 1, false)
       return true
     }
 
@@ -190,7 +187,7 @@ export function handleTimeSpentKeyDown(
     if (targetIdx === COLON_2) targetIdx = COLON_2 + 1
     if (targetIdx >= LENGTH) targetIdx = LENGTH - 1
 
-    const chars = timeSpent.split('')
+    const chars = (timeSpent || EMPTY).split('')
     chars[targetIdx] = e.key
     let nextCursor = targetIdx + 1
     if (nextCursor === COLON_1 || nextCursor === COLON_2) nextCursor += 1

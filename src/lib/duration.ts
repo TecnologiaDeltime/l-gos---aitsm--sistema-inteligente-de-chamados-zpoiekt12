@@ -95,12 +95,32 @@ export function parseDurationToMinutes(value: string | number | null | undefined
  * dígitos (até 6) e reconstrói com dois pontos fixos.
  */
 export function maskHHMMSSInput(raw: string): string {
-  const digits = raw.replace(/\D/g, '').slice(0, 6)
+  const trimmed = (raw || '').trim()
+  if (!trimmed) return ''
+
+  // Se já contém separadores ':' (ex.: usuário colou ou campo já formatado)
+  if (trimmed.includes(':')) {
+    const parts = trimmed.split(':').map((p) => p.replace(/\D/g, ''))
+    if (parts.length === 3) {
+      const h = (parts[0] || '0').slice(0, 2).padStart(2, '0')
+      const m = (parts[1] || '0').slice(0, 2).padStart(2, '0')
+      const s = (parts[2] || '0').slice(0, 2).padStart(2, '0')
+      return `${h}:${m}:${s}`
+    }
+    if (parts.length === 2) {
+      const h = (parts[0] || '0').slice(0, 2).padStart(2, '0')
+      const m = (parts[1] || '0').slice(0, 2).padStart(2, '0')
+      return `${h}:${m}:00`
+    }
+  }
+
+  const digits = trimmed.replace(/\D/g, '').slice(0, 6)
   if (!digits) return ''
-  const hh = digits.slice(0, 2).padEnd(2, '0')
-  const mm = (digits.slice(2, 4) || '00').padEnd(2, '0')
-  const ss = (digits.slice(4, 6) || '00').padEnd(2, '0')
-  return `${hh}:${mm}:${ss}`
+
+  // Não auto-expande dígitos intermediários com zeros antecipados — preserva fluxo progressivo
+  if (digits.length <= 2) return digits
+  if (digits.length <= 4) return `${digits.slice(0, 2)}:${digits.slice(2)}`
+  return `${digits.slice(0, 2)}:${digits.slice(2, 4)}:${digits.slice(4)}`
 }
 
 /**
@@ -110,11 +130,26 @@ export function maskHHMMSSInput(raw: string): string {
 export function validateHHMMSS(value: string, required = false): string {
   const v = (value || '').trim()
   if (!v) return required ? 'Informe o valor no formato 00:00:00.' : ''
-  if (!/^\d{1,3}:\d{2}:\d{2}$/.test(v)) {
-    return 'Formato inválido. Use 00:00:00 (horas:minutos:segundos).'
+
+  // Aceita formatos progressivos completos ou parciais durante digitação:
+  // HH:MM:SS (completo) ou formatos válidos normalizados
+  if (/^\d{1,3}:\d{2}:\d{2}$/.test(v)) {
+    const [h, m, s] = v.split(':').map(Number)
+    if (m > 59 || s > 59) return 'Minutos e segundos inválidos (máximo 59).'
+    if (required && h * 3600 + m * 60 + s <= 0) return 'O valor deve ser maior que 00:00:00.'
+    return ''
   }
-  const [h, m, s] = v.split(':').map(Number)
-  if (m > 59 || s > 59) return 'Minutos e segundos inválidos (máximo 59).'
-  if (required && h * 3600 + m * 60 + s <= 0) return 'O valor deve ser maior que 00:00:00.'
-  return ''
+
+  // Se for valor numérico puro ou formato HH:MM parcial
+  if (/^\d{1,3}:\d{1,2}$/.test(v)) {
+    const [, m] = v.split(':').map(Number)
+    if (m > 59) return 'Minutos inválidos (máximo 59).'
+    return ''
+  }
+
+  if (/^\d{1,6}$/.test(v)) {
+    return ''
+  }
+
+  return 'Formato inválido. Use 00:00:00 (horas:minutos:segundos).'
 }

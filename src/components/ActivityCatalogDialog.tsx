@@ -22,12 +22,8 @@ import { getQueues, QueueRecord } from '@/services/queues'
 import { computePriority, IMPACT_VALUES, URGENCY_VALUES } from '@/lib/itil-matrix'
 import { PriorityBadge } from '@/components/PriorityBadge'
 import { useToast } from '@/hooks/use-toast'
-import {
-  formatMinutes,
-  maskHHMMSSInput,
-  parseDurationToSeconds,
-  validateHHMMSS,
-} from '@/lib/duration'
+import { formatMinutes, parseDurationToSeconds, validateHHMMSS } from '@/lib/duration'
+import { DurationInput } from '@/components/ui/DurationInput'
 import { Users } from 'lucide-react'
 
 interface ActivityCatalogDialogProps {
@@ -329,11 +325,11 @@ export function ActivityCatalogDialog({
                 <div className="grid grid-cols-2 gap-3 pt-1">
                   <div className="space-y-1">
                     <Label className="text-xs">SLA Resposta *</Label>
-                    <Input
+                    <DurationInput
                       value={slaResponse}
-                      onChange={(e) => setSlaResponse(maskHHMMSSInput(e.target.value))}
+                      onChange={setSlaResponse}
                       placeholder="00:30:00"
-                      className="font-mono"
+                      className="h-9 text-sm"
                     />
                     <span className="text-[10px] text-muted-foreground">
                       Até Iniciar Atendimento (00:00:00)
@@ -341,11 +337,11 @@ export function ActivityCatalogDialog({
                   </div>
                   <div className="space-y-1">
                     <Label className="text-xs">SLA Solução *</Label>
-                    <Input
+                    <DurationInput
                       value={slaSolution}
-                      onChange={(e) => setSlaSolution(maskHHMMSSInput(e.target.value))}
+                      onChange={setSlaSolution}
                       placeholder="04:00:00"
-                      className="font-mono"
+                      className="h-9 text-sm"
                     />
                     <span className="text-[10px] text-muted-foreground">
                       Até a Resolução do Chamado (00:00:00)
@@ -372,20 +368,20 @@ export function ActivityCatalogDialog({
               <div className="grid grid-cols-2 gap-3 pt-1">
                 <div className="space-y-1">
                   <Label className="text-xs">SLA Resposta</Label>
-                  <Input
+                  <DurationInput
                     value={slaResponse}
-                    onChange={(e) => setSlaResponse(maskHHMMSSInput(e.target.value))}
+                    onChange={setSlaResponse}
                     placeholder="00:30:00"
-                    className="font-mono"
+                    className="h-9 text-sm"
                   />
                 </div>
                 <div className="space-y-1">
                   <Label className="text-xs">SLA Solução</Label>
-                  <Input
+                  <DurationInput
                     value={slaSolution}
-                    onChange={(e) => setSlaSolution(maskHHMMSSInput(e.target.value))}
+                    onChange={setSlaSolution}
                     placeholder="04:00:00"
-                    className="font-mono"
+                    className="h-9 text-sm"
                   />
                 </div>
               </div>
