@@ -33,11 +33,16 @@ import {
 } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 import pb from '@/lib/pocketbase/client'
-import { createClientContact, updateClientContact, ClientContact } from '@/services/client-contacts'
+import {
+  createClientContact,
+  updateClientContact,
+  type ClientContactRecord,
+} from '@/services/client-contacts'
 
 export interface CollaboratorBulkImportDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
+  clientId?: string
   companyId?: string
   companyName?: string
   onImportComplete?: () => void
@@ -56,7 +61,7 @@ interface RowValidationError {
 
 interface ValidCollaboratorRow {
   rowNumber: number
-  payload: Partial<ClientContact>
+  payload: Partial<ClientContactRecord>
   raw: Record<string, string>
   companyId: string
   companyName: string
@@ -119,10 +124,12 @@ function isValidEmail(email: string): boolean {
 export function CollaboratorBulkImportDialog({
   open,
   onOpenChange,
-  companyId: presetCompanyId,
+  clientId,
+  companyId: presetCompanyIdProp,
   companyName: presetCompanyName,
   onImportComplete,
 }: CollaboratorBulkImportDialogProps) {
+  const presetCompanyId = presetCompanyIdProp || clientId
   const { toast } = useToast()
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -148,7 +155,7 @@ export function CollaboratorBulkImportDialog({
   const [companies, setCompanies] = useState<any[]>([])
   const [units, setUnits] = useState<any[]>([])
   const [departments, setDepartments] = useState<any[]>([])
-  const [existingContacts, setExistingContacts] = useState<ClientContact[]>([])
+  const [existingContacts, setExistingContacts] = useState<ClientContactRecord[]>([])
 
   useEffect(() => {
     if (open) {
@@ -164,7 +171,7 @@ export function CollaboratorBulkImportDialog({
         pb.collection('companies').getFullList({ sort: 'trade_name,legal_name' }),
         pb.collection('company_units').getFullList({ sort: 'name' }),
         pb.collection('company_departments').getFullList({ sort: 'name' }),
-        pb.collection('client_contacts').getFullList<ClientContact>({ sort: '-created' }),
+        pb.collection('client_contacts').getFullList<ClientContactRecord>({ sort: '-created' }),
       ]).then(([compRes, unitRes, deptRes, contRes]) => {
         if (compRes.status === 'fulfilled') setCompanies(compRes.value)
         if (unitRes.status === 'fulfilled') setUnits(unitRes.value)
@@ -449,18 +456,14 @@ export function CollaboratorBulkImportDialog({
       if (!hasRowError && matchedCompany) {
         const isFocal = pontoFocalRaw ? parseBooleanValue(pontoFocalRaw) : false
 
-        const payload: Partial<ClientContact> = {
-          name: nome,
+        const payload: Partial<ClientContactRecord> = {
+          full_name: nome,
           email: email.toLowerCase().trim(),
-          company: matchedCompany.id,
+          client: matchedCompany.id,
           unit: matchedUnit?.id || undefined,
-          department: matchedDepartment?.id || undefined,
-          role: cargo || undefined,
-          position: cargo || undefined,
+          departments: matchedDepartment?.id ? [matchedDepartment.id] : undefined,
           phone: telefone || undefined,
           is_focal_point: isFocal,
-          notes: observacoes || undefined,
-          active: true,
         }
 
         valid.push({
@@ -517,11 +520,15 @@ export function CollaboratorBulkImportDialog({
             continue
           } else {
             // Atualizar os campos preenchidos
-            const updatePayload: Partial<ClientContact> = {}
+            const updatePayload: Partial<ClientContactRecord> = {}
             for (const [k, v] of Object.entries(payload)) {
               if (v !== undefined && v !== '') {
                 ;(updatePayload as any)[k] = v
               }
+            }
+            // Garantir vínculo com o cliente atual
+            if (!updatePayload.client && payload.client) {
+              updatePayload.client = payload.client
             }
             const updated = await updateClientContact(existingMatch.id, updatePayload)
             updatedCount++
@@ -535,7 +542,7 @@ export function CollaboratorBulkImportDialog({
       } catch (err: any) {
         failedCount++
         const msg = err?.data?.message || err?.message || 'Erro ao gravar registro'
-        failureMessages.push(`Linha ${item.rowNumber} (${item.payload.name}): ${msg}`)
+        failureMessages.push(`Linha ${item.rowNumber} (${item.payload.full_name}): ${msg}`)
       }
     }
 
@@ -793,10 +800,10 @@ export function CollaboratorBulkImportDialog({
                       {validRows.slice(0, 100).map((r, idx) => (
                         <TableRow key={idx}>
                           <TableCell className="font-mono text-slate-500">{r.rowNumber}</TableCell>
-                          <TableCell className="font-medium">{r.payload.name}</TableCell>
+                          <TableCell className="font-medium">{r.payload.full_name}</TableCell>
                           <TableCell className="font-mono">{r.email}</TableCell>
                           <TableCell>{r.companyName}</TableCell>
-                          <TableCell>{r.payload.role || '—'}</TableCell>
+                          <TableCell>{r.raw?.cargo || '—'}</TableCell>
                           <TableCell className="text-slate-500">
                             {[r.unitName, r.departmentName].filter(Boolean).join(' • ') || '—'}
                           </TableCell>
