@@ -1,3 +1,4 @@
+// Helper functions for duration formatting and parsing
 export function formatMinutes(minutes: number | string | undefined | null): string {
   const totalSeconds = Math.round((Number(minutes) || 0) * 60)
   const h = Math.floor(totalSeconds / 3600)

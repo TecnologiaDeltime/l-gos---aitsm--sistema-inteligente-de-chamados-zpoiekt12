@@ -14,8 +14,8 @@ export interface DurationInputProps extends Omit<
   React.InputHTMLAttributes<HTMLInputElement>,
   'value' | 'onChange'
 > {
-  /** Valor no formato "HH:MM:SS" ou string vazia */
-  value: string | undefined | null
+  /** Valor no formato "HH:MM:SS", string vazia ou número */
+  value: string | number | undefined | null
   /** Callback disparado quando o valor muda. Retorna string formatada (ex.: "02:00:00" ou parcial "02:00") ou vazia. */
   onChange: (value: string) => void
   /**
@@ -127,14 +127,16 @@ export const DurationInput = forwardRef<HTMLInputElement, DurationInputProps>(
     const inputRef = useRef<HTMLInputElement>(null)
     useImperativeHandle(ref, () => inputRef.current as HTMLInputElement)
 
+    const stringifiedValue = value != null ? String(value) : ''
+
     // Estado interno do texto exibido no input enquanto o usuário digita
-    const [displayValue, setDisplayValue] = useState<string>(value ?? '')
+    const [displayValue, setDisplayValue] = useState<string>(stringifiedValue)
     const [isFocused, setIsFocused] = useState(false)
     const [internalError, setInternalError] = useState<string>('')
 
     // Sincroniza displayValue quando o valor externo muda (e o campo não estiver em foco)
     useEffect(() => {
-      const ext = value ?? ''
+      const ext = value != null ? String(value) : ''
       if (!isFocused) {
         setDisplayValue(ext)
       }

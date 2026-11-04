@@ -620,7 +620,7 @@ export default function ContractEdit() {
                     <DurationInput
                       className={cn(inputCls, !ag.active && 'opacity-40 pointer-events-none')}
                       placeholder="00:00:00"
-                      value={ag.hours ?? ''}
+                      value={ag.hours != null ? String(ag.hours) : ''}
                       disabled={!ag.active}
                       onChange={(val) => {
                         setCustomAgreements((prev) =>
