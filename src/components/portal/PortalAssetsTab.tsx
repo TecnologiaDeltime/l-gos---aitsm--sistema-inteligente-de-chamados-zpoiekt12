@@ -23,6 +23,7 @@ import {
   SlidersHorizontal,
   ChevronRight,
   Info,
+  User,
 } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -496,6 +497,7 @@ export default function PortalAssetsTab({
                 <TableHead className="text-xs font-bold text-foreground">Tipo</TableHead>
                 <TableHead className="text-xs font-bold text-foreground">Status</TableHead>
                 <TableHead className="text-xs font-bold text-foreground">Nº de Série</TableHead>
+                <TableHead className="text-xs font-bold text-foreground">Responsável</TableHead>
                 <TableHead className="text-xs font-bold text-foreground">Localização</TableHead>
                 <TableHead className="text-xs font-bold text-foreground">
                   Unidade / Filial
@@ -508,6 +510,14 @@ export default function PortalAssetsTab({
                 const isOnline = asset.status === 'Ativo'
                 const isMaintenance = asset.status === 'Em Manutenção'
                 const isReserve = asset.status === 'Reserva'
+
+                const rawResp = (asset.responsible_user || (asset as any).owner || '').trim()
+                const deptName = asset.expand?.department?.name
+                const respFormatted = rawResp
+                  ? deptName
+                    ? `${rawResp} — ${deptName}`
+                    : rawResp
+                  : '—'
 
                 return (
                   <TableRow
@@ -549,6 +559,10 @@ export default function PortalAssetsTab({
 
                     <TableCell className="font-mono text-[11px] text-foreground select-all">
                       {asset.serial_number || '—'}
+                    </TableCell>
+
+                    <TableCell className="text-muted-foreground text-xs">
+                      {rawResp ? <span className="text-foreground">{respFormatted}</span> : '—'}
                     </TableCell>
 
                     <TableCell className="text-muted-foreground text-xs">
@@ -641,6 +655,25 @@ export default function PortalAssetsTab({
                         <span>Nº de Série:</span>
                         <span className="font-mono font-medium text-foreground select-all">
                           {asset.serial_number}
+                        </span>
+                      </div>
+                    )}
+
+                    {(asset.responsible_user || (asset as any).owner) && (
+                      <div className="flex items-center justify-between text-muted-foreground">
+                        <span className="flex items-center gap-1">
+                          <User className="h-3 w-3 text-amber-500 shrink-0" /> Resp:
+                        </span>
+                        <span className="font-medium text-foreground truncate max-w-[160px]">
+                          {(() => {
+                            const raw = (
+                              asset.responsible_user ||
+                              (asset as any).owner ||
+                              ''
+                            ).trim()
+                            const dept = asset.expand?.department?.name
+                            return raw ? (dept ? `${raw} — ${dept}` : raw) : '—'
+                          })()}
                         </span>
                       </div>
                     )}

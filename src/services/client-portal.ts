@@ -200,7 +200,7 @@ export async function getClientPortalAssets(companyId: string): Promise<Configur
   return pb.collection('configuration_items').getFullList<ConfigurationItemRecord>({
     filter: `company = "${companyId}"`,
     sort: 'name',
-    expand: 'unit',
+    expand: 'unit,department',
   })
 }
 

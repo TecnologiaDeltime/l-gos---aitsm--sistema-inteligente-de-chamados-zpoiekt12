@@ -768,7 +768,15 @@ export default function AssetsReportPage() {
                       <TableCell className="text-xs">{r.branchName}</TableCell>
                       <TableCell className="text-xs">{r.sectorName}</TableCell>
                       <TableCell className="text-xs">
-                        {r.owner !== '—' ? r.owner : r.responsible_user}
+                        {(() => {
+                          const resp = r.responsible_user !== '—' ? r.responsible_user : r.owner
+                          if (!resp || resp === '—') return '—'
+                          // Se responsible_user já vier com o departamento formatado de itsm-reports, usa direto
+                          if (resp.includes(' — ')) return resp
+                          return r.sectorName && r.sectorName !== '—'
+                            ? `${resp} — ${r.sectorName}`
+                            : resp
+                        })()}
                       </TableCell>
                       <TableCell className="text-xs text-center">
                         <CiStatusBadge status={r.status} />

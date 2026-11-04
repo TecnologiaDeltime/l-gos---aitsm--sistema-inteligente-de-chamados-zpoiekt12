@@ -745,6 +745,7 @@ export async function fetchMonthlyClientReportData(
     .getFullList({
       filter: `company = "${companyId}"`,
       sort: '-created',
+      expand: 'department',
     })
     .catch(() => [] as any[])
 
@@ -785,7 +786,11 @@ export async function fetchMonthlyClientReportData(
       device_type: eq.device_type || eq.type || 'Dispositivo',
       manufacturer: eq.manufacturer || '—',
       model: eq.model || '—',
-      responsible_user: eq.responsible_user || eq.owner || '—',
+      responsible_user: (() => {
+        const raw = (eq.responsible_user || eq.owner || '').trim()
+        const dept = eq.expand?.department?.name
+        return raw ? (dept ? `${raw} — ${dept}` : raw) : '—'
+      })(),
       status: eq.status || 'Ativo',
       date: eq.created ? new Date(eq.created).toLocaleDateString('pt-BR') : '—',
     })),
@@ -795,7 +800,11 @@ export async function fetchMonthlyClientReportData(
       device_type: eq.device_type || eq.type || 'Dispositivo',
       manufacturer: eq.manufacturer || '—',
       model: eq.model || '—',
-      responsible_user: eq.responsible_user || eq.owner || '—',
+      responsible_user: (() => {
+        const raw = (eq.responsible_user || eq.owner || '').trim()
+        const dept = eq.expand?.department?.name
+        return raw ? (dept ? `${raw} — ${dept}` : raw) : '—'
+      })(),
       status: eq.status || 'Inativo',
       date: eq.updated ? new Date(eq.updated).toLocaleDateString('pt-BR') : '—',
     })),

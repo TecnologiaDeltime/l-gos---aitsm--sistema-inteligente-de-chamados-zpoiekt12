@@ -382,6 +382,10 @@ export async function getAssetReport(
       ? `${e.storage}${e.storage_type ? ` (${e.storage_type})` : ''}`
       : '—'
 
+    const rawResp = (e.responsible_user || e.owner || '').trim()
+    const deptName = e.expand?.department?.name
+    const formattedResponsible = rawResp ? (deptName ? `${rawResp} — ${deptName}` : rawResp) : '—'
+
     return {
       id: e.id,
       name: e.name || '—',
@@ -401,7 +405,7 @@ export async function getAssetReport(
       storage_type: e.storage_type || '—',
       storageDisplay,
       owner: e.owner || '—',
-      responsible_user: e.responsible_user || '—',
+      responsible_user: formattedResponsible,
       companyId: e.company || '',
       companyName: e.expand?.company?.trade_name || e.expand?.company?.legal_name || '—',
       branchId: e.unit || '',

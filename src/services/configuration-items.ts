@@ -12,6 +12,8 @@ export interface ConfigurationItemRecord {
   observations?: string
   company: string
   unit?: string | null
+  responsible_user?: string
+  owner?: string
   created: string
   updated: string
   expand?: {
@@ -22,6 +24,10 @@ export interface ConfigurationItemRecord {
       code?: string
     }
     unit?: {
+      id: string
+      name: string
+    }
+    department?: {
       id: string
       name: string
     }

@@ -291,6 +291,7 @@ export default function CmdbDashboard() {
                 <tr>
                   <th className="p-3 font-semibold text-foreground">Nome</th>
                   <th className="p-3 font-semibold text-foreground">Tipo</th>
+                  <th className="p-3 font-semibold text-foreground">Responsável</th>
                   <th className="p-3 font-semibold text-foreground">Fabricante</th>
                   <th className="p-3 font-semibold text-foreground">Status</th>
                   <th className="p-3 font-semibold text-foreground">Garantia até</th>
@@ -299,34 +300,45 @@ export default function CmdbDashboard() {
               <tbody className="divide-y divide-border">
                 {nextWarranties.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="p-4 text-center text-muted-foreground">
+                    <td colSpan={6} className="p-4 text-center text-muted-foreground">
                       Nenhum vencimento próximo.
                     </td>
                   </tr>
                 ) : (
-                  nextWarranties.map((e) => (
-                    <tr key={e.id} className="hover:bg-muted/40">
-                      <td className="p-3">
-                        <Link
-                          to={`/cmdb/assets/${e.id}`}
-                          className="font-semibold text-primary hover:underline"
-                        >
-                          {e.name}
-                        </Link>
-                      </td>
-                      <td className="p-3">{e.device_type || e.type || '-'}</td>
-                      <td className="p-3">{e.manufacturer || '-'}</td>
-                      <td className="p-3">
-                        <CiStatusBadge status={e.status} />
-                      </td>
-                      <td className="p-3">
-                        <span className="flex items-center gap-1">
-                          <Calendar className="h-3 w-3" />
-                          {new Date(e.warranty_until!).toLocaleDateString('pt-BR')}
-                        </span>
-                      </td>
-                    </tr>
-                  ))
+                  nextWarranties.map((e) => {
+                    const resp = (e.responsible_user || e.owner || '').trim()
+                    const deptName = e.expand?.department?.name
+                    const responsibleFormatted = resp
+                      ? deptName
+                        ? `${resp} — ${deptName}`
+                        : resp
+                      : '-'
+
+                    return (
+                      <tr key={e.id} className="hover:bg-muted/40">
+                        <td className="p-3">
+                          <Link
+                            to={`/cmdb/assets/${e.id}`}
+                            className="font-semibold text-primary hover:underline"
+                          >
+                            {e.name}
+                          </Link>
+                        </td>
+                        <td className="p-3">{e.device_type || e.type || '-'}</td>
+                        <td className="p-3 text-foreground">{responsibleFormatted}</td>
+                        <td className="p-3">{e.manufacturer || '-'}</td>
+                        <td className="p-3">
+                          <CiStatusBadge status={e.status} />
+                        </td>
+                        <td className="p-3">
+                          <span className="flex items-center gap-1">
+                            <Calendar className="h-3 w-3" />
+                            {new Date(e.warranty_until!).toLocaleDateString('pt-BR')}
+                          </span>
+                        </td>
+                      </tr>
+                    )
+                  })
                 )}
               </tbody>
             </table>

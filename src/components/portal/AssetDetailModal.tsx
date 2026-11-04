@@ -35,6 +35,7 @@ import {
   ExternalLink,
   ChevronDown,
   ChevronUp,
+  User,
 } from 'lucide-react'
 import {
   Dialog,
@@ -266,6 +267,14 @@ export default function AssetDetailModal({
     asset.expand?.company?.trade_name || asset.expand?.company?.legal_name || 'Empresa Vinculada'
   const unitName = asset.expand?.unit?.name || 'Sede / Não informada'
 
+  const rawResponsible = (asset.responsible_user || (asset as any).owner || '').trim()
+  const deptName = asset.expand?.department?.name
+  const responsibleFormatted = rawResponsible
+    ? deptName
+      ? `${rawResponsible} — ${deptName}`
+      : rawResponsible
+    : null
+
   const toggleExpand = (id: string) => {
     setExpandedTickets((prev) => ({ ...prev, [id]: !prev[id] }))
   }
@@ -357,6 +366,17 @@ export default function AssetDetailModal({
                   {asset.location || 'Localização não informada no cadastro'}
                 </span>
               </div>
+              {responsibleFormatted && (
+                <div className="sm:col-span-2">
+                  <span className="text-muted-foreground block text-[11px]">
+                    Usuário Responsável:
+                  </span>
+                  <span className="font-medium text-foreground flex items-center gap-1.5">
+                    <User className="h-3.5 w-3.5 text-amber-500" />
+                    {responsibleFormatted}
+                  </span>
+                </div>
+              )}
             </div>
           </div>
 
