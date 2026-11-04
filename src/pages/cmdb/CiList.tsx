@@ -439,7 +439,16 @@ export default function CiList() {
                         ? `${e.storage}${e.storage_type ? ` (${e.storage_type})` : ''}`
                         : '-'}
                     </td>
-                    <td className="p-3">{e.owner || '-'}</td>
+                    <td className="p-3">
+                      <div>
+                        <span>{e.owner || e.responsible_user || '-'}</span>
+                        {e.expand?.department?.name && (
+                          <span className="block text-[11px] text-muted-foreground">
+                            {e.expand.department.name}
+                          </span>
+                        )}
+                      </div>
+                    </td>
                     <td className="p-3">{e.manufacturer || '-'}</td>
                     <td className="p-3">{e.model || '-'}</td>
                     <td className="p-3">{e.serial_number || '-'}</td>

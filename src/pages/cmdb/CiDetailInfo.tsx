@@ -284,7 +284,16 @@ export function CiDetailInfo({
             </h3>
             <div className="grid grid-cols-2 gap-4 md:grid-cols-3 rounded-xl border bg-white p-6 dark:bg-slate-900">
               <Field label="Dono do equipamento" value={equipment.owner} />
-              <Field label="Usuário responsável" value={equipment.responsible_user} />
+              <Field
+                label="Usuário responsável"
+                value={
+                  equipment.responsible_user
+                    ? equipment.expand?.department?.name
+                      ? `${equipment.responsible_user} — ${equipment.expand.department.name}`
+                      : equipment.responsible_user
+                    : undefined
+                }
+              />
               <Field label="Empresa" value={equipment.expand?.company?.trade_name} />
               <Field label="Unidade" value={equipment.expand?.unit?.name} />
               <Field label="Localização" value={equipment.location} />
