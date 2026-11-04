@@ -356,7 +356,7 @@ export default function TicketPublicDetailDialog({
             </span>
             {ticket.expand?.category?.name && (
               <span className="text-foreground/80">
-                • Categoria: <strong>{ticket.expand.category.name}</strong>
+                • Atividade: <strong>{ticket.expand.category.name}</strong>
               </span>
             )}
           </DialogDescription>

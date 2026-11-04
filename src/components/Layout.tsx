@@ -252,19 +252,13 @@ export default function Layout() {
         permissions.canWriteModule('tickets'),
     },
     {
-      label: 'Categorias',
-      path: '/categorias',
-      icon: Tags,
-      show:
-        permissions.canAccessItem('tickets', 'tickets_categorias') &&
-        permissions.canManageCategories,
-    },
-    {
       label: 'Catálogo de Atividades',
       path: '/catalogo',
       icon: ListTree,
       show:
-        permissions.canAccessItem('tickets', 'tickets_catalogo') && permissions.canManageCategories,
+        (permissions.canAccessItem('tickets', 'tickets_catalogo') ||
+          permissions.canAccessItem('tickets', 'tickets_categorias')) &&
+        permissions.canManageCategories,
     },
     {
       label: 'Aprovações',

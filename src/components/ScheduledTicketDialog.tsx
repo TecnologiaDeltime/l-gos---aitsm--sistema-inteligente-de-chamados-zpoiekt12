@@ -234,33 +234,29 @@ export const ScheduledTicketDialog: React.FC<ScheduledTicketDialogProps> = ({
       .catch(() => setCompanyContracts([]))
   }, [companyId])
 
-  const subcategories = categories.filter(
-    (c) => c.parent && (!categoryId || c.parent === categoryId),
-  )
+  const parentCategoryMap = React.useMemo(() => {
+    const map = new Map<string, string>()
+    categories.forEach((c) => {
+      if (!c.parent) map.set(c.id, c.name)
+    })
+    return map
+  }, [categories])
 
-  // Quando o usuário troca a categoria principal
-  const handleCategoryChange = (newCatId: string) => {
-    setCategoryId(newCatId)
-    // Se a subcategoria atual não pertence à nova categoria, reseta subcategoria
-    if (subcategoryId) {
-      const currentSub = categories.find((c) => c.id === subcategoryId)
-      if (currentSub && currentSub.parent !== newCatId) {
-        setSubcategoryId('')
-        setPriority('Média')
-        setImpact('Médio')
-        setUrgency('Média')
-      }
-    }
-  }
+  const subcategories = React.useMemo(() => {
+    const subs = categories.filter((c) => c.parent && c.active !== false)
+    if (subs.length > 0) return subs
+    return categories.filter((c) => c.active !== false)
+  }, [categories])
 
-  // Quando o usuário seleciona uma Atividade (subcategoria) do catálogo
+  // Quando o usuário seleciona uma Atividade do catálogo
   const handleSubcategoryChange = (newSubId: string) => {
     setSubcategoryId(newSubId)
     const selectedSub = categories.find((c) => c.id === newSubId)
     if (selectedSub) {
-      // Se a categoria principal ainda não estiver setada, preenche com o pai da subcategoria
-      if (selectedSub.parent && (!categoryId || categoryId !== selectedSub.parent)) {
+      if (selectedSub.parent) {
         setCategoryId(selectedSub.parent)
+      } else {
+        setCategoryId(selectedSub.id)
       }
       const imp = selectedSub.impact || 'Médio'
       const urg = selectedSub.urgency || 'Média'
@@ -269,6 +265,7 @@ export const ScheduledTicketDialog: React.FC<ScheduledTicketDialogProps> = ({
       setUrgency(urg)
       setPriority(prio)
     } else {
+      setCategoryId('')
       setImpact('Médio')
       setUrgency('Média')
       setPriority('Média')
@@ -865,29 +862,9 @@ export const ScheduledTicketDialog: React.FC<ScheduledTicketDialogProps> = ({
                 </Select>
               </div>
 
-              <div>
+              <div className="sm:col-span-2">
                 <Label className="text-xs font-semibold uppercase text-muted-foreground">
-                  Categoria Principal
-                </Label>
-                <Select value={categoryId} onValueChange={handleCategoryChange}>
-                  <SelectTrigger className="mt-1 bg-background">
-                    <SelectValue placeholder="Selecione a categoria" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {categories
-                      .filter((c) => !c.parent)
-                      .map((c) => (
-                        <SelectItem key={c.id} value={c.id}>
-                          {c.name}
-                        </SelectItem>
-                      ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div>
-                <Label className="text-xs font-semibold uppercase text-muted-foreground">
-                  Atividade do Catálogo / Subcategoria
+                  Atividade do Catálogo
                 </Label>
                 <Select
                   value={subcategoryId}
@@ -899,16 +876,19 @@ export const ScheduledTicketDialog: React.FC<ScheduledTicketDialogProps> = ({
                       placeholder={
                         subcategories.length === 0
                           ? 'Nenhuma atividade disponível'
-                          : 'Selecione a atividade...'
+                          : 'Selecione a atividade do catálogo...'
                       }
                     />
                   </SelectTrigger>
                   <SelectContent>
-                    {subcategories.map((sc) => (
-                      <SelectItem key={sc.id} value={sc.id}>
-                        {sc.name}
-                      </SelectItem>
-                    ))}
+                    {subcategories.map((sc) => {
+                      const group = sc.parent ? parentCategoryMap.get(sc.parent) : null
+                      return (
+                        <SelectItem key={sc.id} value={sc.id}>
+                          {group ? `${group} › ${sc.name}` : sc.name}
+                        </SelectItem>
+                      )
+                    })}
                   </SelectContent>
                 </Select>
                 <span className="text-[11px] text-muted-foreground">

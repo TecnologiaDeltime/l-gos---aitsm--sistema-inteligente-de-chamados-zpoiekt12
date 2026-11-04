@@ -145,14 +145,19 @@ export default function TicketCreate() {
   const [currentStep, setCurrentStep] = useState(0)
   const [submitting, setSubmitting] = useState(false)
 
-  const mainCategories = useMemo(
-    () => categories.filter((c) => !c.parent && c.active !== false),
-    [categories],
-  )
-  const availableSubActivities = useMemo(
-    () => categories.filter((c) => c.parent === mainCategory && c.active !== false),
-    [categories, mainCategory],
-  )
+  const parentCategoryMap = useMemo(() => {
+    const map = new Map<string, string>()
+    categories.forEach((c) => {
+      if (!c.parent) map.set(c.id, c.name)
+    })
+    return map
+  }, [categories])
+
+  const availableActivities = useMemo(() => {
+    const subs = categories.filter((c) => c.parent && c.active !== false)
+    if (subs.length > 0) return subs
+    return categories.filter((c) => c.active !== false)
+  }, [categories])
   // Contratos filtrados pela empresa selecionada (client-side)
   const availableContracts = useMemo(
     () => contracts.filter((c) => c.company === company),
@@ -364,21 +369,23 @@ export default function TicketCreate() {
     )
   }, [equipments, contacts, user, requesterName])
 
-  const handleMainCategoryChange = (id: string) => {
-    setMainCategory(id)
-    setSubActivity('')
-    setAutoImpact('')
-    setAutoUrgency('')
-    setAutoPriority('')
-  }
-
   const handleSubActivityChange = (id: string) => {
     setSubActivity(id)
     const sub = categories.find((c) => c.id === id)
     if (sub) {
+      if (sub.parent) {
+        setMainCategory(sub.parent)
+      } else {
+        setMainCategory(sub.id)
+      }
       setAutoImpact(sub.impact || '')
       setAutoUrgency(sub.urgency || '')
       setAutoPriority(sub.priority || computePriority(sub.impact || '', sub.urgency || ''))
+    } else {
+      setMainCategory('')
+      setAutoImpact('')
+      setAutoUrgency('')
+      setAutoPriority('')
     }
   }
 
@@ -624,45 +631,23 @@ export default function TicketCreate() {
                 </SelectContent>
               </Select>
             </div>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <FieldLabel>Categoria Principal</FieldLabel>
-                <Select value={mainCategory} onValueChange={handleMainCategoryChange}>
-                  <SelectTrigger className="rounded-lg">
-                    <SelectValue placeholder="Selecione a categoria" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {mainCategories.map((c) => (
+            <div className="space-y-2">
+              <FieldLabel>Atividade do Catálogo *</FieldLabel>
+              <Select value={subActivity} onValueChange={handleSubActivityChange}>
+                <SelectTrigger className="rounded-lg">
+                  <SelectValue placeholder="Selecione a atividade do catálogo" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableActivities.map((c) => {
+                    const group = c.parent ? parentCategoryMap.get(c.parent) : null
+                    return (
                       <SelectItem key={c.id} value={c.id}>
-                        {c.name}
+                        {group ? `${group} › ${c.name}` : c.name}
                       </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <FieldLabel>Atividade *</FieldLabel>
-                <Select
-                  value={subActivity}
-                  onValueChange={handleSubActivityChange}
-                  disabled={!mainCategory}
-                >
-                  <SelectTrigger className="rounded-lg">
-                    <SelectValue
-                      placeholder={
-                        mainCategory ? 'Selecione a atividade' : 'Primeiro selecione a categoria'
-                      }
-                    />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {availableSubActivities.map((c) => (
-                      <SelectItem key={c.id} value={c.id}>
-                        {c.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+                    )
+                  })}
+                </SelectContent>
+              </Select>
             </div>
             {subActivity && (
               <div className="grid gap-4 sm:grid-cols-3 rounded-lg bg-slate-50 p-4 dark:bg-slate-800/50">

@@ -59,10 +59,9 @@ export function KanbanCard({
           title={`SLA: ${ticket.sla_status || 'N/A'}`}
         />
       </div>
-      {ticket.expand?.category?.name && (
+      {(ticket.expand?.subcategory?.name || ticket.expand?.category?.name) && (
         <p className="text-xs text-slate-400 mt-1.5 truncate">
-          {ticket.expand.category.name}
-          {ticket.expand?.subcategory?.name ? ` › ${ticket.expand.subcategory.name}` : ''}
+          {ticket.expand?.subcategory?.name || ticket.expand?.category?.name}
         </p>
       )}
     </div>

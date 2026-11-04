@@ -202,7 +202,7 @@ const App = () => (
                     </ProtectedRoute>
                   }
                 />
-                <Route path="/categorias" element={<CategoryManagement />} />
+                <Route path="/categorias" element={<Navigate to="/catalogo" replace />} />
                 <Route path="/catalogo" element={<ActivityCatalog />} />
                 <Route path="/clients" element={<ClientList />} />
                 <Route path="/clients/new" element={<ClientDetail />} />
@@ -272,7 +272,7 @@ const App = () => (
                 <Route path="/team" element={<TeamList />} />
                 <Route path="/team/new" element={<TeamDetail />} />
                 <Route path="/queues" element={<QueueManagement />} />
-                <Route path="/categories" element={<CategoryManagement />} />
+                <Route path="/categories" element={<Navigate to="/catalogo" replace />} />
                 <Route path="/activity-catalog" element={<ActivityCatalog />} />
                 <Route path="/recurrent-activities" element={<RecurrentActivities />} />
                 <Route

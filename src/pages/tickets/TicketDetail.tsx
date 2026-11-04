@@ -1836,7 +1836,7 @@ export default function TicketDetail({
             {categoryData && (
               <div className="flex items-center justify-between text-xs pb-2 border-b">
                 <span className="text-muted-foreground">
-                  Categoria:{' '}
+                  Atividade:{' '}
                   <span className="font-medium text-slate-700 dark:text-slate-300">
                     {categoryData.name}
                   </span>

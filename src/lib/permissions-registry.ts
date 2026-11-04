@@ -91,15 +91,9 @@ const BASE_SYSTEM_MODULES: GranularModuleDefinition[] = [
         path: '/tickets/retained',
       },
       {
-        key: 'tickets_categorias',
-        label: 'Categorias de Chamados',
-        description: 'Gestão da árvore de categorias e SLAs',
-        path: '/categorias',
-      },
-      {
         key: 'tickets_catalogo',
         label: 'Catálogo de Atividades',
-        description: 'Catálogo de serviços e atividades padronizadas',
+        description: 'Catálogo de serviços e atividades padronizadas com SLAs',
         path: '/catalogo',
       },
       {
