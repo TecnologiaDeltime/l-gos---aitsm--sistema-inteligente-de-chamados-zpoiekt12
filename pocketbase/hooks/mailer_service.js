@@ -102,6 +102,9 @@
     } catch (_) {}
 
     // Fallback: SMTP padrão do PocketBase
+    var defaultBrand = globalThis.SYSTEM_BRAND_NAME || 'Lógos AITSM'
+    var defaultEmail = globalThis.SYSTEM_DEFAULT_SENDER_EMAIL || 'noreply@logositsm.com.br'
+
     var fallback = {
       isDedicated: false,
       host: '',
@@ -109,9 +112,9 @@
       encryption: 'STARTTLS',
       user: '',
       password: '',
-      senderName: 'Lógos AITSM',
+      senderName: defaultBrand,
       replyTo: '',
-      senderEmail: 'noreply@logositsm.com.br',
+      senderEmail: defaultEmail,
     }
 
     try {
@@ -121,13 +124,17 @@
         fallback.host = s.smtp.host
         fallback.port = s.smtp.port || 587
         fallback.user = s.smtp.username || ''
-        fallback.senderEmail = s.smtp.username || 'noreply@logositsm.com.br'
+        fallback.senderEmail = s.smtp.username || defaultEmail
       }
       if (s && s.meta && s.meta.senderAddress) {
         fallback.senderEmail = s.meta.senderAddress
       }
       if (s && s.meta && s.meta.senderName) {
-        fallback.senderName = s.meta.senderName
+        var metaName = s.meta.senderName || ''
+        if (typeof globalThis.sanitizeSystemBrand === 'function') {
+          metaName = globalThis.sanitizeSystemBrand(metaName)
+        }
+        fallback.senderName = metaName || defaultBrand
       }
     } catch (_) {}
 
@@ -171,8 +178,10 @@
     var message = createMailMessageInstance()
 
     // Remetente
-    var senderEmail = mailerConfig.senderEmail || 'noreply@logositsm.com.br'
-    var senderName = mailerConfig.senderName || 'Atendimento HelpDesk'
+    var defaultBrand = globalThis.SYSTEM_BRAND_NAME || 'Lógos AITSM'
+    var defaultEmail = globalThis.SYSTEM_DEFAULT_SENDER_EMAIL || 'noreply@logositsm.com.br'
+    var senderEmail = mailerConfig.senderEmail || defaultEmail
+    var senderName = mailerConfig.senderName || defaultBrand
 
     if (opts.from && typeof opts.from === 'object') {
       senderEmail = opts.from.address || senderEmail
@@ -185,6 +194,10 @@
     if (mailerConfig.isDedicated && mailerConfig.user) {
       senderEmail = mailerConfig.user
       senderName = mailerConfig.senderName || senderName
+    }
+
+    if (typeof globalThis.sanitizeSystemBrand === 'function') {
+      senderName = globalThis.sanitizeSystemBrand(senderName)
     }
 
     message.from = { address: senderEmail, name: senderName }

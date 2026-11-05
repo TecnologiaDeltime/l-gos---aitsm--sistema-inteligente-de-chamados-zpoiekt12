@@ -40,7 +40,8 @@ export function GlobalNotifications() {
     if (!user) return
     if (e.record.user !== user.id) return
     if (e.record.type !== 'Atribuição') return
-    const message = e.record.message || ''
+    const rawMessage = e.record.message || ''
+    const message = rawMessage.replace(/AITILSM/gi, 'AITSM')
     if (!message.includes('delegado')) return
     if (knownNotifIds.current.has(e.record.id)) return
     knownNotifIds.current.add(e.record.id)

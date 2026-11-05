@@ -302,11 +302,12 @@ routerAdd(
             'h)'
 
           var message = new MailerMessage()
-          message.from = { address: 'noreply@logositsm.com.br', name: 'Lógos AITSM' }
-          message.to = [{ address: dest.email }]
+          var brand = globalThis.SYSTEM_BRAND_NAME || 'Lógos AITSM'
+          var brandEmail = globalThis.SYSTEM_DEFAULT_SENDER_EMAIL || 'noreply@logositsm.com.br'
+          message.from = { address: brandEmail, name: brand }
+          message.to = [{ address: recipients[k].email }]
           message.subject = subject
           message.text = bodyText
-
           if (typeof globalThis.itsmRenderBaseEmailTemplate === 'function') {
             var esc =
               globalThis.itsmEscapeHtml ||
@@ -357,7 +358,7 @@ routerAdd(
               preheader: 'Avaliação solicitada para Mudança #' + changeNumber,
               contentHtml: contentHtml,
               actionHtml: actionHtml,
-              footerNote: 'Notificação enviada pelo fluxo de Mudanças do Lógos AITSM.',
+              footerNote: 'Notificação enviada pelo fluxo de Mudanças do ' + brand + '.',
             })
           }
 

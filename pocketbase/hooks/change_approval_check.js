@@ -261,7 +261,9 @@ onRecordAfterCreateSuccess((e) => {
             : '')
 
         var message = new MailerMessage()
-        message.from = { address: 'noreply@logositsm.com.br', name: 'Lógos AITSM' }
+        var brand = globalThis.SYSTEM_BRAND_NAME || 'Lógos AITSM'
+        var brandEmail = globalThis.SYSTEM_DEFAULT_SENDER_EMAIL || 'noreply@logositsm.com.br'
+        message.from = { address: brandEmail, name: brand }
         message.to = [{ address: dest.email }]
         message.subject = subject
         message.text = bodyText
@@ -317,7 +319,7 @@ onRecordAfterCreateSuccess((e) => {
             contentHtml: contentHtml,
             actionHtml: actionHtml,
             footerNote:
-              'Notificação enviada aos membros do comitê ' + committeeType + ' no Lógos AITSM.',
+              'Notificação enviada aos membros do comitê ' + committeeType + ' no ' + brand + '.',
           })
         }
 

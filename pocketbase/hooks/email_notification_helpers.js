@@ -197,21 +197,28 @@
     var theme = resolveThemePalette(opts)
 
     var preheader = escapeHtml(opts.preheader || '')
+    var brandName = globalThis.SYSTEM_BRAND_NAME || 'Lógos AITSM'
     var badgeText = escapeHtml(
       opts.badgeText ||
         (theme.type === 'critical'
           ? 'Alerta Crítico'
           : theme.type === 'warning'
             ? 'Atenção'
-            : 'Lógos AITSM'),
+            : brandName),
     )
     var title = escapeHtml(opts.title || 'Notificação do Sistema')
     var subtitle = escapeHtml(opts.subtitle || '')
     var contentHtml = opts.contentHtml || ''
     var actionHtml = opts.actionHtml || ''
-    var footerNote = escapeHtml(
-      opts.footerNote || 'Esta é uma notificação automática gerada pelo sistema Lógos AITSM.',
-    )
+    var defaultFooter =
+      'Esta é uma notificação automática gerada pelo sistema ' +
+      (globalThis.SYSTEM_BRAND_NAME || 'Lógos AITSM') +
+      '.'
+    var rawFooter = opts.footerNote || defaultFooter
+    if (typeof globalThis.sanitizeSystemBrand === 'function') {
+      rawFooter = globalThis.sanitizeSystemBrand(rawFooter)
+    }
+    var footerNote = escapeHtml(rawFooter)
 
     var logoUrl = opts.logoUrl || getSystemLogoUrl()
 

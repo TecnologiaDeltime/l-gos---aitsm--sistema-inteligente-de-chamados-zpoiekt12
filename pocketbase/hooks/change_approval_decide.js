@@ -356,11 +356,12 @@ routerAdd(
           if (!recipients[ei].email) continue
           try {
             var message = new MailerMessage()
-            message.from = { address: 'noreply@logositsm.com.br', name: 'Lógos AITSM' }
-            message.to = [{ address: recipients[ei].email }]
+            var brand = globalThis.SYSTEM_BRAND_NAME || 'Lógos AITSM'
+            var brandEmail = globalThis.SYSTEM_DEFAULT_SENDER_EMAIL || 'noreply@logositsm.com.br'
+            message.from = { address: brandEmail, name: brand }
+            message.to = [{ address: recipients[k].email }]
             message.subject = subject
             message.text = bodyText
-
             if (typeof globalThis.itsmRenderBaseEmailTemplate === 'function') {
               var esc =
                 globalThis.itsmEscapeHtml ||
@@ -423,7 +424,7 @@ routerAdd(
                 preheader: 'Resultado da deliberação: Mudança #' + changeNumber + ' ' + resultText,
                 contentHtml: contentHtml,
                 actionHtml: actionHtml,
-                footerNote: 'Deliberação oficial do Comitê de Mudanças Lógos AITSM.',
+                footerNote: 'Deliberação oficial do Comitê de Mudanças ' + brand + '.',
               })
             }
 
