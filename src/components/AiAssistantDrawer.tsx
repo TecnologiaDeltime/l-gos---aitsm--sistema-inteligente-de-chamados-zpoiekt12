@@ -3,6 +3,7 @@ import { Bot, Send, X, Sparkles } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import pb from '@/lib/pocketbase/client'
+import { MarkdownLite } from '@/lib/markdown-lite'
 
 export function AiAssistantDrawer() {
   const [open, setOpen] = useState(false)
@@ -78,7 +79,11 @@ export function AiAssistantDrawer() {
                       : 'bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-200'
                   }`}
                 >
-                  {m.text}
+                  {m.role === 'assistant' ? (
+                    <MarkdownLite text={m.text} />
+                  ) : (
+                    <span className="whitespace-pre-wrap">{m.text}</span>
+                  )}
                 </div>
               </div>
             ))}
