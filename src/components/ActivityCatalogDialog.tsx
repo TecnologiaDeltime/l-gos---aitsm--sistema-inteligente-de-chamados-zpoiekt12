@@ -101,24 +101,25 @@ export function ActivityCatalogDialog({
     // Banco persiste minutos (sla_response_minutes / sla_solution_minutes)
     const resp = respSeconds !== null ? Math.round(respSeconds / 60) : undefined
     const sol = solSeconds !== null ? Math.round(solSeconds / 60) : undefined
-    if (slaResponse && respSeconds === null) {
-      setSlaError('SLA Resposta inválida. Use o formato 00:00:00.')
-      return
-    }
-    if (slaSolution && solSeconds === null) {
-      setSlaError('SLA Solução inválida. Use o formato 00:00:00.')
-      return
-    }
-    const slaValidationError =
-      validateHHMMSS(slaResponse, isSub) || validateHHMMSS(slaSolution, isSub)
-    if (slaValidationError) {
-      setSlaError(slaValidationError)
-      toast({ title: slaValidationError, variant: 'destructive' })
-      return
-    }
-    setSlaError('')
 
     if (isSub) {
+      if (slaResponse && respSeconds === null) {
+        setSlaError('SLA Resposta inválida. Use o formato 00:00:00.')
+        return
+      }
+      if (slaSolution && solSeconds === null) {
+        setSlaError('SLA Solução inválida. Use o formato 00:00:00.')
+        return
+      }
+      const slaValidationError =
+        validateHHMMSS(slaResponse, true) || validateHHMMSS(slaSolution, true)
+      if (slaValidationError) {
+        setSlaError(slaValidationError)
+        toast({ title: slaValidationError, variant: 'destructive' })
+        return
+      }
+      setSlaError('')
+
       if (!impact || !urgency) {
         toast({
           title: 'Impacto e urgência são obrigatórios para subatividades',
@@ -140,6 +141,8 @@ export function ActivityCatalogDialog({
         })
         return
       }
+    } else {
+      setSlaError('')
     }
     setSaving(true)
     try {
@@ -148,10 +151,10 @@ export function ActivityCatalogDialog({
         description,
         parent: parent || undefined,
         active,
-        type: type || 'Incidente',
         queue: queueId || undefined,
         ...(isSub
           ? {
+              type: type || 'Incidente',
               impact,
               urgency,
               priority: computedPriority,
@@ -159,9 +162,13 @@ export function ActivityCatalogDialog({
               sla_solution_minutes: sol,
             }
           : {
-              // Permite configurar SLA padrão também na categoria principal se desejado
-              sla_response_minutes: resp,
-              sla_solution_minutes: sol,
+              // Atividade Principal: dispensa tipo, impacto, urgência e SLAs
+              type: undefined,
+              impact: undefined,
+              urgency: undefined,
+              priority: undefined,
+              sla_response_minutes: undefined,
+              sla_solution_minutes: undefined,
             }),
       }
       if (editingCategory) {
@@ -204,23 +211,24 @@ export function ActivityCatalogDialog({
             />
           </div>
           <div className="space-y-1">
-            <Label className="text-xs">Tipo do Chamado (Classificação) *</Label>
-            <Select value={type} onValueChange={setType}>
+            <Label className="text-xs">Atividade Principal Agrupadora</Label>
+            <Select value={parent} onValueChange={setParent}>
               <SelectTrigger>
-                <SelectValue placeholder="Selecione o tipo do chamado" />
+                <SelectValue placeholder="Nenhuma (esta é uma Atividade Principal)" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="Incidente">Incidente (Falha / Indisponibilidade)</SelectItem>
-                <SelectItem value="Requisição de Serviço">
-                  Requisição de Serviço (Solicitação / Pedido)
-                </SelectItem>
-                <SelectItem value="Dúvida">Dúvida / Esclarecimento</SelectItem>
-                <SelectItem value="Visita Técnica">Visita Técnica</SelectItem>
+                <SelectItem value="">Nenhuma (esta é uma Atividade Principal)</SelectItem>{' '}
+                {mainCategories.map((c) => (
+                  <SelectItem key={c.id} value={c.id}>
+                    {c.name}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
             <p className="text-[11px] text-muted-foreground">
-              Define automaticamente se o chamado é Incidente, Requisição ou Dúvida ao selecionar
-              esta atividade.
+              {isSub
+                ? 'Subatividade vinculada à atividade principal selecionada. Exige tipo, impacto, urgência e SLAs.'
+                : 'Atividade Principal agrupadora. Dispensa Tipo de Chamado, Impacto, Urgência e SLAs (definidos nas subatividades).'}
             </p>
           </div>
 
@@ -251,22 +259,29 @@ export function ActivityCatalogDialog({
             </p>
           </div>
 
-          <div className="space-y-1">
-            <Label className="text-xs">Atividade Principal Agrupadora</Label>
-            <Select value={parent} onValueChange={setParent}>
-              <SelectTrigger>
-                <SelectValue placeholder="Nenhuma (atividade principal)" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="">Nenhuma (atividade principal)</SelectItem>{' '}
-                {mainCategories.map((c) => (
-                  <SelectItem key={c.id} value={c.id}>
-                    {c.name}
+          {isSub && (
+            <div className="space-y-1">
+              <Label className="text-xs">Tipo do Chamado (Classificação) *</Label>
+              <Select value={type} onValueChange={setType}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione o tipo do chamado" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Incidente">Incidente (Falha / Indisponibilidade)</SelectItem>
+                  <SelectItem value="Requisição de Serviço">
+                    Requisição de Serviço (Solicitação / Pedido)
                   </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+                  <SelectItem value="Dúvida">Dúvida / Esclarecimento</SelectItem>
+                  <SelectItem value="Visita Técnica">Visita Técnica</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-[11px] text-muted-foreground">
+                Define automaticamente se o chamado é Incidente, Requisição ou Dúvida ao selecionar
+                esta atividade.
+              </p>
+            </div>
+          )}
+
           {isSub ? (
             <>
               <div className="grid grid-cols-2 gap-3">
@@ -351,42 +366,7 @@ export function ActivityCatalogDialog({
                 {slaError && <p className="text-[11px] text-red-500">{slaError}</p>}
               </div>
             </>
-          ) : (
-            <div className="rounded-lg border border-slate-200 dark:border-slate-800 p-3 space-y-2 bg-slate-50/50 dark:bg-slate-900/50">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-slate-700 dark:text-slate-300 block">
-                  SLA Padrão da Atividade Principal (opcional)
-                </span>
-                <span className="text-[10px] uppercase font-bold text-slate-500 bg-slate-200 dark:bg-slate-800 px-1.5 py-0.5 rounded">
-                  1º na Precedência
-                </span>
-              </div>
-              <p className="text-[11px] text-slate-500">
-                Pode ser herdado por atividades filhas que não definirem SLA específico. Tem
-                precedência sobre o cliente.
-              </p>
-              <div className="grid grid-cols-2 gap-3 pt-1">
-                <div className="space-y-1">
-                  <Label className="text-xs">SLA Resposta</Label>
-                  <DurationInput
-                    value={slaResponse}
-                    onChange={setSlaResponse}
-                    placeholder="00:30:00"
-                    className="h-9 text-sm"
-                  />
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-xs">SLA Solução</Label>
-                  <DurationInput
-                    value={slaSolution}
-                    onChange={setSlaSolution}
-                    placeholder="04:00:00"
-                    className="h-9 text-sm"
-                  />
-                </div>
-              </div>
-            </div>
-          )}
+          ) : null}
           <div className="flex items-center gap-2">
             <Checkbox checked={active} onCheckedChange={(v) => setActive(!!v)} id="active-check" />
             <Label htmlFor="active-check" className="text-xs cursor-pointer">

@@ -7,6 +7,7 @@ import {
   ClipboardList,
   FileText,
   Loader2,
+  Paperclip,
   Tag,
   User,
 } from 'lucide-react'
@@ -124,6 +125,7 @@ export default function TicketCreate() {
   const [type, setType] = useState('Incidente')
   const [mainCategory, setMainCategory] = useState('')
   const [subActivity, setSubActivity] = useState('')
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([])
   const [autoImpact, setAutoImpact] = useState('')
   const [autoUrgency, setAutoUrgency] = useState('')
   const [autoPriority, setAutoPriority] = useState('')
@@ -143,19 +145,22 @@ export default function TicketCreate() {
   const [currentStep, setCurrentStep] = useState(0)
   const [submitting, setSubmitting] = useState(false)
 
-  const parentCategoryMap = useMemo(() => {
-    const map = new Map<string, string>()
-    categories.forEach((c) => {
-      if (!c.parent) map.set(c.id, c.name)
-    })
-    return map
+  const parentCategories = useMemo(() => {
+    return categories.filter((c) => !c.parent && c.active !== false)
   }, [categories])
 
-  const availableActivities = useMemo(() => {
-    const subs = categories.filter((c) => c.parent && c.active !== false)
-    if (subs.length > 0) return subs
-    return categories.filter((c) => c.active !== false)
-  }, [categories])
+  const subcategoriesOfMain = useMemo(() => {
+    if (!mainCategory) return []
+    return categories.filter((c) => c.parent === mainCategory && c.active !== false)
+  }, [categories, mainCategory])
+
+  const handleMainCategoryChange = (parentId: string) => {
+    setMainCategory(parentId)
+    setSubActivity('')
+    setAutoImpact('')
+    setAutoUrgency('')
+    setAutoPriority('')
+  }
 
   /**
    * Filas/Equipes de atendimento ativas cadastradas em Gerenciamento de Filas.
@@ -344,10 +349,8 @@ export default function TicketCreate() {
     setSubActivity(id)
     const sub = categories.find((c) => c.id === id)
     if (sub) {
-      if (sub.parent) {
+      if (sub.parent && sub.parent !== mainCategory) {
         setMainCategory(sub.parent)
-      } else {
-        setMainCategory(sub.id)
       }
       // O tipo do chamado é derivado da atividade cadastrada no catálogo
       if (sub.type) {
@@ -364,7 +367,6 @@ export default function TicketCreate() {
         setQueueId(designatedQueue)
       }
     } else {
-      setMainCategory('')
       setAutoImpact('')
       setAutoUrgency('')
       setAutoPriority('')
@@ -379,8 +381,12 @@ export default function TicketCreate() {
       }
     }
     if (step === 1) {
+      if (!mainCategory) {
+        toast({ title: 'Selecione a atividade principal', variant: 'destructive' })
+        return false
+      }
       if (!subActivity) {
-        toast({ title: 'Selecione uma atividade do catálogo', variant: 'destructive' })
+        toast({ title: 'Selecione uma subatividade do catálogo', variant: 'destructive' })
         return false
       }
       if (!queueId) {
@@ -410,7 +416,7 @@ export default function TicketCreate() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!validateStep(0) || !validateStep(2)) return
+    if (!validateStep(0) || !validateStep(1) || !validateStep(2)) return
 
     setSubmitting(true)
     try {
@@ -444,6 +450,22 @@ export default function TicketCreate() {
         sla_response_deadline: sla.sla_response_deadline,
         sla_solution_deadline: sla.sla_solution_deadline,
       } as any)
+
+      if (selectedFiles.length > 0) {
+        const { uploadAttachment } = await import('@/services/attachments')
+        for (const file of selectedFiles) {
+          try {
+            await uploadAttachment({
+              ticketId: created.id,
+              file,
+              uploadedBy: user?.id,
+            })
+          } catch (uploadErr) {
+            console.error('Erro ao anexar arquivo no chamado:', uploadErr)
+          }
+        }
+      }
+
       markTicketAsSelfCreated(created.id)
       toast({ title: 'Chamado aberto com sucesso!' })
       navigate('/tickets')
@@ -593,27 +615,61 @@ export default function TicketCreate() {
                 Classificação
               </h2>
               <p className="text-sm text-slate-500 dark:text-slate-400">
-                Selecione a atividade do catálogo para definir tipo, impacto, urgência e prioridade
-                automaticamente
+                Selecione primeiro a Atividade Principal e em seguida a Subatividade para definir
+                tipo, impacto, urgência e prioridade automaticamente.
               </p>
             </div>
-            <div className="space-y-2">
-              <FieldLabel>Atividade do Catálogo *</FieldLabel>
-              <Select value={subActivity} onValueChange={handleSubActivityChange}>
-                <SelectTrigger className="rounded-lg">
-                  <SelectValue placeholder="Selecione a atividade do catálogo" />
-                </SelectTrigger>
-                <SelectContent>
-                  {availableActivities.map((c) => {
-                    const group = c.parent ? parentCategoryMap.get(c.parent) : null
-                    return (
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <FieldLabel>Atividade Principal *</FieldLabel>
+                <Select value={mainCategory} onValueChange={handleMainCategoryChange}>
+                  <SelectTrigger className="rounded-lg">
+                    <SelectValue placeholder="Selecione a atividade principal..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {parentCategories.map((c) => (
                       <SelectItem key={c.id} value={c.id}>
-                        {group ? `${group} › ${c.name}` : c.name}
+                        {c.name}
                       </SelectItem>
-                    )
-                  })}
-                </SelectContent>
-              </Select>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-[11px] text-slate-400">
+                  Agrupador principal do catálogo de serviços.
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <FieldLabel>Subatividade (Atividade Específica) *</FieldLabel>
+                <Select
+                  value={subActivity}
+                  onValueChange={handleSubActivityChange}
+                  disabled={!mainCategory || subcategoriesOfMain.length === 0}
+                >
+                  <SelectTrigger className="rounded-lg">
+                    <SelectValue
+                      placeholder={
+                        !mainCategory
+                          ? 'Selecione a atividade principal primeiro'
+                          : subcategoriesOfMain.length === 0
+                            ? 'Nenhuma subatividade cadastrada'
+                            : 'Selecione a subatividade...'
+                      }
+                    />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {subcategoriesOfMain.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>
+                        {c.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-[11px] text-slate-400">
+                  Lista somente as subatividades pertencentes à atividade principal selecionada.
+                </p>
+              </div>
             </div>
             {subActivity && (
               <div className="grid gap-4 sm:grid-cols-4 rounded-lg bg-slate-50 p-4 dark:bg-slate-800/50">
@@ -811,6 +867,71 @@ export default function TicketCreate() {
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
               />
+            </div>
+
+            {/* Campo de anexo abaixo da descrição detalhada */}
+            <div className="space-y-2 rounded-lg border border-dashed p-4 bg-slate-50/50 dark:bg-slate-800/30">
+              <div className="flex items-center justify-between">
+                <FieldLabel>Anexos (opcional)</FieldLabel>
+                <span className="text-[11px] text-muted-foreground">
+                  Prints, documentos ou relatórios
+                </span>
+              </div>
+              <input
+                type="file"
+                id="ticket-create-files"
+                multiple
+                className="hidden"
+                onChange={(e) => {
+                  if (e.target.files && e.target.files.length > 0) {
+                    const newFiles = Array.from(e.target.files)
+                    setSelectedFiles((prev) => [...prev, ...newFiles])
+                  }
+                }}
+              />
+              <label
+                htmlFor="ticket-create-files"
+                className="flex cursor-pointer flex-col items-center justify-center gap-1.5 rounded-md border border-dashed py-3 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+              >
+                <Paperclip className="h-4 w-4 text-primary" />
+                <span className="text-xs font-medium text-slate-700 dark:text-slate-300">
+                  Clique para anexar arquivos
+                </span>
+                <span className="text-[10px] text-muted-foreground">
+                  Imagens, PDFs, logs e documentos
+                </span>
+              </label>
+
+              {selectedFiles.length > 0 && (
+                <div className="space-y-1.5 pt-2">
+                  <p className="text-[11px] font-semibold text-slate-600 dark:text-slate-400">
+                    Arquivos selecionados ({selectedFiles.length}):
+                  </p>
+                  <div className="space-y-1 max-h-36 overflow-y-auto">
+                    {selectedFiles.map((file, idx) => (
+                      <div
+                        key={`${file.name}-${idx}`}
+                        className="flex items-center justify-between text-xs bg-background px-2.5 py-1.5 rounded border"
+                      >
+                        <span className="truncate max-w-[280px]" title={file.name}>
+                          {file.name} ({(file.size / 1024).toFixed(0)} KB)
+                        </span>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 w-6 p-0 text-red-500 hover:text-red-700"
+                          onClick={() =>
+                            setSelectedFiles((prev) => prev.filter((_, i) => i !== idx))
+                          }
+                        >
+                          ✕
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
             <div className="rounded-xl bg-slate-50 p-4 dark:bg-slate-800/50">
               <p className="text-sm text-slate-600 dark:text-slate-400">

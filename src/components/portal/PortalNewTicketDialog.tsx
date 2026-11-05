@@ -78,6 +78,7 @@ export default function PortalNewTicketDialog({
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [type, setType] = useState('Incidente')
+  const [selectedMainCategory, setSelectedMainCategory] = useState<string>('none')
   const [selectedActivity, setSelectedActivity] = useState<string>('none')
   const [activities, setActivities] = useState<CategoryRecord[]>([])
   const [selectedAsset, setSelectedAsset] = useState<string>(initialAssetId || 'none')
@@ -323,10 +324,27 @@ export default function PortalNewTicketDialog({
     }
   }
 
+  const parentActivities = useMemo(() => {
+    return activities.filter((a) => !a.parent && a.active !== false)
+  }, [activities])
+
+  const subActivitiesOfMain = useMemo(() => {
+    if (!selectedMainCategory || selectedMainCategory === 'none') return []
+    return activities.filter((a) => a.parent === selectedMainCategory && a.active !== false)
+  }, [activities, selectedMainCategory])
+
+  const handleSelectMainCategory = (mainId: string) => {
+    setSelectedMainCategory(mainId)
+    setSelectedActivity('none')
+  }
+
   const handleSelectActivity = (activityId: string) => {
     setSelectedActivity(activityId)
     if (activityId && activityId !== 'none') {
       const act = activities.find((a) => a.id === activityId)
+      if (act?.parent && act.parent !== selectedMainCategory) {
+        setSelectedMainCategory(act.parent)
+      }
       if (act?.type) {
         setType(act.type)
       }
@@ -433,6 +451,7 @@ export default function PortalNewTicketDialog({
       setExtraEquipment(null)
       setSelectedSector('none')
       setPreferredContactId('')
+      setSelectedMainCategory('none')
       setSelectedActivity('none')
       setQueueId('')
       setSelectedFile(null)
@@ -591,22 +610,58 @@ export default function PortalNewTicketDialog({
             <div className="space-y-1.5">
               <label className="text-xs font-semibold text-foreground flex items-center gap-1.5">
                 <Tag className="h-3.5 w-3.5 text-amber-500" />
-                Tipo da solicitação (Atividade do Catálogo)
+                Atividade Principal *
               </label>
-              <Select value={selectedActivity} onValueChange={handleSelectActivity}>
+              <Select value={selectedMainCategory} onValueChange={handleSelectMainCategory}>
                 <SelectTrigger className="text-xs h-9">
-                  <SelectValue placeholder="Selecione a atividade (opcional)" />
+                  <SelectValue placeholder="Selecione a atividade principal" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="none">Geral / Selecionar depois pelo atendente</SelectItem>
-                  {activities.map((act) => (
+                  <SelectItem value="none">Selecione uma atividade principal...</SelectItem>
+                  {parentActivities.map((act) => (
                     <SelectItem key={act.id} value={act.id}>
-                      {act.name} {act.type ? `(${act.type})` : ''}
+                      {act.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
+          </div>
+
+          {/* Subatividade vinculada à Atividade Principal */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+              <Tag className="h-3.5 w-3.5 text-amber-500" />
+              Subatividade do Catálogo *
+            </label>
+            <Select
+              value={selectedActivity}
+              onValueChange={handleSelectActivity}
+              disabled={selectedMainCategory === 'none' || subActivitiesOfMain.length === 0}
+            >
+              <SelectTrigger className="text-xs h-9">
+                <SelectValue
+                  placeholder={
+                    selectedMainCategory === 'none'
+                      ? 'Selecione a atividade principal primeiro'
+                      : subActivitiesOfMain.length === 0
+                        ? 'Nenhuma subatividade cadastrada nesta atividade principal'
+                        : 'Selecione a subatividade...'
+                  }
+                />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Selecione uma subatividade...</SelectItem>
+                {subActivitiesOfMain.map((act) => (
+                  <SelectItem key={act.id} value={act.id}>
+                    {act.name} {act.type ? `(${act.type})` : ''}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-[11px] text-muted-foreground">
+              Lista somente as subatividades pertencentes à atividade principal selecionada.
+            </p>
           </div>
 
           {/* Linha 2.1: Equipe Responsável (Obrigatória, pré-selecionada pela atividade) */}
