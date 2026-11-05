@@ -117,17 +117,31 @@ onRecordCreate((e) => {
 }, 'tickets')
 
 // 2. Cron agendado reavaliando chamados sem operador
-cronAdd('ticket_auto_assign_cron', '*/5 * * * *', () => {
+// Executado a cada minuto (* * * * *), avaliando o intervalo configurável (auto_assign_interval_minutes, default: 5 min)
+cronAdd('ticket_auto_assign_cron', '* * * * *', () => {
   try {
     var isEnabled = true
+    var intervalMinutes = 5
     try {
       var settingsRec = $app.findFirstRecordByFilter('system_settings', 'key = "global"', '', 0, 0)
-      if (settingsRec && settingsRec.getBool('auto_assign_enabled') === false) {
-        isEnabled = false
+      if (settingsRec) {
+        if (settingsRec.getBool('auto_assign_enabled') === false) {
+          isEnabled = false
+        }
+        var customInterval = settingsRec.getInt('auto_assign_interval_minutes')
+        if (customInterval && customInterval >= 1) {
+          intervalMinutes = customInterval
+        }
       }
     } catch (_) {}
 
     if (!isEnabled) return
+
+    // Throttle baseado no intervalo em minutos
+    var currentMinute = new Date().getMinutes()
+    if (intervalMinutes > 1 && currentMinute % intervalMinutes !== 0) {
+      return
+    }
 
     var unassignedTickets = $app.findRecordsByFilter(
       'tickets',

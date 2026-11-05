@@ -24,7 +24,8 @@ import { DesignSettingsTab } from '@/components/settings/DesignSettingsTab'
 import ClientPortalSettingsTab from '@/components/settings/ClientPortalSettingsTab'
 import { AiTicketSettingsTab } from '@/components/settings/AiTicketSettingsTab'
 import { ClientConsumptionAgentTab } from '@/components/settings/ClientConsumptionAgentTab'
-import { ShieldCheck, Globe, Shield, Bot, BrainCircuit } from 'lucide-react'
+import { AutoAssignSettingsTab } from '@/components/settings/AutoAssignSettingsTab'
+import { ShieldCheck, Globe, Shield, Bot, BrainCircuit, Users } from 'lucide-react'
 import {
   getVoiceAlertsEnabled,
   setVoiceAlertsEnabled,
@@ -74,7 +75,9 @@ export default function SettingsPage() {
                   ? 'security'
                   : searchParams.get('tab') === 'consumption_agent'
                     ? 'consumption_agent'
-                    : 'general'
+                    : searchParams.get('tab') === 'auto_assign'
+                      ? 'auto_assign'
+                      : 'general'
   const [mainTab, setMainTab] = useState<
     | 'general'
     | 'portal'
@@ -86,6 +89,7 @@ export default function SettingsPage() {
     | 'security'
     | 'profiles'
     | 'consumption_agent'
+    | 'auto_assign'
   >(initialTab as any)
 
   const handleTabChange = (
@@ -99,7 +103,8 @@ export default function SettingsPage() {
       | 'vault'
       | 'security'
       | 'profiles'
-      | 'consumption_agent',
+      | 'consumption_agent'
+      | 'auto_assign',
   ) => {
     setMainTab(tab)
     setSearchParams(
@@ -121,7 +126,9 @@ export default function SettingsPage() {
                       ? { tab: 'profiles' }
                       : tab === 'consumption_agent'
                         ? { tab: 'consumption_agent' }
-                        : {},
+                        : tab === 'auto_assign'
+                          ? { tab: 'auto_assign' }
+                          : {},
     )
   }
 
@@ -146,6 +153,8 @@ export default function SettingsPage() {
       setMainTab('profiles')
     } else if (tabFromUrl === 'consumption_agent' && mainTab !== 'consumption_agent') {
       setMainTab('consumption_agent')
+    } else if (tabFromUrl === 'auto_assign' && mainTab !== 'auto_assign') {
+      setMainTab('auto_assign')
     }
   }, [searchParams])
 
@@ -436,6 +445,23 @@ export default function SettingsPage() {
             </Button>
           )}
 
+          {permissions.canAccessItem('settings', 'settings_auto_assign') && (
+            <Button
+              type="button"
+              size="sm"
+              variant={mainTab === 'auto_assign' ? 'default' : 'ghost'}
+              onClick={() => handleTabChange('auto_assign')}
+              className={`h-8 text-xs font-semibold rounded-lg transition-all ${
+                mainTab === 'auto_assign'
+                  ? 'bg-amber-500/20 text-amber-500 border border-amber-500/30 shadow-xs shadow-amber-500/10'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              <Bot className="h-3.5 w-3.5 mr-1.5 text-amber-500" />
+              Distribuição Automática
+            </Button>
+          )}
+
           {permissions.canAccessItem('settings', 'settings_client_notif') && (
             <Button
               type="button"
@@ -541,6 +567,15 @@ export default function SettingsPage() {
           <ClientConsumptionAgentTab
             canConfigure={permissions.canConfigure('settings_consumption_agent')}
             canEdit={permissions.canEdit('settings_consumption_agent')}
+          />
+        )}
+
+      {/* SEÇÃO DISTRIBUIÇÃO AUTOMÁTICA */}
+      {mainTab === 'auto_assign' &&
+        permissions.canAccessItem('settings', 'settings_auto_assign') && (
+          <AutoAssignSettingsTab
+            canConfigure={permissions.canConfigure('settings_auto_assign')}
+            canEdit={permissions.canEdit('settings_auto_assign')}
           />
         )}
 

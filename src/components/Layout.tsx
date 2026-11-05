@@ -54,6 +54,7 @@ import {
   Sparkles,
   PanelLeftClose,
   PanelLeftOpen,
+  Bot,
 } from 'lucide-react'
 import { useAuth } from '@/hooks/use-auth'
 import { useTheme } from '@/hooks/use-theme'
@@ -584,6 +585,12 @@ export default function Layout() {
       path: '/settings?tab=portal',
       icon: Settings,
       show: permissions.canAccessItem('settings', 'settings_portal'),
+    },
+    {
+      label: 'Distribuição Automática',
+      path: '/settings?tab=auto_assign',
+      icon: Bot,
+      show: permissions.canAccessItem('settings', 'settings_auto_assign'),
     },
     {
       label: 'Notificações de Clientes',

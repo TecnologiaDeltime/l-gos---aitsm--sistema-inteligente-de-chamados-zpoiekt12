@@ -473,6 +473,13 @@ const FEATURE_CATEGORIES: FeatureCategory[] = [
           'Unificação de todos os tempos exibidos (SLA de resposta/solução das atividades do catálogo, prazos de SLA nos chamados, extrato de franquia de horas do cliente, dashboard de consumo de contratos, distribuição de horas por acordo no contrato, relatório mensal, horas de acompanhamento/trabalho e Agente de Consumo) no formato horas:minutos:segundos (00:00:00), com helper central de formatação/parse (src/lib/duration.ts) e máscara de entrada HH:MM:SS no Catálogo de Atividades. Dados continuam persistidos em minutos/segundos/horas conforme o modelo original — a mudança é de exibição e entrada.',
         tag: 'Padrão Visual de Tempo',
       },
+      {
+        id: 'auto-assign-agent',
+        title: 'Agente de Distribuição Automática de Chamados',
+        description:
+          'Distribuição inteligente de novos chamados abertos sem operador atribuído para a equipe da fila, respeitando a ordem: (1) Operador disponível na fila, (2) Menor carga ativa de chamados (mais ocioso), (3) Responsável/Líder da equipe da fila como fallback. Acompanha gatilho síncrono no momento da abertura, cron periódico de reavaliação com intervalo em minutos configurável em Configurações > Distribuição Automática, botão para execução manual imediata e controle por perfil com 3 níveis (Nenhum/Leitura/Total) via permissão settings_auto_assign.',
+        tag: 'Agente Inteligente ITSM',
+      },
     ],
   },
   {

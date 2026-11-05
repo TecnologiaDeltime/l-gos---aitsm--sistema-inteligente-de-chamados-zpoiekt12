@@ -12,7 +12,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { useToast } from '@/hooks/use-toast'
-import { pb } from '@/lib/pocketbase/client'
+import pb from '@/lib/pocketbase/client'
 import { Bot, RefreshCw, CheckCircle2, ShieldAlert, Users, Clock, Zap } from 'lucide-react'
 
 interface AutoAssignTabProps {
@@ -40,7 +40,7 @@ export function AutoAssignSettingsTab({ canConfigure, canEdit }: AutoAssignTabPr
   const loadSettings = async () => {
     setLoading(true)
     try {
-      const records = await pb.collection('system_settings').getList(1, 1, {
+      const records = await pb.collection('system_settings').getList<any>(1, 1, {
         filter: 'key = "global"',
       })
       if (records.items.length > 0) {
@@ -93,12 +93,15 @@ export function AutoAssignSettingsTab({ canConfigure, canEdit }: AutoAssignTabPr
   const handleRunImmediate = async () => {
     setRunningManual(true)
     try {
-      const res = await pb.send('/backend/v1/tickets/auto-assign/run', {
-        method: 'POST',
-      })
+      const res = await pb.send<{ assigned_count?: number; total_evaluated?: number }>(
+        '/backend/v1/tickets/auto-assign/run',
+        {
+          method: 'POST',
+        },
+      )
       toast({
         title: 'Distribuição executada!',
-        description: `${res?.assigned_count || 0} chamado(s) atribuído(s) de ${res?.total_evaluated || 0} avaliado(s).`,
+        description: `${res?.assigned_count ?? 0} chamado(s) atribuído(s) de ${res?.total_evaluated ?? 0} avaliado(s).`,
       })
     } catch (err: any) {
       toast({
