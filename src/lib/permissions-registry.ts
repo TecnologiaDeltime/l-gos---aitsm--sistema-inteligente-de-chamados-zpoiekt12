@@ -730,6 +730,13 @@ const BASE_SYSTEM_MODULES: GranularModuleDefinition[] = [
           'Monitoramento preditivo do consumo médio de horas dos clientes e notificações automáticas para qualidade e gestores',
         path: '/settings?tab=consumption_agent',
       },
+      {
+        key: 'settings_auto_assign',
+        label: 'Agente de Distribuição Automática',
+        description:
+          'Configurações e regras do agente inteligente de distribuição de chamados por disponibilidade, menor carga e líder',
+        path: '/settings?tab=auto_assign',
+      },
     ],
   },
 ]

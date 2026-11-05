@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-05T01:02:46.917Z",
+  "generatedAt": "2026-11-05T01:40:34.639Z",
   "collections": [
     {
       "name": "users",
@@ -1851,6 +1851,13 @@
           "type": "text",
           "required": false,
           "system": false
+        },
+        {
+          "name": "scheduled_ticket",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "scheduled_tickets"
         }
       ],
       "indexes": ["CREATE INDEX idx_attachments_ticket ON ticket_attachments (ticket)"]
@@ -9536,6 +9543,12 @@
           "required": false,
           "system": false,
           "autodateTriggers": ["onCreate", "onUpdate"]
+        },
+        {
+          "name": "attachments",
+          "type": "file",
+          "required": false,
+          "system": false
         }
       ],
       "indexes": [
@@ -11850,6 +11863,65 @@
       "indexes": [
         "CREATE UNIQUE INDEX idx_client_consumption_agent_company ON client_consumption_agents (company)"
       ]
+    },
+    {
+      "name": "system_settings",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != ''",
+        "view": "@request.auth.id != ''",
+        "create": "@request.auth.id != ''",
+        "update": "@request.auth.id != ''",
+        "delete": "@request.auth.id != ''"
+      },
+      "fields": [
+        {
+          "name": "key",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "auto_assign_enabled",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "auto_assign_interval_minutes",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "auto_assign_rule",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": [
+            "Disponibilidade",
+            "Menor Carga",
+            "Ociosidade",
+            "Líder da Equipe",
+            "Cascata Inteligente"
+          ]
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": ["CREATE UNIQUE INDEX idx_system_settings_key ON system_settings (key)"]
     }
   ]
 }
