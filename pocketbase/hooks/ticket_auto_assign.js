@@ -1,5 +1,5 @@
 // pocketbase/hooks/ticket_auto_assign.js
-// Agente de distribuição automática de chamados no Lógos AITILSM
+// Agente de distribuição automática de chamados no Lógos AITSM
 // Ordem de distribuição inteligente:
 // 1. Operador com availability_status 'Disponível' na fila
 // 2. Desempate por menor carga de chamados ativos (status != Encerrado/Cancelado/Resolvido)

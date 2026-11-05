@@ -290,7 +290,7 @@ export function AssetBulkImportDialog({
           campo: 'Empresa / Cliente',
           obrigatorio: 'Sim',
           descricao:
-            'Nome fantasia, razão social ou código da empresa cadastrada no Lógos AITILSM. A empresa DEVE existir previamente no sistema.',
+            'Nome fantasia, razão social ou código da empresa cadastrada no Lógos AITSM. A empresa DEVE existir previamente no sistema.',
           exemplo: companies[0]?.trade_name || 'Empresa Exemplo LTDA',
           valoresAceitos: 'Deve coincidir com um cliente cadastrado no sistema',
         },

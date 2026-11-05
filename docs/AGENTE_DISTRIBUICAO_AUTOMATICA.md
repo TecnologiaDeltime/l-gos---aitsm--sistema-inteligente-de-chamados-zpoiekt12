@@ -1,6 +1,6 @@
-# Agente de Distribuição Automática de Chamados (Lógos AITILSM)
+# Agente de Distribuição Automática de Chamados (Lógos AITSM)
 
-Este documento detalha o funcionamento, arquitetura, regras de negócio, parametrizações e controle de permissões do **Agente de Distribuição Automática de Chamados**, implantado no sistema Lógos AITILSM.
+Este documento detalha o funcionamento, arquitetura, regras de negócio, parametrizações e controle de permissões do **Agente de Distribuição Automática de Chamados**, implantado no sistema Lógos AITSM.
 
 ---
 

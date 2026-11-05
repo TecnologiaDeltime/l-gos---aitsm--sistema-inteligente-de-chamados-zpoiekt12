@@ -337,7 +337,7 @@ cronAdd('change_voting_deadline', '*/15 * * * *', function () {
       if (!notifRecipients[e].email) continue
       try {
         var message = new MailerMessage()
-        message.from = { address: 'noreply@logositsm.com.br', name: 'Lógos AITILSM' }
+        message.from = { address: 'noreply@logositsm.com.br', name: 'Lógos AITSM' }
         message.to = [{ address: notifRecipients[e].email }]
         message.subject = subject
         message.text = bodyText

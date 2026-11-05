@@ -199,7 +199,7 @@ routerAdd('ANY', '/backend/v1/webhooks/prtg', (e) => {
         '</td></tr>' +
         '    <tr><td style="padding: 6px 0; color: #64748b;">Prioridade:</td><td><span style="background-color: #dc2626; color: #ffffff; padding: 2px 8px; border-radius: 12px; font-size: 12px; font-weight: bold;">Crítica</span></td></tr>' +
         '  </table>' +
-        '  <p style="font-size: 13px; color: #475569;">Acesse o Lógos AITILSM para iniciar o atendimento imediato deste incidente.</p>' +
+        '  <p style="font-size: 13px; color: #475569;">Acesse o Lógos AITSM para iniciar o atendimento imediato deste incidente.</p>' +
         '</div>'
 
       let htmlBody = ''
@@ -234,7 +234,7 @@ routerAdd('ANY', '/backend/v1/webhooks/prtg', (e) => {
         'Data/Hora: ' +
         alertTime +
         '\n\n' +
-        'Acesse o sistema Lógos AITILSM para iniciar o atendimento imediato.'
+        'Acesse o sistema Lógos AITSM para iniciar o atendimento imediato.'
 
       for (let k = 0; k < emailRecipients.length; k++) {
         const recipient = emailRecipients[k]

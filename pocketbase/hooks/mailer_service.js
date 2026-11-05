@@ -109,7 +109,7 @@
       encryption: 'STARTTLS',
       user: '',
       password: '',
-      senderName: 'Lógos AITILSM',
+      senderName: 'Lógos AITSM',
       replyTo: '',
       senderEmail: 'noreply@logositsm.com.br',
     }

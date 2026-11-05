@@ -1,6 +1,6 @@
-# Chamados Internos e Chat de Operadores — Lógos AITILSM
+# Chamados Internos e Chat de Operadores — Lógos AITSM
 
-Este documento detalha o funcionamento e a arquitetura das funcionalidades de **Chamados Internos** e **Chat Interno de Operadores**, desenvolvidas para permitir que a própria empresa operadora do Lógos AITILSM gerencie demandas entre seus setores (incluindo a Área de Inovação) e mantenha comunicação instantânea entre operadores.
+Este documento detalha o funcionamento e a arquitetura das funcionalidades de **Chamados Internos** e **Chat Interno de Operadores**, desenvolvidas para permitir que a própria empresa operadora do Lógos AITSM gerencie demandas entre seus setores (incluindo a Área de Inovação) e mantenha comunicação instantânea entre operadores.
 
 ---
 
@@ -8,7 +8,7 @@ Este documento detalha o funcionamento e a arquitetura das funcionalidades de **
 
 ### 1.1 Contexto e Motivação
 
-A empresa que opera o Lógos AITILSM realiza demandas internas entre seus departamentos e áreas (como Inovação, TI Interna, RH, Compras, Operações e Suporte). Anteriormente, a criação de chamados exigia a vinculação de um cliente externo previamente cadastrado.
+A empresa que opera o Lógos AITSM realiza demandas internas entre seus departamentos e áreas (como Inovação, TI Interna, RH, Compras, Operações e Suporte). Anteriormente, a criação de chamados exigia a vinculação de um cliente externo previamente cadastrado.
 
 Com a nova funcionalidade de **Chamados Internos**:
 
@@ -53,7 +53,7 @@ O **Chat de Operadores** (`/chat`) é um módulo de comunicação instantânea 1
 
 ## 3. Catálogo de Permissões e Segurança
 
-Seguindo a regra permanente do projeto Lógos AITILSM, ambas as funcionalidades são 100% controladas por perfis de acesso:
+Seguindo a regra permanente do projeto Lógos AITSM, ambas as funcionalidades são 100% controladas por perfis de acesso:
 
 | Módulo    | Chave do Item     | Nome no Catálogo   | Níveis Suportados             |
 | :-------- | :---------------- | :----------------- | :---------------------------- |

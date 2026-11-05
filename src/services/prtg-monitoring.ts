@@ -57,7 +57,7 @@ export const prtgMonitoringService = {
         return {
           id: item.id,
           prtg_enabled: item.prtg_enabled ?? false,
-          prtg_webhook_token: item.prtg_webhook_token || 'prtg_live_token_aitilsm',
+          prtg_webhook_token: item.prtg_webhook_token || 'prtg_live_token_aitsm',
           prtg_default_priority: item.prtg_default_priority || 'Média',
           prtg_default_queue: item.prtg_default_queue || '',
           prtg_default_activity: item.prtg_default_activity || '',
@@ -73,7 +73,7 @@ export const prtgMonitoringService = {
 
     return {
       prtg_enabled: false,
-      prtg_webhook_token: 'prtg_live_token_aitilsm',
+      prtg_webhook_token: 'prtg_live_token_aitsm',
       prtg_default_priority: 'Média',
       prtg_default_queue: '',
       prtg_default_activity: '',

@@ -161,7 +161,7 @@
       }
     }
 
-    // Padrão: Paleta Oficial Lógos AITILSM (Grafite #17181C + Âmbar #D97706 + Amarelo/Dourado #FCD34D)
+    // Padrão: Paleta Oficial Lógos AITSM (Grafite #17181C + Âmbar #D97706 + Amarelo/Dourado #FCD34D)
     return {
       type: 'brand',
       stripeColor: '#D97706',
@@ -203,19 +203,19 @@
           ? 'Alerta Crítico'
           : theme.type === 'warning'
             ? 'Atenção'
-            : 'Lógos AITILSM'),
+            : 'Lógos AITSM'),
     )
     var title = escapeHtml(opts.title || 'Notificação do Sistema')
     var subtitle = escapeHtml(opts.subtitle || '')
     var contentHtml = opts.contentHtml || ''
     var actionHtml = opts.actionHtml || ''
     var footerNote = escapeHtml(
-      opts.footerNote || 'Esta é uma notificação automática gerada pelo sistema Lógos AITILSM.',
+      opts.footerNote || 'Esta é uma notificação automática gerada pelo sistema Lógos AITSM.',
     )
 
     var logoUrl = opts.logoUrl || getSystemLogoUrl()
 
-    // Marca no cabeçalho (Grafite #17181C com logo oficial Lógos AITILSM)
+    // Marca no cabeçalho (Grafite #17181C com logo oficial Lógos AITSM)
     var brandLogoHtml = ''
     if (logoUrl) {
       brandLogoHtml =
@@ -224,11 +224,11 @@
         '    <td style="vertical-align: middle;">\n' +
         '      <img src="' +
         escapeHtml(logoUrl) +
-        '" alt="Lógos AITILSM" height="38" style="max-height: 38px; max-width: 160px; display: block; border: 0;" />\n' +
+        '" alt="Lógos AITSM" height="38" style="max-height: 38px; max-width: 160px; display: block; border: 0;" />\n' +
         '    </td>\n' +
         '    <td style="padding-left: 14px; vertical-align: middle; border-left: 1px solid rgba(255,255,255,0.15);">\n' +
         '      <div style="font-size: 17px; font-weight: 800; color: #FFFFFF; letter-spacing: -0.4px; line-height: 20px; font-family: -apple-system, BlinkMacSystemFont, \'Segoe UI\', Roboto, Arial, sans-serif;">\n' +
-        '        Lógos <span style="color: #FCD34D; font-weight: 700;">AITILSM</span>\n' +
+        '        Lógos <span style="color: #FCD34D; font-weight: 700;">AITSM</span>\n' +
         '      </div>\n' +
         '      <div style="font-size: 10px; color: #94A3B8; font-weight: 500; text-transform: uppercase; letter-spacing: 0.8px; margin-top: 1px;">Gestão Inteligente de TI</div>\n' +
         '    </td>\n' +
@@ -247,7 +247,7 @@
         '    </td>\n' +
         '    <td style="padding-left: 12px; vertical-align: middle;">\n' +
         '      <div style="font-size: 18px; font-weight: 800; color: #FFFFFF; letter-spacing: -0.5px; line-height: 20px; font-family: -apple-system, BlinkMacSystemFont, \'Segoe UI\', Roboto, Arial, sans-serif;">\n' +
-        '        Lógos <span style="color: #FCD34D; font-weight: 700;">AITILSM</span>\n' +
+        '        Lógos <span style="color: #FCD34D; font-weight: 700;">AITSM</span>\n' +
         '      </div>\n' +
         '      <div style="font-size: 10px; color: #94A3B8; font-weight: 500; text-transform: uppercase; letter-spacing: 0.8px; margin-top: 2px;">Gestão de Serviços de TI</div>\n' +
         '    </td>\n' +
@@ -374,7 +374,7 @@
       footerNote +
       '</p>\n' +
       '              <p style="margin: 0; font-size: 11px; color: #94A3B8; font-weight: 500;">\n' +
-      '                <strong>Lógos AITILSM</strong> • Sistema de Gestão de Serviços de TI • Remetente: <span style="color: #64748B;">noreply@logositsm.com.br</span>\n' +
+      '                <strong>Lógos AITSM</strong> • Sistema de Gestão de Serviços de TI • Remetente: <span style="color: #64748B;">noreply@logositsm.com.br</span>\n' +
       '              </p>\n' +
       '            </td>\n' +
       '          </tr>\n' +
@@ -413,7 +413,7 @@
         : { host: '', port: 587, encryption: 'STARTTLS', user: '', senderEmail: '' }
 
     var senderAccount = mailerConfig.user || mailerConfig.senderEmail || 'noreply@logositsm.com.br'
-    var senderName = mailerConfig.senderName || 'Lógos AITILSM'
+    var senderName = mailerConfig.senderName || 'Lógos AITSM'
 
     var sendSuccess = false
     var sendErrorMsg = ''

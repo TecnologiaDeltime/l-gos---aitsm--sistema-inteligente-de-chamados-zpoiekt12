@@ -1,6 +1,6 @@
-# Relatórios e Extrações de Dados — Lógos AITILSM
+# Relatórios e Extrações de Dados — Lógos AITSM
 
-O Lógos AITILSM conta com uma suíte avançada de relatórios gerenciais, operacionais e de conformidade. Todas as visões fornecem dados auditáveis em tempo real, filtros dinâmicos e opções de exportação padronizadas.
+O Lógos AITSM conta com uma suíte avançada de relatórios gerenciais, operacionais e de conformidade. Todas as visões fornecem dados auditáveis em tempo real, filtros dinâmicos e opções de exportação padronizadas.
 
 ---
 

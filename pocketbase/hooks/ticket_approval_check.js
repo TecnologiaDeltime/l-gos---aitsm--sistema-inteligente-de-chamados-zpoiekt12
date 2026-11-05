@@ -1,5 +1,5 @@
 // pocketbase/hooks/ticket_approval_check.js
-// Lógos AITILSM - Verificação e Criação Automática do Fluxo de Aprovação de Chamados
+// Lógos AITSM - Verificação e Criação Automática do Fluxo de Aprovação de Chamados
 // Regra do Usuário:
 // 1. Aprovação exigida quando TIPO DE SOLICITAÇÃO configurado E PRIORIDADE ALTA coincidirem (as DUAS juntas).
 // 2. Aprovação DUPLA: Cliente no Portal E Aprovador Interno (ou conforme regras da configuração).

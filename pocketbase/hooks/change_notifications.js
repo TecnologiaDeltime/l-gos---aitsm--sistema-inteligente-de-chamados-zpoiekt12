@@ -170,7 +170,7 @@ onRecordAfterUpdateSuccess((e) => {
     if (!recipients[ei].email) continue
     try {
       var message = new MailerMessage()
-      message.from = { address: 'noreply@logositsm.com.br', name: 'Lógos AITILSM' }
+      message.from = { address: 'noreply@logositsm.com.br', name: 'Lógos AITSM' }
       message.to = [{ address: recipients[ei].email }]
       message.subject = subject
       message.text = bodyText

@@ -1109,7 +1109,7 @@ export default function Layout() {
         <Link
           to="/"
           className={`flex items-center ${isCollapsed ? 'justify-center' : 'gap-2.5'} group overflow-hidden`}
-          title="Lógos AITILSM"
+          title="Lógos AITSM"
         >
           {isCollapsed ? (
             <div className="flex items-center justify-center py-1">
@@ -1130,7 +1130,7 @@ export default function Layout() {
                 className="text-base font-bold tracking-tight truncate transition-colors group-hover:opacity-90"
                 style={{ color: customSidebarText }}
               >
-                Lógos AITILSM
+                Lógos AITSM
               </span>
             </div>
           )}
@@ -1318,7 +1318,7 @@ export default function Layout() {
               className="text-[10px] font-mono font-medium opacity-80"
               style={{ color: customSidebarText }}
             >
-              Lógos AITILSM
+              Lógos AITSM
             </p>
             <span
               className="inline-flex items-center gap-1.5 text-[10px] font-mono font-medium"

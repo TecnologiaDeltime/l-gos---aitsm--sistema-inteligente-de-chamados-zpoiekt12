@@ -1,6 +1,6 @@
 # Integração com Ferramenta de Monitoramento PRTG Network Monitor
 
-A integração nativa do **Lógos AITILSM** com o **PRTG Network Monitor** permite a abertura automática de chamados de incidentes mediante alertas de indisponibilidade (_DOWN/Error_), enriquecimento de chamados existentes via deduplicação inteligente e resolução automática quando os sensores normalizam (_UP/OK_).
+A integração nativa do **Lógos AITSM** com o **PRTG Network Monitor** permite a abertura automática de chamados de incidentes mediante alertas de indisponibilidade (_DOWN/Error_), enriquecimento de chamados existentes via deduplicação inteligente e resolução automática quando os sensores normalizam (_UP/OK_).
 
 ---
 
@@ -51,14 +51,14 @@ A integração nativa do **Lógos AITILSM** com o **PRTG Network Monitor** permi
 
 ## 2. Configurando o PRTG Network Monitor
 
-Para que o PRTG notifique o Lógos AITILSM, crie uma **Notificação HTTP** no PRTG:
+Para que o PRTG notifique o Lógos AITSM, crie uma **Notificação HTTP** no PRTG:
 
 ### Passo a passo no PRTG:
 
 1. No menu do PRTG, acesse **Setup** → **Account Settings** → **Notification Templates** (ou Gerenciamento de Notificações).
 2. Clique em **Add Notification Template** (Adicionar Notificação).
 3. Habilite a opção **Execute HTTP Action** (Executar Ação HTTP).
-4. Configure a URL com o token fornecido em **Configurações → Monitoramento (PRTG)** no Lógos AITILSM:
+4. Configure a URL com o token fornecido em **Configurações → Monitoramento (PRTG)** no Lógos AITSM:
    ```
    https://seu-dominio.goskip.app/backend/v1/webhooks/prtg?token=SEU_TOKEN_AQUI
    ```
@@ -84,7 +84,7 @@ Para que o PRTG notifique o Lógos AITILSM, crie uma **Notificação HTTP** no P
 
 ---
 
-## 3. Parâmetros e Funcionalidades no Lógos AITILSM
+## 3. Parâmetros e Funcionalidades no Lógos AITSM
 
 Acesse no menu **Configurações** → aba **Monitoramento (PRTG)** (ou rota `/settings?tab=prtg`):
 

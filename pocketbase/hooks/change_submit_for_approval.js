@@ -302,7 +302,7 @@ routerAdd(
             'h)'
 
           var message = new MailerMessage()
-          message.from = { address: 'noreply@logositsm.com.br', name: 'Lógos AITILSM' }
+          message.from = { address: 'noreply@logositsm.com.br', name: 'Lógos AITSM' }
           message.to = [{ address: dest.email }]
           message.subject = subject
           message.text = bodyText
@@ -357,7 +357,7 @@ routerAdd(
               preheader: 'Avaliação solicitada para Mudança #' + changeNumber,
               contentHtml: contentHtml,
               actionHtml: actionHtml,
-              footerNote: 'Notificação enviada pelo fluxo de Mudanças do Lógos AITILSM.',
+              footerNote: 'Notificação enviada pelo fluxo de Mudanças do Lógos AITSM.',
             })
           }
 

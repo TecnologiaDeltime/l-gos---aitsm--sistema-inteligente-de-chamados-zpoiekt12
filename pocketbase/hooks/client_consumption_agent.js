@@ -9,7 +9,7 @@
 //    - Consumo Elevado: desvio percentual > deviation_high_pct (padrão: +30%)
 //    - Consumo Muito Abaixo: desvio percentual < -deviation_low_pct (padrão: -30%)
 // 3. NOTIFICAÇÃO: notifica in-app (notifications, type="Alerta") e por e-mail institucional
-//    (template Lógos AITILSM via itsmRenderBaseEmailTemplate / mailer_service)
+// (template Lógos AITSM via itsmRenderBaseEmailTemplate / mailer_service)
 //    todos os usuários ativos cujo perfil seja "Qualidade" ou "Gestor" (inclui admin/gestor/qualidade).
 //    - Consumo Elevado → tom VERMELHO (crítico)
 //    - Consumo Muito Abaixo → tom AMARELO (atenção)
@@ -419,7 +419,7 @@
               '    </tr>' +
               '  </table>' +
               '  <p style="font-size: 13px; color: #475569; margin-top: 14px;">' +
-              '    Esta notificação foi enviada automaticamente para gestores de contrato e equipe de qualidade do sistema Lógos AITILSM.' +
+              '    Esta notificação foi enviada automaticamente para gestores de contrato e equipe de qualidade do sistema Lógos AITSM.' +
               '  </p>' +
               '</div>'
 
@@ -435,7 +435,7 @@
                   '<a href="/contracts/consumption" style="display: inline-block; padding: 10px 20px; font-size: 13px; font-weight: bold; color: #FFFFFF; background-color: ' +
                   (isHigh ? '#DC2626' : '#D97706') +
                   '; text-decoration: none; border-radius: 6px;">Acessar Painel de Consumo</a>',
-                footerNote: 'Lógos AITILSM — Agente de Inteligência de Consumo de Clientes',
+                footerNote: 'Lógos AITSM — Agente de Inteligência de Consumo de Clientes',
               })
             }
 

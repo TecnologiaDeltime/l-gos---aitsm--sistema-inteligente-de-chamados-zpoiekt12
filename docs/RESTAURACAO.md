@@ -1,6 +1,6 @@
-# Pontos de Restauração e Procedimento de Rollback — Lógos AITILSM
+# Pontos de Restauração e Procedimento de Rollback — Lógos AITSM
 
-Este documento registra oficialmente os **Pontos de Restauração (Restore Points)** do Lógos AITILSM, estabelecidos a partir de versões homologadas, entregues e com QA 100% limpo, além de descrever os procedimentos de recuperação (rollback), limitações técnicas e governança para novos pontos de restauração.
+Este documento registra oficialmente os **Pontos de Restauração (Restore Points)** do Lógos AITSM, estabelecidos a partir de versões homologadas, entregues e com QA 100% limpo, além de descrever os procedimentos de recuperação (rollback), limitações técnicas e governança para novos pontos de restauração.
 
 ---
 
@@ -90,10 +90,10 @@ Para desenvolvedores que trabalham com uma cópia exportada/clonada do repositó
 
   ```bash
   # Criar a tag no commit vigente da versão 0.0.353:
-  git tag -a restore-point-0.0.353 -m "Ponto de Restauracao Lógos AITILSM v0.0.353 (Chat, TV, Internos, PRTG, Migracao 0131)"
+  git tag -a restore-point-0.0.353 -m "Ponto de Restauracao Lógos AITSM v0.0.353 (Chat, TV, Internos, PRTG, Migracao 0131)"
 
   # Ou caso deseje apontar para o commit específico da 0.0.352:
-  git tag -a restore-point-0.0.352 <hash-do-commit-0.0.352> -m "Ponto de Restauracao Lógos AITILSM v0.0.352"
+  git tag -a restore-point-0.0.352 <hash-do-commit-0.0.352> -m "Ponto de Restauracao Lógos AITSM v0.0.352"
 
   # Verificar as tags de ponto de restauração registradas:
   git tag --list 'restore-point*'

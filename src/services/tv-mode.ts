@@ -105,7 +105,7 @@ export const DEFAULT_TV_PREFERENCES: TvModePreferences = {
   themeMode: 'dark',
 }
 
-const STORAGE_KEY = 'logos_aitilsm_tv_mode_prefs'
+const STORAGE_KEY = 'logos_aitsm_tv_mode_prefs'
 
 export function loadTvPreferences(): TvModePreferences {
   try {

@@ -1,6 +1,6 @@
-# Módulos Operacionais — Lógos AITILSM
+# Módulos Operacionais — Lógos AITSM
 
-Este documento descreve detalhadamente todos os módulos operacionais do Lógos AITILSM, seus fluxos de trabalho, regras de validação e pontos de interface do usuário.
+Este documento descreve detalhadamente todos os módulos operacionais do Lógos AITSM, seus fluxos de trabalho, regras de validação e pontos de interface do usuário.
 
 ---
 
@@ -364,7 +364,7 @@ A integração nativa com o **PRTG Network Monitor** automatiza o fluxo de respo
 
 O **Modo TV** (`/tv`) é a solução visual imersiva para televisores, telões de NOC e monitores de parede de Service Desk:
 
-- **Execução em Tela Cheia**: visualização imersiva via Fullscreen API sem barras de navegação ou menus laterais, com cabeçalho grafite `#17181C`, logo oficial **Lógos AITILSM**, relógio digital em tempo real e barra de progresso do intervalo de transição.
+- **Execução em Tela Cheia**: visualização imersiva via Fullscreen API sem barras de navegação ou menus laterais, com cabeçalho grafite `#17181C`, logo oficial **Lógos AITSM**, relógio digital em tempo real e barra de progresso do intervalo de transição.
 - **7 Dashboards Dedicados**:
   1. _Total de Chamados por Fila com Status_: agrupamento por fila e quebra por status real do chamado.
   2. _Quem está Online_: operadores conectados, perfis de acesso, filas de atendimento e status de disponibilidade.
@@ -384,7 +384,7 @@ O **Modo TV** (`/tv`) é a solução visual imersiva para televisores, telões d
 
 ### 11.1 Chamados Internos entre Setores
 
-Permite que departamentos internos da empresa que opera o Lógos AITILSM (como a Área de Inovação, RH, Compras e TI Interna) abram e recebam demandas sem a necessidade de cadastrar a própria empresa como cliente externo:
+Permite que departamentos internos da empresa que opera o Lógos AITSM (como a Área de Inovação, RH, Compras e TI Interna) abram e recebam demandas sem a necessidade de cadastrar a própria empresa como cliente externo:
 
 - **Abertura Simplificada**: seletor de tipo de chamado (Cliente vs. Interno) em `/chamados/novo`.
 - **Isenção de Faturamento**: interações e horas registradas não debitam saldo de franquia de nenhum cliente (`pocketbase/hooks/on_interaction_consume.js`).

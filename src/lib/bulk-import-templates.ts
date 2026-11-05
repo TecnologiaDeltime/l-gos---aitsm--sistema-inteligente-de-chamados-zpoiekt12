@@ -75,14 +75,14 @@ export function generateProfessionalXlsxTemplate(options: BuildXlsxTemplateOptio
   // 2. Aba de Instruções e Valores Aceitos
   // ─────────────────────────────────────────────────────────────
   const instructionsMatrix: (string | number)[][] = [
-    [`LÓGOS AITILSM - GUIA DE PREENCHIMENTO: ${instructionsTitle.toUpperCase()}`],
+    [`LÓGOS AITSM - GUIA DE PREENCHIMENTO: ${instructionsTitle.toUpperCase()}`],
     ['Orientações gerais para importação em massa sem inconsistências:'],
     ['1. Não altere o nome ou a ordem das colunas da aba de dados.'],
     [
       '2. Linhas de instrução na segunda linha (Obrigatório / Opcional) são detectadas e ignoradas automaticamente pelo importador.',
     ],
     ['3. Você pode apagar as linhas de exemplo ou substituí-las pelos seus registros reais.'],
-    ['4. Campos de Empresa, Filial e Setor são casados com cadastros existentes no Lógos AITILSM.'],
+    ['4. Campos de Empresa, Filial e Setor são casados com cadastros existentes no Lógos AITSM.'],
   ]
 
   if (extraNotes.length > 0) {

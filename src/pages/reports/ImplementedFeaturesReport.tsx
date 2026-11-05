@@ -305,7 +305,7 @@ const FEATURE_CATEGORIES: FeatureCategory[] = [
       },
       {
         id: 'portal-13',
-        title: 'Redesign Moderno do Portal com Identidade Lógos AITILSM',
+        title: 'Redesign Moderno do Portal com Identidade Lógos AITSM',
         description:
           'Modernização completa da interface do Portal do Cliente: barra superior oficial com paleta grafite/âmbar, alternador nativo de tema (Amber Alert escuro e Marrom & Branco claro), banner de boas-vindas sofisticado com cartões de acesso rápido, badges refinados, timeline interativa de histórico e interações públicas (com destaque para respostas da IA) e responsividade mobile caprichada.',
         tag: 'Design & Identidade Visual',
@@ -478,7 +478,7 @@ const FEATURE_CATEGORIES: FeatureCategory[] = [
         title: 'Agente Inteligente de Aprendizado de Consumo Médio por Cliente',
         description:
           'Agente que aprende o consumo médio mensal de horas de franquia (horas de acompanhamento) com base no histórico de N meses de cada cliente, compara com o mês corrente e notifica automaticamente operadores com perfil de Qualidade e Gestor. Consumo elevado dispara alerta em tom vermelho (crítico) e consumo muito abaixo dispara alerta em tom amarelo (atenção). Totalmente configurável por cliente em Configurações > Agente de Consumo e na edição do cliente, com tolerâncias percentuais e janela histórica customizáveis, recalculo sob demanda e proteção anti-ruído.',
-        tag: 'AITILSM & Consumo Inteligente',
+        tag: 'AITSM & Consumo Inteligente',
       },
       {
         id: 'sla-5',
@@ -951,7 +951,7 @@ export default function ImplementedFeaturesReport() {
             </span>
             <span className="flex items-center gap-1.5">
               <Building className="w-3.5 h-3.5 text-primary" />
-              <strong>Sistema:</strong> Lógos AITILSM Enterprise v1.0
+              <strong>Sistema:</strong> Lógos AITSM Enterprise v1.0
             </span>
             <span className="flex items-center gap-1.5">
               <Layers className="w-3.5 h-3.5 text-primary" />
@@ -1194,7 +1194,7 @@ export default function ImplementedFeaturesReport() {
       <div className="bg-card border border-border rounded-xl p-4 md:p-6 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-muted-foreground print:border-t-2 print:border-border print:shadow-none print:rounded-none print:p-3 print:mt-6">
         <div className="space-y-0.5 text-center sm:text-left">
           <p className="font-semibold text-foreground">
-            Lógos AITILSM — Plataforma de Gestão de Serviços de TI
+            Lógos AITSM — Plataforma de Gestão de Serviços de TI
           </p>
           <p>Documento de validação de entregas e recursos homologados.</p>
         </div>

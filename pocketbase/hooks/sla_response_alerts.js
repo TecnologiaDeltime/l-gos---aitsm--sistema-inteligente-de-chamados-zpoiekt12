@@ -332,7 +332,7 @@ cronAdd('sla_response_alerts', '* * * * *', function () {
         deadlineFormatted +
         '\n\n' +
         'Acesse o sistema ITSM para responder ao chamado imediatamente.\n\n' +
-        '-- Lógos AITILSM'
+        '-- Lógos AITSM'
 
       for (var m = 0; m < recipients.length; m++) {
         if (!recipients[m].email) continue

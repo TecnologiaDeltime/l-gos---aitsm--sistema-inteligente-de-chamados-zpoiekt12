@@ -256,9 +256,9 @@ onRecordRequestPasswordResetRequest((e) => {
       if (userEmail && typeof globalThis.sendSystemEmail === 'function') {
         globalThis.sendSystemEmail({
           to: userEmail,
-          subject: 'Recuperação de Acesso - Lógos AITILSM',
-          text: 'Recebemos uma solicitação de recuperação de senha para a sua conta no Lógos AITILSM. Se você solicitou a recuperação, contate o administrador para receber uma nova senha provisória.',
-          html: '<p>Recebemos uma solicitação de recuperação de senha para a sua conta no Lógos AITILSM.</p><p>Se você solicitou a recuperação, contate o administrador para receber uma nova senha provisória.</p>',
+          subject: 'Recuperação de Acesso - Lógos AITSM',
+          text: 'Recebemos uma solicitação de recuperação de senha para a sua conta no Lógos AITSM. Se você solicitou a recuperação, contate o administrador para receber uma nova senha provisória.',
+          html: '<p>Recebemos uma solicitação de recuperação de senha para a sua conta no Lógos AITSM.</p><p>Se você solicitou a recuperação, contate o administrador para receber uma nova senha provisória.</p>',
         })
         return
       }
@@ -600,7 +600,7 @@ routerAdd(
       $app.save(rec)
 
       var userEmail = authUser.getString('email')
-      var issuer = 'Lógos AITILSM'
+      var issuer = 'Lógos AITSM'
       var otpauthUrl =
         'otpauth://totp/' +
         encodeURIComponent(issuer) +
@@ -898,15 +898,15 @@ routerAdd('POST', '/backend/v1/auth/request-password-reset', (e) => {
       try {
         globalThis.sendSystemEmail({
           to: email,
-          subject: 'Recuperação de Acesso - Lógos AITILSM',
+          subject: 'Recuperação de Acesso - Lógos AITSM',
           text:
             'Olá ' +
             (user.getString('name') || 'usuário') +
-            ',\n\nRecebemos uma solicitação de recuperação de senha para a sua conta no Lógos AITILSM.\n' +
+            ',\n\nRecebemos uma solicitação de recuperação de senha para a sua conta no Lógos AITSM.\n' +
             'Por favor, contate o administrador de TI da sua organização para obter sua nova senha provisória de acesso.',
           html:
             '<div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; rounded: 8px;">' +
-            '<h2 style="color: #1e3a8a;">Lógos AITILSM</h2>' +
+            '<h2 style="color: #1e3a8a;">Lógos AITSM</h2>' +
             '<p>Olá <strong>' +
             (user.getString('name') || 'usuário') +
             '</strong>,</p>' +

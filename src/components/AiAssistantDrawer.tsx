@@ -12,7 +12,7 @@ export function AiAssistantDrawer() {
   const [messages, setMessages] = useState<Array<{ role: 'user' | 'assistant'; text: string }>>([
     {
       role: 'assistant',
-      text: 'Olá! Sou o Assistente Técnico Lógos AITILSM. Como posso te ajudar hoje com procedimentos de TI ou chamados?',
+      text: 'Olá! Sou o Assistente Técnico Lógos AITSM. Como posso te ajudar hoje com procedimentos de TI ou chamados?',
     },
   ])
 
@@ -57,7 +57,7 @@ export function AiAssistantDrawer() {
             <div className="flex items-center gap-2">
               <Bot className="h-5 w-5 text-primary" />
               <h3 className="font-semibold text-slate-900 dark:text-slate-100">
-                Assistente Técnico Lógos AITILSM
+                Assistente Técnico Lógos AITSM
               </h3>
             </div>
             <Button variant="ghost" size="icon" onClick={() => setOpen(false)}>

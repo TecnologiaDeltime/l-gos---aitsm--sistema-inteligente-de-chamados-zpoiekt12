@@ -54,7 +54,7 @@ export function PrtgSettingsTab({ canConfigure = true }: AutoAssignSettingsTabPr
   const [testing, setTesting] = useState(false)
   const [settings, setSettings] = useState<PrtgSettings>({
     prtg_enabled: false,
-    prtg_webhook_token: 'prtg_live_token_aitilsm',
+    prtg_webhook_token: 'prtg_live_token_aitsm',
     prtg_default_priority: 'Média',
     prtg_default_queue: '',
     prtg_default_activity: '',

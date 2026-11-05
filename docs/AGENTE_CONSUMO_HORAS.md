@@ -1,6 +1,6 @@
-# Agente Inteligente de Consumo Médio de Horas (Lógos AITILSM)
+# Agente Inteligente de Consumo Médio de Horas (Lógos AITSM)
 
-Este documento detalha o funcionamento, arquitetura, regras de negócio e parametrizações do **Agente de Consumo Médio**, implantado no sistema Lógos AITILSM.
+Este documento detalha o funcionamento, arquitetura, regras de negócio e parametrizações do **Agente de Consumo Médio**, implantado no sistema Lógos AITSM.
 
 ---
 
@@ -15,7 +15,7 @@ Aprender continuamente o comportamento de consumo de horas de franquia de cada c
 
 ## 2. Regra de Horas e Definição de Consumo
 
-Conforme a regra definitiva do Lógos AITILSM (migrações `0108` e `0109`):
+Conforme a regra definitiva do Lógos AITSM (migrações `0108` e `0109`):
 
 - **Horas de Acompanhamento** (logs e interações de chamados com origem diferente de _Cronômetro_): **debitam a franquia do cliente**.
 - **Tempo de Play/Pause (Cronômetro)**: acumula nas horas de trabalho do operador e **não debita franquia**.
@@ -72,8 +72,8 @@ O agente filtra os usuários ativos no sistema (`users` onde `active != false`) 
 ### 5.2. Canais de Notificação
 
 1. **Notificação In-App (`notifications`)**: Registrada para cada gestor/qualidade com link direto para o cliente.
-2. **E-mail com Template Lógos AITILSM**:
-   - Cabeçalho oficial Grafite `#17181C` com logo Lógos AITILSM e acento âmbar `#D97706`.
+2. **E-mail com Template Lógos AITSM**:
+   - Cabeçalho oficial Grafite `#17181C` com logo Lógos AITSM e acento âmbar `#D97706`.
    - **Consumo Elevado**: tom **VERMELHO** (`#DC2626` / `#FEF2F2`) com ícone de alerta crítico.
    - **Consumo Muito Abaixo**: tom **AMARELO** (`#EAB308` / `#FEFCE8`) com ícone de atenção.
    - Detalha: Nome do Cliente, Consumo Atual, Média Histórica Aprendida, Desvio Percentual e botão com link direto para o sistema.

@@ -411,7 +411,7 @@ export function downloadXlsxTemplate(
 <body>
   <div style="margin-bottom:12px;">
     <h2 style="color:#D97706;font-size:16px;margin:0 0 4px 0;">${escapeXml(sheetTitle)}</h2>
-    <p style="color:#6B7280;font-size:11px;margin:0;">Modelo oficial de importação Lógos AITILSM. Preencha as linhas abaixo e mantenha os cabeçalhos intactos.</p>
+    <p style="color:#6B7280;font-size:11px;margin:0;">Modelo oficial de importação Lógos AITSM. Preencha as linhas abaixo e mantenha os cabeçalhos intactos.</p>
   </div>
   <table>
     <thead><tr>${thead}</tr></thead>

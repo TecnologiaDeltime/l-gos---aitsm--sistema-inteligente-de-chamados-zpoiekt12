@@ -348,7 +348,7 @@ cronAdd('level_consumption_alerts', '*/5 * * * *', function () {
         pctRounded +
         '%\n\n' +
         'Acesse o sistema para maiores detalhes.\n\n' +
-        '-- Lógos AITILSM'
+        '-- Lógos AITSM'
 
       // ---- Notificação in-app ----
       var userIds = Object.keys(recipientIds)
@@ -381,7 +381,7 @@ cronAdd('level_consumption_alerts', '*/5 * * * *', function () {
       for (var em2 = 0; em2 < emailList.length; em2++) {
         try {
           var mailMsg = new MailerMessage()
-          mailMsg.from = { address: 'noreply@logositsm.com.br', name: 'Lógos AITILSM' }
+          mailMsg.from = { address: 'noreply@logositsm.com.br', name: 'Lógos AITSM' }
           mailMsg.to = [{ address: emailList[em2] }]
           mailMsg.subject = subject
           mailMsg.text = bodyText

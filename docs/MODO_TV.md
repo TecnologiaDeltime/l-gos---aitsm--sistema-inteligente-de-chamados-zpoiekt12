@@ -1,15 +1,15 @@
-# Modo TV · Lógos AITILSM
+# Modo TV · Lógos AITSM
 
 ## Visão Geral
 
-O **Modo TV** (`/tv`) é a tela de exibição do sistema **Lógos AITILSM** projetada para televisores, monitores de parede de NOC/Service Desk e salas de operação contínua. Ele opera em tela cheia (Fullscreen API), sem barras de navegação ou menus laterais, alternando automaticamente entre os dashboards escolhidos pela equipe.
+O **Modo TV** (`/tv`) é a tela de exibição do sistema **Lógos AITSM** projetada para televisores, monitores de parede de NOC/Service Desk e salas de operação contínua. Ele opera em tela cheia (Fullscreen API), sem barras de navegação ou menus laterais, alternando automaticamente entre os dashboards escolhidos pela equipe.
 
 ---
 
 ## Características Principais
 
 1. **Tela Cheia Imersiva**:
-   - Cabeçalho escuro grafite (`#17181C`) com logotipo oficial **Lógos AITILSM**.
+   - Cabeçalho escuro grafite (`#17181C`) com logotipo oficial **Lógos AITSM**.
    - Relógio digital em tempo real (data e hora com segundos).
    - Indicador de dashboard ativo, total selecionado e barra de progresso da transição.
    - Botões de pausa/play da rotação, alternância manual (anterior/próximo) e botão de saída.

@@ -370,7 +370,7 @@ export default function PortalPage() {
       )}
 
       {/* =========================================================================
-          CABEÇALHO OFICIAL: Grafite #17181C com letras âmbar/brancas e Lógos AITILSM
+          CABEÇALHO OFICIAL: Grafite #17181C com letras âmbar/brancas e Lógos AITSM
           ========================================================================= */}
       <header
         className={`w-full border-b border-amber-500/25 bg-[#17181C] text-amber-100 shadow-md backdrop-blur-sm ${!isAdmin ? 'sticky top-0 z-40' : ''}`}
@@ -392,7 +392,7 @@ export default function PortalPage() {
                 <div className="leading-tight hidden sm:block">
                   <span className="text-[13px] font-black tracking-tight text-white">LÓGOS</span>
                   <span className="text-[11px] font-extrabold text-[#FCD34D] ml-1 tracking-wider">
-                    AITILSM
+                    AITSM
                   </span>
                 </div>
               </div>
@@ -514,7 +514,7 @@ export default function PortalPage() {
           </div>
         )}
 
-        {/* Banner de Boas-vindas com Resumo Rápido e Identidade Lógos AITILSM */}
+        {/* Banner de Boas-vindas com Resumo Rápido e Identidade Lógos AITSM */}
         <div className="relative overflow-hidden rounded-2xl border border-amber-500/25 bg-gradient-to-br from-card via-card to-amber-500/5 p-4 sm:p-5 shadow-xs space-y-4">
           <div className="absolute top-0 right-0 w-64 h-64 bg-radial from-amber-500/10 to-transparent pointer-events-none rounded-full blur-2xl -mr-20 -mt-20" />
           <div className="relative flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
@@ -1066,7 +1066,7 @@ export default function PortalPage() {
           ========================================================================= */}
       <footer className="border-t border-border/50 py-4 text-center text-xs text-muted-foreground mt-auto bg-card/50">
         <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
-          <span>{companyName} • Portal do Cliente do Sistema Lógos AITILSM</span>
+          <span>{companyName} • Portal do Cliente do Sistema Lógos AITSM</span>
           <span className="text-[11px]">
             Logs transparentes, segurança e conformidade operacional.
           </span>

@@ -145,7 +145,7 @@ cronAdd('approval_escalation_cron', '* * * * *', function () {
       encryption: 'STARTTLS',
       user: '',
       password: '',
-      senderName: 'Lógos AITILSM',
+      senderName: 'Lógos AITSM',
       replyTo: '',
       senderEmail: 'noreply@logositsm.com.br',
     }
@@ -625,7 +625,7 @@ cronAdd('approval_escalation_cron', '* * * * *', function () {
         'Ou visualize via portal web: ' +
         webPortalUrl +
         '\n\n' +
-        '-- Lógos AITILSM'
+        '-- Lógos AITSM'
 
       try {
         if (typeof globalThis.itsmSendWithAudit === 'function') {

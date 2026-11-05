@@ -261,7 +261,7 @@ onRecordAfterCreateSuccess((e) => {
             : '')
 
         var message = new MailerMessage()
-        message.from = { address: 'noreply@logositsm.com.br', name: 'Lógos AITILSM' }
+        message.from = { address: 'noreply@logositsm.com.br', name: 'Lógos AITSM' }
         message.to = [{ address: dest.email }]
         message.subject = subject
         message.text = bodyText
@@ -317,7 +317,7 @@ onRecordAfterCreateSuccess((e) => {
             contentHtml: contentHtml,
             actionHtml: actionHtml,
             footerNote:
-              'Notificação enviada aos membros do comitê ' + committeeType + ' no Lógos AITILSM.',
+              'Notificação enviada aos membros do comitê ' + committeeType + ' no Lógos AITSM.',
           })
         }
 

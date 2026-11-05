@@ -1,6 +1,6 @@
-# Documentação Oficial: Portal do Cliente — Lógos AITILSM
+# Documentação Oficial: Portal do Cliente — Lógos AITSM
 
-Esta documentação descreve a arquitetura, convenções de acesso, segurança e regras de negócio do **Portal do Cliente** no Lógos AITILSM (React + Vite + TypeScript + Tailwind, backend PocketBase Skip Cloud).
+Esta documentação descreve a arquitetura, convenções de acesso, segurança e regras de negócio do **Portal do Cliente** no Lógos AITSM (React + Vite + TypeScript + Tailwind, backend PocketBase Skip Cloud).
 
 ---
 

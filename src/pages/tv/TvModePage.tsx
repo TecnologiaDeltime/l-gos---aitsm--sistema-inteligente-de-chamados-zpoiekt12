@@ -431,7 +431,7 @@ export function TvModePage() {
                   <Tv className="h-8 w-8" />
                 </div>
                 <div>
-                  <h3 className="text-xl font-bold text-amber-300">Modo TV Lógos AITILSM</h3>
+                  <h3 className="text-xl font-bold text-amber-300">Modo TV Lógos AITSM</h3>
                   <p className="text-xs text-slate-400">
                     Preparado para monitores de parede, salas de comando e NOC
                   </p>
