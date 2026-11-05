@@ -3,7 +3,7 @@ import pb from '@/lib/pocketbase/client'
 export interface TicketRecord {
   id: string
   number: string
-  company: string
+  company?: string
   unit?: string
   department?: string
   requester_name: string
@@ -48,6 +48,8 @@ export interface TicketRecord {
   parent_ticket_id?: string
   association_group_id?: string
   email_html?: string
+  is_internal?: boolean
+  internal_sector?: string
   created: string
   updated: string
   /** Pesquisa de satisfação do cliente (nota 1 a 5, comentário e data de resposta). */

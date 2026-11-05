@@ -121,6 +121,13 @@ export const PROFILE_LANDING_OPTIONS: ProfileLandingOption[] = [
     itemKey: 'tickets_novo',
   },
   {
+    route: '/chat',
+    label: 'Chat de Operadores',
+    description: 'Comunicação interna em tempo real entre operadores',
+    moduleKey: 'chat',
+    itemKey: 'chat_operadores',
+  },
+  {
     route: '/clients',
     label: 'Clientes & Contratos',
     description: 'Cadastro de empresas clientes e contratos',

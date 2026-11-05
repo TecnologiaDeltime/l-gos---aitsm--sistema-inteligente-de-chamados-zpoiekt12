@@ -49,6 +49,11 @@ export const getCompanyDepartments = (companyId: string) =>
     sort: 'name',
   })
 
+export const getAllDepartments = () =>
+  pb.collection('company_departments').getFullList<CompanyDepartmentRecord>({
+    sort: 'name',
+  })
+
 export interface CompanyDepartmentRecord {
   id: string
   company: string

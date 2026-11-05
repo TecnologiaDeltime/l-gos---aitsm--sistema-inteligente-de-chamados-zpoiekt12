@@ -38,13 +38,23 @@ export function KanbanCard({
         isDragging && 'opacity-40',
       )}
     >
-      <div className="flex items-center justify-between mb-1.5">
-        <Link
-          to={`/tickets/${ticket.id}`}
-          className="text-xs font-bold text-primary hover:underline"
-        >
-          {ticket.number}
-        </Link>
+      <div className="flex items-center justify-between mb-1.5 gap-1">
+        <div className="flex items-center gap-1.5 min-w-0">
+          <Link
+            to={`/tickets/${ticket.id}`}
+            className="text-xs font-bold text-primary hover:underline truncate"
+          >
+            {ticket.number}
+          </Link>
+          {ticket.is_internal && (
+            <Badge
+              variant="outline"
+              className="bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-950/60 dark:text-amber-300 dark:border-amber-800 text-[10px] px-1 py-0 h-4 font-semibold"
+            >
+              Interno
+            </Badge>
+          )}
+        </div>
         <PriorityBadge priority={ticket.priority} />
       </div>
       <p className="text-sm font-medium text-slate-800 line-clamp-2 mb-2 dark:text-slate-200">

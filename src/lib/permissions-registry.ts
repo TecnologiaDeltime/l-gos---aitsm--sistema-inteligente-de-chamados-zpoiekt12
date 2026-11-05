@@ -80,6 +80,13 @@ const BASE_SYSTEM_MODULES: GranularModuleDefinition[] = [
         path: '/chamados/novo',
       },
       {
+        key: 'tickets_interno',
+        label: 'Chamados Internos',
+        description:
+          'Abertura e gestão de chamados internos entre setores da empresa sem vínculo obrigatório com clientes externos',
+        path: '/chamados/novo',
+      },
+      {
         key: 'tickets_portal_meu_chamado',
         label: 'Atalho Meu chamado (Portal)',
         description:
@@ -143,6 +150,20 @@ const BASE_SYSTEM_MODULES: GranularModuleDefinition[] = [
         description:
           'Uso da IA para sugerir tags e palavras-chave relevantes na visualização interna do chamado',
         path: '/tickets',
+      },
+    ],
+  },
+  {
+    key: 'chat',
+    label: 'Chat Interno',
+    description: 'Comunicação em tempo real 1:1 entre operadores e equipes internas',
+    category: 'Atendimento',
+    items: [
+      {
+        key: 'chat_operadores',
+        label: 'Chat de Operadores',
+        description: 'Troca de mensagens diretas e histórico entre operadores internos',
+        path: '/chat',
       },
     ],
   },

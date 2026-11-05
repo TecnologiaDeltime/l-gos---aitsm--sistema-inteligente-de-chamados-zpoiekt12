@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-05T02:53:02.194Z",
+  "generatedAt": "2026-11-05T13:43:44.642Z",
   "collections": [
     {
       "name": "users",
@@ -1201,7 +1201,7 @@
         {
           "name": "company",
           "type": "relation",
-          "required": true,
+          "required": false,
           "system": false,
           "collectionRef": "companies"
         },
@@ -1636,6 +1636,18 @@
         },
         {
           "name": "monitoring_source",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "is_internal",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "internal_sector",
           "type": "text",
           "required": false,
           "system": false
@@ -12006,6 +12018,55 @@
         }
       ],
       "indexes": ["CREATE UNIQUE INDEX idx_system_settings_key ON system_settings (key)"]
+    },
+    {
+      "name": "operator_chat_messages",
+      "type": "base",
+      "apiRules": {
+        "list": null,
+        "view": "@request.auth.id != '' && (@request.auth.id = sender.id || @request.auth.id = recipient.id)",
+        "create": "@request.auth.id != '' && @request.auth.id = sender.id",
+        "update": "@request.auth.id != '' && (@request.auth.id = sender.id || @request.auth.id = recipient.id)",
+        "delete": "@request.auth.id != '' && @request.auth.id = sender.id"
+      },
+      "fields": [
+        {
+          "name": "sender",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "recipient",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "content",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "read",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "read_at",
+          "type": "date",
+          "required": false,
+          "system": false
+        }
+      ],
+      "indexes": [
+        "CREATE INDEX idx_chat_sender_rec ON operator_chat_messages (sender, recipient, created)",
+        "CREATE INDEX idx_chat_read ON operator_chat_messages (recipient, read)"
+      ]
     }
   ]
 }

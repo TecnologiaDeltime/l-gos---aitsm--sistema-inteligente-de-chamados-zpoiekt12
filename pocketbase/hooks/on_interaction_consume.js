@@ -18,6 +18,9 @@ onRecordAfterCreateSuccess((e) => {
 
   try {
     var ticket = $app.findRecordById('tickets', ticketId)
+    // Chamado interno NÃO consome franquia de horas de cliente
+    if (ticket.getBool('is_internal')) return e.next()
+
     var contractId = ticket.getString('contract')
     if (!contractId) return e.next()
 

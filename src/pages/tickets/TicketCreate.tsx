@@ -24,7 +24,14 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { useToast } from '@/hooks/use-toast'
 import { cn } from '@/lib/utils'
-import { getCompanies, getCompanyDepartments, type CompanyRecord } from '@/services/companies'
+import {
+  getCompanies,
+  getCompanyDepartments,
+  getAllDepartments,
+  type CompanyRecord,
+  type CompanyDepartmentRecord,
+} from '@/services/companies'
+import { usePermissions } from '@/hooks/use-permissions'
 
 import { getCategories, type CategoryRecord } from '@/services/categories'
 import { getEquipments, type EquipmentRecord } from '@/services/equipments'
@@ -110,6 +117,13 @@ export default function TicketCreate() {
 
   const [companies, setCompanies] = useState<CompanyRecord[]>([])
   const { user } = useAuth()
+  const { canAccessItem } = usePermissions()
+  const canOpenInternal = canAccessItem('tickets', 'tickets_interno')
+
+  // Modalidade de chamado: 'client' (cliente) ou 'internal' (interno da empresa)
+  const [ticketScope, setTicketScope] = useState<'client' | 'internal'>('client')
+  const [allInternalSectors, setAllInternalSectors] = useState<CompanyDepartmentRecord[]>([])
+  const [internalSector, setInternalSector] = useState('')
   const [categories, setCategories] = useState<CategoryRecord[]>([])
   const [equipments, setEquipments] = useState<EquipmentRecord[]>([])
   const [configurationItems, setConfigurationItems] = useState<ConfigurationItemRecord[]>([])
@@ -193,13 +207,15 @@ export default function TicketCreate() {
 
   useEffect(() => {
     const load = async () => {
-      const [comps, cats, techs, queues] = await Promise.all([
+      const [comps, cats, techs, queues, allDepts] = await Promise.all([
         getCompanies(),
         getCategories(),
         getUsers("role='tecnico' || role='gestor' || role='admin'").catch(() => []),
         getQueues().catch(() => []),
+        getAllDepartments().catch(() => [] as CompanyDepartmentRecord[]),
       ])
       setCompanies(comps)
+      setAllInternalSectors(allDepts as CompanyDepartmentRecord[])
       setCategories(cats)
       setTechnicians(techs as UserItem[])
       setAllQueues(queues as QueueRecord[])
@@ -375,9 +391,16 @@ export default function TicketCreate() {
 
   const validateStep = (step: number): boolean => {
     if (step === 0) {
-      if (!company) {
-        toast({ title: 'Selecione uma empresa', variant: 'destructive' })
-        return false
+      if (ticketScope === 'client') {
+        if (!company) {
+          toast({ title: 'Selecione uma empresa', variant: 'destructive' })
+          return false
+        }
+      } else {
+        if (!internalSector) {
+          toast({ title: 'Selecione o setor solicitante', variant: 'destructive' })
+          return false
+        }
       }
     }
     if (step === 1) {
@@ -424,28 +447,38 @@ export default function TicketCreate() {
       const sla = sub
         ? calculateSlaFromMinutes(sub.sla_response_minutes, sub.sla_solution_minutes)
         : { sla_response_deadline: undefined, sla_solution_deadline: undefined }
+      const isInternal = ticketScope === 'internal'
       const created = await createTicket({
         number: 'PENDENTE',
-        company,
-        unit: unit || undefined,
-        department: department && department !== 'none' ? department : undefined,
+        company: isInternal ? undefined : company,
+        unit: isInternal ? undefined : unit || undefined,
+        department: isInternal
+          ? undefined
+          : department && department !== 'none'
+            ? department
+            : undefined,
+        is_internal: isInternal,
+        internal_sector: isInternal ? internalSector : undefined,
         title,
         description,
         type,
         category: mainCategory || undefined,
         subcategory: subActivity || undefined,
-        equipment: itemType === 'asset' && equipment ? equipment : undefined,
-        configuration_item: itemType === 'ci' && configurationItem ? configurationItem : undefined,
+        equipment: !isInternal && itemType === 'asset' && equipment ? equipment : undefined,
+        configuration_item:
+          !isInternal && itemType === 'ci' && configurationItem ? configurationItem : undefined,
         queue: queueId || undefined,
         impact: autoImpact || 'Médio',
         urgency: autoUrgency || 'Média',
         priority: autoPriority || 'Média',
         status: 'Novo',
         assigned_to: assignedTo || undefined,
-        requester_name: requesterName || 'Solicitante',
-        requester_email: requesterEmail,
+        requester_name: isInternal
+          ? requesterName || user?.name || 'Solicitante Interno'
+          : requesterName || 'Solicitante',
+        requester_email: isInternal ? requesterEmail || user?.email || '' : requesterEmail,
         requester_phone: requesterPhone,
-        source: 'Portal',
+        source: isInternal ? 'Manual' : 'Portal',
         sla_status: 'Dentro do Prazo',
         sla_response_deadline: sla.sla_response_deadline,
         sla_solution_deadline: sla.sla_solution_deadline,
@@ -491,116 +524,213 @@ export default function TicketCreate() {
         {currentStep === 0 && (
           <div className="animate-fade-in space-y-5 rounded-2xl bg-white p-6 dark:bg-slate-900 sm:p-8">
             <div className="space-y-1">
-              <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-50">
-                Informações do Solicitante
-              </h2>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-50">
+                  Informações do Solicitante
+                </h2>
+                {canOpenInternal && (
+                  <div className="flex items-center gap-1 rounded-lg border bg-slate-50 p-1 dark:bg-slate-800 text-xs">
+                    <button
+                      type="button"
+                      onClick={() => setTicketScope('client')}
+                      className={cn(
+                        'rounded-md px-2.5 py-1 font-medium transition-all',
+                        ticketScope === 'client'
+                          ? 'bg-white shadow text-slate-900 dark:bg-slate-900 dark:text-slate-100'
+                          : 'text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200',
+                      )}
+                    >
+                      Chamado de Cliente
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setTicketScope('internal')}
+                      className={cn(
+                        'rounded-md px-2.5 py-1 font-medium transition-all',
+                        ticketScope === 'internal'
+                          ? 'bg-amber-500 text-white shadow'
+                          : 'text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200',
+                      )}
+                    >
+                      Chamado Interno
+                    </button>
+                  </div>
+                )}
+              </div>
               <p className="text-sm text-slate-500 dark:text-slate-400">
-                Selecione a empresa e o solicitante do chamado
+                {ticketScope === 'internal'
+                  ? 'Chamado interno entre setores da empresa — não exige cliente e não debita franquia.'
+                  : 'Selecione a empresa cliente e o solicitante do chamado.'}
               </p>
             </div>
-            <div className="space-y-2">
-              <FieldLabel>Empresa / Cliente</FieldLabel>
-              <Select value={company} onValueChange={handleCompanyChange}>
-                <SelectTrigger className="rounded-lg">
-                  <SelectValue placeholder="Selecione o cliente" />
-                </SelectTrigger>
-                <SelectContent>
-                  {companies.map((c) => (
-                    <SelectItem key={c.id} value={c.id}>
-                      {c.trade_name} ({c.code})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <FieldLabel>Solicitante</FieldLabel>
-                <Select value={selectedContact} onValueChange={handleContactChange}>
-                  <SelectTrigger className="rounded-lg">
-                    <SelectValue placeholder="Selecione o solicitante" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {contacts.map((c) => (
-                      <SelectItem key={c.id} value={c.id}>
-                        {c.full_name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <FieldLabel>Filial</FieldLabel>
-                <Select value={unit} onValueChange={setUnit}>
-                  <SelectTrigger className="rounded-lg">
-                    <SelectValue placeholder="Selecione a filial" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {units.map((u) => (
-                      <SelectItem key={u.id} value={u.id}>
-                        {u.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <div className="space-y-2">
-              <FieldLabel>Setor</FieldLabel>
-              {deptLoading ? (
-                <div className="flex items-center gap-2 h-9 px-3 rounded-lg border bg-slate-50 dark:bg-slate-800">
-                  <Loader2 className="h-3.5 w-3.5 animate-spin text-slate-400" />
-                  <span className="text-sm text-slate-400">Buscando setores...</span>
+
+            {ticketScope === 'internal' ? (
+              <div className="space-y-4 rounded-xl border border-amber-200 bg-amber-50/50 p-4 dark:border-amber-900/50 dark:bg-amber-950/20">
+                <div className="flex items-center gap-2">
+                  <Badge className="bg-amber-500 text-white font-semibold">
+                    Modalidade Interna
+                  </Badge>
+                  <span className="text-xs text-amber-800 dark:text-amber-300">
+                    Aberto diretamente para a equipe/fila responsável (ex: Área de Inovação, TI, RH)
+                  </span>
                 </div>
-              ) : (
-                <Select value={department} onValueChange={setDepartment} disabled={!company}>
-                  <SelectTrigger className="rounded-lg">
-                    <SelectValue
-                      placeholder={company ? 'Selecione o setor' : 'Selecione uma empresa primeiro'}
-                    />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">— Nenhum —</SelectItem>
-                    {departments.map((d) => (
-                      <SelectItem key={d.id} value={d.id}>
-                        {d.name}
+                <div className="space-y-2">
+                  <FieldLabel>Setor Solicitante *</FieldLabel>
+                  <Select value={internalSector} onValueChange={setInternalSector}>
+                    <SelectTrigger className="rounded-lg bg-white dark:bg-slate-900">
+                      <SelectValue placeholder="Selecione o setor solicitante interno" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Array.from(
+                        new Set(allInternalSectors.map((s) => s.name).filter(Boolean)),
+                      ).map((secName) => (
+                        <SelectItem key={secName} value={secName}>
+                          {secName}
+                        </SelectItem>
+                      ))}
+                      <SelectItem value="Área de Inovação">Área de Inovação</SelectItem>
+                      <SelectItem value="Tecnologia da Informação">
+                        Tecnologia da Informação
                       </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
-            </div>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <FieldLabel>Nome do Solicitante</FieldLabel>
-                <Input
-                  required
-                  className="rounded-lg"
-                  placeholder="Ex: Maria Oliveira"
-                  value={requesterName}
-                  onChange={(e) => setRequesterName(e.target.value)}
-                />
+                      <SelectItem value="Operações">Operações</SelectItem>
+                      <SelectItem value="Administrativo / Financeiro">
+                        Administrativo / Financeiro
+                      </SelectItem>
+                      <SelectItem value="Diretoria">Diretoria</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <FieldLabel>Nome do Solicitante</FieldLabel>
+                    <Input
+                      className="rounded-lg bg-white dark:bg-slate-900"
+                      placeholder={user?.name || 'Seu nome'}
+                      value={requesterName}
+                      onChange={(e) => setRequesterName(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <FieldLabel>E-mail do Solicitante</FieldLabel>
+                    <Input
+                      type="email"
+                      className="rounded-lg bg-white dark:bg-slate-900"
+                      placeholder={user?.email || 'seu.email@empresa.com'}
+                      value={requesterEmail}
+                      onChange={(e) => setRequesterEmail(e.target.value)}
+                    />
+                  </div>
+                </div>
               </div>
-              <div className="space-y-2">
-                <FieldLabel>E-mail do Solicitante</FieldLabel>
-                <Input
-                  type="email"
-                  className="rounded-lg"
-                  placeholder="maria@empresa.com"
-                  value={requesterEmail}
-                  onChange={(e) => setRequesterEmail(e.target.value)}
-                />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <FieldLabel>Telefone do Solicitante</FieldLabel>
-              <Input
-                className="rounded-lg"
-                placeholder="(00) 00000-0000"
-                value={requesterPhone}
-                onChange={(e) => setRequesterPhone(e.target.value)}
-              />
-            </div>
+            ) : (
+              <>
+                <div className="space-y-2">
+                  <FieldLabel>Empresa / Cliente</FieldLabel>
+                  <Select value={company} onValueChange={handleCompanyChange}>
+                    <SelectTrigger className="rounded-lg">
+                      <SelectValue placeholder="Selecione o cliente" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {companies.map((c) => (
+                        <SelectItem key={c.id} value={c.id}>
+                          {c.trade_name} ({c.code})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <FieldLabel>Solicitante</FieldLabel>
+                    <Select value={selectedContact} onValueChange={handleContactChange}>
+                      <SelectTrigger className="rounded-lg">
+                        <SelectValue placeholder="Selecione o solicitante" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {contacts.map((c) => (
+                          <SelectItem key={c.id} value={c.id}>
+                            {c.full_name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <FieldLabel>Filial</FieldLabel>
+                    <Select value={unit} onValueChange={setUnit}>
+                      <SelectTrigger className="rounded-lg">
+                        <SelectValue placeholder="Selecione a filial" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {units.map((u) => (
+                          <SelectItem key={u.id} value={u.id}>
+                            {u.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <FieldLabel>Setor</FieldLabel>
+                  {deptLoading ? (
+                    <div className="flex items-center gap-2 h-9 px-3 rounded-lg border bg-slate-50 dark:bg-slate-800">
+                      <Loader2 className="h-3.5 w-3.5 animate-spin text-slate-400" />
+                      <span className="text-sm text-slate-400">Buscando setores...</span>
+                    </div>
+                  ) : (
+                    <Select value={department} onValueChange={setDepartment} disabled={!company}>
+                      <SelectTrigger className="rounded-lg">
+                        <SelectValue
+                          placeholder={
+                            company ? 'Selecione o setor' : 'Selecione uma empresa primeiro'
+                          }
+                        />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">— Nenhum —</SelectItem>
+                        {departments.map((d) => (
+                          <SelectItem key={d.id} value={d.id}>
+                            {d.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                </div>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <FieldLabel>Nome do Solicitante</FieldLabel>
+                    <Input
+                      required
+                      className="rounded-lg"
+                      placeholder="Ex: Maria Oliveira"
+                      value={requesterName}
+                      onChange={(e) => setRequesterName(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <FieldLabel>E-mail do Solicitante</FieldLabel>
+                    <Input
+                      type="email"
+                      className="rounded-lg"
+                      placeholder="maria@empresa.com"
+                      value={requesterEmail}
+                      onChange={(e) => setRequesterEmail(e.target.value)}
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <FieldLabel>Telefone do Solicitante</FieldLabel>
+                  <Input
+                    className="rounded-lg"
+                    placeholder="(00) 00000-0000"
+                    value={requesterPhone}
+                    onChange={(e) => setRequesterPhone(e.target.value)}
+                  />
+                </div>
+              </>
+            )}
           </div>
         )}
 

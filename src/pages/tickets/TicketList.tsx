@@ -646,6 +646,14 @@ export default function TicketList() {
                             >
                               {t.number}
                             </span>
+                            {t.is_internal && (
+                              <Badge
+                                variant="outline"
+                                className="bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-950/60 dark:text-amber-300 dark:border-amber-800 text-[10px] px-1.5 py-0 h-4 font-semibold"
+                              >
+                                Interno
+                              </Badge>
+                            )}
                             {t.parent_ticket_id && (
                               <GitBranch className="h-3 w-3 text-primary shrink-0" />
                             )}
@@ -685,10 +693,14 @@ export default function TicketList() {
                           <StatusBadge status={t.status} />
                         </div>
 
-                        {/* Detalhe extra sutil: Cliente + Tempo de abertura */}
+                        {/* Detalhe extra sutil: Cliente / Setor interno + Tempo de abertura */}
                         <div className="flex items-center justify-between gap-1 text-[10px] text-muted-foreground font-mono">
                           <span className="truncate max-w-[140px] text-muted-foreground/90">
-                            {t.expand?.company?.trade_name || 'Geral'}
+                            {t.is_internal
+                              ? t.internal_sector
+                                ? `Setor: ${t.internal_sector}`
+                                : 'Interno'
+                              : t.expand?.company?.trade_name || 'Geral'}
                           </span>
                           <span className="text-muted-foreground/70">
                             {formatTicketAge(t.created, now)}
@@ -787,12 +799,22 @@ export default function TicketList() {
               >
                 <CardContent className="p-4 space-y-3">
                   <div className="flex items-center justify-between gap-2">
-                    <Link
-                      to={`/tickets/${t.id}`}
-                      className="text-sm font-bold text-primary hover:underline"
-                    >
-                      {t.number}
-                    </Link>
+                    <div className="flex items-center gap-1.5">
+                      <Link
+                        to={`/tickets/${t.id}`}
+                        className="text-sm font-bold text-primary hover:underline"
+                      >
+                        {t.number}
+                      </Link>
+                      {t.is_internal && (
+                        <Badge
+                          variant="outline"
+                          className="bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-950/60 dark:text-amber-300 dark:border-amber-800 text-[10px] px-1.5 py-0 h-4 font-semibold"
+                        >
+                          Interno
+                        </Badge>
+                      )}
+                    </div>
                     <PriorityBadge priority={t.priority} />
                   </div>
                   <Link to={`/tickets/${t.id}`} className="block">
@@ -807,7 +829,11 @@ export default function TicketList() {
                   <div className="flex items-center justify-between gap-2 border-t pt-2 text-xs text-muted-foreground">
                     <div className="flex flex-col">
                       <span className="text-[11px] font-medium text-slate-700 dark:text-slate-300">
-                        {t.expand?.company?.trade_name || 'Geral'}
+                        {t.is_internal
+                          ? t.internal_sector
+                            ? `Setor: ${t.internal_sector}`
+                            : 'Chamado Interno'
+                          : t.expand?.company?.trade_name || 'Geral'}
                       </span>
                       <span className="text-[10px] text-muted-foreground">
                         Aberto em: {formatDateTime(t.created)} ({formatTicketAge(t.created, now)})
@@ -908,10 +934,18 @@ export default function TicketList() {
                         />
                       </td>
                       <td className="px-4 py-3 font-bold text-primary">
-                        <div className="flex items-center gap-1">
+                        <div className="flex items-center gap-1 flex-wrap">
                           <Link to={`/tickets/${t.id}`} className="hover:underline">
                             {t.number}
                           </Link>
+                          {t.is_internal && (
+                            <Badge
+                              variant="outline"
+                              className="bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-950/60 dark:text-amber-300 dark:border-amber-800 text-[10px] px-1.5 py-0 h-4 font-semibold"
+                            >
+                              Interno
+                            </Badge>
+                          )}
                           {t.parent_ticket_id ? (
                             <Link
                               to={`/tickets/${t.parent_ticket_id}`}
@@ -945,7 +979,13 @@ export default function TicketList() {
                         </Link>
                       </td>
                       <td className="px-4 py-3 text-muted-foreground">
-                        {t.expand?.company?.trade_name || 'Geral'}
+                        {t.is_internal ? (
+                          <span className="inline-flex items-center gap-1 text-amber-800 dark:text-amber-300 font-medium">
+                            Setor: {t.internal_sector || 'Interno'}
+                          </span>
+                        ) : (
+                          t.expand?.company?.trade_name || 'Geral'
+                        )}
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap">
                         <div className="flex flex-col">
