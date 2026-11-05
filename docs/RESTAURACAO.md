@@ -4,11 +4,11 @@ Este documento registra oficialmente os **Pontos de Restauração (Restore Point
 
 ---
 
-## 1. Ponto de Restauração Atual — `restore-point-0.0.352` (Vigente)
+## 1. Ponto de Restauração Atual — `restore-point-0.0.353` / `restore-point-0.0.352` (Vigente)
 
-- **Identificador de Referência:** `restore-point-0.0.352`
-- **Versão Base Homologada:** `0.0.352` (registrada no commit atual do repositório)
-- **Data de Registro:** Novembro de 2026
+- **Identificador de Referência:** `restore-point-0.0.353` (equivalente ao snapshot estável homologado da v0.0.352)
+- **Versão Base Homologada:** `0.0.352` / `0.0.353` (consolidada com QA 100% aprovado)
+- **Data de Registro:** 05 de Novembro de 2026
 - **Status de Qualidade:** Testes estáticos (oxlint), verificação de tipos (TypeScript tsc) e build Vite 100% aprovados sem erros nem advertências.
 - **Estado do Banco de Dados PocketBase:**
   - Migrações aplicadas no Skip Cloud até a migração **`0131_add_chat_history_permission.js`** (131 migrações ativas e integradas).
@@ -67,23 +67,42 @@ Este documento registra oficialmente os **Pontos de Restauração (Restore Point
 
 ## 3. Como Realizar o Rollback do Código
 
-O projeto é hospedado e versionado na plataforma Skip, com histórico de versões sequenciais (ex: 0.0.291 ... 0.0.352). Não há repositório GitHub remoto externo conectado.
+O projeto é hospedado e versionado nativamente na plataforma Skip Cloud (React + Vite + TypeScript), onde cada commit aprovado pelo ciclo de QA (`run_qa` + `commit_changes`) gera uma nova versão sequencial imutável no histórico da plataforma (ex.: `0.0.291`, `0.0.352`, `0.0.353`), com o versionamento do `package.json` gerenciado automaticamente pelo ecossistema.
 
-### 3.1 Reversão pelo Histórico de Versões da Plataforma Skip (Recomendado)
+### 3.1 Mecanismo Oficial: Histórico de Versões e Rollback Nativo da Plataforma Skip (Recomendado)
 
-1. Na interface do projeto no painel Skip Cloud / Histórico de Versões (Versions / Deployments):
-   - Localize a versão marcada como **`0.0.352`** (ou `0.0.291` para o marco legado).
-   - Selecione a opção **"Rollback to this version"** / **"Restaurar esta versão"**.
-   - O ambiente de Preview e a branch ativa de compilação serão imediatamente revertidos para o snapshot do código-fonte exato daquela versão.
+Na plataforma Skip, o versionamento é atômico por commit e dispensa ferramentas externas:
 
-### 3.2 Reversão Manual via Git (Ambiente Local ou Repositório Clonado)
+1. Acesse o painel do projeto no Skip Cloud / Histórico de Versões (**Versions / Deployments**).
+2. Localize a versão marcada como **`0.0.352`** (ou **`0.0.353`**, ambas cobrindo a consolidação estável pós-migração 0131 e chat/TV), ou a versão histórica **`0.0.291`**.
+3. Clique em **"Rollback to this version"** / **"Restaurar esta versão"**.
+4. A plataforma restaura imediatamente o snapshot do código-fonte daquele commit, executa o build limpo do frontend e atualiza o servidor de Preview em tempo real.
 
-Caso esteja trabalhando diretamente em um clone git local do projeto:
+### 3.2 Equivalência em Ambientes Git Locais ou Clones Exportados
 
-- **Para inspecionar o estado do ponto de restauração vigente sem alterar o histórico atual:**
+Para desenvolvedores que trabalham com uma cópia exportada/clonada do repositório Git:
+
+- **Tags Recomendadas de Restauração:**
+  - `restore-point-0.0.353` (ou `restore-point-0.0.352`) para o ponto vigente estável.
+  - `restore-point-0.0.291` (commit base `22a8d58`) para o marco histórico legado.
+
+- **Comandos Git para criação da tag (caso não tenha sido exportada no clone):**
 
   ```bash
-  git checkout restore-point-0.0.352
+  # Criar a tag no commit vigente da versão 0.0.353:
+  git tag -a restore-point-0.0.353 -m "Ponto de Restauracao Lógos AITILSM v0.0.353 (Chat, TV, Internos, PRTG, Migracao 0131)"
+
+  # Ou caso deseje apontar para o commit específico da 0.0.352:
+  git tag -a restore-point-0.0.352 <hash-do-commit-0.0.352> -m "Ponto de Restauracao Lógos AITILSM v0.0.352"
+
+  # Verificar as tags de ponto de restauração registradas:
+  git tag --list 'restore-point*'
+  ```
+
+- **Para inspecionar o estado do ponto de restauração vigente sem alterar o branch atual:**
+
+  ```bash
+  git checkout restore-point-0.0.353
   ```
 
 - **Para inspecionar o ponto de restauração legado (0.0.291):**
@@ -96,24 +115,24 @@ Caso esteja trabalhando diretamente em um clone git local do projeto:
 - **Para criar uma nova branch a partir do ponto vigente:**
 
   ```bash
-  git checkout -b recuperacao-v352 restore-point-0.0.352
+  git checkout -b recuperacao-v353 restore-point-0.0.353
   ```
 
 - **Para desfazer commits defeituosos preservando o histórico (Revert seguro):**
 
   ```bash
-  git revert HEAD~..restore-point-0.0.352
+  git revert HEAD~..restore-point-0.0.353
   ```
 
 - **Para forçar o branch principal ao estado exato do ponto de restauração (Reset):**
   ```bash
-  git reset --hard restore-point-0.0.352
+  git reset --hard restore-point-0.0.353
   ```
 
 ### 3.3 Comportamento do Preview da Plataforma após o Rollback
 
 - Ao realizar o rollback do código, a plataforma recompila o frontend React + Vite e atualiza o servidor de preview instantaneamente.
-- Quaisquer telas, componentes, scripts ou rotas criados após a v0.0.352 deixarão de ser servidos, retornando ao estado estável homologado deste ponto.
+- Quaisquer telas, componentes, scripts ou rotas criados após o ponto restaurado deixarão de ser servidos, retornando ao estado estável homologado deste ponto.
 
 ---
 

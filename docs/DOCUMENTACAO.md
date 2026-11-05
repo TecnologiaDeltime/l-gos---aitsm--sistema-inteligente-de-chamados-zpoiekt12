@@ -40,7 +40,7 @@ O conjunto documental está dividido em módulos temáticos para facilitar a con
    - **Caixa de E-mail & Ingestão IMAP**: Conexão IMAP/SMTP/Microsoft Graph, quarentena e chamados retidos.
    - **Identidade Visual e Temas Oficiais**: Modo Escuro _Amber Alert_ padrão (#17181C grafite, #FCD34D letras âmbar, #D97706 ativo) e Modo Claro _Marrom & Branco_ (#17181C grafite, #FFFFFF letras brancas, #D97706 ativo), alternador no topo e ausência de animações/piscar em gráficos.
    - **Regras Críticas de Negócio**: Regra das Horas (acompanhamento debita franquia × play/pause acumula no operador e não debita), SLA de Resposta no Play, Máscara fixa de Tempo Gasto (`00:00`), e Automações de Ativos na exclusão de usuários/equipamentos.
-   - **Pontos de Restauração e Rollback**: Ponto vigente `restore-point-0.0.352` (v0.0.352) e ponto anterior `restore-point-0.0.291` (v0.0.291), documentação em `docs/RESTAURACAO.md` e escopo restrito a código.
+   - **Pontos de Restauração e Rollback**: Ponto vigente `restore-point-0.0.353` / `restore-point-0.0.352` e ponto anterior `restore-point-0.0.291` (v0.0.291), documentação em `docs/RESTAURACAO.md` e escopo restrito a código.
 
 4. **[Documentos Complementares Existentes]**:
    - [Agente de Distribuição Automática de Chamados](AGENTE_DISTRIBUICAO_AUTOMATICA.md)
