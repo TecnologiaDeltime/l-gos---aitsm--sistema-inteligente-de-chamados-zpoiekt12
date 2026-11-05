@@ -230,8 +230,9 @@ O sistema opera com separação estrita e auditável entre o tempo que custeia o
 
 ---
 
-### 6.4 Ponto de Restauração e Procedimento de Rollback
+### 6.4 Pontos de Restauração e Procedimento de Rollback
 
-- O ponto de restauração oficial homologado está estabelecido na versão **0.0.291** (tag `restore-point-0.0.291`).
+- O ponto de restauração oficial vigente está estabelecido na versão **0.0.352** (tag `restore-point-0.0.352`), consolidando chamados internos, chat em tempo real de operadores, histórico de chat com busca avançada, modo TV, PRTG e automações.
+- O ponto de restauração anterior histórico permanece registrado na versão **0.0.291** (tag `restore-point-0.0.291`, commit `22a8d58`).
 - O procedimento de recuperação está detalhado em `docs/RESTAURACAO.md`.
 - **Escopo Técnico**: o rollback na plataforma Skip restaura **exclusivamente o código-fonte da aplicação**. Dados transacionais e registros do banco de dados PocketBase não são apagados por rollbacks de código.
