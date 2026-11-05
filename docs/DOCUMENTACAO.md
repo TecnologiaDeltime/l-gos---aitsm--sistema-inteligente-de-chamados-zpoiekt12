@@ -51,6 +51,7 @@ O conjunto documental está dividido em módulos temáticos para facilitar a con
    - [Integração com Ferramenta de Monitoramento PRTG](INTEGRACAO_PRTG.md)
    - [Modo TV e Painéis em Rotação Automática](MODO_TV.md)
    - [Chamados Internos entre Setores e Chat de Operadores](CHAMADOS_INTERNOS_E_CHAT.md)
+   - [Documento de Autoria e Titularidade](../AUTHORSHIP.md)
 
 ---
 
