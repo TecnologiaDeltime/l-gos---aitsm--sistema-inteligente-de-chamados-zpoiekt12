@@ -181,6 +181,20 @@ const FEATURE_CATEGORIES: FeatureCategory[] = [
           'Gatilho condicional exigindo aprovação quando o tipo de solicitação configurado e a prioridade alta (Alta/Crítica) coincidirem juntos. O chamado é retido em "Aguardando Aprovação", podendo exigir aprovação do cliente (Ponto Focal no Portal) e/ou aprovadores internos da TI. A transição para status "Novo" só ocorre com ambas aprovadas; recusa em qualquer instância cancela o chamado e exige justificativa obrigatória registrada no histórico.',
         tag: 'Governança & ITIL',
       },
+      {
+        id: 'tk-internal-tickets',
+        title: 'Chamados Internos entre Setores da Empresa',
+        description:
+          'Abertura de chamados internos diretamente entre departamentos/setores da própria organização (ex.: Inovação, RH, Financeiro, TI Interna, Infraestrutura) sem necessidade de cadastrar a própria empresa como cliente. O formulário conta com alternador "Cliente Externo" / "Chamado Interno", seleção de Setor Solicitante, identificação visual clara por badge azul "Interno" na listagem, kanban e ficha de detalhes, exclusão automática do Portal do Cliente e garantia de que horas de acompanhamento internas não debitam franquia de contratos de clientes.',
+        tag: 'Atendimento Interno',
+      },
+      {
+        id: 'tk-operator-chat',
+        title: 'Chat Interno entre Operadores e Equipes em Tempo Real',
+        description:
+          'Canal de comunicação instantânea 1:1 entre operadores, técnicos e equipe de inovação em /chat, com histórico completo, contadores de mensagens não lidas, confirmação visual de entrega e leitura (ticks duplos), presença online/offline automática calculada por atividade recente, alertas sonoros e notificações globais no sino do sistema com redirecionamento ao chat. Protegido por permissão granular em 3 níveis (Nenhum/Leitura/Total).',
+        tag: 'Comunicação / Chat',
+      },
     ],
   },
   {

@@ -27,6 +27,8 @@ export interface OperatorChatMessageRecord {
   }
 }
 
+export type OperatorChatMessage = OperatorChatMessageRecord
+
 export interface ChatOperatorUser {
   id: string
   name: string
@@ -75,11 +77,32 @@ export async function sendChatMessage(
 }
 
 /**
- * Marca mensagens enviadas por outro usuário como lidas pelo usuário atual.
+ * Envia uma nova mensagem 1:1 (aceita objeto ou parâmetros posicionais).
  */
-export async function markConversationAsRead(recipientId: string, senderId: string): Promise<void> {
-  if (!recipientId || !senderId) return
-  const filter = `recipient = "${recipientId}" && sender = "${senderId}" && read = false`
+export async function sendOperatorMessage(
+  dataOrSender:
+    | {
+        sender: string
+        recipient: string
+        content: string
+      }
+    | string,
+  recipientId?: string,
+  content?: string,
+): Promise<OperatorChatMessageRecord> {
+  if (typeof dataOrSender === 'object') {
+    return sendChatMessage(dataOrSender.sender, dataOrSender.recipient, dataOrSender.content)
+  }
+  return sendChatMessage(dataOrSender, recipientId || '', content || '')
+}
+
+/**
+ * Marca mensagens trocadas entre dois usuários como lidas.
+ * Aceita markConversationAsRead(operatorId, currentUserId) ou (recipientId, senderId).
+ */
+export async function markConversationAsRead(arg1: string, arg2: string): Promise<void> {
+  if (!arg1 || !arg2) return
+  const filter = `((recipient = "${arg1}" && sender = "${arg2}") || (recipient = "${arg2}" && sender = "${arg1}")) && read = false`
   const unreadList = await pb
     .collection('operator_chat_messages')
     .getFullList<OperatorChatMessageRecord>({
@@ -120,6 +143,8 @@ export async function getUnreadCountsBySender(
   }
   return counts
 }
+
+export const getUnreadCountBySender = getUnreadCountsBySender
 
 /**
  * Busca a lista de operadores / usuários internos do sistema.

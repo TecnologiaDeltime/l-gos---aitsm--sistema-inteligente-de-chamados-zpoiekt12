@@ -149,7 +149,9 @@ export default function OperatorChatPage() {
         playTicketChime('Baixa')
       }
     } else if (e.action === 'update' && isRelated) {
-      setMessages((prev) => prev.map((m) => (m.id === record.id ? (record as OperatorChatMessage) : m)))
+      setMessages((prev) =>
+        prev.map((m) => (m.id === record.id ? (record as OperatorChatMessage) : m)),
+      )
     }
   })
 
@@ -440,7 +442,10 @@ export default function OperatorChatPage() {
               </ScrollArea>
 
               {/* Caixa de Entrada de Mensagem */}
-              <form onSubmit={handleSend} className="p-3 border-t border-border bg-muted/20 flex gap-2">
+              <form
+                onSubmit={handleSend}
+                className="p-3 border-t border-border bg-muted/20 flex gap-2"
+              >
                 <Input
                   ref={inputRef}
                   placeholder={`Mensagem para ${selectedOperator.name}... (Pressione Enter para enviar)`}

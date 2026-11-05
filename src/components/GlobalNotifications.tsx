@@ -168,7 +168,9 @@ export function GlobalNotifications() {
           navigateRef.current('/chat')
           notif.close()
         }
-      } catch { /* intentionally ignored */ }
+      } catch {
+        /* intentionally ignored */
+      }
     }
 
     playTicketChime('Baixa')
