@@ -153,6 +153,7 @@ _[print: tela de configurações de sla com limiares de tempo e alertas sonoros]
 
 - **Portal do Cliente (`/settings?tab=portal`)**: liberação de auto-provisionamento de solicitantes e pontos focais, com senha inicial padrão `Cliente@123`.
 - **Notificações de Clientes (`/settings?tab=client_notif`)**: personalização dos e-mails transacionais enviados ao solicitante na abertura, interação e resolução de chamados, além da definição do **Prazo de Reabertura de Chamados em Dias**.
+- **Distribuição Automática de Chamados (`/settings?tab=auto_assign`)**: agente de distribuição inteligente que delega novos chamados abertos sem operador diretamente para o analista da fila com status "Disponível" e menor carga de chamados ativos (mais ocioso), com fallback para o Líder/Responsável da Fila. Permite ativar/desativar o agente, parametrizar o intervalo em minutos da rotina cron de reavaliação de chamados órfãos e disparar a execução manual imediata. O acesso é governado pela permissão `settings_auto_assign` em 3 níveis (Nenhum, Leitura, Configurar). Consulte [docs/AGENTE_DISTRIBUICAO_AUTOMATICA.md](AGENTE_DISTRIBUICAO_AUTOMATICA.md).
 - **Modelos de Chamados (`/settings/ticket-templates`)**: cadastro de respostas padronizadas e templates de solução.
 - **Segurança & Sessão (`/settings?tab=security`)**: tempo de expiração de sessão por inatividade e políticas de complexidade de senha.
 

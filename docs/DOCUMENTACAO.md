@@ -35,6 +35,7 @@ O conjunto documental está dividido em módulos temáticos para facilitar a con
    - **Autenticação, Sessão e Segurança**: Login Operacional (`/login`), Verificação em Duas Etapas (2FA / TOTP) com primeiro acesso forçado para administradores, Modo Suporte do Administrador (impersonação segura no Portal do Cliente com barra de topo âmbar).
    - **Perfis de Acesso (`/profiles`)**: Matriz granular de permissões com 3 níveis (_Visualizar, Editar, Configurar_), Imunidade Total do Administrador, Auto-registro dinâmico de novas funcionalidades e Tela Inicial (_Landing Route_) configurável por perfil.
    - **Painel do Operador (`/operator-dashboard`)**: Primeira tela dos perfis de operação, com segregação de horas de hoje, do mês e dos últimos 3 meses (_Trabalhadas via Play/Pause × Acompanhamento via Logs_).
+   - **Agente de Distribuição Automática de Chamados**: Distribuição inteligente por disponibilidade → ociosidade → líder da fila, cron de reavaliação com intervalo configurável e permissão 3 níveis (`settings_auto_assign`).
    - **Parâmetros de SLA**: Temas de aviso e alertas de resposta/solução, som, popup e voz.
    - **Caixa de E-mail & Ingestão IMAP**: Conexão IMAP/SMTP/Microsoft Graph, quarentena e chamados retidos.
    - **Identidade Visual e Temas Oficiais**: Modo Escuro _Amber Alert_ padrão (#17181C grafite, #FCD34D letras âmbar, #D97706 ativo) e Modo Claro _Marrom & Branco_ (#17181C grafite, #FFFFFF letras brancas, #D97706 ativo), alternador no topo e ausência de animações/piscar em gráficos.
@@ -42,6 +43,8 @@ O conjunto documental está dividido em módulos temáticos para facilitar a con
    - **Ponto de Restauração e Rollback**: Tag `restore-point-0.0.291`, documentação em `docs/RESTAURACAO.md` e escopo restrito a código.
 
 4. **[Documentos Complementares Existentes]**:
+   - [Agente de Distribuição Automática de Chamados](AGENTE_DISTRIBUICAO_AUTOMATICA.md)
+   - [Agente Inteligente de Consumo Médio de Horas](AGENTE_CONSUMO_HORAS.md)
    - [Portal do Cliente Detalhado](PORTAL_DO_CLIENTE.md)
    - [Perfis de Acesso e Matriz Granular](PERFIS_DE_ACESSO.md)
    - [Procedimento de Restauração e Rollback](RESTAURACAO.md)
