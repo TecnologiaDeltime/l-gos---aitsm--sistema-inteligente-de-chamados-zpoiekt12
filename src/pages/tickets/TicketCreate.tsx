@@ -455,11 +455,7 @@ export default function TicketCreate() {
         const { uploadAttachment } = await import('@/services/attachments')
         for (const file of selectedFiles) {
           try {
-            await uploadAttachment({
-              ticketId: created.id,
-              file,
-              uploadedBy: user?.id,
-            })
+            await uploadAttachment(created.id, file, user?.id || '')
           } catch (uploadErr) {
             console.error('Erro ao anexar arquivo no chamado:', uploadErr)
           }
