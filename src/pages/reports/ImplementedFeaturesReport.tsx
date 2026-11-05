@@ -199,7 +199,7 @@ const FEATURE_CATEGORIES: FeatureCategory[] = [
         id: 'tk-chat-history',
         title: 'Histórico de Chat por Operador (/chat/historico)',
         description:
-          'Consulta somente leitura de todas as conversas e mensagens do chat interno entre operadores, agrupadas por conversa em ordem cronológica com remetente, destinatário, conteúdo e data/hora de cada mensagem. Filtros por operador (participante), período (De/Até) e busca textual no conteúdo, com totalizadores de mensagens, conversas e participantes. Não interfere no chat em tempo real nem altera flags de leitura. Item próprio no catálogo de permissões (chat.chat_historico) em 3 níveis, exibido apenas a quem também tem acesso ao chat (chat_operadores), com guard de rota dedicado.',
+          'Consulta somente leitura de todas as conversas e mensagens do chat interno entre operadores, agrupadas por conversa em ordem cronológica com remetente, destinatário, conteúdo e data/hora de cada mensagem. Busca por texto aprimorada com tolerância a acentos (NFD), suporte a múltiplas palavras em qualquer ordem (AND lógico), destaque visual (highlight) do trecho encontrado, contadores de ocorrências por conversa e totalizador geral destacado. Filtros combinados por operador (participante) e período (De/Até). Não interfere no chat em tempo real nem altera flags de leitura. Item próprio no catálogo de permissões (chat.chat_historico) em 3 níveis, com guard de rota dedicado.',
         tag: 'Comunicação / Chat',
       },
     ],

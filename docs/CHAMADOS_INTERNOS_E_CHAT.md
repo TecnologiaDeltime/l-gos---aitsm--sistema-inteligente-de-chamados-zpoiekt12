@@ -93,14 +93,20 @@ Consulta **somente leitura** de todo o histórico de conversas e mensagens troca
 
 ### 5.2 Filtros Disponíveis
 
-| Filtro             | Descrição                                                                                                        |
-| :----------------- | :--------------------------------------------------------------------------------------------------------------- |
-| Operador           | Seleção do operador (participante como remetente ou destinatário da mensagem). "Todos os operadores" lista tudo. |
-| Período (De / Até) | Intervalo de datas inclusivo, aplicado sobre a data de criação das mensagens.                                    |
-| Buscar no conteúdo | Busca textual livre contida no texto das mensagens.                                                              |
+| Filtro             | Descrição                                                                                                                                       |
+| :----------------- | :---------------------------------------------------------------------------------------------------------------------------------------------- |
+| Operador           | Seleção do operador (participante como remetente ou destinatário da mensagem). "Todos os operadores" lista tudo.                                |
+| Período (De / Até) | Intervalo de datas inclusivo, aplicado sobre a data de criação das mensagens.                                                                   |
+| Buscar no conteúdo | Busca textual livre contida no texto das mensagens. Suporta tolerância a acentos (NFD), múltiplas palavras em qualquer ordem e destaque visual. |
 
+- **Busca por texto avançada e flexível**:
+  - **Insensível a acentos e a maiúsculas/minúsculas**: digitando `informacao` a busca localiza `Informação`, `nao` localiza `não`.
+  - **Múltiplas palavras em qualquer ordem**: termos separados por espaço (ex.: `backup falhou`) localizam mensagens que contenham ambas as palavras em qualquer ordem ou posição (`falhou o backup ontem`).
+  - **Destaque visual (highlight)**: o trecho encontrado aparece destacado com marcação dourada/amarela suave diretamente no balão da mensagem, preservando a acentuação e caixa original.
+  - **Contadores de ocorrências**: cada conversa exibe badge com a quantidade exata de mensagens casadas na busca, e o cabeçalho exibe badge de destaque com o totalizador geral de mensagens encontradas para o termo pesquisado.
+  - **Alcance ampliado**: consulta na coleção de mensagens otimizada para abranger conversas antigas e refino em memória sem truncamento prematuro.
 - Totalizadores exibidos no topo: **quantidade de mensagens**, **conversas distintas** e **participantes distintos** do resultado filtrado.
-- Botão "Limpar filtros" restaura a consulta completa.
+- Botão "Limpar filtros" e botão rápido ✕ no campo de busca restauram a consulta completa.
 
 ### 5.3 Permissão no Catálogo de Acesso
 

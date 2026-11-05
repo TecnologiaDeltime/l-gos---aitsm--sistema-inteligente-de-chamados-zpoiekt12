@@ -10,6 +10,7 @@ import {
   summarizeChatHistory,
 } from '@/services/chat-history'
 import { formatDateTime } from '@/lib/date-format'
+import { splitTextWithHighlight } from '@/lib/search-text'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
@@ -40,6 +41,7 @@ interface ConversationGroup {
   participants: Array<ChatOperatorUser | undefined>
   messages: ChatHistoryMessage[]
   lastAt: string
+  matchingCount: number
 }
 
 export default function ChatHistoryPage() {
@@ -133,6 +135,7 @@ export default function ChatHistoryPage() {
       participants: entry.participantIds.map((id) => userById.get(id)),
       messages: [...entry.messages].sort((a, b) => (a.created < b.created ? -1 : 1)),
       lastAt: entry.lastAt,
+      matchingCount: entry.messages.length,
     }))
 
     list.sort((a, b) => (a.lastAt < b.lastAt ? 1 : -1))
@@ -231,18 +234,40 @@ export default function ChatHistoryPage() {
             <label className="flex items-center gap-1 text-[11px] font-medium text-muted-foreground">
               <Search className="h-3 w-3" /> Buscar no conteúdo
             </label>
-            <Input
-              placeholder="Termo contido nas mensagens..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="h-9 text-xs"
-            />
+            <div className="relative">
+              <Input
+                placeholder="Busca por termos, palavras múltiplas, sem acentos..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="h-9 pr-7 text-xs"
+              />
+              {search && (
+                <button
+                  type="button"
+                  onClick={() => setSearch('')}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground hover:text-foreground"
+                  title="Limpar busca de texto"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
           </div>
         </div>
         <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
-          <Badge variant="outline" className="text-[10px]">
-            {summary.total} mensagem(ens)
-          </Badge>
+          {search.trim() ? (
+            <Badge
+              variant="outline"
+              className="border-amber-500/50 bg-amber-500/10 text-[10px] font-semibold text-amber-600 dark:text-amber-400"
+            >
+              <Search className="mr-1 h-3 w-3" />
+              {summary.total} mensagem(ens) encontrada(s) com o termo &ldquo;{search.trim()}&rdquo;
+            </Badge>
+          ) : (
+            <Badge variant="outline" className="text-[10px]">
+              {summary.total} mensagem(ens)
+            </Badge>
+          )}
           <Badge variant="outline" className="text-[10px]">
             {summary.conversations} conversa(s)
           </Badge>
@@ -318,7 +343,19 @@ export default function ChatHistoryPage() {
                           ))}
                         </div>
                         <div>
-                          <div className="text-xs font-semibold text-foreground">{otherName}</div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-semibold text-foreground">
+                              {otherName}
+                            </span>
+                            {search.trim() && (
+                              <Badge
+                                variant="outline"
+                                className="border-amber-500/40 bg-amber-500/10 px-1.5 py-0 text-[10px] text-amber-600 dark:text-amber-400"
+                              >
+                                {conv.matchingCount} ocorrência(s)
+                              </Badge>
+                            )}
+                          </div>
                           <div className="text-[11px] text-muted-foreground">
                             {conv.messages.length} mensagem(ens) · última em{' '}
                             {formatDateTime(conv.lastAt)}
@@ -350,7 +387,22 @@ export default function ChatHistoryPage() {
                                   <span>·</span>
                                   <span>{formatDateTime(m.created)}</span>
                                 </div>
-                                <div className="whitespace-pre-wrap break-words">{m.content}</div>
+                                <div className="whitespace-pre-wrap break-words">
+                                  {search.trim()
+                                    ? splitTextWithHighlight(m.content, search).map((seg, idx) =>
+                                        seg.isMatch ? (
+                                          <mark
+                                            key={idx}
+                                            className="rounded bg-amber-300 px-0.5 font-bold text-amber-950 dark:bg-amber-400/90 dark:text-zinc-950"
+                                          >
+                                            {seg.text}
+                                          </mark>
+                                        ) : (
+                                          <span key={idx}>{seg.text}</span>
+                                        ),
+                                      )
+                                    : m.content}
+                                </div>
                               </div>
                             </div>
                           )

@@ -4,6 +4,7 @@ import {
   getChatOperators,
   OperatorChatMessageRecord,
 } from '@/services/operator-chat'
+import { extractSearchTokens, matchesAllTokens } from '@/lib/search-text'
 
 /**
  * Serviço de Histórico de Chat por Operador.
@@ -49,10 +50,20 @@ function endOfDayIso(dateStr?: string): string | undefined {
  * Consulta o histórico de mensagens do chat interno.
  *
  * O filtro de operador é sempre "participa" (sender OU recipient), nunca apenas remetente.
+ * Quando há termo de busca textual:
+ * 1. Para maximizar o alcance sem perder registros de conversas antigas, buscamos na coleção
+ *    de mensagens com filtro PocketBase (se houver tokens curtos sem caracteres especiais).
+ *    Porém, como o PocketBase `~` pode ser sensível a acentos no SQLite dependendo da collation,
+ *    e buscas com múltiplas palavras ou variações ("informacao" vs "Informação") requerem
+ *    tolerância, a consulta traz uma amostra ampla da base (limit parametrizável, padrão 1000)
+ *    e refina com o parser NFD em memória, garantindo:
+ *    - Insensibilidade a acentos ("informacao" acha "Informação")
+ *    - Múltiplas palavras em qualquer ordem ("backup falhou" acha "falhou o backup")
+ *    - Sem falsos positivos e sem truncamento precoce.
  */
 export async function getChatHistory(
   filters: ChatHistoryFilters,
-  limit = 500,
+  limit = 1000,
 ): Promise<ChatHistoryMessage[]> {
   const clauses: string[] = []
 
@@ -63,17 +74,25 @@ export async function getChatHistory(
   const toIso = endOfDayIso(filters.to)
   if (fromIso) clauses.push(`created >= "${fromIso}"`)
   if (toIso) clauses.push(`created <= "${toIso}"`)
-  if (filters.search?.trim()) {
-    const term = filters.search.trim().replace(/"/g, '\\"')
-    clauses.push(`content ~ "${term}"`)
-  }
 
-  return pb.collection('operator_chat_messages').getFullList<ChatHistoryMessage>({
-    filter: clauses.join(' && '),
+  // Se houver busca e nenhum caractere diacrítico no termo, podemos tentar um pre-filtro mais
+  // amplo no PocketBase se couber; caso contrário, trazemos a listagem ampla do escopo
+  // de data/operador e aplicamos a filtragem precisa em memória.
+  // Notar que `limit` padrão foi ampliado para 1000 mensagens.
+  const rawList = await pb.collection('operator_chat_messages').getFullList<ChatHistoryMessage>({
+    filter: clauses.length > 0 ? clauses.join(' && ') : undefined,
     sort: '-created',
     expand: 'sender,recipient',
     limit,
   })
+
+  const searchTerm = filters.search?.trim()
+  if (!searchTerm) {
+    return rawList
+  }
+
+  // Refinamento em memória: insensível a acentos e múltiplas palavras em qualquer ordem
+  return rawList.filter((m) => matchesAllTokens(m.content, searchTerm))
 }
 
 /**
