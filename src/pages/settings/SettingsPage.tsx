@@ -25,7 +25,8 @@ import ClientPortalSettingsTab from '@/components/settings/ClientPortalSettingsT
 import { AiTicketSettingsTab } from '@/components/settings/AiTicketSettingsTab'
 import { ClientConsumptionAgentTab } from '@/components/settings/ClientConsumptionAgentTab'
 import { AutoAssignSettingsTab } from '@/components/settings/AutoAssignSettingsTab'
-import { ShieldCheck, Globe, Shield, Bot, BrainCircuit, Users } from 'lucide-react'
+import { PrtgSettingsTab } from '@/components/settings/PrtgSettingsTab'
+import { ShieldCheck, Globe, Shield, Bot, BrainCircuit, Users, Activity } from 'lucide-react'
 import {
   getVoiceAlertsEnabled,
   setVoiceAlertsEnabled,
@@ -77,7 +78,9 @@ export default function SettingsPage() {
                     ? 'consumption_agent'
                     : searchParams.get('tab') === 'auto_assign'
                       ? 'auto_assign'
-                      : 'general'
+                      : searchParams.get('tab') === 'prtg'
+                        ? 'prtg'
+                        : 'general'
   const [mainTab, setMainTab] = useState<
     | 'general'
     | 'portal'
@@ -90,6 +93,7 @@ export default function SettingsPage() {
     | 'profiles'
     | 'consumption_agent'
     | 'auto_assign'
+    | 'prtg'
   >(initialTab as any)
 
   const handleTabChange = (
@@ -104,7 +108,8 @@ export default function SettingsPage() {
       | 'security'
       | 'profiles'
       | 'consumption_agent'
-      | 'auto_assign',
+      | 'auto_assign'
+      | 'prtg',
   ) => {
     setMainTab(tab)
     setSearchParams(
@@ -128,7 +133,9 @@ export default function SettingsPage() {
                         ? { tab: 'consumption_agent' }
                         : tab === 'auto_assign'
                           ? { tab: 'auto_assign' }
-                          : {},
+                          : tab === 'prtg'
+                            ? { tab: 'prtg' }
+                            : {},
     )
   }
 
@@ -155,6 +162,8 @@ export default function SettingsPage() {
       setMainTab('consumption_agent')
     } else if (tabFromUrl === 'auto_assign' && mainTab !== 'auto_assign') {
       setMainTab('auto_assign')
+    } else if (tabFromUrl === 'prtg' && mainTab !== 'prtg') {
+      setMainTab('prtg')
     }
   }, [searchParams])
 
@@ -462,6 +471,23 @@ export default function SettingsPage() {
             </Button>
           )}
 
+          {permissions.canAccessItem('settings', 'settings_prtg_monitoring') && (
+            <Button
+              type="button"
+              size="sm"
+              variant={mainTab === 'prtg' ? 'default' : 'ghost'}
+              onClick={() => handleTabChange('prtg')}
+              className={`h-8 text-xs font-semibold rounded-lg transition-all ${
+                mainTab === 'prtg'
+                  ? 'bg-amber-500/20 text-amber-500 border border-amber-500/30 shadow-xs shadow-amber-500/10'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              <Activity className="h-3.5 w-3.5 mr-1.5 text-amber-500" />
+              Monitoramento (PRTG)
+            </Button>
+          )}
+
           {permissions.canAccessItem('settings', 'settings_client_notif') && (
             <Button
               type="button"
@@ -578,6 +604,11 @@ export default function SettingsPage() {
             canEdit={permissions.canEdit('settings_auto_assign')}
           />
         )}
+
+      {/* SEÇÃO MONITORAMENTO PRTG */}
+      {mainTab === 'prtg' && permissions.canAccessItem('settings', 'settings_prtg_monitoring') && (
+        <PrtgSettingsTab canConfigure={permissions.canConfigure('settings_prtg_monitoring')} />
+      )}
 
       {/* SEÇÃO DESIGN & APARÊNCIA */}
       {mainTab === 'design' && permissions.canAccessItem('settings', 'settings_design') && (

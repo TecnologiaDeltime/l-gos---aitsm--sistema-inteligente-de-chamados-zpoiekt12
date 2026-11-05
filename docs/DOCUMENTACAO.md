@@ -48,6 +48,7 @@ O conjunto documental está dividido em módulos temáticos para facilitar a con
    - [Portal do Cliente Detalhado](PORTAL_DO_CLIENTE.md)
    - [Perfis de Acesso e Matriz Granular](PERFIS_DE_ACESSO.md)
    - [Procedimento de Restauração e Rollback](RESTAURACAO.md)
+   - [Integração com Ferramenta de Monitoramento PRTG](INTEGRACAO_PRTG.md)
 
 ---
 

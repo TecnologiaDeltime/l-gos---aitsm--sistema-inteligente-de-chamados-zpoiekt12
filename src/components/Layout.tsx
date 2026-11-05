@@ -593,6 +593,12 @@ export default function Layout() {
       show: permissions.canAccessItem('settings', 'settings_auto_assign'),
     },
     {
+      label: 'Monitoramento & PRTG',
+      path: '/settings?tab=prtg',
+      icon: Activity,
+      show: permissions.canAccessItem('settings', 'settings_prtg_monitoring'),
+    },
+    {
       label: 'Notificações de Clientes',
       path: '/settings?tab=client_notif',
       icon: Bell,

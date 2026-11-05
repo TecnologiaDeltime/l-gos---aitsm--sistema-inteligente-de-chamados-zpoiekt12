@@ -737,6 +737,13 @@ const BASE_SYSTEM_MODULES: GranularModuleDefinition[] = [
           'Configurações e regras do agente inteligente de distribuição de chamados por disponibilidade, menor carga e líder',
         path: '/settings?tab=auto_assign',
       },
+      {
+        key: 'settings_prtg_monitoring',
+        label: 'Monitoramento & PRTG',
+        description:
+          'Integração com PRTG Network Monitor para abertura automática de chamados, deduplicação de alertas e auto-resolução',
+        path: '/settings?tab=prtg',
+      },
     ],
   },
 ]

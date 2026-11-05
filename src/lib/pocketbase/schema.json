@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-05T01:48:38.487Z",
+  "generatedAt": "2026-11-05T02:12:35.331Z",
   "collections": [
     {
       "name": "users",
@@ -1304,7 +1304,15 @@
           "type": "select",
           "required": false,
           "system": false,
-          "selectValues": ["Portal", "E-mail", "Manual", "API", "Programado"]
+          "selectValues": [
+            "Portal",
+            "E-mail",
+            "Manual",
+            "API",
+            "Programado",
+            "Monitoramento",
+            "PRTG"
+          ]
         },
         {
           "name": "impact",
@@ -1610,6 +1618,24 @@
         },
         {
           "name": "tags",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "monitoring_sensor_id",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "monitoring_device",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "monitoring_source",
           "type": "text",
           "required": false,
           "system": false
@@ -11919,6 +11945,64 @@
           "required": false,
           "system": false,
           "autodateTriggers": ["onCreate", "onUpdate"]
+        },
+        {
+          "name": "prtg_enabled",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "prtg_webhook_token",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "prtg_default_priority",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["Crítica", "Alta", "Média", "Baixa"]
+        },
+        {
+          "name": "prtg_default_queue",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "queues"
+        },
+        {
+          "name": "prtg_default_activity",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "tkt_categories"
+        },
+        {
+          "name": "prtg_default_company",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "companies"
+        },
+        {
+          "name": "prtg_dedup_hours",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "prtg_mapping_rules",
+          "type": "json",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "prtg_auto_resolve_on_up",
+          "type": "bool",
+          "required": false,
+          "system": false
         }
       ],
       "indexes": ["CREATE UNIQUE INDEX idx_system_settings_key ON system_settings (key)"]
