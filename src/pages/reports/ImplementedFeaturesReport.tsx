@@ -195,6 +195,13 @@ const FEATURE_CATEGORIES: FeatureCategory[] = [
           'Canal de comunicação instantânea 1:1 entre operadores, técnicos e equipe de inovação em /chat, com histórico completo, contadores de mensagens não lidas, confirmação visual de entrega e leitura (ticks duplos), presença online/offline automática calculada por atividade recente, alertas sonoros e notificações globais no sino do sistema com redirecionamento ao chat. Protegido por permissão granular em 3 níveis (Nenhum/Leitura/Total).',
         tag: 'Comunicação / Chat',
       },
+      {
+        id: 'tk-chat-history',
+        title: 'Histórico de Chat por Operador (/chat/historico)',
+        description:
+          'Consulta somente leitura de todas as conversas e mensagens do chat interno entre operadores, agrupadas por conversa em ordem cronológica com remetente, destinatário, conteúdo e data/hora de cada mensagem. Filtros por operador (participante), período (De/Até) e busca textual no conteúdo, com totalizadores de mensagens, conversas e participantes. Não interfere no chat em tempo real nem altera flags de leitura. Item próprio no catálogo de permissões (chat.chat_historico) em 3 níveis, exibido apenas a quem também tem acesso ao chat (chat_operadores), com guard de rota dedicado.',
+        tag: 'Comunicação / Chat',
+      },
     ],
   },
   {

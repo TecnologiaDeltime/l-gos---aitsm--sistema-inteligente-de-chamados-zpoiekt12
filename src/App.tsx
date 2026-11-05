@@ -90,6 +90,7 @@ import MyProblems from '@/pages/problems/MyProblems'
 import VaultPage from '@/pages/vault/VaultPage'
 import { AtendimentoPage } from '@/pages/atendimento/AtendimentoPage'
 import OperatorChatPage from '@/pages/chat/OperatorChatPage'
+import ChatHistoryPage from '@/pages/chat/ChatHistoryPage'
 import ProblemInvestigation from '@/pages/problems/ProblemInvestigation'
 import ProblemEffectivenessAnalysis from '@/pages/problems/ProblemEffectivenessAnalysis'
 import ProblemPending from '@/pages/problems/ProblemPending'
@@ -204,6 +205,14 @@ const App = () => (
                   element={
                     <ProtectedRoute requiredModule="chat" requiredItem="chat_operadores">
                       <OperatorChatPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/chat/historico"
+                  element={
+                    <ProtectedRoute requiredModule="chat" requiredItem="chat_historico">
+                      <ChatHistoryPage />
                     </ProtectedRoute>
                   }
                 />

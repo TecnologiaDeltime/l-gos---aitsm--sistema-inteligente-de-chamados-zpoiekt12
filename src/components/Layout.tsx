@@ -58,6 +58,7 @@ import {
   Activity,
   Tv,
   MessageSquare,
+  History,
 } from 'lucide-react'
 import { useAuth } from '@/hooks/use-auth'
 import { useTheme } from '@/hooks/use-theme'
@@ -232,6 +233,14 @@ export default function Layout() {
       path: '/chat',
       icon: MessageSquare,
       show: permissions.canAccessItem('chat', 'chat_operadores'),
+    },
+    {
+      label: 'Histórico de Chat',
+      path: '/chat/historico',
+      icon: History,
+      show:
+        permissions.canAccessItem('chat', 'chat_operadores') &&
+        permissions.canAccessItem('chat', 'chat_historico'),
     },
     {
       label: 'Fila de Tickets',

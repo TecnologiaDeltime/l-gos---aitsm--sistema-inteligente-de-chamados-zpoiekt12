@@ -75,3 +75,40 @@ Seguindo a regra permanente do projeto Lógos AITILSM, ambas as funcionalidades 
    - Cria a coleção `operator_chat_messages` com campos `sender` (relação users), `recipient` (relação users), `content` (text), `read` (bool) e regras de acesso restritas aos participantes da conversa.
 2. **`0130_add_internal_tickets_and_operator_chat_permissions.js`**:
    - Registra as permissões `tickets_interno` e `chat_operadores` para todos os perfis existentes com nível `edit`, permitindo customização granular posterior na tela de Perfis de Acesso (`/profiles`).
+3. **`0131_add_chat_history_permission.js`**:
+   - Registra a permissão `chat_historico` para todos os perfis existentes com nível `view` (Leitura), permitindo customização granular posterior na tela de Perfis de Acesso.
+
+---
+
+## 5. Histórico de Chat por Operador (/chat/historico)
+
+### 5.1 Visão Geral
+
+Consulta **somente leitura** de todo o histórico de conversas e mensagens trocadas no chat interno entre operadores, acessível em `/chat/historico` ou pelo item **Histórico de Chat** no menu principal.
+
+- **Reutilização**: A consulta reutiliza o serviço `operator-chat.ts` (coleção `operator_chat_messages` criada na migração 0129) e **não duplica lógica** do chat em tempo real.
+- **Somente leitura**: A tela nunca cria, altera ou exclui mensagens e **não altera flags de leitura** (`read`) das conversas — o chat em tempo real continua funcionando exatamente como antes.
+- **Agrupamento**: As mensagens são agrupadas por conversa (par de participantes) e exibidas em ordem cronológica, da mais recente para a mais antiga.
+- **Expansão**: Cada conversa pode ser expandida para ver as mensagens individuais, com **remetente**, **destinatário**, **conteúdo** e **data/hora** de cada uma.
+
+### 5.2 Filtros Disponíveis
+
+| Filtro             | Descrição                                                                                                        |
+| :----------------- | :--------------------------------------------------------------------------------------------------------------- |
+| Operador           | Seleção do operador (participante como remetente ou destinatário da mensagem). "Todos os operadores" lista tudo. |
+| Período (De / Até) | Intervalo de datas inclusivo, aplicado sobre a data de criação das mensagens.                                    |
+| Buscar no conteúdo | Busca textual livre contida no texto das mensagens.                                                              |
+
+- Totalizadores exibidos no topo: **quantidade de mensagens**, **conversas distintas** e **participantes distintos** do resultado filtrado.
+- Botão "Limpar filtros" restaura a consulta completa.
+
+### 5.3 Permissão no Catálogo de Acesso
+
+| Módulo | Chave do Item    | Nome no Catálogo               | Níveis Suportados             |
+| :----- | :--------------- | :----------------------------- | :---------------------------- |
+| `chat` | `chat_historico` | Histórico de Chat por Operador | Nenhum / Leitura / Configurar |
+
+- **Herança**: O histórico **possui permissão própria** (`chat_historico`) mas o item de menu só aparece para quem **TAMBÉM tem acesso ao chat** (`chat_operadores`), garantindo coerência: quem não enxerga o chat não precisa enxergar seu histórico.
+- **Guard de rota**: `/chat/historico` está protegida por `ProtectedRoute requiredModule="chat" requiredItem="chat_historico"`; perfis sem acesso são redirecionados.
+- **Menu**: O item "Histórico de Chat" só aparece quando o perfil tem `chat_operadores` **E** `chat_historico` concedidos.
+- **Acesso dentro da tela**: Os dados lidos são restritos pelas mesmas regras de acesso da coleção `operator_chat_messages` (regras da migração 0129), garantindo que cada operador só consulte conversas das quais participa ou que seu perfil autorize.

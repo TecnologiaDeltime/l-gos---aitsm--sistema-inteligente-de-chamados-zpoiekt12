@@ -165,6 +165,13 @@ const BASE_SYSTEM_MODULES: GranularModuleDefinition[] = [
         description: 'Troca de mensagens diretas e histórico entre operadores internos',
         path: '/chat',
       },
+      {
+        key: 'chat_historico',
+        label: 'Histórico de Chat por Operador',
+        description:
+          'Consulta de leitura do histórico de conversas e mensagens por operador, com filtros de operador e período',
+        path: '/chat/historico',
+      },
     ],
   },
   {
