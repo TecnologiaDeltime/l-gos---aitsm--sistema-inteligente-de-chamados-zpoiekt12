@@ -85,7 +85,25 @@ function isSafeUrl(url: string): boolean {
 
 /**
  * Sanitiza propriedades CSS inline (remove behaviors, expression, javascript:, url(javascript:))
+ * e neutraliza animações/transições vindas do e-mail (assinaturas piscando, blink, marquee).
  */
+const ANIMATION_STYLE_PROPERTIES = [
+  'animation',
+  'animation-name',
+  'animation-duration',
+  'animation-iteration-count',
+  'animation-delay',
+  'animation-timing-function',
+  'animation-direction',
+  'animation-play-state',
+  'animation-fill-mode',
+  'transition',
+  'transition-property',
+  'transition-duration',
+  'transition-timing-function',
+  'transition-delay',
+]
+
 function sanitizeStyle(styleStr: string): string {
   if (!styleStr) return ''
   const lower = styleStr.toLowerCase()
@@ -97,7 +115,16 @@ function sanitizeStyle(styleStr: string): string {
   ) {
     return ''
   }
-  return styleStr
+  // Remove declarações de animation/transition do estilo inline
+  let cleaned = styleStr
+  for (const prop of ANIMATION_STYLE_PROPERTIES) {
+    // Ex.: "animation: blink 1s infinite;", "transition: all .2s;"
+    const pattern = new RegExp(`(?:^|;)\\s*${prop}\\s*:[^;]*(?:;|$)`, 'gi')
+    cleaned = cleaned.replace(pattern, (match) => (match.trim().endsWith(';') ? ';' : ''))
+  }
+  // Normaliza separadores duplicados após remoções
+  cleaned = cleaned.replace(/;+/g, ';').replace(/^\s*;|;\s*$/g, '')
+  return cleaned.trim() ? cleaned : ''
 }
 
 /**

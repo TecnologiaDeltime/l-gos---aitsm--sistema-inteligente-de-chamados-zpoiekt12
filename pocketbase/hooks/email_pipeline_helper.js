@@ -9,19 +9,30 @@
 // 5. Registra o resultado em processed_emails para idempotência estrita
 
 module.exports = {
-  // Limpa texto simples de HTML
+  // Limpa texto simples de HTML preservando a formatação: quebras estruturais
+  // (<br>, </p>, </div>, </li>...) viram quebras de linha reais e \n NÃO é
+  // colapsado (apenas espaços/tabs redundantes), para que a descrição do
+  // chamado e o corpo das interações cheguem com os parágrafos do e-mail.
   cleanText: function (text) {
     if (!text) return ''
     return String(text)
+      .replace(/\r\n/g, '\n')
+      .replace(/\r/g, '\n')
       .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
       .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+      .replace(/<br\s*\/?>/gi, '\n')
+      .replace(/<\/(p|div|tr|h[1-6]|blockquote|pre|table|ul|ol)>/gi, '\n')
+      .replace(/<li[^>]*>/gi, '• ')
       .replace(/<[^>]+>/g, ' ')
       .replace(/&nbsp;/g, ' ')
       .replace(/&amp;/g, '&')
       .replace(/&lt;/g, '<')
       .replace(/&gt;/g, '>')
       .replace(/&quot;/g, '"')
-      .replace(/\s+/g, ' ')
+      .replace(/&#39;/g, "'")
+      .replace(/[ \t]+/g, ' ')
+      .replace(/ *\n */g, '\n')
+      .replace(/\n\s*\n\s*\n+/g, '\n\n')
       .trim()
   },
 

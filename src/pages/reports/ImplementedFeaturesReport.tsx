@@ -702,6 +702,27 @@ const FEATURE_CATEGORIES: FeatureCategory[] = [
           'Agente nativo do Skip Cloud (ticket-responder-agent) integrado ao atendimento interno e ao Portal do Cliente. Opera nos dois modos configuráveis: (1) Sugestão ao operador via botão "Resposta IA", gerando rascunhos contextualizados com chamado, ativos e base de conhecimento para revisão e envio como interação; e (2) Resposta automática opcional que acolhe o solicitante sem debitar franquia de horas (origem Automático, Não Faturável).',
         tag: 'Agente Nativo / ITSM',
       },
+      {
+        id: 'kb-ai-5',
+        title: 'Respostas do Assistente Técnico com Formatação Markdown',
+        description:
+          'A resposta do Assistente Técnico Lógos AITSM (agente nativo de IA) passa a ser instruída em seu prompt de sistema a responder sempre em Markdown, com títulos, listas, negrito, blocos de código e tabelas quando fizer sentido. No painel, a resposta é renderizada pelo componente MarkdownLite (sem bibliotecas externas), preservando títulos, listas numeradas e com marcadores, negrito/itálico, código e tabelas simples — acabando com os textos corridos sem espaços nem quebras de linha.',
+        tag: 'IA Nativa / UX',
+      },
+      {
+        id: 'kb-ai-6',
+        title: 'Preservação de Formatação em Chamados Abertos por E-mail',
+        description:
+          'O pipeline de ingestão de e-mails (Microsoft Graph, webhook de ingestão e caminhos auxiliares) foi ajustado para preservar a formatação do corpo do e-mail: as quebras de linha e parágrafos do e-mail original são convertidas em quebras reais e gravadas na descrição do chamado e no corpo das interações, em vez de colapsar tudo em um único bloco corrido de texto sem espaços nem parágrafos.',
+        tag: 'Ingestão de E-mail',
+      },
+      {
+        id: 'kb-ai-7',
+        title: 'Assinatura de E-mail do Cliente Sem Piscar',
+        description:
+          'O visualizador do e-mail original (card "E-mail Original") e o conteúdo de e-mail exibido no chamado agora neutralizam animações vindas do e-mail do cliente — GIFs de assinatura, animações e transições inline — garantindo exibição estática e estável do conteúdo, sem elementos piscando.',
+        tag: 'Ingestão de E-mail',
+      },
     ],
   },
   {

@@ -135,18 +135,30 @@ cronAdd('email_checker_cron', '*/2 * * * *', () => {
       }
     }
 
+    // Limpeza que PRESERVA a formatação: converte quebras estruturais do HTML
+    // (<br>, </p>, </div>, </li>...) em quebras de linha reais e NÃO colapsa
+    // \n — apenas espaços/tabs redundantes — para que a descrição do chamado
+    // e o corpo das interações cheguem com parágrafos do e-mail original.
     var cleanText = function (text) {
       if (!text) return ''
       return String(text)
+        .replace(/\r\n/g, '\n')
+        .replace(/\r/g, '\n')
         .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
         .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+        .replace(/<br\s*\/?>/gi, '\n')
+        .replace(/<\/(p|div|tr|h[1-6]|blockquote|pre|table|ul|ol)>/gi, '\n')
+        .replace(/<li[^>]*>/gi, '• ')
         .replace(/<[^>]+>/g, ' ')
         .replace(/&nbsp;/g, ' ')
         .replace(/&amp;/g, '&')
         .replace(/&lt;/g, '<')
         .replace(/&gt;/g, '>')
         .replace(/&quot;/g, '"')
-        .replace(/\s+/g, ' ')
+        .replace(/&#39;/g, "'")
+        .replace(/[ \t]+/g, ' ')
+        .replace(/ *\n */g, '\n')
+        .replace(/\n\s*\n\s*\n+/g, '\n\n')
         .trim()
     }
 
@@ -855,7 +867,8 @@ cronAdd('email_checker_cron', '*/2 * * * *', () => {
           .replace(/&#39;/g, "'")
           .replace(/\r\n/g, '\n')
           .replace(/[ \t]+/g, ' ')
-          .replace(/\n\s*\n\s*\n+/g, '\n\n')
+          .replace(/ *\n */g, '\n')
+          .replace(/\n{3,}/g, '\n\n')
           .trim()
       },
       getAccessToken: function (params) {

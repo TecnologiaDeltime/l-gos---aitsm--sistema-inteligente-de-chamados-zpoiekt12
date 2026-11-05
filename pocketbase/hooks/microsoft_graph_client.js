@@ -34,7 +34,8 @@
       .replace(/&#39;/g, "'")
       .replace(/\r\n/g, '\n')
       .replace(/[ \t]+/g, ' ')
-      .replace(/\n\s*\n\s*\n+/g, '\n\n')
+      .replace(/ *\n */g, '\n')
+      .replace(/\n{3,}/g, '\n\n')
       .trim()
   }
 

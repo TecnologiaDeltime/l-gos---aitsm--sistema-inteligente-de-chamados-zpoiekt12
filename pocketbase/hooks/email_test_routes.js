@@ -1406,7 +1406,10 @@
             .replace(/&gt;/g, '>')
             .replace(/&quot;/g, '"')
             .replace(/&#39;/g, "'")
+            .replace(/\r\n/g, '\n')
             .replace(/[ \t]+/g, ' ')
+            .replace(/ *\n */g, '\n')
+            .replace(/\n{3,}/g, '\n\n')
             .trim()
         },
       }

@@ -272,3 +272,34 @@
   outline: 2px solid hsl(var(--primary));
   outline-offset: 2px;
 }
+
+/* ------------------------------------------------------------------ */
+/* E-mail renderizado (card "E-mail Original" e visualizações do      */
+/* corpo do e-mail): neutraliza QUALQUER animação vinda do e-mail     */
+/* do cliente — GIF de assinatura, @keyframes, animation/transition   */
+/* inline — para que a assinatura e demais elementos apareçam         */
+/* estáticos, sem piscar.                                             */
+/* ------------------------------------------------------------------ */
+.email-html-body *,
+.email-html-static *,
+.email-html-iframe * {
+  animation: none !important;
+  animation-name: none !important;
+  animation-duration: 0s !important;
+  animation-iteration-count: 1 !important;
+  transition: none !important;
+}
+
+/* Oculta explicitamente o elemento <blink> legado, se algum e-mail usar */
+.email-html-body blink,
+.email-html-static blink,
+.email-html-iframe blink {
+  display: none !important;
+}
+
+/* Elementos <marquee> legados: congela na posição atual */
+.email-html-body marquee,
+.email-html-static marquee,
+.email-html-iframe marquee {
+  overflow-x: hidden !important;
+}
