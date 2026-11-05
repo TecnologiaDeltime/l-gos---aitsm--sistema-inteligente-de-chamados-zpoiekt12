@@ -52,6 +52,13 @@ const BASE_SYSTEM_MODULES: GranularModuleDefinition[] = [
         description: 'Visão consolidada da fila de atendimento',
         path: '/dashboard',
       },
+      {
+        key: 'modo_tv',
+        label: 'Modo TV (Painel Monitor)',
+        description:
+          'Exibição em tela cheia com rotação automática de dashboards operacionais e gerenciais',
+        path: '/tv',
+      },
     ],
   },
   {

@@ -69,6 +69,7 @@ import AutomationList from '@/pages/automations/AutomationList'
 import AutomationEditor from '@/pages/automations/AutomationEditor'
 import TechnicalAgenda from '@/pages/visits/TechnicalAgenda'
 import VisitManagerDashboard from '@/pages/visits/VisitManagerDashboard'
+import { TvModePage } from '@/pages/tv/TvModePage'
 import ChangeDashboard from '@/pages/changes/ChangeDashboard'
 import ChangeList from '@/pages/changes/ChangeList'
 import MyChanges from '@/pages/changes/MyChanges'
@@ -164,6 +165,16 @@ const App = () => (
                   <PortalProtectedRoute>
                     <PortalPage />
                   </PortalProtectedRoute>
+                }
+              />
+
+              {/* Rota Modo TV (Tela Cheia sem chrome de layout, protegida por autenticação e permissão) */}
+              <Route
+                path="/tv"
+                element={
+                  <ProtectedRoute requiredModule="dashboard" requiredItem="modo_tv">
+                    <TvModePage />
+                  </ProtectedRoute>
                 }
               />
 

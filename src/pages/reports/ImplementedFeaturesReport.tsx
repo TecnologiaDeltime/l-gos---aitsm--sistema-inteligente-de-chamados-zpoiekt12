@@ -487,6 +487,13 @@ const FEATURE_CATEGORIES: FeatureCategory[] = [
           'Abertura automática de chamados de incidentes com origem "PRTG" disparados por notificações HTTP de sensores DOWN/Error, deduplicação inteligente de alertas repetidos dentro da janela de horas configurável (registrando nova interação no chamado existente), auto-resolução do chamado quando o sensor recupera (UP/OK), mapeamento flexível de regras por sensor/dispositivo para direcionamento de cliente, fila e atividade, e simulador de teste interativo em Configurações > Monitoramento & PRTG.',
         tag: 'Monitoramento & NOC',
       },
+      {
+        id: 'tv-mode-presentation',
+        title: 'Modo TV · Painel Monitor de Parede com Rotação Automática',
+        description:
+          'Tela de exibição em tela cheia (Fullscreen) para TVs e monitores NOC, com rotação automática configurável entre 7 dashboards dedicados de alta legibilidade: (1) Total de chamados por Fila com status, (2) Quem está online com perfil e filas, (3) Consumo de horas dos clientes em cartões com horas consumidas em destaque, percentual de alerta e total contratado em HH:MM:SS, (4) Metas do Dashboard Gerencial (Gauges de cumprimento por prioridade + saldo e consumo), (5) Total geral de chamados por status com barras proporcionais, (6) Gestão de Mudanças (abertas/andamento/fechadas), (7) Gestão de Problemas (abertos/efetividade/concluídos). Inclui seletor de dashboards, intervalo ajustável, persistência de preferências, relógio digital, barra de progresso, polling de atualização em tempo real e controle de permissões em 3 níveis no catálogo.',
+        tag: 'NOC / Gestão Visual',
+      },
     ],
   },
   {

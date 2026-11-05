@@ -56,6 +56,7 @@ import {
   PanelLeftOpen,
   Bot,
   Activity,
+  Tv,
 } from 'lucide-react'
 import { useAuth } from '@/hooks/use-auth'
 import { useTheme } from '@/hooks/use-theme'
@@ -286,6 +287,12 @@ export default function Layout() {
       path: '/dashboard',
       icon: LayoutDashboard,
       show: permissions.canAccessItem('dashboard', 'painel_tickets'),
+    },
+    {
+      label: 'Modo TV (Painel Monitor)',
+      path: '/tv',
+      icon: Tv,
+      show: permissions.canAccessItem('dashboard', 'modo_tv'),
     },
   ]
 
