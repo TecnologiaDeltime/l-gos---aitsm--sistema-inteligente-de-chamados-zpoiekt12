@@ -47,7 +47,6 @@ import {
   RefreshCw,
   Clock,
   ArrowLeft,
-  ChevronRight,
   ShieldCheck,
 } from 'lucide-react'
 import pb from '@/lib/pocketbase/client'

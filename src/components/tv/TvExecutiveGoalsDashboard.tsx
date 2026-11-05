@@ -1,6 +1,6 @@
 import { Card, CardContent } from '@/components/ui/card'
 import { SlaGauge } from '@/components/dashboard/SlaGauge'
-import { Timer, Hourglass, CheckCircle2, Clock, Inbox } from 'lucide-react'
+import { Timer, Hourglass, CheckCircle2, Inbox } from 'lucide-react'
 import type { TvMetasData } from '@/services/tv-mode'
 
 interface TvExecutiveGoalsDashboardProps {

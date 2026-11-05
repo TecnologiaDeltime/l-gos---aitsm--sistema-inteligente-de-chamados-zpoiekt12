@@ -1,6 +1,6 @@
-import { Card, CardContent } from '@/components/ui/card'
+import { Card } from '@/components/ui/card'
 import { formatSeconds } from '@/lib/duration'
-import { AlertTriangle, Building2, CheckCircle2 } from 'lucide-react'
+import { AlertTriangle, Building2 } from 'lucide-react'
 import type { ClientHoursData } from '@/services/client-hours'
 
 interface TvClientHoursDashboardProps {

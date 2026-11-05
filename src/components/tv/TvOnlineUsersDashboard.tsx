@@ -1,6 +1,6 @@
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Users, Wifi, Clock, Shield } from 'lucide-react'
+import { Users, Wifi, Shield } from 'lucide-react'
 import type { OnlineUserItem } from '@/services/tv-mode'
 
 interface TvOnlineUsersDashboardProps {

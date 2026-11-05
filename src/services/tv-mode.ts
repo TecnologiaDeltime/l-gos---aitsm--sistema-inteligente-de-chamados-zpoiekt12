@@ -317,19 +317,25 @@ export async function fetchClientHoursSummary(): Promise<ClientHoursData[]> {
  * 5. Metas do Dashboard Gerencial
  */
 export async function fetchExecutiveGoalsData(): Promise<TvMetasData> {
-  const [tickets, contracts, periods, visits, technicalVisits] = await Promise.all([
+  const [tickets, contracts, periods, visits, technicalVisits, interactions] = await Promise.all([
     pb.collection('tickets').getFullList<TicketRecord>({
       expand: 'company,assigned_to',
     }),
-    pb.collection('contracts').getFullList({ filter: 'status = "Ativo"' }),
-    pb.collection('contract_periods').getFullList({ filter: 'status = "Ativo"' }),
+    pb.collection('contracts').getFullList<any>({ filter: 'status = "Ativo"' }),
+    pb.collection('contract_periods').getFullList<any>({ filter: 'status = "Ativo"' }),
     pb
       .collection('visits')
-      .getFullList()
+      .getFullList<any>()
       .catch(() => []),
     pb
       .collection('technical_visits')
-      .getFullList()
+      .getFullList<any>()
+      .catch(() => []),
+    pb
+      .collection('ticket_interactions')
+      .getFullList<any>({
+        fields: 'id,ticket,duration_minutes,created',
+      })
       .catch(() => []),
   ])
 
@@ -338,12 +344,12 @@ export async function fetchExecutiveGoalsData(): Promise<TvMetasData> {
   const dashboardData: DashboardData = {
     tickets,
     visits: allVisits as any,
-    contracts,
-    periods,
+    contracts: contracts as any,
+    periods: periods as any,
     users: [],
     categories: [],
     queues: [],
-    interactions: [],
+    interactions: interactions as any,
     companies: [],
     units: [],
   }

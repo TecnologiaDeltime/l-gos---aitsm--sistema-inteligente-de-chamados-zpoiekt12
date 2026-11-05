@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
-import { CheckCircle2, AlertCircle, Clock, Archive } from 'lucide-react'
+import { CheckCircle2, Clock, Archive } from 'lucide-react'
 import type { TicketStatusSummary } from '@/services/tv-mode'
 
 interface TvStatusTicketsDashboardProps {

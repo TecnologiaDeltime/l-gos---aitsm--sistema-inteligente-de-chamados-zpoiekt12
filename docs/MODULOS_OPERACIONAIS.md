@@ -357,3 +357,23 @@ A integração nativa com o **PRTG Network Monitor** automatiza o fluxo de respo
 - **Regras Flexíveis de Mapeamento**: permite associar termos contidos no nome do dispositivo ou sensor a empresas clientes específicas, filas de atendimento dedicadas e atividades do catálogo.
 - **Simulador Interativo e Permissões Granulares**: aba dedicada em `Configurações > Monitoramento & PRTG` (`/settings?tab=prtg`) com ferramenta de simulação em tempo real e controle de acesso em 3 níveis (Nenhum / Leitura / Total) via permissão `settings_prtg_monitoring`.
 - Documentação detalhada disponível em `docs/INTEGRACAO_PRTG.md`.
+
+---
+
+## 10. Modo TV · Painel Monitor de Parede com Rotação Automática
+
+O **Modo TV** (`/tv`) é a solução visual imersiva para televisores, telões de NOC e monitores de parede de Service Desk:
+
+- **Execução em Tela Cheia**: visualização imersiva via Fullscreen API sem barras de navegação ou menus laterais, com cabeçalho grafite `#17181C`, logo oficial **Lógos AITILSM**, relógio digital em tempo real e barra de progresso do intervalo de transição.
+- **7 Dashboards Dedicados**:
+  1. _Total de Chamados por Fila com Status_: agrupamento por fila e quebra por status real do chamado.
+  2. _Quem está Online_: operadores conectados, perfis de acesso, filas de atendimento e status de disponibilidade.
+  3. _Consumo de Horas dos Clientes_: cartões de empresas com horas consumidas em destaque numérico, percentual e total contratado em formato obrigatório `HH:MM:SS`.
+  4. _Metas (Dashboard Gerencial)_: medidores circulares (gauges) de cumprimento de SLA por prioridade e cards de saldo/consumo.
+  5. _Total de Chamados por Status_: contadores gerais com barras proporcionais de distribuição.
+  6. _Gestão de Mudanças (RDM)_: métricas de mudanças abertas, em andamento e concluídas.
+  7. _Gestão de Problemas_: métricas de problemas abertos, em teste de efetividade e encerrados.
+- **Rotação Automática e Persistência**: ciclo configurável entre 10s e 300s (padrão 30s) com seletor de dashboards ativos, atalhos de teclado (pausa, avançar, retroceder, ESC para sair) e preferências salvas em `localStorage`.
+- **Atualização Contínua**: polling automático em segundo plano a cada 30 segundos mantendo os números sempre sincronizados.
+- **Controle por Perfis de Acesso**: item de menu em Painéis com guard na permissão `modo_tv` (módulo `dashboard`), com níveis Nenhum, Leitura e Configurar (migração `0128_add_tv_mode_permission.js`).
+- Documentação técnica e operacional completa em `docs/MODO_TV.md`.
