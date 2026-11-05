@@ -57,6 +57,7 @@ import {
   Bot,
   Activity,
   Tv,
+  MessageSquare,
 } from 'lucide-react'
 import { useAuth } from '@/hooks/use-auth'
 import { useTheme } from '@/hooks/use-theme'
@@ -225,6 +226,12 @@ export default function Layout() {
       path: '/atendimento',
       icon: Sparkles,
       show: permissions.canAccessItem('atendimento', 'atendimento_omnichannel'),
+    },
+    {
+      label: 'Chat de Operadores',
+      path: '/chat',
+      icon: MessageSquare,
+      show: permissions.canAccessItem('chat', 'chat_operadores'),
     },
     {
       label: 'Fila de Tickets',

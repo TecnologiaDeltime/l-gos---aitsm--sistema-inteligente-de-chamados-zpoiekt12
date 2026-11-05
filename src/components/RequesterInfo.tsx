@@ -121,7 +121,13 @@ export function RequesterInfo({ ticket, onUpdated }: RequesterInfoProps) {
         <div className="space-y-2.5">
           <InfoRow icon={User} label="Nome" value={ticket.requester_name} />
           <InfoRow icon={Phone} label="Telefone" value={ticket.requester_phone} href={telHref} />
-          {departmentName ? (
+          {ticket.is_internal ? (
+            <InfoRow
+              icon={Building2}
+              label="Setor Solicitante (Interno)"
+              value={ticket.internal_sector || 'Setor Interno'}
+            />
+          ) : departmentName ? (
             <InfoRow icon={Building2} label="Setor" value={departmentName} />
           ) : inferredDept ? (
             <div className="flex items-start gap-2 text-xs">

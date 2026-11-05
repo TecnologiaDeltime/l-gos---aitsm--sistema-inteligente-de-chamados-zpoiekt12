@@ -128,15 +128,25 @@ export async function getChatOperators(): Promise<ChatOperatorUser[]> {
   const users = await pb.collection('users').getFullList<any>({
     filter: `role != "cliente" && role != "cliente_gestor" && status = "Ativo"`,
     sort: 'name',
-    fields: 'id,name,email,avatar,role,status',
+    fields: 'id,name,email,avatar,role,status,session_last_activity,updated',
   })
 
-  return users.map((u) => ({
-    id: u.id,
-    name: u.name || u.email,
-    email: u.email,
-    avatar: u.avatar,
-    role: u.role,
-    status: u.status,
-  }))
+  const now = Date.now()
+  const ONLINE_THRESHOLD_MS = 15 * 60 * 1000 // 15 minutos
+
+  return users.map((u) => {
+    const lastActivity = u.session_last_activity || u.updated
+    const lastTime = lastActivity ? new Date(lastActivity).getTime() : 0
+    const online = now - lastTime < ONLINE_THRESHOLD_MS
+
+    return {
+      id: u.id,
+      name: u.name || u.email,
+      email: u.email,
+      avatar: u.avatar,
+      role: u.role,
+      status: u.status,
+      online,
+    }
+  })
 }

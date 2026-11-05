@@ -10,6 +10,7 @@ export type ModuleKey =
   | 'dashboard'
   | 'tickets'
   | 'tickets_children'
+  | 'chat'
   | 'atendimento'
   | 'cmdb'
   | 'changes'

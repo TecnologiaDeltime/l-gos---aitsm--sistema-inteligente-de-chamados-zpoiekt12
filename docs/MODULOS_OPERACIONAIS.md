@@ -377,3 +377,22 @@ O **Modo TV** (`/tv`) é a solução visual imersiva para televisores, telões d
 - **Atualização Contínua**: polling automático em segundo plano a cada 30 segundos mantendo os números sempre sincronizados.
 - **Controle por Perfis de Acesso**: item de menu em Painéis com guard na permissão `modo_tv` (módulo `dashboard`), com níveis Nenhum, Leitura e Configurar (migração `0128_add_tv_mode_permission.js`).
 - Documentação técnica e operacional completa em `docs/MODO_TV.md`.
+
+---
+
+## 11. Chamados Internos e Chat de Operadores
+
+### 11.1 Chamados Internos entre Setores
+Permite que departamentos internos da empresa que opera o Lógos AITILSM (como a Área de Inovação, RH, Compras e TI Interna) abram e recebam demandas sem a necessidade de cadastrar a própria empresa como cliente externo:
+- **Abertura Simplificada**: seletor de tipo de chamado (Cliente vs. Interno) em `/chamados/novo`.
+- **Isenção de Faturamento**: interações e horas registradas não debitam saldo de franquia de nenhum cliente (`pocketbase/hooks/on_interaction_consume.js`).
+- **Segurança e Privacidade**: chamados com `is_internal = true` são estritamente filtrados e ocultados no Portal do Cliente.
+- **Identificação em Listagens e Kanban**: badge visual "Interno" e indicação do setor solicitante nas filas de trabalho.
+
+### 11.2 Chat Interno de Operadores
+Canal de comunicação direta 1:1 entre operadores e equipes internas (`/chat`):
+- **Presença em Tempo Real**: lista de operadores com avatar e status de disponibilidade (Online, Ausente, Ocupado, Offline).
+- **Mensageria Instantânea**: mensagens armazenadas na coleção `operator_chat_messages` e sincronizadas via Realtime do PocketBase.
+- **Notificações Globais**: alerta no topo e sinal sonoro discreto via `GlobalNotifications` ao receber mensagens de outros técnicos.
+- **Controle de Acesso**: permissões `tickets.tickets_interno` e `chat.chat_operadores` com 3 níveis na matriz de perfis de acesso.
+- Documentação técnica completa em `docs/CHAMADOS_INTERNOS_E_CHAT.md`.

@@ -913,6 +913,14 @@ export default function TicketDetail({
                 {ticket.number} - {ticket.title}
               </h2>
               <div className="flex items-center gap-2">
+                {ticket.is_internal && (
+                  <Badge
+                    variant="outline"
+                    className="bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-950/60 dark:text-amber-300 dark:border-amber-800 text-xs px-2.5 py-0.5 font-semibold"
+                  >
+                    Chamado Interno{ticket.internal_sector ? ` • ${ticket.internal_sector}` : ''}
+                  </Badge>
+                )}
                 {childTickets.length > 0 && (
                   <span className="inline-flex items-center gap-1 rounded-full border border-slate-300 bg-slate-50 px-2 py-0.5 text-[11px] font-medium text-slate-600 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300">
                     <GitBranch className="h-3 w-3" />

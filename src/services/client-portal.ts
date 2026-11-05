@@ -72,7 +72,7 @@ export interface ClientPortalAccessItem {
 export async function getClientPortalTickets(companyId: string): Promise<TicketRecord[]> {
   if (!companyId) return []
   return pb.collection('tickets').getFullList<TicketRecord>({
-    filter: `company = "${companyId}"`,
+    filter: `company = "${companyId}" && (is_internal != true || is_internal = null)`,
     sort: '-created',
     expand: 'category,subcategory,assigned_to',
   })

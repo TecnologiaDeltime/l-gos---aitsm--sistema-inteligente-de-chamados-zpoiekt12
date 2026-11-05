@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import { User, Clock } from 'lucide-react'
+import { Badge } from '@/components/ui/badge'
 import { TicketRecord } from '@/services/tickets'
 import { PriorityBadge } from '@/components/PriorityBadge'
 import { SLA_DOT_COLORS } from '@/lib/kanban-constants'
