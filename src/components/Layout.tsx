@@ -55,6 +55,7 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   Bot,
+  Activity,
 } from 'lucide-react'
 import { useAuth } from '@/hooks/use-auth'
 import { useTheme } from '@/hooks/use-theme'

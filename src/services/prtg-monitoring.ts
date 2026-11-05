@@ -35,7 +35,7 @@ export interface PrtgSimulationResult {
 export const prtgMonitoringService = {
   async getSettings(): Promise<PrtgSettings> {
     try {
-      const records = await pb.collection('system_settings').getList(1, 1, {
+      const records = await pb.collection('system_settings').getList<any>(1, 1, {
         filter: 'key = "global"',
         requestKey: null,
       })
@@ -99,25 +99,27 @@ export const prtgMonitoringService = {
     }
 
     if (settings.id) {
-      const updated = await pb.collection('system_settings').update(settings.id, payload)
+      const updated = await pb.collection('system_settings').update<any>(settings.id, payload)
       return {
         ...settings,
         id: updated.id,
       }
     } else {
       // Procurar se já existe global
-      const records = await pb.collection('system_settings').getList(1, 1, {
+      const records = await pb.collection('system_settings').getList<any>(1, 1, {
         filter: 'key = "global"',
         requestKey: null,
       })
       if (records.items.length > 0) {
-        const updated = await pb.collection('system_settings').update(records.items[0].id, payload)
+        const updated = await pb
+          .collection('system_settings')
+          .update<any>(records.items[0].id, payload)
         return {
           ...settings,
           id: updated.id,
         }
       }
-      const created = await pb.collection('system_settings').create(payload)
+      const created = await pb.collection('system_settings').create<any>(payload)
       return {
         ...settings,
         id: created.id,
@@ -137,7 +139,10 @@ export const prtgMonitoringService = {
     lastvalue?: string
     priority?: string
   }): Promise<PrtgSimulationResult> {
-    const baseUrl = window.location.origin
+    const baseUrl = (import.meta.env.VITE_POCKETBASE_URL || window.location.origin).replace(
+      /\/$/,
+      '',
+    )
     const url = `${baseUrl}/backend/v1/webhooks/prtg?token=${encodeURIComponent(params.token)}`
 
     const response = await fetch(url, {

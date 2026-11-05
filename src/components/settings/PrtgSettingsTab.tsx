@@ -92,14 +92,19 @@ export function PrtgSettingsTab({ canConfigure = true }: AutoAssignSettingsTabPr
       const [st, qList, aList, cList] = await Promise.all([
         prtgMonitoringService.getSettings(),
         pb.collection('queues').getFullList<SimpleItem>({ sort: 'name', requestKey: null }),
-        pb.collection('categories').getFullList<SimpleItem>({ sort: 'name', requestKey: null }),
-        pb.collection('companies').getFullList<SimpleItem>({ sort: 'name', requestKey: null }),
+        pb.collection('tkt_categories').getFullList<SimpleItem>({ sort: 'name', requestKey: null }),
+        pb.collection('companies').getFullList<any>({ sort: 'trade_name', requestKey: null }),
       ])
+
+      const mappedCompanies: SimpleItem[] = (cList || []).map((c: any) => ({
+        id: c.id,
+        name: c.trade_name || c.legal_name || c.name || 'Empresa',
+      }))
 
       setSettings(st)
       setQueues(qList)
       setActivities(aList)
-      setCompanies(cList)
+      setCompanies(mappedCompanies)
     } catch (e: any) {
       toast({
         title: 'Erro ao carregar configurações',
@@ -139,7 +144,11 @@ export function PrtgSettingsTab({ canConfigure = true }: AutoAssignSettingsTabPr
     setSettings((prev) => ({ ...prev, prtg_webhook_token: `prtg_${rand}` }))
   }
 
-  const webhookUrl = `${window.location.origin}/backend/v1/webhooks/prtg?token=${encodeURIComponent(
+  const backendBase = (import.meta.env.VITE_POCKETBASE_URL || window.location.origin).replace(
+    /\/$/,
+    '',
+  )
+  const webhookUrl = `${backendBase}/backend/v1/webhooks/prtg?token=${encodeURIComponent(
     settings.prtg_webhook_token || '',
   )}`
 

@@ -341,3 +341,19 @@ _[print: inventário de ti cmdb no portal com histórico de manutenção do ativ
 _[print: consulta de visitas técnicas agendadas com nome do técnico responsável no portal]_
 _[print: extrato de horas contratadas consumidas e saldo restante no portal]_
 _[print: relatório mensal abnt liberado visualizado pelo cliente no portal]_
+
+---
+
+## 9. Integrações e Monitoramento de Infraestrutura
+
+### 9.1 Monitoramento de Redes e Ativos com PRTG Network Monitor
+
+A integração nativa com o **PRTG Network Monitor** automatiza o fluxo de resposta a incidentes de infraestrutura sem exigir intervenção humana manual para o registro inicial:
+
+- **Endpoint de Webhook Seguro**: rota `/backend/v1/webhooks/prtg?token=...` protegida por token criptográfico parametrizável.
+- **Abertura Automática de Incidentes (DOWN/Error)**: ao detectar indisponibilidade de links, servidores, switches ou serviços, o PRTG dispara uma Notificação HTTP criando imediatamente um chamado com origem `PRTG`, prioridade ITIL pré-definida e classificação por regras.
+- **Deduplicação Inteligente de Alertas**: caso múltiplos alertas cheguem para o mesmo sensor dentro do período configurável (ex: 4 horas), o sistema não polui a fila com tickets duplicados — ele localiza o chamado aberto e anexa os novos dados como interação na timeline.
+- **Auto-Resolução em Recuperação (UP/OK)**: quando o PRTG notifica a normalização do sensor, o sistema registra automaticamente a mensagem de recuperação na timeline e transiciona o chamado para o status **Resolvido**.
+- **Regras Flexíveis de Mapeamento**: permite associar termos contidos no nome do dispositivo ou sensor a empresas clientes específicas, filas de atendimento dedicadas e atividades do catálogo.
+- **Simulador Interativo e Permissões Granulares**: aba dedicada em `Configurações > Monitoramento & PRTG` (`/settings?tab=prtg`) com ferramenta de simulação em tempo real e controle de acesso em 3 níveis (Nenhum / Leitura / Total) via permissão `settings_prtg_monitoring`.
+- Documentação detalhada disponível em `docs/INTEGRACAO_PRTG.md`.

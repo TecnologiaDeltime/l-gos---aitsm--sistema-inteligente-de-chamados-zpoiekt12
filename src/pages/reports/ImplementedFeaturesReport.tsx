@@ -480,6 +480,13 @@ const FEATURE_CATEGORIES: FeatureCategory[] = [
           'Distribuição inteligente de novos chamados abertos sem operador atribuído para a equipe da fila, respeitando a ordem: (1) Operador disponível na fila, (2) Menor carga ativa de chamados (mais ocioso), (3) Responsável/Líder da equipe da fila como fallback. Acompanha gatilho síncrono no momento da abertura, cron periódico de reavaliação com intervalo em minutos configurável em Configurações > Distribuição Automática, botão para execução manual imediata e controle por perfil com 3 níveis (Nenhum/Leitura/Total) via permissão settings_auto_assign.',
         tag: 'Agente Inteligente ITSM',
       },
+      {
+        id: 'prtg-monitoring-integration',
+        title: 'Integração com Ferramenta de Monitoramento PRTG Network Monitor',
+        description:
+          'Abertura automática de chamados de incidentes com origem "PRTG" disparados por notificações HTTP de sensores DOWN/Error, deduplicação inteligente de alertas repetidos dentro da janela de horas configurável (registrando nova interação no chamado existente), auto-resolução do chamado quando o sensor recupera (UP/OK), mapeamento flexível de regras por sensor/dispositivo para direcionamento de cliente, fila e atividade, e simulador de teste interativo em Configurações > Monitoramento & PRTG.',
+        tag: 'Monitoramento & NOC',
+      },
     ],
   },
   {
