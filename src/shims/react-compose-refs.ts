@@ -69,6 +69,8 @@ export function useComposedRefs<T>(...refs: PossibleRef<T>[]): React.RefCallback
 
   return React.useCallback((node: T) => {
     // If the DOM node reference has not changed, do not re-run state-setting refs.
+    // In React 19, ref callbacks can be called on every commit if their identity changes,
+    // or when parent re-renders. If node is identical and we already mounted refs, skip.
     if (lastNodeRef.current === node && cleanupsRef.current.length > 0) {
       return
     }

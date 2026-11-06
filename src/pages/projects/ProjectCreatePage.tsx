@@ -49,7 +49,7 @@ export default function ProjectCreatePage() {
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
   const [companyId, setCompanyId] = useState<string>('none')
-  const [managerId, setManagerId] = useState<string>('')
+  const [managerId, setManagerId] = useState<string>(() => user?.id || '')
   const [methodology, setMethodology] = useState<ProjectMethodology>('waterfall')
   const [status, setStatus] = useState<ProjectStatus>('planning')
   const [startDate, setStartDate] = useState('')
@@ -63,12 +63,6 @@ export default function ProjectCreatePage() {
   useEffect(() => {
     loadAuxData()
   }, [])
-
-  useEffect(() => {
-    if (user?.id && !managerId) {
-      setManagerId(user.id)
-    }
-  }, [user, managerId])
 
   const loadAuxData = async () => {
     try {
