@@ -26,6 +26,7 @@ export type ModuleKey =
   | 'time_tracking'
   | 'vault'
   | 'knowledge'
+  | 'projects'
   | 'admin'
 
 export interface GranularPermissionItem {

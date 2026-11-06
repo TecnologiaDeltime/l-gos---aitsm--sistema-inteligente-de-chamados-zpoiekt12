@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-05T22:08:10.225Z",
+  "generatedAt": "2026-11-06T17:48:14.313Z",
   "collections": [
     {
       "name": "users",
@@ -12066,6 +12066,418 @@
       "indexes": [
         "CREATE INDEX idx_chat_sender_rec ON operator_chat_messages (sender, recipient, created)",
         "CREATE INDEX idx_chat_read ON operator_chat_messages (recipient, read)"
+      ]
+    },
+    {
+      "name": "projects",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != \"\"",
+        "view": "@request.auth.id != \"\"",
+        "create": "@request.auth.id != \"\"",
+        "update": "@request.auth.id != \"\"",
+        "delete": "@request.auth.id != \"\""
+      },
+      "fields": [
+        {
+          "name": "name",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "description",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "company",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "companies"
+        },
+        {
+          "name": "manager",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "methodology",
+          "type": "select",
+          "required": true,
+          "system": false,
+          "selectValues": ["waterfall", "scrum", "lean"]
+        },
+        {
+          "name": "status",
+          "type": "select",
+          "required": true,
+          "system": false,
+          "selectValues": ["planning", "active", "completed", "suspended", "cancelled"]
+        },
+        {
+          "name": "start_date",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "target_date",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "completed_at",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "team_members",
+          "type": "json",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "methodology_settings",
+          "type": "json",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "total_worked_seconds",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": [
+        "CREATE INDEX idx_projects_status ON projects (status)",
+        "CREATE INDEX idx_projects_methodology ON projects (methodology)",
+        "CREATE INDEX idx_projects_company ON projects (company)",
+        "CREATE INDEX idx_projects_manager ON projects (manager)"
+      ]
+    },
+    {
+      "name": "project_sprints",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != \"\"",
+        "view": "@request.auth.id != \"\"",
+        "create": "@request.auth.id != \"\"",
+        "update": "@request.auth.id != \"\"",
+        "delete": "@request.auth.id != \"\""
+      },
+      "fields": [
+        {
+          "name": "project",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "projects"
+        },
+        {
+          "name": "name",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "goal",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "status",
+          "type": "select",
+          "required": true,
+          "system": false,
+          "selectValues": ["planned", "active", "completed", "cancelled"]
+        },
+        {
+          "name": "start_date",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "end_date",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "daily_notes",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "review_notes",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "retrospective_notes",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": [
+        "CREATE INDEX idx_sprints_project ON project_sprints (project)",
+        "CREATE INDEX idx_sprints_status ON project_sprints (status)"
+      ]
+    },
+    {
+      "name": "project_tasks",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != \"\"",
+        "view": "@request.auth.id != \"\"",
+        "create": "@request.auth.id != \"\"",
+        "update": "@request.auth.id != \"\"",
+        "delete": "@request.auth.id != \"\""
+      },
+      "fields": [
+        {
+          "name": "project",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "projects"
+        },
+        {
+          "name": "title",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "description",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "assigned_to",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "status",
+          "type": "select",
+          "required": true,
+          "system": false,
+          "selectValues": ["backlog", "todo", "in_progress", "review", "done", "cancelled"]
+        },
+        {
+          "name": "priority",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["low", "medium", "high", "critical"]
+        },
+        {
+          "name": "waterfall_phase",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["initiation", "planning", "execution", "monitoring", "closure"]
+        },
+        {
+          "name": "is_milestone",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "sprint",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "project_sprints"
+        },
+        {
+          "name": "story_points",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "lean_stage",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "due_date",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "completed_at",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "ticket",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "tickets"
+        },
+        {
+          "name": "worked_seconds",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "order",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": [
+        "CREATE INDEX idx_tasks_project ON project_tasks (project)",
+        "CREATE INDEX idx_tasks_assigned ON project_tasks (assigned_to)",
+        "CREATE INDEX idx_tasks_status ON project_tasks (status)",
+        "CREATE INDEX idx_tasks_waterfall ON project_tasks (waterfall_phase)",
+        "CREATE INDEX idx_tasks_sprint ON project_tasks (sprint)",
+        "CREATE INDEX idx_tasks_ticket ON project_tasks (ticket)"
+      ]
+    },
+    {
+      "name": "project_work_logs",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != \"\"",
+        "view": "@request.auth.id != \"\"",
+        "create": "@request.auth.id != \"\"",
+        "update": "@request.auth.id != \"\"",
+        "delete": "@request.auth.id != \"\""
+      },
+      "fields": [
+        {
+          "name": "project",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "projects"
+        },
+        {
+          "name": "task",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "project_tasks"
+        },
+        {
+          "name": "user",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "description",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "duration_seconds",
+          "type": "number",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "logged_at",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "ticket",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "tickets"
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": [
+        "CREATE INDEX idx_worklogs_project ON project_work_logs (project)",
+        "CREATE INDEX idx_worklogs_task ON project_work_logs (task)",
+        "CREATE INDEX idx_worklogs_user ON project_work_logs (user)"
       ]
     }
   ]

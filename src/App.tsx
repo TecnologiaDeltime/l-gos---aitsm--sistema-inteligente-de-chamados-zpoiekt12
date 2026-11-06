@@ -118,6 +118,9 @@ import { AlertNotificationPopup } from '@/components/AlertNotificationPopup'
 import AlertAuditPage from '@/pages/reports/AlertAuditPage'
 import AssetAutomationLogsPage from '@/pages/reports/AssetAutomationLogsPage'
 import ImplementedFeaturesReport from '@/pages/reports/ImplementedFeaturesReport'
+import ProjectsPage from '@/pages/projects/ProjectsPage'
+import ProjectCreatePage from '@/pages/projects/ProjectCreatePage'
+import ProjectDetailPage from '@/pages/projects/ProjectDetailPage'
 import TicketApprovalsPage from '@/pages/tickets/TicketApprovalsPage'
 import ApprovalPublic from '@/pages/tickets/ApprovalPublic'
 import { useAuth } from '@/hooks/use-auth'
@@ -310,6 +313,30 @@ const App = () => (
                 <Route path="/reports/alert-audit" element={<AlertAuditPage />} />
                 <Route path="/reports/clients" element={<ClientExtractionPage />} />
                 <Route path="/reports/monthly-client" element={<MonthlyClientReportPage />} />
+                <Route
+                  path="/projetos"
+                  element={
+                    <ProtectedRoute requiredModule="projects">
+                      <ProjectsPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/projetos/novo"
+                  element={
+                    <ProtectedRoute requiredModule="projects" requireWrite={true}>
+                      <ProjectCreatePage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/projetos/:id"
+                  element={
+                    <ProtectedRoute requiredModule="projects">
+                      <ProjectDetailPage />
+                    </ProtectedRoute>
+                  }
+                />
                 <Route path="/knowledge-base" element={<KnowledgeBase />} />
                 <Route path="/cmdb" element={<CmdbDashboard />} />
                 <Route path="/cmdb/assets" element={<CiList />} />

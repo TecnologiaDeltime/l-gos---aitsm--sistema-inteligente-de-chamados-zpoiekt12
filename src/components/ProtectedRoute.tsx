@@ -19,8 +19,14 @@ export function ProtectedRoute({
   requireWrite = false,
 }: ProtectedRouteProps) {
   const { isAuthenticated, user, loading } = useAuth()
-  const { canReadModule, canWriteModule, isModuleHidden, canAccessItem, canAccessPath, isAdmin } =
-    usePermissions()
+  const {
+    canReadModule,
+    canWriteModule,
+    isModuleHidden,
+    canAccessItem,
+    canAccessPath,
+    isAdmin,
+  } = usePermissions()
   const location = useLocation()
 
   if (loading) {

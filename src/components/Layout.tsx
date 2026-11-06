@@ -59,6 +59,7 @@ import {
   Tv,
   MessageSquare,
   History,
+  FolderKanban,
 } from 'lucide-react'
 import { useAuth } from '@/hooks/use-auth'
 import { useTheme } from '@/hooks/use-theme'
@@ -135,6 +136,7 @@ export default function Layout() {
   const [cmdbMenuOpen, setCmdbMenuOpen] = useState(false)
   const [adminMenuOpen, setAdminMenuOpen] = useState(false)
   const [knowledgeMenuOpen, setKnowledgeMenuOpen] = useState(false)
+  const [projectsMenuOpen, setProjectsMenuOpen] = useState(false)
 
   useEffect(() => {
     if (user) {
@@ -175,6 +177,24 @@ export default function Layout() {
 
   const knowledgeGroupVisible =
     !permissions.isModuleHidden('knowledge') && knowledgeSubmenuItems.some((i) => i.show)
+
+  const projectsSubmenuItems = [
+    {
+      label: 'Painel de Projetos',
+      path: '/projetos',
+      icon: FolderKanban,
+      show: permissions.canAccessItem('projects', 'projects_list'),
+    },
+    {
+      label: 'Novo Projeto',
+      path: '/projetos/novo',
+      icon: PlusCircle,
+      show: permissions.canAccessItem('projects', 'projects_create'),
+    },
+  ]
+
+  const projectsGroupVisible =
+    !permissions.isModuleHidden('projects') && projectsSubmenuItems.some((i) => i.show)
 
   const navItems = [
     {
@@ -781,6 +801,7 @@ export default function Layout() {
   autoRegisterMenuItems('changes', 'Operações & Gestão', changesSubmenuItems)
   autoRegisterMenuItems('problems', 'Operações & Gestão', problemsSubmenuItems)
   autoRegisterMenuItems('visits', 'Operações & Gestão', visitsN2SubmenuItems)
+  autoRegisterMenuItems('projects', 'Operações & Gestão', projectsSubmenuItems)
   autoRegisterMenuItems('knowledge', 'Operações & Gestão', knowledgeSubmenuItems)
   autoRegisterMenuItems('reports', 'Relatórios & Qualidade', relatoriosSubmenuItems)
   autoRegisterMenuItems('admin', 'Administração', adminSubmenuItems)
@@ -1222,6 +1243,16 @@ export default function Layout() {
             items: problemsSubmenuItems,
             isOpen: problemsMenuOpen,
             onToggle: () => setProblemsMenuOpen(!problemsMenuOpen),
+          })}
+
+        {projectsGroupVisible &&
+          renderNavGroup({
+            key: 'projects-group',
+            label: 'Gestão de Projetos',
+            icon: FolderKanban,
+            items: projectsSubmenuItems,
+            isOpen: projectsMenuOpen,
+            onToggle: () => setProjectsMenuOpen(!projectsMenuOpen),
           })}
 
         {knowledgeGroupVisible &&

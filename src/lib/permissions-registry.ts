@@ -563,6 +563,40 @@ const BASE_SYSTEM_MODULES: GranularModuleDefinition[] = [
       },
     ],
   },
+  {
+    key: 'projects',
+    label: 'Gestão de Projetos',
+    description:
+      'Projetos em Cascata, Ágil/Scrum e Lean com delegação de atividades, horas e chamados integrados',
+    category: 'Operações & Gestão',
+    items: [
+      {
+        key: 'projects_list',
+        label: 'Painel e Lista de Projetos',
+        description: 'Visualização geral dos projetos em andamento, concluídos e arquivados',
+        path: '/projetos',
+        defaultGranted: true,
+        defaultLevel: 'view',
+      },
+      {
+        key: 'projects_create',
+        label: 'Criar e Editar Projetos',
+        description: 'Cadastro de novos projetos, definição de metodologia, datas e equipe',
+        path: '/projetos/novo',
+        defaultGranted: true,
+        defaultLevel: 'edit',
+      },
+      {
+        key: 'projects_manage',
+        label: 'Gestão de Atividades, Sprints e Horas',
+        description:
+          'Criação de sprints, tarefas, geração de chamados e lançamento de horas do projeto',
+        path: '/projetos/:id',
+        defaultGranted: true,
+        defaultLevel: 'configure',
+      },
+    ],
+  },
 
   // Relatórios & Qualidade
   {
