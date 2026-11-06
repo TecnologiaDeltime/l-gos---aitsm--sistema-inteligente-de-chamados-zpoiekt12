@@ -22,6 +22,7 @@ import {
   Globe,
   Star,
   LayoutDashboard,
+  FolderKanban,
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -826,6 +827,79 @@ const FEATURE_CATEGORIES: FeatureCategory[] = [
         description:
           'Balanceamento e apropriação de apontamentos conforme nível de suporte atribuído.',
         tag: 'Distribuição N1/N2',
+      },
+    ],
+  },
+  {
+    id: 'projects',
+    title: 'Gestão de Projetos e Metodologias',
+    icon: FolderKanban,
+    color: 'text-amber-500 dark:text-amber-400',
+    bgLight: 'bg-amber-50/70 dark:bg-amber-950/20',
+    borderColor: 'border-amber-300 dark:border-amber-800',
+    items: [
+      {
+        id: 'proj-1',
+        title: 'Módulo Completo de Projetos (/projetos)',
+        description:
+          'Painel geral com métricas executivas, total de horas consumidas em tempo real, status, listagem e filtros avançados.',
+        tag: 'Gestão de Projetos',
+      },
+      {
+        id: 'proj-2',
+        title: 'Cadastro Flexível de Projetos e Equipe (/projetos/novo)',
+        description:
+          'Criação de projetos com código, cliente associado ou projeto interno, gestor responsável, datas e equipe técnica alocada.',
+        tag: 'Projetos & Equipe',
+      },
+      {
+        id: 'proj-3',
+        title: 'Três Metodologias: Cascata (Waterfall), Scrum e Lean',
+        description:
+          'Visões comutáveis conforme a metodologia do projeto: Cascata com 5 fases e marcos; Scrum com Backlog, Sprints e quadro; Lean com fluxo contínuo e limite de WIP.',
+        tag: 'Metodologias Ágeis & Preditivas',
+      },
+      {
+        id: 'proj-4',
+        title: 'Quadro Lean com Limite de WIP e Alerta de Gargalos',
+        description:
+          'Controle de Trabalho em Progresso por coluna do quadro com sinalização visual de limite excedido e destaque de tarefas paradas há mais de 7 dias.',
+        tag: 'Lean / Kanban',
+      },
+      {
+        id: 'proj-5',
+        title: 'Planejamento de Sprints e Cerimônias Ágeis',
+        description:
+          'Criação e gestão de Sprints com meta clara, datas de início/fim, quadro Kanban da Sprint ativa e notas de Daily/Review/Retrospective.',
+        tag: 'Scrum / Sprints',
+      },
+      {
+        id: 'proj-6',
+        title: 'Delegação de Atividades a Operadores',
+        description:
+          'Designação individual de tarefas e histórias a membros da equipe técnica, com estimativas de tempo ou pontos, prioridade e prazos.',
+        tag: 'Delegação Operacional',
+      },
+      {
+        id: 'proj-7',
+        title: 'Geração Integrada de Chamado ITSM a partir da Atividade',
+        description:
+          'Ação com um clique para abrir e vincular um chamado operacional à tarefa do projeto, mantendo número de protocolo e atalho direto.',
+        tag: 'Integração ITSM',
+      },
+      {
+        id: 'proj-8',
+        title: 'Apontamento de Horas e Registro de Ações',
+        description:
+          'Lançamento direto de tempo trabalhado com máscara de tempo, descrição da ação realizada e totalização automática de horas no projeto.',
+        tag: 'Apontamento de Horas',
+      },
+      {
+        id: 'proj-9',
+        title: 'Controle de Acesso Granular em Perfis de Acesso',
+        description:
+          'Permissões do módulo sob a chave projects com 3 níveis (Visualizar, Editar, Configurar) e proteção de rotas via ProtectedRoute.',
+        tag: 'Governança & Perfis',
       },
     ],
   },

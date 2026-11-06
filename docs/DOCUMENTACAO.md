@@ -18,6 +18,7 @@ O conjunto documental está dividido em módulos temáticos para facilitar a con
    - **Gestão de Contratos**: Contratos vigentes, franquia de horas, conciliação, períodos contratuais e múltiplos níveis de atendimento por contrato (seleção múltipla, consumo por nível e migração 0125 com campo `service_levels`).
    - **Gestão de Visitas Técnicas N2**: Dashboard de Visitas, Calendário e Agenda, Minhas Visitas, Lançamento de Despesas e Reembolsos, Ordens de Serviço, Assinaturas Digitais, Checklists Técnicos e Visitas Recorrentes.
    - **Base de Conhecimento com Inteligência Artificial**: Consulta e publicação de artigos técnicos, Geração Automática de Rascunhos por IA a partir de notas de encerramento de técnicos seniores, Painel de Cura com Diagnóstico Algorítmico e Agente Nativo de IA para Resposta a Chamados nos dois modos (sugestão ao operador e resposta automática).
+   - **Gestão de Projetos (`/projetos`)**: Módulo completo de projetos integrado a chamados e horas de trabalho. Três visões metodológicas comutáveis (Cascata com 5 fases e marcos; Scrum com Backlog, Sprints e quadro; Lean com fluxo contínuo e limite de WIP), delegação de atividades a operadores, geração de chamado vinculado a partir da atividade e lançamento de horas/ações no projeto.
    - **Portal do Cliente (`/portal`)**: Tela de Login dedicada (`/portal/login`), Dashboard Analítico, Meus Chamados com timeline pública, Abertura de Chamado, Aprovações por Pontos Focais, Inventário de TI (CMDB) com histórico de manutenção e atalho de chamado, Visitas Técnicas agendadas com técnico designado, Saldo de Horas e Franquia, e Relatórios Mensais ABNT Liberados.
 
 2. **[Relatórios e Extrações](RELATORIOS.md)**
@@ -51,6 +52,7 @@ O conjunto documental está dividido em módulos temáticos para facilitar a con
    - [Integração com Ferramenta de Monitoramento PRTG](INTEGRACAO_PRTG.md)
    - [Modo TV e Painéis em Rotação Automática](MODO_TV.md)
    - [Chamados Internos entre Setores e Chat de Operadores](CHAMADOS_INTERNOS_E_CHAT.md)
+   - [Gestão de Projetos e Metodologias (Cascata, Scrum, Lean)](PROJETOS.md)
    - [Documento de Autoria e Titularidade](../AUTHORSHIP.md)
 
 ---

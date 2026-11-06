@@ -400,3 +400,32 @@ Canal de comunicação direta 1:1 entre operadores e equipes internas (`/chat`):
 - **Notificações Globais**: alerta no topo e sinal sonoro discreto via `GlobalNotifications` ao receber mensagens de outros técnicos.
 - **Controle de Acesso**: permissões `tickets.tickets_interno` e `chat.chat_operadores` com 3 níveis na matriz de perfis de acesso.
 - Documentação técnica completa em `docs/CHAMADOS_INTERNOS_E_CHAT.md`.
+
+---
+
+## 12. Módulo de Gestão de Projetos (`/projetos`)
+
+O módulo de **Projetos** consolida o planejamento, execução e acompanhamento de iniciativas internas ou contratadas por clientes, unificando metodologias de mercado com a operação de chamados ITSM e controle de horas.
+
+### 12.1 Painel e Cadastro de Projetos (`/projetos` e `/projetos/novo`)
+
+- **Listagem e Indicadores**: Total de projetos, projetos ativos, horas acumuladas em tempo real e taxa de conclusão das atividades. Filtros por metodologia (Cascata, Scrum, Lean), status e cliente.
+- **Cadastro Flexível**: Nome, código, cliente associado (opcional para projetos internos), gestor do projeto, período (data de início e meta de conclusão) e equipe técnica alocada.
+- **Seleção de Metodologia**: Configura o comportamento e visualização do projeto no momento da criação:
+  1. **Cascata (Waterfall)**: modelo linear preditivo dividido nas 5 fases clássicas (Iniciação, Planejamento, Execução, Monitoramento & Controle, Encerramento), com controle de entregáveis e marcos (_milestones_).
+  2. **Ágil (Scrum)**: framework iterativo com Backlog Geral de Histórias/Tarefas, planejamento de Sprints com meta clara e datas, quadro Kanban da Sprint ativa e registro das notas de cerimônias (Daily, Review, Retrospective).
+  3. **Lean**: fluxo contínuo orientado à eliminação de desperdícios, com quadro Kanban visual, limitação de Trabalho em Progresso (_WIP Limit_) por coluna com alerta visual de violação e destaque automático de tarefas estagnadas há mais de 7 dias.
+
+### 12.2 Atividades, Delegação e Geração de Chamados
+
+- **Delegação a Operadores**: Cada atividade ou história pode ser designada a um técnico específico da equipe, com estimativa em horas ou _story points_, prioridade e data limite.
+- **Geração Integrada de Chamado ITSM**: Com um clique no botão "Gerar Chamado", o operador cria um chamado documentando formalmente a execução técnica da atividade no sistema ITSM. O chamado nasce vinculado à atividade e ao projeto, com número identificador e atalho direto.
+- **Apontamento de Horas e Ações**: Diálogo para lançamento direto de tempo trabalhado no formato padrão `HH:MM:SS` acompanhado da descrição da ação realizada. O tempo é acumulado automaticamente tanto na atividade quanto no total de horas do projeto (`total_worked_seconds`).
+
+### 12.3 Permissões Granulares
+
+- Catálogo sob a chave `projects` com 3 níveis na matriz de perfis de acesso:
+  - `projects_list`: visualização da lista e indicadores gerais de projetos.
+  - `projects_create`: permissão para cadastrar e editar parâmetros de projetos.
+  - `projects_manage`: gestão operacional de tarefas, planejamento de sprints, geração de chamados e lançamento de horas.
+- Documentação detalhada em `docs/PROJETOS.md`.

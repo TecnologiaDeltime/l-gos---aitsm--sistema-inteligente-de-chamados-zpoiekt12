@@ -157,6 +157,12 @@ export function usePermissions() {
         return { read: isTecnico, write: isTecnico, hidden: !isTecnico }
       case 'knowledge':
         return { read: true, write: isTecnico, hidden: false }
+      case 'projects':
+        return {
+          read: isTecnico || isGestor || isAdmin,
+          write: isGestor || isAdmin,
+          hidden: !isTecnico && !isGestor && !isAdmin,
+        }
       case 'admin':
         return { read: isAdmin, write: isAdmin, hidden: !isAdmin }
       default:

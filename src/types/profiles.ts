@@ -178,6 +178,13 @@ export const PROFILE_LANDING_OPTIONS: ProfileLandingOption[] = [
     moduleKey: 'reports',
     itemKey: 'rep_implemented_features',
   },
+  {
+    route: '/projetos',
+    label: 'Gestão de Projetos',
+    description: 'Painel de projetos em Cascata, Scrum e Lean com atividades e horas',
+    moduleKey: 'projects',
+    itemKey: 'projects_list',
+  },
 ]
 
 export interface ProfileRecord {
