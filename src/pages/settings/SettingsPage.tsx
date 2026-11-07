@@ -7,7 +7,18 @@ import { Button } from '@/components/ui/button'
 import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
 import { useToast } from '@/hooks/use-toast'
-import { FileText, Bell, Save, Mail, User, Settings, Hourglass, Lock, Palette } from 'lucide-react'
+import {
+  FileText,
+  Bell,
+  Save,
+  Mail,
+  User,
+  Settings,
+  Hourglass,
+  Lock,
+  Palette,
+  CalendarClock,
+} from 'lucide-react'
 import {
   getEmailConfig,
   saveEmailConfig,
@@ -25,6 +36,7 @@ import ClientPortalSettingsTab from '@/components/settings/ClientPortalSettingsT
 import { AiTicketSettingsTab } from '@/components/settings/AiTicketSettingsTab'
 import { ClientConsumptionAgentTab } from '@/components/settings/ClientConsumptionAgentTab'
 import { AutoAssignSettingsTab } from '@/components/settings/AutoAssignSettingsTab'
+import { ProjectDeadlinesSettingsTab } from '@/components/settings/ProjectDeadlinesSettingsTab'
 import { PrtgSettingsTab } from '@/components/settings/PrtgSettingsTab'
 import { ShieldCheck, Globe, Shield, Bot, BrainCircuit, Users, Activity } from 'lucide-react'
 import {
@@ -80,7 +92,9 @@ export default function SettingsPage() {
                       ? 'auto_assign'
                       : searchParams.get('tab') === 'prtg'
                         ? 'prtg'
-                        : 'general'
+                        : searchParams.get('tab') === 'project-deadlines'
+                          ? 'project-deadlines'
+                          : 'general'
   const [mainTab, setMainTab] = useState<
     | 'general'
     | 'portal'
@@ -94,6 +108,7 @@ export default function SettingsPage() {
     | 'consumption_agent'
     | 'auto_assign'
     | 'prtg'
+    | 'project-deadlines'
   >(initialTab as any)
 
   const handleTabChange = (
@@ -109,7 +124,8 @@ export default function SettingsPage() {
       | 'profiles'
       | 'consumption_agent'
       | 'auto_assign'
-      | 'prtg',
+      | 'prtg'
+      | 'project-deadlines',
   ) => {
     setMainTab(tab)
     setSearchParams(
@@ -135,7 +151,9 @@ export default function SettingsPage() {
                           ? { tab: 'auto_assign' }
                           : tab === 'prtg'
                             ? { tab: 'prtg' }
-                            : {},
+                            : tab === 'project-deadlines'
+                              ? { tab: 'project-deadlines' }
+                              : {},
     )
   }
 
@@ -164,6 +182,8 @@ export default function SettingsPage() {
       setMainTab('auto_assign')
     } else if (tabFromUrl === 'prtg' && mainTab !== 'prtg') {
       setMainTab('prtg')
+    } else if (tabFromUrl === 'project-deadlines' && mainTab !== 'project-deadlines') {
+      setMainTab('project-deadlines')
     }
   }, [searchParams])
 
@@ -488,6 +508,23 @@ export default function SettingsPage() {
             </Button>
           )}
 
+          {permissions.canAccessItem('projects', 'projects_deadlines_notifications') && (
+            <Button
+              type="button"
+              size="sm"
+              variant={mainTab === 'project-deadlines' ? 'default' : 'ghost'}
+              onClick={() => handleTabChange('project-deadlines')}
+              className={`h-8 text-xs font-semibold rounded-lg transition-all ${
+                mainTab === 'project-deadlines'
+                  ? 'bg-amber-500/20 text-amber-500 border border-amber-500/30 shadow-xs shadow-amber-500/10'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              <CalendarClock className="h-3.5 w-3.5 mr-1.5 text-amber-500" />
+              Prazos de Projetos
+            </Button>
+          )}
+
           {permissions.canAccessItem('settings', 'settings_client_notif') && (
             <Button
               type="button"
@@ -609,6 +646,15 @@ export default function SettingsPage() {
       {mainTab === 'prtg' && permissions.canAccessItem('settings', 'settings_prtg_monitoring') && (
         <PrtgSettingsTab canConfigure={permissions.canConfigure('settings_prtg_monitoring')} />
       )}
+
+      {/* SEÇÃO PRAZOS DE PROJETOS (notificações de prazo) */}
+      {mainTab === 'project-deadlines' &&
+        permissions.canAccessItem('projects', 'projects_deadlines_notifications') && (
+          <ProjectDeadlinesSettingsTab
+            canConfigure={permissions.canConfigure('projects.projects_deadlines_notifications')}
+            canEdit={permissions.canEdit('projects.projects_deadlines_notifications')}
+          />
+        )}
 
       {/* SEÇÃO DESIGN & APARÊNCIA */}
       {mainTab === 'design' && permissions.canAccessItem('settings', 'settings_design') && (

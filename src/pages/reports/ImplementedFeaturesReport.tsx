@@ -901,6 +901,13 @@ const FEATURE_CATEGORIES: FeatureCategory[] = [
           'Permissões do módulo sob a chave projects com 3 níveis (Visualizar, Editar, Configurar) e proteção de rotas via ProtectedRoute.',
         tag: 'Governança & Perfis',
       },
+      {
+        id: 'proj-10',
+        title: 'Notificações de Prazo de Projetos e Atividades',
+        description:
+          'Agente agendado (cron no backend, migração 0135) que monitora os prazos dos projetos (target_date) e das atividades (due_date) e envia avisos no sino de notificações em três momentos: próximo do prazo (dentro dos dias de antecedência configurados, padrão 3), vencendo hoje e vencido. Intervalo de verificação e antecedência parametrizáveis na aba Prazos de Projetos em Configurações (/settings?tab=project-deadlines). Anti-duplicidade por tipo de aviso com marcação em deadline_alerts (JSON em projects e project_tasks): cada aviso é enviado uma única vez por prazo de referência e os marcos são reiniciados quando o prazo muda. Projetos concluídos/suspensos/cancelados e atividades concluídas não geram avisos. Destinatários configuráveis: responsável pelo projeto, gestores/administradores e responsável pela atividade. Permissão granular nova (projects.projects_deadlines_notifications) com item no catálogo de permissões e deep-link da aba.',
+        tag: 'Notificações & Prazos',
+      },
     ],
   },
 ]

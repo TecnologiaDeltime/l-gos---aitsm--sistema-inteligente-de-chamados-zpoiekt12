@@ -46,3 +46,18 @@ Itens granulares no catálogo:
 - `project_sprints`: Sprints do Scrum (nome, meta, datas de início/fim, status, notas de cerimônias).
 - `project_work_logs`: Apontamentos de horas e ações (usuário, atividade, duração em segundos, descrição da ação, chamado vinculado).
 - `profile_permissions`: Registros atualizados via migração `0134_create_projects_module.js`.
+- `project_deadline_settings`: Configuração global das notificações de prazo (criada pela migração `0135_project_deadline_notifications.js`) com registro único padrão: `enabled=true`, `check_interval_minutes=60`, `advance_days=3`, `notify_manager=true`, `notify_gestors=true`, `notify_task_assignee=true` e `last_check_epoch_min` (controle de janela de verificação).
+
+---
+
+## 5. Notificações de Prazo de Projetos e Atividades
+
+Agente agendado (cron `project_deadline_notifications`, executado a cada 30 minutos no backend e respeitando a janela configurada via `check_interval_minutes` com `last_check_epoch_min`) que monitora os prazos e envia avisos no sino de notificações:
+
+- **Projetos** (`projects.target_date`): avisos "próximo do prazo" (dentro dos dias de antecedência configurados — padrão 3), "vencendo hoje" e "vencido".
+- **Atividades** (`project_tasks.due_date`): mesmos três tipos de aviso, notificando o responsável pela atividade.
+- **Anti-duplicidade**: cada tipo de aviso é enviado uma única vez por prazo de referência; as marcas ficam no campo JSON `deadline_alerts` em `projects` e `project_tasks`. Quando o prazo muda, as marcas são reiniciadas e os avisos voltam a ser emitidos para o novo prazo.
+- **Filtros**: projetos concluídos, suspensos ou cancelados e atividades concluídas/canceladas não geram avisos.
+- **Destinatários configuráveis na aba**: responsável pelo projeto (manager), gestores/administradores (papel gestor/admin com acesso a Projetos) e responsável pela atividade.
+- **Aba de configuração**: `Configurações → Prazos de Projetos` (`/settings?tab=project-deadlines`), componente `src/components/settings/ProjectDeadlinesSettingsTab.tsx` e service `src/services/project-deadline-settings.ts`. Permite ativar/desativar, definir o intervalo de verificação (15 min a 1x/dia) e os dias de antecedência do aviso "próximo do prazo".
+- **Permissão**: item granular `projects_deadlines_notifications` no módulo `projects` do catálogo de permissões (3 níveis, migração 0135), conforme a regra permanente de funcionalidade nova → item no catálogo. O acesso à aba e o deep-link respeitam essa permissão.
