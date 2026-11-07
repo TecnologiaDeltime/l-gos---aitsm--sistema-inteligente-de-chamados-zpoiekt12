@@ -595,6 +595,15 @@ const BASE_SYSTEM_MODULES: GranularModuleDefinition[] = [
         defaultGranted: true,
         defaultLevel: 'configure',
       },
+      {
+        key: 'projects_deadlines_notifications',
+        label: 'Notificações de Prazo de Projetos',
+        description:
+          'Recebe avisos no sino de prazo próximo, vencendo hoje e vencido de projetos e atividades (configuração do agente em Configurações)',
+        path: '/settings?tab=project-deadlines',
+        defaultGranted: true,
+        defaultLevel: 'configure',
+      },
     ],
   },
 

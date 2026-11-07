@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-06T23:38:03.577Z",
+  "generatedAt": "2026-11-07T00:05:13.319Z",
   "collections": [
     {
       "name": "users",
@@ -12168,6 +12168,12 @@
           "required": false,
           "system": false,
           "autodateTriggers": ["onCreate", "onUpdate"]
+        },
+        {
+          "name": "deadline_alerts",
+          "type": "json",
+          "required": false,
+          "system": false
         }
       ],
       "indexes": [
@@ -12391,6 +12397,12 @@
           "required": false,
           "system": false,
           "autodateTriggers": ["onCreate", "onUpdate"]
+        },
+        {
+          "name": "deadline_alerts",
+          "type": "json",
+          "required": false,
+          "system": false
         }
       ],
       "indexes": [
@@ -12479,6 +12491,76 @@
         "CREATE INDEX idx_worklogs_task ON project_work_logs (task)",
         "CREATE INDEX idx_worklogs_user ON project_work_logs (user)"
       ]
+    },
+    {
+      "name": "project_deadline_settings",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != \"\"",
+        "view": "@request.auth.id != \"\"",
+        "create": "@request.auth.id != \"\"",
+        "update": "@request.auth.id != \"\"",
+        "delete": null
+      },
+      "fields": [
+        {
+          "name": "enabled",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "check_interval_minutes",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "advance_days",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "notify_manager",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "notify_gestors",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "notify_task_assignee",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "last_check_epoch_min",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": []
     }
   ]
 }
