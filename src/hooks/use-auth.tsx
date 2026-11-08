@@ -174,9 +174,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const now = Date.now()
       lastActivityRef.current = now
 
-      // Enviar heartbeat a cada 5 minutos de atividade contínua
+      // Enviar heartbeat a cada 60 segundos de atividade contínua.
+      // Antes eram 5 min: com o limite de presença de 15 min do chat, um operador
+      // ativo podia ficar >5 min sem registrar atividade e aparecer offline.
       if (
-        now - lastHeartbeatSentRef.current > 5 * 60 * 1000 &&
+        now - lastHeartbeatSentRef.current > 60 * 1000 &&
         !isHeartbeatSendingRef.current &&
         pb.authStore.isValid
       ) {
@@ -194,8 +196,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const events = ['mousedown', 'keydown', 'scroll', 'touchstart', 'click']
     events.forEach((evt) => window.addEventListener(evt, handleUserActivity, { passive: true }))
 
+    // Heartbeat garantido: envia periodicamente mesmo sem eventos de mouse/teclado
+    // (usuário parado lendo a tela continua "online" para o chat).
+    const heartbeatTimer = setInterval(() => {
+      const now = Date.now()
+      if (now - lastHeartbeatSentRef.current > 60 * 1000 && pb.authStore.isValid) {
+        lastHeartbeatSentRef.current = now
+        securityService
+          .sendHeartbeat()
+          .catch(() => {})
+          .finally(() => {
+            isHeartbeatSendingRef.current = false
+          })
+      }
+    }, 30 * 1000)
+
     return () => {
       events.forEach((evt) => window.removeEventListener(evt, handleUserActivity))
+      clearInterval(heartbeatTimer)
     }
   }, [token])
 

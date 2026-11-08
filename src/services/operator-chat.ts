@@ -37,6 +37,20 @@ export interface ChatOperatorUser {
   role?: string
   status?: string
   online?: boolean
+  /** ISO da última atividade registrada (session_last_activity), usado para recalcular presença */
+  lastActivityAt?: string
+}
+
+/** Limiar de presença online do chat (15 min sem atividade = Ausente). */
+export const CHAT_ONLINE_THRESHOLD_MS = 15 * 60 * 1000
+
+/** Recalcula o estado online a partir da última atividade conhecida. */
+export function isChatOperatorOnline(
+  op: Pick<ChatOperatorUser, 'online' | 'lastActivityAt'>,
+  now: number = Date.now(),
+): boolean {
+  if (!op.lastActivityAt) return op.online === true
+  return now - new Date(op.lastActivityAt).getTime() < CHAT_ONLINE_THRESHOLD_MS
 }
 
 /**
@@ -150,10 +164,13 @@ export const getUnreadCountBySender = getUnreadCountsBySender
  * Busca a lista de operadores / usuários internos do sistema.
  */
 export async function getChatOperators(): Promise<ChatOperatorUser[]> {
+  // NOTA: o campo "status" NÃO existe na coleção users (o campo correto é "active" bool).
+  // Filtrar por status = "Ativo" gerava HTTP 400 e a lista do chat voltava vazia
+  // (ninguém aparecia como online). Filtramos por active = true.
   const users = await pb.collection('users').getFullList<any>({
-    filter: `role != "cliente" && role != "cliente_gestor" && status = "Ativo"`,
+    filter: `active = true && role != "cliente" && role != "cliente_gestor"`,
     sort: 'name',
-    fields: 'id,name,email,avatar,role,status,session_last_activity,updated',
+    fields: 'id,name,email,avatar,role,active,session_last_activity,updated',
   })
 
   const now = Date.now()
@@ -162,7 +179,7 @@ export async function getChatOperators(): Promise<ChatOperatorUser[]> {
   return users.map((u) => {
     const lastActivity = u.session_last_activity || u.updated
     const lastTime = lastActivity ? new Date(lastActivity).getTime() : 0
-    const online = now - lastTime < ONLINE_THRESHOLD_MS
+    const online = lastTime > 0 && now - lastTime < ONLINE_THRESHOLD_MS
 
     return {
       id: u.id,
@@ -170,8 +187,8 @@ export async function getChatOperators(): Promise<ChatOperatorUser[]> {
       email: u.email,
       avatar: u.avatar,
       role: u.role,
-      status: u.status,
       online,
+      lastActivityAt: lastActivity || undefined,
     }
   })
 }

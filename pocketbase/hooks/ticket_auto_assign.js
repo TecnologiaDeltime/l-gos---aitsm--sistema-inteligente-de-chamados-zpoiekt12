@@ -1,10 +1,16 @@
 // pocketbase/hooks/ticket_auto_assign.js
 // Agente de distribuição automática de chamados no Lógos AITSM
 // Ordem de distribuição inteligente:
-// 1. Operador com availability_status 'Disponível' na fila
+// 1. Operadores ATIVOS da fila (availability_status 'Disponível' se o campo existir)
 // 2. Desempate por menor carga de chamados ativos (status != Encerrado/Cancelado/Resolvido)
-// 3. Ocioso (sem chamados ativos ou mais tempo sem novo chamado)
-// 4. Fallback: Responsável / Líder da fila (queue.manager)
+// 3. Fallback: usuários internos ativos cujo campo `team` seja igual ao nome da fila
+//    (corrige filas sem members cadastrados — ex.: "Suporte N2" x users.team)
+// 4. Fallback: qualquer operador interno ativo da fila com menor carga
+// NOTAS (bugs corrigidos):
+// - A coleção `queues` NÃO possui campo `manager`: ler queue.getString('manager')
+//   retornava vazio e, com members vazio, nenhum candidato era encontrado.
+// - O campo `availability_status` NÃO existe em users (o correto é `active` bool);
+//   o filtro antigo considerava todos disponíveis por padrão, mas o pool vinha vazio.
 // IMPORTANTE: Toda lógica embutida inline nas callbacks (regra JSVM do PocketBase)
 
 // 1. Hook ao criar chamado (se não tiver assigned_to)
@@ -27,11 +33,38 @@ onRecordCreate((e) => {
       try {
         var queue = $app.findRecordById('queues', queueId)
         var members = queue.get('members') || []
-        var managerId = queue.getString('manager')
 
+        // Fallback quando a fila não tem members: operadores internos ativos
+        // cujo campo team corresponde ao nome da fila.
         if (!members || members.length === 0) {
-          assignedUserId = managerId || ''
-        } else {
+          try {
+            var teamFallback = $app.findRecordsByFilter(
+              'users',
+              'active = true && team = "' + queue.getString('name').replace(/"/g, '\\"') + '"',
+              '-created',
+              50,
+              0,
+            )
+            var teamIds = []
+            for (var tf = 0; tf < teamFallback.length; tf++) teamIds.push(teamFallback[tf].id)
+            if (teamIds.length > 0) {
+              $app
+                .logger()
+                .info(
+                  'auto_assign: fila sem members, usando fallback por team',
+                  'queue',
+                  queue.getString('name'),
+                  'found',
+                  teamIds.length,
+                )
+            }
+            members = teamIds
+          } catch (tfErr) {
+            $app.logger().warn('auto_assign: fallback por team falhou', 'error', tfErr.message)
+          }
+        }
+
+        if (members && members.length > 0) {
           var availableMembers = []
           var otherMembers = []
 
@@ -39,6 +72,9 @@ onRecordCreate((e) => {
             var memberId = members[i]
             try {
               var userRec = $app.findRecordById('users', memberId)
+              if (userRec.getBool('active') === false) continue
+              // O campo availability_status não existe em users; se um dia for
+              // adicionado, é respeitado. Default: Disponível.
               var avail = userRec.getString('availability_status') || 'Disponível'
               if (avail === 'Disponível' || avail === 'disponivel') {
                 availableMembers.push(memberId)
@@ -50,7 +86,9 @@ onRecordCreate((e) => {
             }
           }
 
-          var candidatePool = availableMembers.length > 0 ? availableMembers : members
+          var candidatePool = availableMembers.length > 0 ? availableMembers : otherMembers
+          if (candidatePool.length === 0) candidatePool = members
+
           var bestMemberId = ''
           var leastLoadCount = 999999
 
@@ -74,8 +112,6 @@ onRecordCreate((e) => {
 
           if (bestMemberId) {
             assignedUserId = bestMemberId
-          } else if (managerId) {
-            assignedUserId = managerId
           } else {
             assignedUserId = members[0] || ''
           }
@@ -103,11 +139,29 @@ onRecordCreate((e) => {
           $app.save(interRec)
         } catch (_) {}
 
+        $app
+          .logger()
+          .info(
+            'auto_assign: chamado atribuído na criação',
+            'ticket',
+            e.record.id,
+            'operator',
+            assignedUserId,
+          )
         return e.next()
       }
-    }
 
-    e.record.set('status', 'Aguardando Atribuição')
+      $app
+        .logger()
+        .warn(
+          'auto_assign: nenhum candidato encontrado na criação',
+          'ticket',
+          e.record.id,
+          'queue',
+          queueId,
+        )
+      e.record.set('status', 'Aguardando Atribuição')
+    }
   } catch (err) {
     $app.logger().error('ticket_auto_assign onRecordCreate failed', 'error', err.message)
     e.record.set('status', 'Aguardando Atribuição')
@@ -159,23 +213,41 @@ cronAdd('ticket_auto_assign_cron', '* * * * *', () => {
         try {
           var q = $app.findRecordById('queues', qId)
           var mList = q.get('members') || []
-          var mManager = q.getString('manager')
 
+          // Fallback por team quando a fila não tem members
           if (!mList || mList.length === 0) {
-            opId = mManager || ''
-          } else {
+            try {
+              var teamUsers = $app.findRecordsByFilter(
+                'users',
+                'active = true && team = "' + q.getString('name').replace(/"/g, '\\"') + '"',
+                '-created',
+                50,
+                0,
+              )
+              mList = teamUsers.map(function (u) {
+                return u.id
+              })
+            } catch (_) {}
+          }
+
+          if (mList && mList.length > 0) {
             var availList = []
+            var othersList = []
             for (var m = 0; m < mList.length; m++) {
               try {
                 var u = $app.findRecordById('users', mList[m])
+                if (u.getBool('active') === false) continue
                 var aStat = u.getString('availability_status') || 'Disponível'
                 if (aStat === 'Disponível' || aStat === 'disponivel') {
                   availList.push(mList[m])
+                } else {
+                  othersList.push(mList[m])
                 }
               } catch (_) {}
             }
 
-            var pool = availList.length > 0 ? availList : mList
+            var pool = availList.length > 0 ? availList : othersList
+            if (pool.length === 0) pool = mList
             var bestId = ''
             var minCount = 999999
 
@@ -196,7 +268,7 @@ cronAdd('ticket_auto_assign_cron', '* * * * *', () => {
               }
             }
 
-            opId = bestId || mManager || mList[0] || ''
+            opId = bestId || mList[0] || ''
           }
         } catch (_) {}
 
@@ -222,6 +294,14 @@ cronAdd('ticket_auto_assign_cron', '* * * * *', () => {
             )
             $app.save(iRec)
           } catch (_) {}
+
+          $app
+            .logger()
+            .info('auto_assign cron: chamado atribuído', 'ticket', tkt.id, 'operator', opId)
+        } else {
+          $app
+            .logger()
+            .warn('auto_assign cron: nenhum candidato para a fila', 'ticket', tkt.id, 'queue', qId)
         }
       }
     }
@@ -230,7 +310,7 @@ cronAdd('ticket_auto_assign_cron', '* * * * *', () => {
   }
 })
 
-// 3. Endpoint para reavaliação imediata via API
+// 3. Endpoint para reavaliação imediata via API (botão "Executar agora")
 routerAdd(
   'POST',
   '/backend/v1/tickets/auto-assign/run',
@@ -256,21 +336,43 @@ routerAdd(
           try {
             var queueRecord = $app.findRecordById('queues', qId)
             var mems = queueRecord.get('members') || []
-            var mgr = queueRecord.getString('manager')
+
+            // Fallback por team quando a fila não tem members
+            if (!mems || mems.length === 0) {
+              try {
+                var tfUsers = $app.findRecordsByFilter(
+                  'users',
+                  'active = true && team = "' +
+                    queueRecord.getString('name').replace(/"/g, '\\"') +
+                    '"',
+                  '-created',
+                  50,
+                  0,
+                )
+                mems = tfUsers.map(function (u) {
+                  return u.id
+                })
+              } catch (_) {}
+            }
 
             if (mems && mems.length > 0) {
               var avails = []
+              var others = []
               for (var mi = 0; mi < mems.length; mi++) {
                 try {
                   var usr = $app.findRecordById('users', mems[mi])
+                  if (usr.getBool('active') === false) continue
                   var st = usr.getString('availability_status') || 'Disponível'
                   if (st === 'Disponível' || st === 'disponivel') {
                     avails.push(mems[mi])
+                  } else {
+                    others.push(mems[mi])
                   }
                 } catch (_) {}
               }
 
-              var candidates = avails.length > 0 ? avails : mems
+              var candidates = avails.length > 0 ? avails : others
+              if (candidates.length === 0) candidates = mems
               var bestCandidate = ''
               var lowestLoad = 999999
 
@@ -291,9 +393,7 @@ routerAdd(
                 }
               }
 
-              targetOp = bestCandidate || mgr || mems[0] || ''
-            } else {
-              targetOp = mgr || ''
+              targetOp = bestCandidate || mems[0] || ''
             }
           } catch (_) {}
 

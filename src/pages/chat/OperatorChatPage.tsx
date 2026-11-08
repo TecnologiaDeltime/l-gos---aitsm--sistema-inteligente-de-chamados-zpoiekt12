@@ -5,6 +5,7 @@ import {
   getChatOperators,
   getConversationMessages,
   getUnreadCountBySender,
+  isChatOperatorOnline,
   markConversationAsRead,
   OperatorChatMessage,
   sendOperatorMessage,
@@ -40,6 +41,7 @@ export default function OperatorChatPage() {
   const [loadingMessages, setLoadingMessages] = useState(false)
   const [sending, setSending] = useState(false)
   const [unreadMap, setUnreadMap] = useState<Record<string, number>>({})
+  const [currentTime, setCurrentTime] = useState(Date.now())
 
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -79,6 +81,13 @@ export default function OperatorChatPage() {
     }, 30000)
     return () => clearInterval(interval)
   }, [user?.id])
+
+  // Relógio de presença: re-renderiza a cada 30s para o indicador online/offline
+  // recalcular o limite de 15 min mesmo sem nova resposta da API.
+  useEffect(() => {
+    const t = setInterval(() => setCurrentTime(Date.now()), 30000)
+    return () => clearInterval(t)
+  }, [])
 
   // Seleciona o primeiro operador automaticamente caso nenhum selecionado e exista algum
   useEffect(() => {
@@ -184,14 +193,20 @@ export default function OperatorChatPage() {
     }
   }
 
-  // Filtra operadores pela busca
+  // Filtra operadores pela busca e recalcula a presença online a cada tick do relógio
+  // (o indicador vira "Ausente" sozinho após 15 min sem atividade, sem esperar a próxima busca)
   const filteredOperators = useMemo(() => {
-    if (!searchTerm.trim()) return operators
-    const q = searchTerm.toLowerCase()
-    return operators.filter(
-      (op) => op.name.toLowerCase().includes(q) || op.email.toLowerCase().includes(q),
-    )
-  }, [operators, searchTerm])
+    void currentTime
+    const list = searchTerm.trim()
+      ? (() => {
+          const q = searchTerm.toLowerCase()
+          return operators.filter(
+            (op) => op.name.toLowerCase().includes(q) || op.email.toLowerCase().includes(q),
+          )
+        })()
+      : operators
+    return list.map((op) => ({ ...op, online: isChatOperatorOnline(op) }))
+  }, [operators, searchTerm, currentTime])
 
   const totalUnread = useMemo(() => {
     return Object.values(unreadMap).reduce((acc, count) => acc + count, 0)
