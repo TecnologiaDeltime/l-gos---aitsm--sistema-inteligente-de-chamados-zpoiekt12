@@ -30,6 +30,8 @@ import { MentionSelector } from '@/components/chat/MentionSelector'
 import { buildMentionMarkup, type MentionEntityType } from '@/lib/chat-mentions'
 import type { MentionCandidate } from '@/lib/chat-mention-data'
 import { createAudioRecorder, type AudioRecorderControls } from '@/lib/chat-audio-recorder'
+import { describeChatError } from '@/services/operator-chat'
+import { useToast } from '@/hooks/use-toast'
 import {
   CHAT_ATTACHMENT_MAX_BYTES,
   CHAT_ATTACHMENT_MIME_TYPES,
@@ -55,6 +57,9 @@ import { formatTicketAge } from '@/lib/date-format'
 
 export default function OperatorChatPage() {
   const { user } = useAuth()
+  const { toast } = useToast()
+  // Feedback de falha de envio (motivo claro em vez de "engolir" a mensagem)
+  const [sendError, setSendError] = useState<string | null>(null)
   const [operators, setOperators] = useState<ChatOperatorUser[]>([])
   const [selectedOperator, setSelectedOperator] = useState<ChatOperatorUser | null>(null)
   const [messages, setMessages] = useState<OperatorChatMessage[]>([])
@@ -259,6 +264,8 @@ export default function OperatorChatPage() {
     const isRelated =
       (record.sender === user.id && record.recipient === selectedOperator?.id) ||
       (record.sender === selectedOperator?.id && record.recipient === user.id)
+    // Anexo chega como nome de arquivo (ex. "audio-chat-...webm"), não como URL.
+    const fileFieldName: string | undefined = record?.file
 
     if (e.action === 'create') {
       if (isRelated) {
@@ -268,6 +275,11 @@ export default function OperatorChatPage() {
         })
         if (record.sender === selectedOperator?.id) {
           markConversationAsRead(selectedOperator.id, user.id).catch(() => {})
+        }
+        if (record.sender !== user.id && fileFieldName) {
+          // Anexo novo do parceiro: força re-busca do arquivo (o record do realtime
+          // às vezes chega antes do arquivo estar acessível via getFileUrl).
+          scrollToBottom()
         }
         // A conversa com este parceiro vira a mais recente do histórico
         setConversations((prev) => {
@@ -303,6 +315,7 @@ export default function OperatorChatPage() {
 
   // ===== Anexos (foto/vídeo/áudio) =====
   const clearPendingFile = () => {
+    setSendError(null)
     if (previewUrlRef.current) {
       URL.revokeObjectURL(previewUrlRef.current)
       previewUrlRef.current = null
@@ -334,6 +347,7 @@ export default function OperatorChatPage() {
   const startRecording = async () => {
     if (recorderRef.current) return
     setRecorderError(null)
+    setSendError(null)
     const recorder = createAudioRecorder(
       (state) => {
         setRecording(state.recording)
@@ -342,6 +356,11 @@ export default function OperatorChatPage() {
       },
       (file) => {
         handleFileChosen(file)
+        toast({
+          title: 'Áudio pronto',
+          description: 'Revise e clique em Enviar para mandar a mensagem.',
+          duration: 3000,
+        })
       },
     )
     recorderRef.current = recorder
@@ -382,10 +401,11 @@ export default function OperatorChatPage() {
   }
 
   // Enviar mensagem
-  const handleSend = async (e?: React.FormEvent) => {
+  const handleSend = async (e?: React.FormEvent | React.MouseEvent) => {
     if (e) e.preventDefault()
     if (!user || !selectedOperator || sending) return
     if (!inputText.trim() && !pendingFile) return
+    setSendError(null)
 
     const content = inputText.trim()
     const file = pendingFile
@@ -407,6 +427,14 @@ export default function OperatorChatPage() {
       setTimeout(() => scrollToBottom(), 50)
     } catch (err) {
       console.error('Erro ao enviar mensagem no chat:', err)
+      const reason = describeChatError(err)
+      setSendError(reason)
+      toast({
+        title: 'Falha ao enviar a mensagem',
+        description: reason,
+        variant: 'destructive',
+        duration: 8000,
+      })
       setInputText(content)
       if (file) handleFileChosen(file)
     } finally {
@@ -842,6 +870,29 @@ export default function OperatorChatPage() {
                 </div>
               )}
 
+              {/* Erro de gravação / anexo / envio — motivo claro, com botão tentar de novo */}
+              {sendError && (
+                <div className="mx-3 mt-2 flex items-center gap-2 rounded-lg border border-red-500/40 bg-red-500/10 px-2.5 py-1.5 text-[11px] text-red-600 dark:text-red-400">
+                  <span className="flex-1">{sendError}</span>
+                  <button
+                    type="button"
+                    onClick={handleSend}
+                    className="font-semibold underline underline-offset-2 hover:text-red-500"
+                    title="Tentar enviar novamente"
+                  >
+                    Tentar de novo
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSendError(null)}
+                    className="text-red-500 hover:text-red-400"
+                    title="Fechar"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              )}
+
               {/* Erro de gravação / anexo */}
               {recorderError && (
                 <div className="mx-3 mt-2 flex items-center gap-2 rounded-lg border border-red-500/40 bg-red-500/10 px-2.5 py-1.5 text-[11px] text-red-600 dark:text-red-400">
@@ -888,7 +939,7 @@ export default function OperatorChatPage() {
                     className="h-9 w-9 shrink-0 text-muted-foreground hover:text-amber-500"
                     title="Anexar foto ou vídeo"
                     onClick={() => fileInputRef.current?.click()}
-                    disabled={sending || recording}
+                    disabled={recording}
                   >
                     <Paperclip className="h-4 w-4" />
                   </Button>
@@ -924,7 +975,7 @@ export default function OperatorChatPage() {
                       className="h-9 w-9 shrink-0 text-muted-foreground hover:text-amber-500"
                       title="Gravar áudio"
                       onClick={startRecording}
-                      disabled={sending || !!pendingFile}
+                      disabled={!!pendingFile}
                     >
                       <Mic className="h-4 w-4" />
                     </Button>
@@ -937,7 +988,7 @@ export default function OperatorChatPage() {
                       setInputText(e.target.value)
                       detectMentionTrigger(e.target.value)
                     }}
-                    disabled={sending}
+                    disabled={false}
                     className="flex-1 h-10 text-xs"
                   />
                   <Tooltip>
@@ -947,8 +998,16 @@ export default function OperatorChatPage() {
                         disabled={(!inputText.trim() && !pendingFile) || sending}
                         className="bg-amber-500 text-slate-950 hover:bg-amber-400 font-semibold px-4"
                       >
-                        <Send className="h-4 w-4 mr-1.5" />
-                        {selectedOperatorPresence?.online === false ? 'Enviar (offline)' : 'Enviar'}
+                        {sending ? (
+                          <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
+                        ) : (
+                          <Send className="h-4 w-4 mr-1.5" />
+                        )}
+                        {sending
+                          ? 'Enviando...'
+                          : selectedOperatorPresence?.online === false
+                            ? 'Enviar (offline)'
+                            : 'Enviar'}
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent side="top">

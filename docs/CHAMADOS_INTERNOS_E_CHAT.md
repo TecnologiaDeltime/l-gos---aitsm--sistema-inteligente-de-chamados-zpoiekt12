@@ -71,13 +71,20 @@ O **Chat de Operadores** (`/chat`) é um módulo de comunicação instantânea 1
    - **Não toca** quando a mensagem chega na conversa que o operador está visualizando aberta na tela (a conversa ativa é registrada em `setActiveConversationPartner`); o comportamento é silencioso por design, pois a mensagem já está visível.
    - Respeita o mute global de alertas sonoros do sistema ( sino com mudo, `useAlertMute`).
    - A reprodução é centralizada no ícone da barra superior (`ChatTopBarIcon`), evitando toques duplicados com o sino global.
-9. **Busca interna na conversa aberta**:
-   - Campo de busca acima das mensagens da conversa ativa: filtra localmente as mensagens já carregadas, **sem chamadas extras ao backend**.
-   - **Insensível a acentos e maiúsculas/minúsculas** e aceita múltiplas palavras em qualquer ordem — reutiliza `matchesAllTokens` e `splitTextWithHighlight` de `src/lib/search-text.ts` (mesmo padrão do Histórico de Chat).
-   - **Contagem de ocorrências**: badge no cabeçalho da conversa mostra quantas mensagens casam com o termo; as bolhas não casadas ficam ocultas durante a busca.
-   - **Destaque visual (highlight)**: o trecho encontrado dentro da bolha aparece com marcação âmbar suave, preservando acentos e caixa originais.
-   - Botão ✕ limpa a busca e restaura a conversa completa.
-10. **Anexos: foto, vídeo e áudio gravado**:
+9. **Resiliência e fluidez (v0.0.370+)**:
+   - **Sem travas na digitação**: o campo de mensagem e os botões de anexo/microfone **nunca desabilitam durante o envio** — o estado de envio aparece apenas no botão Enviar ("Enviando..." com spinner), que evita duplo clique.
+   - **Feedback de falha garantido**: se um envio (texto, foto ou áudio) falhar, o motivo aparece **em dois lugares** — faixa vermelha acima da caixa com botão **"Tentar de novo"** e toast descritivo (`describeChatError` traduz erros do PocketBase — campo inválido, 5 MB, rede — em texto legível). O texto digitado e o anexo escolhidos são **restaurados** para reenvio.
+   - **Conexão em tempo real**: queda de conexão SSE avisa o operador uma única vez com toast ("Conexão em tempo real perdida — reconectando"); o callback vive em `ref`, então a assinatura não é recriada a cada render.
+   - **Perda de autenticação** durante o uso (token expirado etc.) redireciona para `/login` em vez de o chat ficar mudo.
+10. **Busca interna na conversa aberta**:
+
+- Campo de busca acima das mensagens da conversa ativa: filtra localmente as mensagens já carregadas, **sem chamadas extras ao backend**.
+- **Insensível a acentos e maiúsculas/minúsculas** e aceita múltiplas palavras em qualquer ordem — reutiliza `matchesAllTokens` e `splitTextWithHighlight` de `src/lib/search-text.ts` (mesmo padrão do Histórico de Chat).
+- **Contagem de ocorrências**: badge no cabeçalho da conversa mostra quantas mensagens casam com o termo; as bolhas não casadas ficam ocultas durante a busca.
+- **Destaque visual (highlight)**: o trecho encontrado dentro da bolha aparece com marcação âmbar suave, preservando acentos e caixa originais.
+- Botão ✕ limpa a busca e restaura a conversa completa.
+
+11. **Anexos: foto, vídeo e áudio gravado**:
 
 - Botão de clipe na caixa de mensagem abre o seletor de arquivos (foto/vídeo); mensagem aceita **um anexo** por envio, com **limite de 5 MB** (`CHAT_ATTACHMENT_MAX_BYTES`, mesmo limite do campo `file` da migração 0137).
 - **Gravação de áudio pelo microfone** via botão de microfone, usando a API **MediaRecorder** do navegador (`src/lib/chat-audio-recorder.ts`): contagem de segundos ao vivo, botão de parar (anexa) e botão de descartar; erros de permissão/ausência de microfone são exibidos de forma amigável.
@@ -141,6 +148,11 @@ Seguindo a regra permanente do projeto Lógos AITSM, ambas as funcionalidades s�
    - Adiciona o campo `file` (arquivo único) na coleção `operator_chat_messages`, com tamanho máximo de **5 MB** e tipos aceitos de imagem, áudio e vídeo — suporte aos anexos de foto, vídeo e áudio gravado no chat.
    - Regras de acesso intactas (migração 0136): participantes da conversa.
    - Sem item novo no catálogo de permissões: o acesso continua regido pelo item existente `chat.chat_operadores`.
+6. **`0138_operator_chat_autodate_and_file_mimes.js`** — **correção de raiz do chat "amarrado"**:
+   - A coleção `operator_chat_messages` foi criada na migração 0129 **sem os campos autodate `created`/`updated`**. Como o serviço ordena por `sort: '-created'` (conversas, mensagens, não lidas), **toda listagem retornava HTTP 400** — nada carregava, e os índices da coleção referenciavam a coluna inexistente, derrubando também a criação (mensagem "não sai").
+   - A migração adiciona os autodate e faz **backfill** de `created`/`updated` (registros antigos ganham a data da última alteração; sem isso a ordenação seria indefinida).
+   - Ampla a allowlist de MIME do campo `file` para as detecções reais de conteúdo dos gravadores dos navegadores: `application/ogg` (Firefox grava `.ogg`), `audio/x-m4a` (Safari), `audio/x-wav`, `audio/aac`, `audio/mp3`, `audio/mpeg3`, `video/x-m4v`, `video/quicktime` e `video/x-msvideo` — o áudio gravado passou a subir sem rejeição de tipo.
+7. **`0139_chat_backfill_created.js`** — backfill idempotente separado de `created`/`updated` para as mensagens antigas (complementa a 0138; reexecutar é no-op).
 
 ---
 

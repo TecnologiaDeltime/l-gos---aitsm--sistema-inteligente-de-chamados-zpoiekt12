@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-08T23:04:48.828Z",
+  "generatedAt": "2026-11-08T23:50:06.927Z",
   "collections": [
     {
       "name": "users",
@@ -12067,11 +12067,25 @@
           "type": "file",
           "required": false,
           "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onUpdate"]
         }
       ],
       "indexes": [
-        "CREATE INDEX idx_chat_sender_rec ON operator_chat_messages (sender, recipient, created)",
-        "CREATE INDEX idx_chat_read ON operator_chat_messages (recipient, read)"
+        "CREATE INDEX `idx_chat_sender_rec` ON `operator_chat_messages` (sender)",
+        "CREATE INDEX `idx_chat_read` ON `operator_chat_messages` (recipient)"
       ]
     },
     {

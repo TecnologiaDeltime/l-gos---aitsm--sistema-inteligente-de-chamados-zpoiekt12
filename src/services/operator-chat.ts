@@ -149,9 +149,34 @@ export async function sendChatMessage(
   // PocketBase exige content (required): quando a mensagem é só o anexo, usamos um texto curto.
   formData.append('content', trimmed || filePlaceholderText(file))
   formData.append('read', 'false')
-  formData.append('file', file)
+  formData.append('file', file, file.name || 'anexo')
 
-  return pb.collection('operator_chat_messages').create<OperatorChatMessageRecord>(formData)
+  // Importante NÃO definir Content-Type manualmente: o navegador monta o multipart
+  // com boundary próprio. Timeout alto: upload em rede lenta não deve abortar no meio.
+  return pb
+    .collection('operator_chat_messages')
+    .create<OperatorChatMessageRecord>(formData, { timeout: 60000 })
+}
+
+/**
+ * Traduz um erro qualquer do envio (PocketBase 400/403, rede, etc.) em um
+ * motivo claro e legível para o operador — nada de "engolir" o envio.
+ */
+export function describeChatError(err: unknown): string {
+  const e = err as any
+  const fieldErrors = e?.response?.data || {}
+  const parts: string[] = []
+  for (const [field, v] of Object.entries(fieldErrors)) {
+    const msg =
+      (v as any)?.message ||
+      (typeof v === 'string' ? v : '') ||
+      (field === 'file' ? 'anexo inválido (formato ou tamanho)' : 'valor inválido')
+    parts.push(`${field}: ${msg}`)
+  }
+  if (parts.length > 0) return parts.join(' • ')
+  if (e?.status === 0 || e?.message === 'Failed to fetch')
+    return 'Sem conexão com o servidor. Verifique sua internet e tente novamente.'
+  return e?.response?.message || e?.message || 'Erro inesperado ao enviar a mensagem.'
 }
 
 /** Texto padrão da mensagem quando só há anexo (sem texto digitado). */

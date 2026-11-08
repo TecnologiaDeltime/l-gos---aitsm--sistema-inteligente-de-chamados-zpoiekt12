@@ -14,11 +14,37 @@ export interface AudioRecorderControls {
   cancel: () => void
 }
 
-/** MIME preferido pelo MediaRecorder deste navegador (com fallback). */
+/**
+ * MIME preferido pelo MediaRecorder deste navegador (com fallback amplo).
+ * A ordem cobre Chrome/Edge (webm+opus), Firefox (ogg+opus) e Safari (mp4/aac).
+ * Se nenhum MIME específico for suportado, usamos o MediaRecorder SEM mimeType:
+ * o navegador grava no seu formato padrão — a allowlist do campo file (0138)
+ * aceita todas as detecções de conteúdo reais desses formatos.
+ */
 function pickAudioMime(): string | undefined {
   if (typeof MediaRecorder === 'undefined') return undefined
-  const candidates = ['audio/webm;codecs=opus', 'audio/webm', 'audio/ogg;codecs=opus', 'audio/mp4']
-  return candidates.find((t) => MediaRecorder.isTypeSupported(t))
+  const candidates = [
+    'audio/webm;codecs=opus',
+    'audio/webm',
+    'audio/ogg;codecs=opus',
+    'audio/ogg',
+    'audio/mp4',
+    'audio/aac',
+  ]
+  const supported = candidates.find((t) => {
+    try {
+      return MediaRecorder.isTypeSupported(t)
+    } catch (_) {
+      return false
+    }
+  })
+  if (supported) return supported
+  // Último recurso: alguns navegadores aceitam gravar mas não anunciam suporte.
+  try {
+    return new MediaRecorder(new MediaStream()).mimeType || undefined
+  } catch (_) {
+    return undefined
+  }
 }
 
 /** Extensão coerente com o MIME gravado (o PocketBase preserva a extensão do nome). */
@@ -73,7 +99,8 @@ export function createAudioRecorder(
             emit(null)
             return
           }
-          const type = recorder && recorder.mimeType ? recorder.mimeType : mimeType || 'audio/webm'
+          // recorder já foi limpo em cleanup() — usar a variável mimeType capturada no start.
+          const type = mimeType || 'audio/webm'
           const blob = new Blob(chunks, { type })
           const ext = extensionForMime(type)
           onFinished(
