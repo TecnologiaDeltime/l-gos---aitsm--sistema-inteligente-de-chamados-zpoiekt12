@@ -162,7 +162,8 @@ const BASE_SYSTEM_MODULES: GranularModuleDefinition[] = [
       {
         key: 'chat_operadores',
         label: 'Chat de Operadores',
-        description: 'Troca de mensagens diretas e histórico entre operadores internos',
+        description:
+          'Troca de mensagens diretas e histórico entre operadores internos, com busca na conversa, anexos (áudio/foto/vídeo), gravação de áudio e menção de chamado/mudança/problema',
         path: '/chat',
       },
       {

@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-08T17:05:07.200Z",
+  "generatedAt": "2026-11-08T21:27:01.359Z",
   "collections": [
     {
       "name": "users",
@@ -12059,6 +12059,12 @@
         {
           "name": "read_at",
           "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "file",
+          "type": "file",
           "required": false,
           "system": false
         }

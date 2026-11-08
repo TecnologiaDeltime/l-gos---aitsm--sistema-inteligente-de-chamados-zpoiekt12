@@ -7,6 +7,8 @@ export interface OperatorChatMessageRecord {
   content: string
   read?: boolean
   read_at?: string
+  /** Anexo único (imagem, áudio ou vídeo) — migração 0137, máx. 5 MB. */
+  file?: string
   created: string
   updated: string
   expand?: {
@@ -96,23 +98,68 @@ export function hasOlderMessages(loadedCount: number, pageSize = CHAT_MESSAGES_P
   return loadedCount >= pageSize
 }
 
+/** Tamanho máximo do anexo do chat (5 MB — mesmo limite do campo file na migração 0137). */
+export const CHAT_ATTACHMENT_MAX_BYTES = 5 * 1024 * 1024
+
+/** Tipos MIME aceitos no anexo do chat (imagem, áudio e vídeo). */
+export const CHAT_ATTACHMENT_MIME_TYPES = [
+  'image/jpeg',
+  'image/png',
+  'image/gif',
+  'image/webp',
+  'audio/webm',
+  'audio/ogg',
+  'audio/mpeg',
+  'audio/mp4',
+  'audio/wav',
+  'video/webm',
+  'video/mp4',
+  'video/quicktime',
+]
+
 /**
  * Envia uma nova mensagem 1:1.
+ * `file` (opcional) é um anexo único de imagem, áudio ou vídeo (máx. 5 MB).
  */
 export async function sendChatMessage(
   senderId: string,
   recipientId: string,
   content: string,
+  file?: File | null,
 ): Promise<OperatorChatMessageRecord> {
   const trimmed = content.trim()
-  if (!trimmed) throw new Error('Mensagem vazia')
+  if (!trimmed && !file) throw new Error('Mensagem vazia')
 
-  return pb.collection('operator_chat_messages').create<OperatorChatMessageRecord>({
-    sender: senderId,
-    recipient: recipientId,
-    content: trimmed,
-    read: false,
-  })
+  if (!file) {
+    return pb.collection('operator_chat_messages').create<OperatorChatMessageRecord>({
+      sender: senderId,
+      recipient: recipientId,
+      content: trimmed,
+      read: false,
+    })
+  }
+
+  if (file.size > CHAT_ATTACHMENT_MAX_BYTES) {
+    throw new Error('Arquivo maior que o limite de 5 MB')
+  }
+
+  const formData = new FormData()
+  formData.append('sender', senderId)
+  formData.append('recipient', recipientId)
+  // PocketBase exige content (required): quando a mensagem é só o anexo, usamos um texto curto.
+  formData.append('content', trimmed || filePlaceholderText(file))
+  formData.append('read', 'false')
+  formData.append('file', file)
+
+  return pb.collection('operator_chat_messages').create<OperatorChatMessageRecord>(formData)
+}
+
+/** Texto padrão da mensagem quando só há anexo (sem texto digitado). */
+export function filePlaceholderText(file: File): string {
+  if (file.type.startsWith('image/')) return '📷 Foto'
+  if (file.type.startsWith('video/')) return '🎬 Vídeo'
+  if (file.type.startsWith('audio/')) return '🎤 Áudio'
+  return '📎 Anexo'
 }
 
 /**
@@ -124,15 +171,43 @@ export async function sendOperatorMessage(
         sender: string
         recipient: string
         content: string
+        file?: File | null
       }
     | string,
   recipientId?: string,
   content?: string,
+  file?: File | null,
 ): Promise<OperatorChatMessageRecord> {
   if (typeof dataOrSender === 'object') {
-    return sendChatMessage(dataOrSender.sender, dataOrSender.recipient, dataOrSender.content)
+    return sendChatMessage(
+      dataOrSender.sender,
+      dataOrSender.recipient,
+      dataOrSender.content,
+      dataOrSender.file,
+    )
   }
-  return sendChatMessage(dataOrSender, recipientId || '', content || '')
+  return sendChatMessage(dataOrSender, recipientId || '', content || '', file)
+}
+
+/** URL do arquivo anexado a uma mensagem do chat (protegido pelas regras da coleção 0136). */
+export function getChatMessageFileUrl(
+  msg: Pick<OperatorChatMessageRecord, 'id' | 'file'> & { collectionId?: string },
+): string {
+  if (!msg.file) return ''
+  return pb.files.getURL(msg as any, msg.file)
+}
+
+/** Classifica o anexo da mensagem pelo MIME/tipo do nome do arquivo. */
+export function getChatAttachmentKind(
+  msg: Pick<OperatorChatMessageRecord, 'file'>,
+): 'image' | 'audio' | 'video' | null {
+  if (!msg.file) return null
+  const name = msg.file.toLowerCase()
+  if (/\.(png|jpe?g|gif|webp)$/.test(name)) return 'image'
+  if (/\.(webm|ogg|oga|mp3|m4a|wav)$/.test(name)) return 'audio'
+  if (/\.(webm|mp4|mov)$/.test(name)) return 'video'
+  // PocketBase renomeia preservando a extensão; sem extensão reconhecida, não renderiza player.
+  return null
 }
 
 /**
