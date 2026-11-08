@@ -2,8 +2,12 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useAuth } from '@/hooks/use-auth'
 import {
   ChatOperatorUser,
+  CHAT_MESSAGES_PAGE_SIZE,
+  ChatConversationSummary,
+  getChatConversations,
   getChatOperators,
   getConversationMessages,
+  getConversationMessagesPage,
   getUnreadCountBySender,
   isChatOperatorOnline,
   markConversationAsRead,
@@ -19,6 +23,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import { ConversationHistoryList } from '@/components/chat/ConversationHistoryList'
 import {
   MessageSquare,
   Search,
@@ -29,6 +34,9 @@ import {
   Check,
   User,
   Sparkles,
+  ChevronUp,
+  Loader2,
+  History as HistoryIcon,
 } from 'lucide-react'
 
 export default function OperatorChatPage() {
@@ -43,8 +51,17 @@ export default function OperatorChatPage() {
   const [sending, setSending] = useState(false)
   const [unreadMap, setUnreadMap] = useState<Record<string, number>>({})
   const [currentTime, setCurrentTime] = useState(Date.now())
+  // Histórico de conversas (agrupamento por parceiro das próprias mensagens)
+  const [conversations, setConversations] = useState<ChatConversationSummary[]>([])
+  const [loadingConversations, setLoadingConversations] = useState(true)
+  const [hasLoadedConversations, setHasLoadedConversations] = useState(false)
+  // Paginação do histórico da conversa aberta ("Carregar mais")
+  const [loadingOlder, setLoadingOlder] = useState(false)
+  const [hasMoreOlder, setHasMoreOlder] = useState(false)
+  const [historyLoadedFor, setHistoryLoadedFor] = useState<string | null>(null)
 
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const messagesTopRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
   // Carrega lista de operadores
@@ -72,6 +89,20 @@ export default function OperatorChatPage() {
     }
   }
 
+  // Carrega o histórico de conversas do operador logado (agrupado por parceiro)
+  const loadConversations = async () => {
+    if (!user) return
+    try {
+      const list = await getChatConversations(user.id, { operators, unreadCounts: unreadMap })
+      setConversations(list)
+    } catch (err) {
+      console.error('Erro ao carregar histórico de conversas:', err)
+    } finally {
+      setLoadingConversations(false)
+      setHasLoadedConversations(true)
+    }
+  }
+
   useEffect(() => {
     loadOperators()
     loadUnreadCounts()
@@ -82,6 +113,12 @@ export default function OperatorChatPage() {
     }, 30000)
     return () => clearInterval(interval)
   }, [user?.id])
+
+  // Recarrega o histórico de conversas quando a lista de operadores chega
+  // (nome/avatar resolvidos) ou os contadores de não lidas mudam.
+  useEffect(() => {
+    loadConversations()
+  }, [user?.id, operators, unreadMap])
 
   // Relógio de presença: re-renderiza a cada 30s para o indicador online/offline
   // recalcular o limite de 15 min mesmo sem nova resposta da API.
@@ -104,6 +141,8 @@ export default function OperatorChatPage() {
     try {
       const list = await getConversationMessages(user.id, operatorId)
       setMessages(list)
+      setHasMoreOlder(list.length >= CHAT_MESSAGES_PAGE_SIZE)
+      setHistoryLoadedFor(operatorId)
       // Marca como lidas as mensagens recebidas deste operador
       await markConversationAsRead(operatorId, user.id)
       setUnreadMap((prev) => ({ ...prev, [operatorId]: 0 }))
@@ -111,6 +150,53 @@ export default function OperatorChatPage() {
       console.error('Erro ao carregar mensagens da conversa:', err)
     } finally {
       setLoadingMessages(false)
+    }
+  }
+
+  // Carrega página anterior (mais antigas) de mensagens da conversa aberta
+  const loadOlderMessages = async () => {
+    if (!user || !selectedOperator || loadingOlder || !hasMoreOlder) return
+    const oldest = messages[0]
+    if (!oldest) return
+    setLoadingOlder(true)
+    try {
+      const older = await getConversationMessagesPage(user.id, selectedOperator.id, {
+        before: oldest.created,
+        limit: CHAT_MESSAGES_PAGE_SIZE,
+      })
+      setMessages((prev) => {
+        const known = new Set(prev.map((m) => m.id))
+        const fresh = older.filter((m) => !known.has(m.id))
+        return [...fresh, ...prev]
+      })
+      setHasMoreOlder(older.length >= CHAT_MESSAGES_PAGE_SIZE)
+      if (older.length === 0) setHasMoreOlder(false)
+      // Busca o nome do parceiro em conversas antigas cujo remetente não existe mais
+      // nos operadores atuais para exibição correta no cabeçalho do chat
+      if (older.length > 0) {
+        const unknownSender = older.find(
+          (m) => m.sender !== user.id && !operators.some((o) => o.id === m.sender),
+        )
+        if (unknownSender && unknownSender.expand?.sender) {
+          setOperators((prev) => {
+            if (prev.some((o) => o.id === unknownSender.expand!.sender!.id)) return prev
+            const s = unknownSender.expand.sender
+            return [
+              ...prev,
+              {
+                id: s.id,
+                name: s.name,
+                email: s.email,
+                avatar: s.avatar,
+              } as ChatOperatorUser,
+            ]
+          })
+        }
+      }
+    } catch (err) {
+      console.error('Erro ao carregar mensagens antigas da conversa:', err)
+    } finally {
+      setLoadingOlder(false)
     }
   }
 
@@ -155,6 +241,22 @@ export default function OperatorChatPage() {
         if (record.sender === selectedOperator?.id) {
           markConversationAsRead(selectedOperator.id, user.id).catch(() => {})
         }
+        // A conversa com este parceiro vira a mais recente do histórico
+        setConversations((prev) => {
+          const idx = prev.findIndex((c) => c.partnerId === record.sender)
+          if (idx === -1) return prev
+          const conv = prev[idx]
+          const updated: ChatConversationSummary = {
+            ...conv,
+            lastMessagePreview: String(record.content || '')
+              .replace(/\s+/g, ' ')
+              .slice(0, 70),
+            lastMessageAt: record.created,
+            lastFromMe: record.sender === user.id,
+            unread: record.sender === user.id ? 0 : (unreadMap[record.sender] || 0) + 1,
+          }
+          return [updated, ...prev.filter((_, i) => i !== idx)]
+        })
       } else if (record.recipient === user.id) {
         // Mensagem de outro operador (conversa não aberta): incrementa não lido.
         // O som toca UMA única vez, centralizado no ChatTopBarIcon (barra superior) —
@@ -339,8 +441,48 @@ export default function OperatorChatPage() {
           </ScrollArea>
         </Card>
 
-        {/* Painel Direito: Janela da Conversa (8 colunas) */}
-        <Card className="md:col-span-8 lg:col-span-8.5 flex flex-col min-h-0 bg-card border-border overflow-hidden">
+        {/* Painel Central: Histórico de Conversas (3 colunas) */}
+        <Card className="md:col-span-3 lg:col-span-3 flex flex-col min-h-0 bg-card border-border overflow-hidden">
+          <div className="p-3 border-b border-border flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <HistoryIcon className="h-4 w-4 text-amber-500" />
+              <h2 className="text-xs font-bold text-foreground">Conversas</h2>
+            </div>
+            <span className="text-[10px] text-muted-foreground">
+              {conversations.length} anterior(es)
+            </span>
+          </div>
+          <ScrollArea className="flex-1">
+            <ConversationHistoryList
+              conversations={conversations}
+              loading={loadingConversations}
+              hasLoadedOnce={hasLoadedConversations}
+              activePartnerId={selectedOperator?.id || null}
+              onSelect={async (partnerId) => {
+                const op =
+                  operators.find((o) => o.id === partnerId) ||
+                  (() => {
+                    const conv = conversations.find((c) => c.partnerId === partnerId)
+                    return conv
+                      ? {
+                          id: conv.partnerId,
+                          name: conv.partnerName,
+                          email: conv.partnerEmail || '',
+                          avatar: conv.partnerAvatar,
+                        }
+                      : null
+                  })()
+                if (op) {
+                  setSelectedOperator(op as ChatOperatorUser)
+                }
+              }}
+              operators={operators}
+            />
+          </ScrollArea>
+        </Card>
+
+        {/* Painel Direito: Janela da Conversa (5 colunas) */}
+        <Card className="md:col-span-5 lg:col-span-5.5 flex flex-col min-h-0 bg-card border-border overflow-hidden">
           {selectedOperator ? (
             <>
               {/* Topo da Conversa com Informações do Operador */}
@@ -389,6 +531,31 @@ export default function OperatorChatPage() {
 
               {/* Área de Mensagens */}
               <ScrollArea className="flex-1 p-4">
+                {/* Botão Carregar mais (histórico paginado) */}
+                {hasMoreOlder && messages.length > 0 && !loadingMessages && (
+                  <div className="flex justify-center pb-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 px-3 text-[11px] text-amber-600 dark:text-amber-400 hover:text-amber-500"
+                      onClick={loadOlderMessages}
+                      disabled={loadingOlder}
+                    >
+                      {loadingOlder ? (
+                        <>
+                          <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                          Carregando...
+                        </>
+                      ) : (
+                        <>
+                          <ChevronUp className="h-3 w-3 mr-1" />
+                          Carregar mensagens mais antigas
+                        </>
+                      )}
+                    </Button>
+                    <div ref={messagesTopRef} />
+                  </div>
+                )}
                 {loadingMessages ? (
                   <div className="flex h-full items-center justify-center p-8 text-xs text-muted-foreground">
                     Carregando conversa...

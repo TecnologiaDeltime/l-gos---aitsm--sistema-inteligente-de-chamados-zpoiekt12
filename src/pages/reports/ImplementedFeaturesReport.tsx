@@ -204,6 +204,13 @@ const FEATURE_CATEGORIES: FeatureCategory[] = [
         tag: 'Comunicação / Chat',
       },
       {
+        id: 'tk-operator-chat-historico',
+        title: 'Chat Interno: histórico de conversas na página do chat',
+        description:
+          'Nova seção "Conversas" dentro do próprio chat em tempo real (/chat): todas as conversas anteriores do operador logado agrupadas por parceiro (mensagens em que ele é remetente OU destinatário), com nome do operador, prévia truncada da última mensagem, data/hora relativa da última interação e contador de não lidas daquela conversa, ordenadas da mais recente para a mais antiga. Clicar numa conversa reabre a conversa ativa com aquele operador no painel do chat, carregando a janela das mensagens mais recentes e paginação "Carregar mensagens mais antigas" para o histórico anterior, seguindo em tempo real (envio, leitura e badges funcionam normalmente na conversa reaberta). O agrupamento respeita a listRule da coleção (sender/recipient = usuário logado, migração 0136) — cada operador vê apenas as próprias conversas. Permissão: reutiliza o item existente chat.chat_operadores do catálogo.',
+        tag: 'Comunicação / Chat',
+      },
+      {
         id: 'tk-chat-history',
         title: 'Histórico de Chat por Operador (/chat/historico)',
         description:

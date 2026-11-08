@@ -51,10 +51,21 @@ O **Chat de Operadores** (`/chat`) é um módulo de comunicação instantânea 1
 5. **Conversa em bolhas (estilo mensageiros)**:
    - Mensagens próprias e recebidas com lados e cores distintas: enviadas em âmbar à direita (tema escuro Amber Alert) / âmbar sobre cartão claro (tema Marrom & Branco); recebidas em cartão neutro à esquerda.
    - Cada bolha exibe nome do remetente (nas recebidas), hora de envio e ticks de leitura (✓ / ✓✓) nas enviadas.
-6. **Ícone de chat na barra superior**:
+6. **Histórico de conversas na página do chat (seção "Conversas")**:
+   - Painel próprio ao lado da lista de operadores que agrupa **todas as conversas anteriores** do operador logado (mensagens em que ele é remetente OU destinatário) **por parceiro**, com:
+     - Nome do operador com quem conversou (e avatar).
+     - Prévia truncada da última mensagem (prefixada com "Você: " quando a última mensagem foi enviada pelo próprio usuário).
+     - Data/hora relativa da última mensagem ("agora", "hh:mm" hoje, "Ontem", dia da semana ou "dd/mm/aaaa").
+     - Contador de não lidas daquela conversa (badge âmbar).
+   - Ordenação da conversa mais recente para a mais antiga; nova mensagem recebida move a conversa para o topo em tempo real.
+   - **Clique numa conversa do histórico reabre a conversa ativa** com aquele operador no painel do chat (reutiliza a conversa 1:1 existente), carregando a **janela das mensagens mais recentes** (50) e com botão **"Carregar mensagens mais antigas"** para paginar o histórico anterior — e seguindo em tempo real (envio, leitura, ticks e bolhas funcionam normalmente na conversa reaberta).
+   - O agrupamento **respeita a listRule** da coleção (`sender/recipient = @request.auth.id`, migração 0136): cada operador enxerga somente as próprias conversas.
+   - Permissão: **reutiliza o item existente** `chat.chat_operadores` do catálogo (parte do chat em tempo real); sem item novo.
+   - Serviço: `getChatConversations` e `getConversationMessagesPage` em `src/services/operator-chat.ts`; componente `src/components/chat/ConversationHistoryList.tsx`.
+7. **Ícone de chat na barra superior**:
    - Ao lado do alternador de modo claro/escuro, o ícone de balão de conversa exibe badge numérica com a **quantidade total** de mensagens não lidas do operador (mesma fonte de dados do chat: coleção `operator_chat_messages` via `getUnreadCountsBySender`).
    - Clique navega direto ao `/chat`. Ao abrir uma conversa no chat, as mensagens são marcadas como lidas via realtime (evento `update` com `read = true`) e o badge zera automaticamente — sem duplicar mecanismos (o sino global e o ícone compartilham a mesma contagem).
-7. **Alerta sonoro discreto de nova mensagem**:
+8. **Alerta sonoro discreto de nova mensagem**:
    - Som curto gerado via **Web Audio API** (duas notas suaves, ~0,4 s, ganho baixo), sem arquivos nem dependências externas.
    - Toca **somente na chegada** de mensagem nova de outra pessoa — nunca ao abrir o chat, nunca ao enviar.
    - **Não toca** quando a mensagem chega na conversa que o operador está visualizando aberta na tela (a conversa ativa é registrada em `setActiveConversationPartner`); o comportamento é silencioso por design, pois a mensagem já está visível.

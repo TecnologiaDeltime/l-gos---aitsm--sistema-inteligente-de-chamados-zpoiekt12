@@ -75,16 +75,25 @@ export function isChatOperatorOnline(
 export async function getConversationMessages(
   userId: string,
   otherUserId: string,
-  limit = 100,
+  limit = CHAT_MESSAGES_PAGE_SIZE,
 ): Promise<OperatorChatMessageRecord[]> {
   if (!userId || !otherUserId) return []
   const filter = `(sender = "${userId}" && recipient = "${otherUserId}") || (sender = "${otherUserId}" && recipient = "${userId}")`
-  return pb.collection('operator_chat_messages').getFullList<OperatorChatMessageRecord>({
-    filter,
-    sort: 'created',
-    expand: 'sender,recipient',
-    limit,
-  })
+  // Janela das mensagens MAIS RECENTES da conversa (o restante entra via "Carregar
+  // mensagens mais antigas", paginado por getConversationMessagesPage).
+  const page = await pb
+    .collection('operator_chat_messages')
+    .getList<OperatorChatMessageRecord>(1, limit, {
+      filter,
+      sort: '-created',
+      expand: 'sender,recipient',
+    })
+  return [...page.items].reverse()
+}
+
+/** Indica se existem mensagens mais antigas além das carregadas na janela inicial. */
+export function hasOlderMessages(loadedCount: number, pageSize = CHAT_MESSAGES_PAGE_SIZE): boolean {
+  return loadedCount >= pageSize
 }
 
 /**
@@ -175,6 +184,122 @@ export async function getUnreadCountsBySender(
 }
 
 export const getUnreadCountBySender = getUnreadCountsBySender
+
+/** Janela padrão de mensagens carregadas por vez ao abrir uma conversa do histórico. */
+export const CHAT_MESSAGES_PAGE_SIZE = 50
+
+export interface ChatConversationSummary {
+  /** ID do outro operador (parceiro da conversa com o usuário logado). */
+  partnerId: string
+  /** Nome do parceiro (via expand da mensagem mais recente ou fallback pelo id). */
+  partnerName: string
+  partnerEmail?: string
+  partnerAvatar?: string
+  /** Prévia truncada da última mensagem trocada com este parceiro. */
+  lastMessagePreview: string
+  /** Data/hora (ISO) da última mensagem trocada com este parceiro. */
+  lastMessageAt: string
+  /** true = a última mensagem foi enviada pelo usuário logado. */
+  lastFromMe: boolean
+  /** Quantidade de mensagens não lidas recebidas deste parceiro. */
+  unread: number
+  /** Quantidade total de mensagens trocadas com este parceiro (se conhecida). */
+  messageCount?: number
+}
+
+/** Trunca o conteúdo de uma mensagem para uso como prévia na lista de conversas. */
+function truncatePreview(content: string, max = 70): string {
+  const singleLine = content.replace(/\s+/g, ' ').trim()
+  return singleLine.length > max ? `${singleLine.slice(0, max - 1)}…` : singleLine
+}
+
+/**
+ * Monta o histórico de conversas do usuário logado: agrupa as mensagens em que ele é
+ * sender OU recipient por operador com quem conversou, calculando última mensagem,
+ * prévia, data/hora e contador de não lidas. Ordenado da conversa mais recente para a
+ * mais antiga. O nome do parceiro é resolvido com os operadores já carregados no chat
+ * (quando informado), pois a listRule da coleção garante que só chegam mensagens
+ * próprias (0136) — nada é lido fora do escopo do usuário logado.
+ */
+export async function getChatConversations(
+  currentUserId: string,
+  opts: {
+    limit?: number
+    operators?: ChatOperatorUser[]
+    unreadCounts?: Record<string, number>
+  } = {},
+): Promise<ChatConversationSummary[]> {
+  if (!currentUserId) return []
+  const limit = opts.limit ?? 500
+
+  const list = await pb
+    .collection('operator_chat_messages')
+    .getFullList<OperatorChatMessageRecord>({
+      filter: `sender = "${currentUserId}" || recipient = "${currentUserId}"`,
+      sort: '-created',
+      expand: 'sender,recipient',
+      limit,
+    })
+
+  const byId = new Map<string, ChatOperatorUser>()
+  for (const op of opts.operators || []) byId.set(op.id, op)
+  const unread = opts.unreadCounts || {}
+
+  const map = new Map<string, ChatConversationSummary>()
+  for (const m of list) {
+    const partnerId = m.sender === currentUserId ? m.recipient : m.sender
+    const existing = map.get(partnerId)
+    if (existing) {
+      existing.messageCount = (existing.messageCount || 0) + 1
+      continue // a lista já vem em -created: a primeira ocorrência é a última mensagem
+    }
+    // resolve parceiro: expand da própria mensagem, depois lista de operadores do chat
+    const expanded =
+      m.expand?.sender?.id === partnerId
+        ? m.expand.sender
+        : m.expand?.recipient?.id === partnerId
+          ? m.expand.recipient
+          : undefined
+    const op = byId.get(partnerId)
+    map.set(partnerId, {
+      partnerId,
+      partnerName: expanded?.name || op?.name || partnerId,
+      partnerEmail: expanded?.email || op?.email,
+      partnerAvatar: expanded?.avatar || op?.avatar,
+      lastMessagePreview: truncatePreview(m.content),
+      lastMessageAt: m.created,
+      lastFromMe: m.sender === currentUserId,
+      unread: unread[partnerId] || 0,
+      messageCount: 1,
+    })
+  }
+
+  // A lista já vem ordenada por -created; preservamos essa ordem no Map (inserção).
+  return Array.from(map.values())
+}
+
+/**
+ * Página de mensagens antigas de uma conversa (para o "Carregar mais" do histórico).
+ * Retorna as mensagens ANTERIORES a `before` (ISO), em ordem cronológica ascendente.
+ */
+export async function getConversationMessagesPage(
+  userId: string,
+  otherUserId: string,
+  opts: { before?: string; limit?: number } = {},
+): Promise<OperatorChatMessageRecord[]> {
+  if (!userId || !otherUserId) return []
+  const limit = opts.limit ?? CHAT_MESSAGES_PAGE_SIZE
+  const beforeClause = opts.before ? ` && created < "${opts.before}"` : ''
+  const filter = `((sender = "${userId}" && recipient = "${otherUserId}") || (sender = "${otherUserId}" && recipient = "${userId}"))${beforeClause}`
+  const page = await pb
+    .collection('operator_chat_messages')
+    .getList<OperatorChatMessageRecord>(1, limit, {
+      filter,
+      sort: '-created',
+      expand: 'sender,recipient',
+    })
+  return [...page.items].reverse()
+}
 
 /**
  * Busca a lista de operadores / usuários internos do sistema.
