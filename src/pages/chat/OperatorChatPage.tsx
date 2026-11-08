@@ -11,7 +11,8 @@ import {
   sendOperatorMessage,
 } from '@/services/operator-chat'
 import { useRealtime } from '@/hooks/use-realtime'
-import { playTicketChime } from '@/lib/ticket-alerts'
+import { setActiveConversationPartner } from '@/services/operator-chat'
+import { formatChatTime } from '@/lib/chat-format'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
@@ -115,11 +116,16 @@ export default function OperatorChatPage() {
 
   useEffect(() => {
     if (selectedOperator) {
+      // Registra a conversa aberta: o ícone da barra superior usa isso para
+      // NÃO tocar o alerta sonoro de mensagens desta conversa (já está na tela).
+      setActiveConversationPartner(selectedOperator.id)
       loadConversation(selectedOperator.id)
       setTimeout(() => inputRef.current?.focus(), 100)
     } else {
+      setActiveConversationPartner(null)
       setMessages([])
     }
+    return () => setActiveConversationPartner(null)
   }, [selectedOperator?.id, user?.id])
 
   // Rola para a mensagem mais recente
@@ -150,12 +156,13 @@ export default function OperatorChatPage() {
           markConversationAsRead(selectedOperator.id, user.id).catch(() => {})
         }
       } else if (record.recipient === user.id) {
-        // Mensagem de outro operador: incrementa não lido e toca aviso
+        // Mensagem de outro operador (conversa não aberta): incrementa não lido.
+        // O som toca UMA única vez, centralizado no ChatTopBarIcon (barra superior) —
+        // aqui só atualizamos o contador para não duplicar o alerta sonoro.
         setUnreadMap((prev) => ({
           ...prev,
           [record.sender]: (prev[record.sender] || 0) + 1,
         }))
-        playTicketChime('Baixa')
       }
     } else if (e.action === 'update' && isRelated) {
       setMessages((prev) =>
@@ -401,12 +408,8 @@ export default function OperatorChatPage() {
                   <div className="space-y-3">
                     {messages.map((m) => {
                       const isMe = m.sender === user?.id
-                      const timeStr = m.created
-                        ? new Date(m.created).toLocaleTimeString('pt-BR', {
-                            hour: '2-digit',
-                            minute: '2-digit',
-                          })
-                        : ''
+                      const timeStr = formatChatTime(m)
+                      const showSenderName = !isMe
 
                       return (
                         <div
@@ -427,25 +430,39 @@ export default function OperatorChatPage() {
                           )}
 
                           <div
-                            className={`max-w-[75%] rounded-2xl px-3.5 py-2 text-xs shadow-sm break-words whitespace-pre-wrap ${
-                              isMe
-                                ? 'bg-amber-500 text-slate-950 font-medium rounded-br-xs'
-                                : 'bg-muted text-foreground border border-border rounded-bl-xs'
+                            className={`flex flex-col gap-0.5 max-w-[75%] ${
+                              isMe ? 'items-end' : 'items-start'
                             }`}
                           >
-                            <p className="leading-relaxed">{m.content}</p>
+                            {/* Nome do remetente acima da bolha (só para mensagens recebidas) */}
+                            {showSenderName && (
+                              <span className="px-1 text-[10px] font-semibold text-muted-foreground">
+                                {selectedOperator.name}
+                              </span>
+                            )}
+
+                            {/* Bolha da mensagem: minhas (âmbar, à direita) × recebidas (card, à esquerda) */}
                             <div
-                              className={`flex items-center justify-end gap-1 mt-1 text-[10px] ${
-                                isMe ? 'text-slate-900/80' : 'text-muted-foreground'
+                              className={`rounded-2xl px-3.5 py-2 text-xs shadow-sm break-words whitespace-pre-wrap ${
+                                isMe
+                                  ? 'bg-amber-500 text-slate-950 font-medium rounded-br-sm'
+                                  : 'bg-muted text-foreground border border-border rounded-bl-sm'
                               }`}
                             >
-                              <span>{timeStr}</span>
-                              {isMe &&
-                                (m.read ? (
-                                  <CheckCheck className="h-3 w-3 text-emerald-800 dark:text-emerald-950" />
-                                ) : (
-                                  <Check className="h-3 w-3 text-slate-800/60" />
-                                ))}
+                              <p className="leading-relaxed">{m.content}</p>
+                              <div
+                                className={`flex items-center justify-end gap-1 mt-1 text-[10px] ${
+                                  isMe ? 'text-slate-900/80' : 'text-muted-foreground'
+                                }`}
+                              >
+                                <span>{timeStr}</span>
+                                {isMe &&
+                                  (m.read ? (
+                                    <CheckCheck className="h-3 w-3 text-emerald-800 dark:text-emerald-950" />
+                                  ) : (
+                                    <Check className="h-3 w-3 text-slate-800/60" />
+                                  ))}
+                              </div>
                             </div>
                           </div>
                         </div>

@@ -44,6 +44,22 @@ export interface ChatOperatorUser {
 /** Limiar de presença online do chat (15 min sem atividade = Ausente). */
 export const CHAT_ONLINE_THRESHOLD_MS = 15 * 60 * 1000
 
+/**
+ * Registro (em memória, por aba) da conversa que o operador está visualizando
+ * aberta na tela do chat neste momento. Usado pelo ícone da barra superior
+ * (ChatTopBarIcon) para NÃO tocar o alerta sonoro quando a mensagem chega na
+ * conversa que o próprio operador já está vendo.
+ */
+let activeConversationPartnerId: string | null = null
+
+export function setActiveConversationPartner(partnerId: string | null): void {
+  activeConversationPartnerId = partnerId
+}
+
+export function getActiveConversationPartner(): string | null {
+  return activeConversationPartnerId
+}
+
 /** Recalcula o estado online a partir da última atividade conhecida. */
 export function isChatOperatorOnline(
   op: Pick<ChatOperatorUser, 'online' | 'lastActivityAt'>,

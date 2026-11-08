@@ -197,6 +197,13 @@ const FEATURE_CATEGORIES: FeatureCategory[] = [
         tag: 'Comunicação / Chat',
       },
       {
+        id: 'tk-operator-chat-ux',
+        title: 'Chat Interno: bolhas de conversa, ícone na barra superior e alerta sonoro',
+        description:
+          'Experiência de conversa no estilo mensageiros: bolhas de mensagens próprias e recebidas em lados e cores distintas (âmbar à direita para as enviadas, cartão neutro à esquerda para as recebidas, alinhado aos temas escuro Amber Alert e claro Marrom & Branco), com nome do remetente e hora em cada bolha e ticks de leitura nas enviadas. Ícone de chat na barra superior ao lado do alternador de modo claro/escuro, com badge numérico da quantidade total de mensagens não lidas do operador (mesma fonte de dados do chat — coleção operator_chat_messages), clique direto ao chat e zeramento ao abrir a conversa (marcação de leitura via realtime). Alerta sonoro discreto via Web Audio API (duas notas suaves, sem dependências externas), tocado apenas na chegada de mensagem nova de outra pessoa e silenciado automaticamente na conversa que o operador está visualizando aberta na tela; respeita o mute global de alertas do sistema. Correção de entrega em tempo real: listRule da coleção operator_chat_messages definida para os participantes da conversa (migração 0136). Permissão: reutiliza o item existente chat.chat_operadores do catálogo.',
+        tag: 'Comunicação / Chat',
+      },
+      {
         id: 'tk-chat-history',
         title: 'Histórico de Chat por Operador (/chat/historico)',
         description:

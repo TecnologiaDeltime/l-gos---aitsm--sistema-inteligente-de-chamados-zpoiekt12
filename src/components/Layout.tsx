@@ -91,6 +91,7 @@ import { NewTicketToast } from '@/components/NewTicketToast'
 import { RefreshIndicator } from '@/components/RefreshIndicator'
 import { autoRegisterMenuItems } from '@/lib/permissions-registry'
 import { LogosMonogram } from '@/components/brand/LogosLogo'
+import { ChatTopBarIcon } from '@/components/chat/ChatTopBarIcon'
 
 export default function Layout() {
   const { user, signOut } = useAuth()
@@ -1471,6 +1472,9 @@ export default function Layout() {
           </div>
 
           <div className="flex items-center gap-3">
+            {/* Ícone de chat interno com badge de não lidas (logo antes do alternador de modo) */}
+            <ChatTopBarIcon />
+
             {/* Alternador de Modo Claro / Escuro */}
             <Tooltip>
               <TooltipTrigger asChild>

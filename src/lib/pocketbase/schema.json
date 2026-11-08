@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-08T15:23:34.548Z",
+  "generatedAt": "2026-11-08T16:00:48.835Z",
   "collections": [
     {
       "name": "users",
@@ -12023,7 +12023,7 @@
       "name": "operator_chat_messages",
       "type": "base",
       "apiRules": {
-        "list": null,
+        "list": "@request.auth.id != '' && (@request.auth.id = sender.id || @request.auth.id = recipient.id)",
         "view": "@request.auth.id != '' && (@request.auth.id = sender.id || @request.auth.id = recipient.id)",
         "create": "@request.auth.id != '' && @request.auth.id = sender.id",
         "update": "@request.auth.id != '' && (@request.auth.id = sender.id || @request.auth.id = recipient.id)",

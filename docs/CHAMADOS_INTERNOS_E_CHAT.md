@@ -48,6 +48,18 @@ O **Chat de Operadores** (`/chat`) é um módulo de comunicação instantânea 1
    - Quando uma nova mensagem é recebida de outro operador, um aviso sonoro discreto e uma notificação no topo alertam o usuário com atalho direto para a conversa.
 4. **Contador de Não Lidas**:
    - Badges numéricas na lista de contatos do chat indicam mensagens pendentes de leitura por operador.
+5. **Conversa em bolhas (estilo mensageiros)**:
+   - Mensagens próprias e recebidas com lados e cores distintas: enviadas em âmbar à direita (tema escuro Amber Alert) / âmbar sobre cartão claro (tema Marrom & Branco); recebidas em cartão neutro à esquerda.
+   - Cada bolha exibe nome do remetente (nas recebidas), hora de envio e ticks de leitura (✓ / ✓✓) nas enviadas.
+6. **Ícone de chat na barra superior**:
+   - Ao lado do alternador de modo claro/escuro, o ícone de balão de conversa exibe badge numérica com a **quantidade total** de mensagens não lidas do operador (mesma fonte de dados do chat: coleção `operator_chat_messages` via `getUnreadCountsBySender`).
+   - Clique navega direto ao `/chat`. Ao abrir uma conversa no chat, as mensagens são marcadas como lidas via realtime (evento `update` com `read = true`) e o badge zera automaticamente — sem duplicar mecanismos (o sino global e o ícone compartilham a mesma contagem).
+7. **Alerta sonoro discreto de nova mensagem**:
+   - Som curto gerado via **Web Audio API** (duas notas suaves, ~0,4 s, ganho baixo), sem arquivos nem dependências externas.
+   - Toca **somente na chegada** de mensagem nova de outra pessoa — nunca ao abrir o chat, nunca ao enviar.
+   - **Não toca** quando a mensagem chega na conversa que o operador está visualizando aberta na tela (a conversa ativa é registrada em `setActiveConversationPartner`); o comportamento é silencioso por design, pois a mensagem já está visível.
+   - Respeita o mute global de alertas sonoros do sistema ( sino com mudo, `useAlertMute`).
+   - A reprodução é centralizada no ícone da barra superior (`ChatTopBarIcon`), evitando toques duplicados com o sino global.
 
 ---
 
@@ -77,6 +89,10 @@ Seguindo a regra permanente do projeto Lógos AITSM, ambas as funcionalidades s�
    - Registra as permissões `tickets_interno` e `chat_operadores` para todos os perfis existentes com nível `edit`, permitindo customização granular posterior na tela de Perfis de Acesso (`/profiles`).
 3. **`0131_add_chat_history_permission.js`**:
    - Registra a permissão `chat_historico` para todos os perfis existentes com nível `view` (Leitura), permitindo customização granular posterior na tela de Perfis de Acesso.
+4. **`0136_operator_chat_list_rule.js`**:
+   - **Correção de bug de entrega em tempo real**: a coleção `operator_chat_messages` foi criada na migração 0129 sem `listRule`. No PocketBase, a distribuição Realtime e a paginação de registros são autorizadas pela _list rule_ — com ela nula, apenas superusuários conseguiam listar/assinar a coleção, e as mensagens nunca chegavam ao outro lado (o remetente via a própria mensagem porque a criação usa a _create rule_, mas o destinatário não recebia o evento nem o histórico).
+   - A migração define a `listRule` idêntica às demais regras: apenas participantes da conversa (`sender = @request.auth.id || recipient = @request.auth.id`). Idempotente (reexecutar não altera o resultado).
+   - Sem item novo no catálogo de permissões: o acesso continua regido pelo item existente `chat.chat_operadores`.
 
 ---
 

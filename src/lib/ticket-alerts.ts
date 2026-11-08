@@ -121,6 +121,50 @@ function processQueue(): void {
   }, duration)
 }
 
+/**
+ * Som curto e discreto de nova mensagem no chat interno de operadores.
+ * Diferente dos chimes de chamados: um "pop" suave de duas notas, volume baixo,
+ * tocado uma única vez por chegada de mensagem. Respeita o mesmo mute global
+ * dos alertas (isSoundEnabled) — se o operador silenciou as notificações, não toca.
+ */
+export function playChatMessagePop(): void {
+  if (!isSoundEnabled()) return
+  try {
+    if (!audioContext) {
+      try {
+        audioContext = new (window.AudioContext || (window as any).webkitAudioContext)()
+      } catch {
+        return
+      }
+    }
+    const ctx = audioContext
+    if (!ctx) return
+    if (ctx.state === 'suspended') {
+      ctx.resume().catch(() => {})
+    }
+    const now = ctx.currentTime
+    const tones: ToneConfig[] = [
+      { freq: 587.33, start: 0, dur: 0.09, type: 'sine', gain: 0.09 },
+      { freq: 783.99, start: 0.08, dur: 0.13, type: 'sine', gain: 0.07 },
+    ]
+    tones.forEach(({ freq, start, dur, type, gain: gainVal }) => {
+      const osc = ctx.createOscillator()
+      const gainNode = ctx.createGain()
+      osc.connect(gainNode)
+      gainNode.connect(ctx.destination)
+      osc.frequency.value = freq
+      osc.type = type
+      gainNode.gain.setValueAtTime(0, now + start)
+      gainNode.gain.linearRampToValueAtTime(gainVal, now + start + 0.015)
+      gainNode.gain.exponentialRampToValueAtTime(0.001, now + start + dur)
+      osc.start(now + start)
+      osc.stop(now + start + dur)
+    })
+  } catch {
+    // graceful degradation — áudio indisponível não deve quebrar o chat
+  }
+}
+
 const selfCreatedTickets = new Set<string>()
 
 export function markTicketAsSelfCreated(id: string): void {
