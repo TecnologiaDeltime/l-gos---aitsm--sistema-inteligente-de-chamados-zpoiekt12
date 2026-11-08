@@ -78,20 +78,32 @@ O **Chat de Operadores** (`/chat`) é um módulo de comunicação instantânea 1
    - **Destaque visual (highlight)**: o trecho encontrado dentro da bolha aparece com marcação âmbar suave, preservando acentos e caixa originais.
    - Botão ✕ limpa a busca e restaura a conversa completa.
 10. **Anexos: foto, vídeo e áudio gravado**:
-   - Botão de clipe na caixa de mensagem abre o seletor de arquivos (foto/vídeo); mensagem aceita **um anexo** por envio, com **limite de 5 MB** (`CHAT_ATTACHMENT_MAX_BYTES`, mesmo limite do campo `file` da migração 0137).
-   - **Gravação de áudio pelo microfone** via botão de microfone, usando a API **MediaRecorder** do navegador (`src/lib/chat-audio-recorder.ts`): contagem de segundos ao vivo, botão de parar (anexa) e botão de descartar; erros de permissão/ausência de microfone são exibidos de forma amigável.
-   - Renderização na conversa via `getChatMessageFileUrl` / `getChatAttachmentKind` (`src/services/operator-chat.ts`):
-     - **Foto**: imagem visível inline na bolha (clique abre em nova aba).
-     - **Vídeo**: player `<video>` tocável dentro da bolha, com controles.
-     - **Áudio**: player `<audio>` tocável dentro da bolha, com controles.
-   - O acesso ao arquivo é protegido pelas regras da coleção (participantes da conversa — migração 0136).
-   - Permissão: **reutiliza o item existente** `chat.chat_operadores` do catálogo; sem item novo.
+
+- Botão de clipe na caixa de mensagem abre o seletor de arquivos (foto/vídeo); mensagem aceita **um anexo** por envio, com **limite de 5 MB** (`CHAT_ATTACHMENT_MAX_BYTES`, mesmo limite do campo `file` da migração 0137).
+- **Gravação de áudio pelo microfone** via botão de microfone, usando a API **MediaRecorder** do navegador (`src/lib/chat-audio-recorder.ts`): contagem de segundos ao vivo, botão de parar (anexa) e botão de descartar; erros de permissão/ausência de microfone são exibidos de forma amigável.
+- Renderização na conversa via `getChatMessageFileUrl` / `getChatAttachmentKind` (`src/services/operator-chat.ts`):
+  - **Foto**: imagem visível inline na bolha (clique abre em nova aba).
+  - **Vídeo**: player `<video>` tocável dentro da bolha, com controles.
+  - **Áudio**: player `<audio>` tocável dentro da bolha, com controles.
+- O acesso ao arquivo é protegido pelas regras da coleção (participantes da conversa — migração 0136).
+- Permissão: **reutiliza o item existente** `chat.chat_operadores` do catálogo; sem item novo.
+
 11. **Menção `@` de chamado, mudança ou problema**:
-   - Digitar `@` na caixa de mensagem abre um **seletor** (`src/components/chat/MentionSelector.tsx`) que consulta em tempo real as coleções `tickets`, `changes` e `problems`, filtrando por número ou título (números reais no banco: chamado `"068 - 00033"`, mudança `"MUD-2026-94268"`, problema `"PRB-000003"`).
-   - Chamados listados priorizam status em aberto (Novo, Em Atendimento, Escalonado etc.); mudanças e problemas listam os mais recentes.
-   - A menção selecionada é inserida na mensagem e enviada como texto no formato `@{tipo}:{id}` dentro de um marcador invisível — **o conteúdo do item não é duplicado na mensagem**.
-   - Na conversa, a menção vira um **cartão clicável** (`src/components/chat/ChatMentionCard.tsx`) que busca os dados atuais do item no momento do render (número, título, status e prioridade) e navega para `/tickets/:id`, `/changes/:id` ou `/problems/:id` (rotas já existentes).
-   - Permissão: **reutiliza o item existente** `chat.chat_operadores` do catálogo; sem item novo.
+
+- Digitar `@` na caixa de mensagem abre um **seletor** (`src/components/chat/MentionSelector.tsx`) que consulta em tempo real as coleções `tickets`, `changes` e `problems`, filtrando por número ou título (números reais no banco: chamado `"068 - 00033"`, mudança `"MUD-2026-94268"`, problema `"PRB-000003"`).
+- Chamados listados priorizam status em aberto (Novo, Em Atendimento, Escalonado etc.); mudanças e problemas listam os mais recentes.
+- A menção selecionada é inserida na mensagem e enviada como texto no formato `@{tipo}:{id}` dentro de um marcador invisível — **o conteúdo do item não é duplicado na mensagem**.
+- Na conversa, a menção vira um **cartão clicável** (`src/components/chat/ChatMentionCard.tsx`) que busca os dados atuais do item no momento do render (número, título, status e prioridade) e navega para `/tickets/:id`, `/changes/:id` ou `/problems/:id` (rotas já existentes).
+- Permissão: **reutiliza o item existente** `chat.chat_operadores` do catálogo; sem item novo.
+
+12. **Mensagem para operador offline (entrega garantida ao voltar)**:
+
+- Nenhum bloqueio de envio por presença: a lista de contatos e o histórico permitem selecionar/iniciar conversa com operador **offline** exatamente como com um online — a mensagem (texto ou anexo) é criada normalmente na coleção `operator_chat_messages`.
+- A entrega depende do realtime do PocketBase + contadores existentes (badge de não lidas e alerta sonoro), **sem fila nova**: quando o destinatário conecta/abre o chat, o evento realtime e o refresh periódico de 30 s entregam a mensagem, tocam o som e incrementam o badge normalmente.
+- **Estado offline explícito na lista de contatos**: ponto cinza + rótulo "Offline — visto há X" (última atividade em `session_last_activity`, recalculado a cada tick de 30 s); tooltip do ponto indica há quanto tempo.
+- **Cabeçalho da conversa** mostra o badge de presença ("Offline — visto há X") e a linha "As mensagens serão entregues quando ele ficar online".
+- **Estado vazio da conversa** avisa: "O operador está offline no momento — a mensagem fica guardada e é entregue assim que ele voltar, com badge e alerta sonoro normais."
+- Permissão: **reutiliza o item existente** `chat.chat_operadores` do catálogo; sem item novo.
 
 ---
 

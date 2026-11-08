@@ -1,5 +1,6 @@
+import { useMemo } from 'react'
 import { formatConversationListTime } from '@/lib/chat-format'
-import { ChatConversationSummary } from '@/services/operator-chat'
+import { isChatOperatorOnline, ChatConversationSummary } from '@/services/operator-chat'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { History, MessageSquare } from 'lucide-react'
@@ -13,7 +14,15 @@ interface ConversationHistoryListProps {
   activePartnerId: string | null
   onSelect: (partnerId: string) => void
   /** Operadores conhecidos (para atualizar nome/avatar em tempo real quando disponíveis). */
-  operators: Array<{ id: string; name: string; email: string; avatar?: string }>
+  operators: Array<{
+    id: string
+    name: string
+    email: string
+    avatar?: string
+    lastActivityAt?: string
+  }>
+  /** Tick do relógio de presença para recalcular online/offline (opcional). */
+  presenceTick?: number
 }
 
 /**
@@ -27,8 +36,19 @@ export function ConversationHistoryList({
   activePartnerId,
   onSelect,
   operators,
+  presenceTick,
 }: ConversationHistoryListProps) {
   const byId = new Map(operators.map((o) => [o.id, o]))
+
+  // Presença do parceiro recalculada a cada tick do relógio de presença da página,
+  // para que conversas com operadores que ficaram online/offline atualizem em tempo real.
+  const presenceById = useMemo(() => {
+    const map = new Map<string, boolean>()
+    for (const op of operators) {
+      map.set(op.id, isChatOperatorOnline(op as any, presenceTick ?? Date.now()))
+    }
+    return map
+  }, [operators, presenceTick])
 
   return (
     <div className="space-y-1">
@@ -50,6 +70,7 @@ export function ConversationHistoryList({
             const live = byId.get(conv.partnerId)
             const name = live?.name || conv.partnerName
             const email = live?.email || conv.partnerEmail
+            const isPartnerOnline = presenceById.get(conv.partnerId) ?? false
             const avatar = live?.avatar || conv.partnerAvatar
             const isActive = activePartnerId === conv.partnerId
             return (
@@ -82,6 +103,15 @@ export function ConversationHistoryList({
                         {formatConversationListTime(conv.lastMessageAt)}
                       </span>
                     </div>
+                    <p
+                      className={`text-[10px] truncate ${
+                        isPartnerOnline
+                          ? 'text-emerald-600 dark:text-emerald-400'
+                          : 'text-slate-500 dark:text-slate-400'
+                      }`}
+                    >
+                      {isPartnerOnline ? 'Online agora' : 'Offline'}
+                    </p>
                     <div className="flex items-center justify-between gap-1">
                       <p className="text-[11px] text-muted-foreground truncate flex-1">
                         {conv.lastFromMe ? 'Você: ' : ''}

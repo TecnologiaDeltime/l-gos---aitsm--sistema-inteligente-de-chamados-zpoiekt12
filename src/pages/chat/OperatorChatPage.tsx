@@ -23,6 +23,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { ConversationHistoryList } from '@/components/chat/ConversationHistoryList'
 import { ChatMessageBubble, countMessageMatches } from '@/components/chat/ChatMessageBubble'
 import { MentionSelector } from '@/components/chat/MentionSelector'
@@ -38,10 +39,6 @@ import {
   MessageSquare,
   Search,
   Send,
-  Wifi,
-  WifiOff,
-  CheckCheck,
-  Check,
   User,
   Sparkles,
   ChevronUp,
@@ -52,9 +49,9 @@ import {
   Square,
   Trash2,
   X,
-  AtSign,
-  Image as ImageIcon,
+  Clock,
 } from 'lucide-react'
+import { formatTicketAge } from '@/lib/date-format'
 
 export default function OperatorChatPage() {
   const { user } = useAuth()
@@ -463,6 +460,22 @@ export default function OperatorChatPage() {
     return Object.values(unreadMap).reduce((acc, count) => acc + count, 0)
   }, [unreadMap])
 
+  // Rótulo de presença do operador selecionado (usado no cabeçalho da conversa):
+  // "Online agora" ou "Offline — visto há X" (mensagem entregue quando ele voltar).
+  const selectedOperatorPresence = useMemo(() => {
+    const op = selectedOperator
+    if (!op) return null
+    const online = isChatOperatorOnline(op, currentTime)
+    return {
+      online,
+      label: online
+        ? 'Online agora'
+        : op.lastActivityAt
+          ? `Offline — visto ${formatTicketAge(op.lastActivityAt, currentTime) || 'há algum tempo'}`
+          : 'Offline',
+    }
+  }, [selectedOperator, currentTime])
+
   return (
     <div className="flex h-[calc(100vh-4.25rem)] flex-col gap-3 p-4">
       {/* Cabeçalho */}
@@ -555,7 +568,13 @@ export default function OperatorChatPage() {
                             className={`absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-background ${
                               op.online ? 'bg-emerald-500' : 'bg-slate-400'
                             }`}
-                            title={op.online ? 'Online' : 'Ausente'}
+                            title={
+                              op.online
+                                ? 'Online'
+                                : op.lastActivityAt
+                                  ? `Offline — visto ${formatTicketAge(op.lastActivityAt, currentTime) || 'há algum tempo'}`
+                                  : 'Offline'
+                            }
                           />
                         </div>
                         <div className="min-w-0 flex-1">
@@ -565,6 +584,26 @@ export default function OperatorChatPage() {
                             </p>
                           </div>
                           <p className="text-[11px] text-muted-foreground truncate">{op.email}</p>
+                          <p
+                            className={`text-[10px] truncate flex items-center gap-1 ${
+                              op.online
+                                ? 'text-emerald-600 dark:text-emerald-400'
+                                : 'text-slate-500 dark:text-slate-400'
+                            }`}
+                          >
+                            {op.online ? (
+                              'Online agora'
+                            ) : (
+                              <>
+                                <Clock className="h-2.5 w-2.5 shrink-0" />
+                                <span className="truncate">
+                                  {op.lastActivityAt
+                                    ? `Offline — visto ${formatTicketAge(op.lastActivityAt, currentTime) || 'há algum tempo'}`
+                                    : 'Offline — sem registro de atividade'}
+                                </span>
+                              </>
+                            )}
+                          </p>
                         </div>
                       </div>
 
@@ -619,6 +658,7 @@ export default function OperatorChatPage() {
                 }
               }}
               operators={operators}
+              presenceTick={currentTime}
             />
           </ScrollArea>
         </Card>
@@ -643,7 +683,7 @@ export default function OperatorChatPage() {
                     </Avatar>
                     <span
                       className={`absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-background ${
-                        selectedOperator.online ? 'bg-emerald-500' : 'bg-slate-400'
+                        selectedOperatorPresence?.online ? 'bg-emerald-500' : 'bg-slate-400'
                       }`}
                     />
                   </div>
@@ -655,17 +695,20 @@ export default function OperatorChatPage() {
                       <Badge
                         variant="outline"
                         className={
-                          selectedOperator.online
+                          selectedOperatorPresence?.online
                             ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/30 text-[10px]'
-                            : 'bg-muted text-muted-foreground border-border text-[10px]'
+                            : 'bg-slate-500/10 text-slate-500 dark:text-slate-400 border-slate-500/30 text-[10px]'
                         }
                       >
-                        {selectedOperator.online ? 'Online' : 'Ausente'}
+                        {selectedOperatorPresence?.label || 'Offline'}
                       </Badge>
                     </div>
                     <p className="text-[11px] text-muted-foreground truncate">
                       {selectedOperator.email}
                       {selectedOperator.role ? ` • ${selectedOperator.role}` : ''}
+                      {!selectedOperatorPresence?.online
+                        ? ' • As mensagens serão entregues quando ele ficar online'
+                        : ''}
                     </p>
                   </div>
                 </div>
@@ -738,8 +781,9 @@ export default function OperatorChatPage() {
                       Inicie uma conversa com {selectedOperator.name}
                     </p>
                     <p className="text-xs max-w-sm">
-                      As mensagens enviadas aparecem instantaneamente para o operador no chat
-                      interno.
+                      {selectedOperatorPresence?.online
+                        ? 'As mensagens enviadas aparecem instantaneamente para o operador no chat interno.'
+                        : 'O operador está offline no momento — a mensagem fica guardada e é entregue assim que ele voltar, com badge e alerta sonoro normais.'}
                     </p>
                   </div>
                 ) : (
@@ -896,14 +940,25 @@ export default function OperatorChatPage() {
                     disabled={sending}
                     className="flex-1 h-10 text-xs"
                   />
-                  <Button
-                    type="submit"
-                    disabled={(!inputText.trim() && !pendingFile) || sending}
-                    className="bg-amber-500 text-slate-950 hover:bg-amber-400 font-semibold px-4"
-                  >
-                    <Send className="h-4 w-4 mr-1.5" />
-                    Enviar
-                  </Button>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        type="submit"
+                        disabled={(!inputText.trim() && !pendingFile) || sending}
+                        className="bg-amber-500 text-slate-950 hover:bg-amber-400 font-semibold px-4"
+                      >
+                        <Send className="h-4 w-4 mr-1.5" />
+                        {selectedOperatorPresence?.online === false ? 'Enviar (offline)' : 'Enviar'}
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="top">
+                      <p className="text-xs">
+                        {selectedOperatorPresence?.online === false
+                          ? `${selectedOperator.name} está offline — a mensagem ficará guardada e será entregue quando ele voltar.`
+                          : 'Enviar mensagem'}
+                      </p>
+                    </TooltipContent>
+                  </Tooltip>
                 </div>
               </form>
             </>

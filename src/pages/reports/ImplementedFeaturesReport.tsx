@@ -217,6 +217,34 @@ const FEATURE_CATEGORIES: FeatureCategory[] = [
           'Consulta somente leitura de todas as conversas e mensagens do chat interno entre operadores, agrupadas por conversa em ordem cronológica com remetente, destinatário, conteúdo e data/hora de cada mensagem. Busca por texto aprimorada com tolerância a acentos (NFD), suporte a múltiplas palavras em qualquer ordem (AND lógico), destaque visual (highlight) do trecho encontrado, contadores de ocorrências por conversa e totalizador geral destacado. Filtros combinados por operador (participante) e período (De/Até). Não interfere no chat em tempo real nem altera flags de leitura. Item próprio no catálogo de permissões (chat.chat_historico) em 3 níveis, com guard de rota dedicado.',
         tag: 'Comunicação / Chat',
       },
+      {
+        id: 'tk-chat-search',
+        title: 'Chat Interno: busca interna na conversa aberta (v0.0.372)',
+        description:
+          'Campo de busca acima das mensagens da conversa ativa em /chat, com filtragem local instantânea das mensagens já carregadas (sem chamadas extras ao backend), insensível a acentos e maiúsculas/minúsculas, múltiplas palavras em qualquer ordem (reutiliza matchesAllTokens/splitTextWithHighlight de src/lib/search-text.ts), contagem de ocorrências e de mensagens encontradas no cabeçalho, destaque visual âmbar do trecho dentro da bolha e botão para limpar e restaurar a conversa completa. Permissão: reutiliza o item existente chat.chat_operadores do catálogo.',
+        tag: 'Comunicação / Chat',
+      },
+      {
+        id: 'tk-chat-attachments',
+        title: 'Chat Interno: envio de áudio, foto e vídeo (v0.0.372)',
+        description:
+          'Anexo único por mensagem (campo file, migração 0137, limite 5 MB) com botão de clipe para foto/vídeo e gravação de áudio pelo microfone via MediaRecorder (src/lib/chat-audio-recorder.ts), com contagem de segundos, parar/descartar e erros de permissão tratados. Renderização inline na bolha: imagem com clique para abrir em nova aba, player de vídeo e player de áudio com controles; acesso protegido pelas regras da coleção (participantes, migração 0136). Permissão: reutiliza o item existente chat.chat_operadores do catálogo.',
+        tag: 'Comunicação / Chat',
+      },
+      {
+        id: 'tk-chat-mentions',
+        title: 'Chat Interno: menção @ de chamado, mudança e problema (v0.0.372)',
+        description:
+          'Digitar @ abre seletor (src/components/chat/MentionSelector.tsx) que consulta tickets, changes e problems por número ou título; a menção viaja como texto @{tipo}:{id} (conteúdo não duplicado) e vira cartão clicável na conversa (src/components/chat/ChatMentionCard.tsx) com número, título, status e prioridade atuais, navegando para /tickets/:id, /changes/:id ou /problems/:id. Permissão: reutiliza o item existente chat.chat_operadores do catálogo.',
+        tag: 'Comunicação / Chat',
+      },
+      {
+        id: 'tk-chat-offline',
+        title: 'Chat Interno: mensagem para operador offline com entrega ao voltar (v0.0.373)',
+        description:
+          'Envio de mensagem (texto ou anexo) para operadores offline sem bloqueio de presença: a lista de contatos e o histórico permitem selecionar/iniciar conversa normalmente e a mensagem é criada na coleção operator_chat_messages como qualquer outra. Estado offline explícito na lista (ponto cinza + "Offline — visto há X" pela session_last_activity, recalculado a cada 30 s) e no cabeçalho da conversa, com aviso de que a mensagem será entregue quando ele voltar. A entrega usa o realtime e os mecanismos existentes (badge de não lidas, alerta sonoro e refresh periódico de 30 s) — sem fila nova. Permissão: reutiliza o item existente chat.chat_operadores do catálogo.',
+        tag: 'Comunicação / Chat',
+      },
     ],
   },
   {
