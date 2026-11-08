@@ -71,6 +71,27 @@ O **Chat de Operadores** (`/chat`) é um módulo de comunicação instantânea 1
    - **Não toca** quando a mensagem chega na conversa que o operador está visualizando aberta na tela (a conversa ativa é registrada em `setActiveConversationPartner`); o comportamento é silencioso por design, pois a mensagem já está visível.
    - Respeita o mute global de alertas sonoros do sistema ( sino com mudo, `useAlertMute`).
    - A reprodução é centralizada no ícone da barra superior (`ChatTopBarIcon`), evitando toques duplicados com o sino global.
+9. **Busca interna na conversa aberta**:
+   - Campo de busca acima das mensagens da conversa ativa: filtra localmente as mensagens já carregadas, **sem chamadas extras ao backend**.
+   - **Insensível a acentos e maiúsculas/minúsculas** e aceita múltiplas palavras em qualquer ordem — reutiliza `matchesAllTokens` e `splitTextWithHighlight` de `src/lib/search-text.ts` (mesmo padrão do Histórico de Chat).
+   - **Contagem de ocorrências**: badge no cabeçalho da conversa mostra quantas mensagens casam com o termo; as bolhas não casadas ficam ocultas durante a busca.
+   - **Destaque visual (highlight)**: o trecho encontrado dentro da bolha aparece com marcação âmbar suave, preservando acentos e caixa originais.
+   - Botão ✕ limpa a busca e restaura a conversa completa.
+10. **Anexos: foto, vídeo e áudio gravado**:
+   - Botão de clipe na caixa de mensagem abre o seletor de arquivos (foto/vídeo); mensagem aceita **um anexo** por envio, com **limite de 5 MB** (`CHAT_ATTACHMENT_MAX_BYTES`, mesmo limite do campo `file` da migração 0137).
+   - **Gravação de áudio pelo microfone** via botão de microfone, usando a API **MediaRecorder** do navegador (`src/lib/chat-audio-recorder.ts`): contagem de segundos ao vivo, botão de parar (anexa) e botão de descartar; erros de permissão/ausência de microfone são exibidos de forma amigável.
+   - Renderização na conversa via `getChatMessageFileUrl` / `getChatAttachmentKind` (`src/services/operator-chat.ts`):
+     - **Foto**: imagem visível inline na bolha (clique abre em nova aba).
+     - **Vídeo**: player `<video>` tocável dentro da bolha, com controles.
+     - **Áudio**: player `<audio>` tocável dentro da bolha, com controles.
+   - O acesso ao arquivo é protegido pelas regras da coleção (participantes da conversa — migração 0136).
+   - Permissão: **reutiliza o item existente** `chat.chat_operadores` do catálogo; sem item novo.
+11. **Menção `@` de chamado, mudança ou problema**:
+   - Digitar `@` na caixa de mensagem abre um **seletor** (`src/components/chat/MentionSelector.tsx`) que consulta em tempo real as coleções `tickets`, `changes` e `problems`, filtrando por número ou título (números reais no banco: chamado `"068 - 00033"`, mudança `"MUD-2026-94268"`, problema `"PRB-000003"`).
+   - Chamados listados priorizam status em aberto (Novo, Em Atendimento, Escalonado etc.); mudanças e problemas listam os mais recentes.
+   - A menção selecionada é inserida na mensagem e enviada como texto no formato `@{tipo}:{id}` dentro de um marcador invisível — **o conteúdo do item não é duplicado na mensagem**.
+   - Na conversa, a menção vira um **cartão clicável** (`src/components/chat/ChatMentionCard.tsx`) que busca os dados atuais do item no momento do render (número, título, status e prioridade) e navega para `/tickets/:id`, `/changes/:id` ou `/problems/:id` (rotas já existentes).
+   - Permissão: **reutiliza o item existente** `chat.chat_operadores` do catálogo; sem item novo.
 
 ---
 
@@ -103,6 +124,10 @@ Seguindo a regra permanente do projeto Lógos AITSM, ambas as funcionalidades s�
 4. **`0136_operator_chat_list_rule.js`**:
    - **Correção de bug de entrega em tempo real**: a coleção `operator_chat_messages` foi criada na migração 0129 sem `listRule`. No PocketBase, a distribuição Realtime e a paginação de registros são autorizadas pela _list rule_ — com ela nula, apenas superusuários conseguiam listar/assinar a coleção, e as mensagens nunca chegavam ao outro lado (o remetente via a própria mensagem porque a criação usa a _create rule_, mas o destinatário não recebia o evento nem o histórico).
    - A migração define a `listRule` idêntica às demais regras: apenas participantes da conversa (`sender = @request.auth.id || recipient = @request.auth.id`). Idempotente (reexecutar não altera o resultado).
+   - Sem item novo no catálogo de permissões: o acesso continua regido pelo item existente `chat.chat_operadores`.
+5. **`0137_add_operator_chat_file.js`**:
+   - Adiciona o campo `file` (arquivo único) na coleção `operator_chat_messages`, com tamanho máximo de **5 MB** e tipos aceitos de imagem, áudio e vídeo — suporte aos anexos de foto, vídeo e áudio gravado no chat.
+   - Regras de acesso intactas (migração 0136): participantes da conversa.
    - Sem item novo no catálogo de permissões: o acesso continua regido pelo item existente `chat.chat_operadores`.
 
 ---

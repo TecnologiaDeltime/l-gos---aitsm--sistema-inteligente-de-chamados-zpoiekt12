@@ -24,6 +24,16 @@ import { Badge } from '@/components/ui/badge'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { ConversationHistoryList } from '@/components/chat/ConversationHistoryList'
+import { ChatMessageBubble, countMessageMatches } from '@/components/chat/ChatMessageBubble'
+import { MentionSelector } from '@/components/chat/MentionSelector'
+import { buildMentionMarkup, type MentionEntityType } from '@/lib/chat-mentions'
+import type { MentionCandidate } from '@/lib/chat-mention-data'
+import { createAudioRecorder, type AudioRecorderControls } from '@/lib/chat-audio-recorder'
+import {
+  CHAT_ATTACHMENT_MAX_BYTES,
+  CHAT_ATTACHMENT_MIME_TYPES,
+  filePlaceholderText,
+} from '@/services/operator-chat'
 import {
   MessageSquare,
   Search,
@@ -37,6 +47,13 @@ import {
   ChevronUp,
   Loader2,
   History as HistoryIcon,
+  Paperclip,
+  Mic,
+  Square,
+  Trash2,
+  X,
+  AtSign,
+  Image as ImageIcon,
 } from 'lucide-react'
 
 export default function OperatorChatPage() {
@@ -59,10 +76,24 @@ export default function OperatorChatPage() {
   const [loadingOlder, setLoadingOlder] = useState(false)
   const [hasMoreOlder, setHasMoreOlder] = useState(false)
   const [historyLoadedFor, setHistoryLoadedFor] = useState<string | null>(null)
+  // Busca interna na conversa aberta (contagem + destaque)
+  const [conversationSearch, setConversationSearch] = useState('')
+  // Anexos (foto/vídeo via input de arquivo + áudio via MediaRecorder)
+  const [pendingFile, setPendingFile] = useState<File | null>(null)
+  const [filePreviewUrl, setFilePreviewUrl] = useState<string | null>(null)
+  const [recording, setRecording] = useState(false)
+  const [recordingSeconds, setRecordingSeconds] = useState(0)
+  const [recorderError, setRecorderError] = useState<string | null>(null)
+  // Menção @
+  const [mentionOpen, setMentionOpen] = useState(false)
+  const [mentionQuery, setMentionQuery] = useState('')
 
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const messagesTopRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const recorderRef = useRef<AudioRecorderControls | null>(null)
+  const previewUrlRef = useRef<string | null>(null)
 
   // Carrega lista de operadores
   const loadOperators = async () => {
@@ -273,13 +304,96 @@ export default function OperatorChatPage() {
     }
   })
 
+  // ===== Anexos (foto/vídeo/áudio) =====
+  const clearPendingFile = () => {
+    if (previewUrlRef.current) {
+      URL.revokeObjectURL(previewUrlRef.current)
+      previewUrlRef.current = null
+    }
+    setFilePreviewUrl(null)
+    setPendingFile(null)
+  }
+
+  const handleFileChosen = (file: File | null) => {
+    if (!file) return
+    if (file.size > CHAT_ATTACHMENT_MAX_BYTES) {
+      setRecorderError(
+        `Arquivo maior que o limite de 5 MB (${(file.size / 1024 / 1024).toFixed(1)} MB).`,
+      )
+      return
+    }
+    if (pendingFile && previewUrlRef.current) {
+      URL.revokeObjectURL(previewUrlRef.current)
+      previewUrlRef.current = null
+    }
+    setRecorderError(null)
+    const url = URL.createObjectURL(file)
+    previewUrlRef.current = url
+    setPendingFile(file)
+    setFilePreviewUrl(url)
+    if (fileInputRef.current) fileInputRef.current.value = ''
+  }
+
+  const startRecording = async () => {
+    if (recorderRef.current) return
+    setRecorderError(null)
+    const recorder = createAudioRecorder(
+      (state) => {
+        setRecording(state.recording)
+        setRecordingSeconds(state.seconds)
+        if (state.error) setRecorderError(state.error)
+      },
+      (file) => {
+        handleFileChosen(file)
+      },
+    )
+    recorderRef.current = recorder
+    await recorder.start()
+  }
+
+  const stopRecording = () => {
+    recorderRef.current?.stop()
+    recorderRef.current = null
+  }
+
+  const cancelRecording = () => {
+    recorderRef.current?.cancel()
+    recorderRef.current = null
+  }
+
+  // ===== Menção @ =====
+  // Detecta "@..." no fim do texto e abre o seletor.
+  const detectMentionTrigger = (text: string) => {
+    const m = /(^|\s)@([^\s@]*)$/.exec(text)
+    if (m) {
+      setMentionQuery(m[2])
+      setMentionOpen(true)
+    } else {
+      setMentionOpen(false)
+      setMentionQuery('')
+    }
+  }
+
+  const handleMentionSelect = (candidate: MentionCandidate, label: string) => {
+    const markup = buildMentionMarkup(candidate.entityType, candidate.id, label)
+    setInputText((prev) =>
+      prev.replace(/(^|\s)@([^\s@]*)$/, (_full, pre: string) => `${pre}${markup} `),
+    )
+    setMentionOpen(false)
+    setMentionQuery('')
+    setTimeout(() => inputRef.current?.focus(), 50)
+  }
+
   // Enviar mensagem
   const handleSend = async (e?: React.FormEvent) => {
     if (e) e.preventDefault()
-    if (!user || !selectedOperator || !inputText.trim() || sending) return
+    if (!user || !selectedOperator || sending) return
+    if (!inputText.trim() && !pendingFile) return
 
     const content = inputText.trim()
+    const file = pendingFile
     setInputText('')
+    clearPendingFile()
     setSending(true)
 
     try {
@@ -287,6 +401,7 @@ export default function OperatorChatPage() {
         sender: user.id,
         recipient: selectedOperator.id,
         content,
+        file,
       })
       setMessages((prev) => {
         if (prev.some((m) => m.id === created.id)) return prev
@@ -296,11 +411,38 @@ export default function OperatorChatPage() {
     } catch (err) {
       console.error('Erro ao enviar mensagem no chat:', err)
       setInputText(content)
+      if (file) handleFileChosen(file)
     } finally {
       setSending(false)
       inputRef.current?.focus()
     }
   }
+
+  // ===== Busca interna na conversa aberta =====
+  // Limpa a busca ao trocar de parceiro
+  useEffect(() => {
+    setConversationSearch('')
+  }, [selectedOperator?.id])
+
+  const totalSearchMatches = useMemo(() => {
+    const q = conversationSearch.trim()
+    if (!q) return 0
+    let count = 0
+    for (const m of messages) {
+      count += countMessageMatches(m.content, q)
+    }
+    return count
+  }, [messages, conversationSearch])
+
+  const searchMatchesCount = useMemo(() => {
+    const q = conversationSearch.trim()
+    if (!q) return 0
+    let count = 0
+    for (const m of messages) {
+      if (countMessageMatches(m.content, q) > 0) count += 1
+    }
+    return count
+  }, [messages, conversationSearch])
 
   // Filtra operadores pela busca e recalcula a presença online a cada tick do relógio
   // (o indicador vira "Ausente" sozinho após 15 min sem atividade, sem esperar a próxima busca)
@@ -529,6 +671,35 @@ export default function OperatorChatPage() {
                 </div>
               </div>
 
+              {/* Busca interna na conversa aberta: contagem + destaque nas bolhas */}
+              <div className="flex items-center gap-2 border-b border-border bg-muted/20 px-3 py-2">
+                <div className="relative flex-1">
+                  <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    value={conversationSearch}
+                    onChange={(e) => setConversationSearch(e.target.value)}
+                    placeholder="Buscar nesta conversa..."
+                    className="h-8 pl-8 pr-7 text-xs"
+                  />
+                  {conversationSearch && (
+                    <button
+                      type="button"
+                      onClick={() => setConversationSearch('')}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                      title="Limpar busca"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  )}
+                </div>
+                {conversationSearch.trim() && (
+                  <span className="shrink-0 text-[11px] text-muted-foreground">
+                    {totalSearchMatches} ocorrência{totalSearchMatches !== 1 ? 's' : ''} em{' '}
+                    {searchMatchesCount} mensagem{searchMatchesCount !== 1 ? 's' : ''}
+                  </span>
+                )}
+              </div>
+
               {/* Área de Mensagens */}
               <ScrollArea className="flex-1 p-4">
                 {/* Botão Carregar mais (histórico paginado) */}
@@ -575,64 +746,19 @@ export default function OperatorChatPage() {
                   <div className="space-y-3">
                     {messages.map((m) => {
                       const isMe = m.sender === user?.id
-                      const timeStr = formatChatTime(m)
-                      const showSenderName = !isMe
-
                       return (
-                        <div
+                        <ChatMessageBubble
                           key={m.id}
-                          className={`flex items-end gap-2 ${isMe ? 'justify-end' : 'justify-start'}`}
-                        >
-                          {!isMe && (
-                            <Avatar className="h-6 w-6 mb-1 shrink-0">
-                              {selectedOperator.avatar && (
-                                <AvatarImage
-                                  src={`${import.meta.env.VITE_POCKETBASE_URL}/api/files/users/${selectedOperator.id}/${selectedOperator.avatar}`}
-                                />
-                              )}
-                              <AvatarFallback className="bg-amber-500/20 text-amber-500 text-[10px] font-bold">
-                                {selectedOperator.name.slice(0, 2).toUpperCase()}
-                              </AvatarFallback>
-                            </Avatar>
-                          )}
-
-                          <div
-                            className={`flex flex-col gap-0.5 max-w-[75%] ${
-                              isMe ? 'items-end' : 'items-start'
-                            }`}
-                          >
-                            {/* Nome do remetente acima da bolha (só para mensagens recebidas) */}
-                            {showSenderName && (
-                              <span className="px-1 text-[10px] font-semibold text-muted-foreground">
-                                {selectedOperator.name}
-                              </span>
-                            )}
-
-                            {/* Bolha da mensagem: minhas (âmbar, à direita) × recebidas (card, à esquerda) */}
-                            <div
-                              className={`rounded-2xl px-3.5 py-2 text-xs shadow-sm break-words whitespace-pre-wrap ${
-                                isMe
-                                  ? 'bg-amber-500 text-slate-950 font-medium rounded-br-sm'
-                                  : 'bg-muted text-foreground border border-border rounded-bl-sm'
-                              }`}
-                            >
-                              <p className="leading-relaxed">{m.content}</p>
-                              <div
-                                className={`flex items-center justify-end gap-1 mt-1 text-[10px] ${
-                                  isMe ? 'text-slate-900/80' : 'text-muted-foreground'
-                                }`}
-                              >
-                                <span>{timeStr}</span>
-                                {isMe &&
-                                  (m.read ? (
-                                    <CheckCheck className="h-3 w-3 text-emerald-800 dark:text-emerald-950" />
-                                  ) : (
-                                    <Check className="h-3 w-3 text-slate-800/60" />
-                                  ))}
-                              </div>
-                            </div>
-                          </div>
-                        </div>
+                          message={m}
+                          isMe={isMe}
+                          senderName={selectedOperator.name}
+                          senderAvatar={
+                            selectedOperator.avatar
+                              ? `${import.meta.env.VITE_POCKETBASE_URL}/api/files/users/${selectedOperator.id}/${selectedOperator.avatar}`
+                              : undefined
+                          }
+                          searchQuery={conversationSearch}
+                        />
                       )
                     })}
                     <div ref={messagesEndRef} />
@@ -640,27 +766,145 @@ export default function OperatorChatPage() {
                 )}
               </ScrollArea>
 
+              {/* Prévia do anexo pendente (foto/vídeo/áudio) */}
+              {pendingFile && (
+                <div className="mx-3 mt-2 flex items-center gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-2.5 py-1.5">
+                  {filePreviewUrl && pendingFile.type.startsWith('image/') && (
+                    <img
+                      src={filePreviewUrl}
+                      alt="Prévia"
+                      className="h-10 w-10 rounded object-cover"
+                    />
+                  )}
+                  {filePreviewUrl && pendingFile.type.startsWith('video/') && (
+                    <video src={filePreviewUrl} className="h-10 w-10 rounded object-cover" muted />
+                  )}
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-[11px] font-medium text-foreground">
+                      {pendingFile.name || filePlaceholderText(pendingFile)}
+                    </p>
+                    <p className="text-[10px] text-muted-foreground">
+                      {(pendingFile.size / 1024).toFixed(0)} KB
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={clearPendingFile}
+                    className="text-muted-foreground hover:text-foreground"
+                    title="Remover anexo"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              )}
+
+              {/* Erro de gravação / anexo */}
+              {recorderError && (
+                <div className="mx-3 mt-2 flex items-center gap-2 rounded-lg border border-red-500/40 bg-red-500/10 px-2.5 py-1.5 text-[11px] text-red-600 dark:text-red-400">
+                  <span className="flex-1">{recorderError}</span>
+                  <button
+                    type="button"
+                    onClick={() => setRecorderError(null)}
+                    className="text-red-500 hover:text-red-400"
+                    title="Fechar"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              )}
+
               {/* Caixa de Entrada de Mensagem */}
               <form
                 onSubmit={handleSend}
-                className="p-3 border-t border-border bg-muted/20 flex gap-2"
+                className="p-3 border-t border-border bg-muted/20 space-y-2"
               >
-                <Input
-                  ref={inputRef}
-                  placeholder={`Mensagem para ${selectedOperator.name}... (Pressione Enter para enviar)`}
-                  value={inputText}
-                  onChange={(e) => setInputText(e.target.value)}
-                  disabled={sending}
-                  className="flex-1 h-10 text-xs"
-                />
-                <Button
-                  type="submit"
-                  disabled={!inputText.trim() || sending}
-                  className="bg-amber-500 text-slate-950 hover:bg-amber-400 font-semibold px-4"
-                >
-                  <Send className="h-4 w-4 mr-1.5" />
-                  Enviar
-                </Button>
+                {mentionOpen && (
+                  <MentionSelector
+                    query={mentionQuery}
+                    onSelect={handleMentionSelect}
+                    onClose={() => {
+                      setMentionOpen(false)
+                      setMentionQuery('')
+                    }}
+                  />
+                )}
+                <div className="flex gap-2 items-center">
+                  {/* Anexo de arquivo (foto/vídeo) */}
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept={CHAT_ATTACHMENT_MIME_TYPES.join(',')}
+                    className="hidden"
+                    onChange={(e) => handleFileChosen(e.target.files?.[0] ?? null)}
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="h-9 w-9 shrink-0 text-muted-foreground hover:text-amber-500"
+                    title="Anexar foto ou vídeo"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={sending || recording}
+                  >
+                    <Paperclip className="h-4 w-4" />
+                  </Button>
+                  {/* Gravação de áudio */}
+                  {recording ? (
+                    <div className="flex items-center gap-1.5 shrink-0 rounded-lg border border-red-500/40 bg-red-500/10 px-2 h-9">
+                      <span className="h-2 w-2 rounded-full bg-red-500 animate-pulse" />
+                      <span className="text-[11px] font-medium text-red-600 dark:text-red-400 tabular-nums">
+                        {recordingSeconds}s
+                      </span>
+                      <button
+                        type="button"
+                        onClick={cancelRecording}
+                        className="text-red-500 hover:text-red-400 ml-0.5"
+                        title="Descartar gravação"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={stopRecording}
+                        className="text-emerald-600 hover:text-emerald-500"
+                        title="Parar e anexar"
+                      >
+                        <Square className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  ) : (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="h-9 w-9 shrink-0 text-muted-foreground hover:text-amber-500"
+                      title="Gravar áudio"
+                      onClick={startRecording}
+                      disabled={sending || !!pendingFile}
+                    >
+                      <Mic className="h-4 w-4" />
+                    </Button>
+                  )}
+                  <Input
+                    ref={inputRef}
+                    placeholder={`Mensagem para ${selectedOperator.name}... (@ para mencionar chamado/mudança/problema)`}
+                    value={inputText}
+                    onChange={(e) => {
+                      setInputText(e.target.value)
+                      detectMentionTrigger(e.target.value)
+                    }}
+                    disabled={sending}
+                    className="flex-1 h-10 text-xs"
+                  />
+                  <Button
+                    type="submit"
+                    disabled={(!inputText.trim() && !pendingFile) || sending}
+                    className="bg-amber-500 text-slate-950 hover:bg-amber-400 font-semibold px-4"
+                  >
+                    <Send className="h-4 w-4 mr-1.5" />
+                    Enviar
+                  </Button>
+                </div>
               </form>
             </>
           ) : (
