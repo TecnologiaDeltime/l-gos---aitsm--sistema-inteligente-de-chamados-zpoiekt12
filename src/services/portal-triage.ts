@@ -96,3 +96,14 @@ export const triggerPortalTriage = async (ticketId: string): Promise<PortalTriag
     return null
   }
 }
+
+/**
+ * Disparo explícito fire-and-forget: chama triggerPortalTriage sem esperar o retorno.
+ * Garante que a abertura do chamado no portal nunca seja atrasada ou bloqueada.
+ */
+export const triggerPortalTriageFireAndForget = (ticketId: string): void => {
+  if (!ticketId) return
+  void triggerPortalTriage(ticketId).catch((err) => {
+    console.warn('[portal-triage] erro em background:', err)
+  })
+}

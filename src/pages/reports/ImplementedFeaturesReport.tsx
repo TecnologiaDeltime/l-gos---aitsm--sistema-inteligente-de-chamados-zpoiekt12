@@ -361,6 +361,13 @@ const FEATURE_CATEGORIES: FeatureCategory[] = [
           'Modernização completa da interface do Portal do Cliente: barra superior oficial com paleta grafite/âmbar, alternador nativo de tema (Amber Alert escuro e Marrom & Branco claro), banner de boas-vindas sofisticado com cartões de acesso rápido, badges refinados, timeline interativa de histórico e interações públicas (com destaque para respostas da IA) e responsividade mobile caprichada.',
         tag: 'Design & Identidade Visual',
       },
+      {
+        id: 'portal-14-auto-triage',
+        title: 'Abertura Simplificada e Triagem Automática por IA (v0.0.379)',
+        description:
+          'O formulário de abertura de chamados do Portal do Cliente foi radicalmente simplificado: foram removidos os campos "Atividade principal", "Subatividade do catálogo" e "Equipe responsável", mantendo exclusivamente título, descrição, prioridade (com badges e descritivos) e anexos, além do seletor opcional de ativo e setor. Ao submeter, o sistema dispara imediatamente uma triagem inteligente por IA (agente nativo portal-ticket-triage-agent, tier rápido, JSON estrito) que lê o título e a descrição, identifica a atividade correspondente no Catálogo de Serviços e distribui o chamado para a equipe configurada naquela atividade. Se a confiança for insuficiente ou a atividade não tiver equipe, o chamado é encaminhado para a fila padrão configurável. Inclui aba de gestão dedicada em Configurações > Triagem do Portal (IA) protegida pela permissão settings_portal_triage para ativar/desativar, selecionar fila de fallback, ajustar o limiar de confiança e simular triagens manualmente.',
+        tag: 'IA & Autoatendimento',
+      },
     ],
   },
   {

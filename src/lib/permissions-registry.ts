@@ -766,6 +766,13 @@ const BASE_SYSTEM_MODULES: GranularModuleDefinition[] = [
         path: '/settings?tab=portal',
       },
       {
+        key: 'settings_portal_triage',
+        label: 'Triagem Automática por IA (Portal)',
+        description:
+          'Configurações do agente de IA que lê a descrição do chamado e categoriza/distribui automaticamente para a equipe do catálogo',
+        path: '/settings?tab=portal_triage',
+      },
+      {
         key: 'settings_client_notif',
         label: 'Notificações de Clientes',
         description: 'E-mails automáticos de abertura e resolução para solicitantes',

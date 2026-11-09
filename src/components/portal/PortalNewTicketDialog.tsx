@@ -9,7 +9,6 @@ import {
   FileIcon,
   UserCheck,
   Laptop,
-  Tag,
 } from 'lucide-react'
 import {
   Dialog,
@@ -35,11 +34,10 @@ import { getCompanyDepartments, CompanyDepartmentRecord } from '@/services/compa
 import { getClientContacts, ClientContactRecord } from '@/services/client-contacts'
 import { uploadAttachment } from '@/services/attachments'
 import { getEquipments, EquipmentRecord } from '@/services/equipments'
-import { getCategories, CategoryRecord } from '@/services/categories'
-import { getQueues, QueueRecord } from '@/services/queues'
+import { triggerPortalTriageFireAndForget } from '@/services/portal-triage'
 import { useToast } from '@/hooks/use-toast'
 import { usePermissions } from '@/hooks/use-permissions'
-import { Users, Inbox } from 'lucide-react'
+import { Sparkles, AlertCircle } from 'lucide-react'
 
 interface PortalNewTicketDialogProps {
   open: boolean
@@ -77,23 +75,12 @@ export default function PortalNewTicketDialog({
 
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
-  const [type, setType] = useState('Incidente')
-  const [selectedMainCategory, setSelectedMainCategory] = useState<string>('none')
-  const [selectedActivity, setSelectedActivity] = useState<string>('none')
-  const [activities, setActivities] = useState<CategoryRecord[]>([])
+  const [priority, setPriority] = useState<'Baixa' | 'Média' | 'Alta' | 'Crítica'>('Média')
   const [selectedAsset, setSelectedAsset] = useState<string>(initialAssetId || 'none')
-  const [queueId, setQueueId] = useState<string>('')
-  const [queues, setQueues] = useState<QueueRecord[]>([])
 
   useEffect(() => {
     if (open) {
       setSelectedAsset(initialAssetId || 'none')
-      Promise.all([getCategories().catch(() => []), getQueues().catch(() => [])]).then(
-        ([cats, qs]) => {
-          setActivities((cats as CategoryRecord[]).filter((c) => c.active !== false))
-          setQueues((qs as QueueRecord[]).filter((q) => q.active !== false))
-        },
-      )
     }
   }, [open, initialAssetId])
 
@@ -163,8 +150,7 @@ export default function PortalNewTicketDialog({
     setContactPhone(currentUser?.phone || '')
     setSelectedSector('none')
     setPreferredContactId('')
-    setSelectedActivity('none')
-    setQueueId('')
+    setPriority('Média')
     setSelectedFile(null)
     setExtraEquipment(null)
   }, [open])
@@ -324,39 +310,6 @@ export default function PortalNewTicketDialog({
     }
   }
 
-  const parentActivities = useMemo(() => {
-    return activities.filter((a) => !a.parent && a.active !== false)
-  }, [activities])
-
-  const subActivitiesOfMain = useMemo(() => {
-    if (!selectedMainCategory || selectedMainCategory === 'none') return []
-    return activities.filter((a) => a.parent === selectedMainCategory && a.active !== false)
-  }, [activities, selectedMainCategory])
-
-  const handleSelectMainCategory = (mainId: string) => {
-    setSelectedMainCategory(mainId)
-    setSelectedActivity('none')
-  }
-
-  const handleSelectActivity = (activityId: string) => {
-    setSelectedActivity(activityId)
-    if (activityId && activityId !== 'none') {
-      const act = activities.find((a) => a.id === activityId)
-      if (act?.parent && act.parent !== selectedMainCategory) {
-        setSelectedMainCategory(act.parent)
-      }
-      if (act?.type) {
-        setType(act.type)
-      }
-      // Pré-seleção da equipe responsável vinculada à atividade ou à atividade pai
-      const designatedQueue =
-        act?.queue || (act?.parent ? activities.find((c) => c.id === act.parent)?.queue : undefined)
-      if (designatedQueue) {
-        setQueueId(designatedQueue)
-      }
-    }
-  }
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!companyId) {
@@ -368,25 +321,21 @@ export default function PortalNewTicketDialog({
       return
     }
 
-    if (!queueId) {
-      toast({
-        title: 'Selecione a equipe responsável',
-        description: 'É necessário direcionar o chamado para uma equipe de atendimento.',
-        variant: 'destructive',
-      })
-      return
-    }
-
     try {
       setSubmitting(true)
 
-      const act = activities.find((a) => a.id === selectedActivity)
-      const ticketCategory = act ? (act.parent ? act.parent : act.id) : undefined
-      const ticketSubcategory = act && act.parent ? act.id : undefined
-      const ticketType = act?.type || type || 'Incidente'
-      const ticketImpact = act?.impact || 'Médio'
-      const ticketUrgency = act?.urgency || 'Média'
-      const ticketPriority = act?.priority || 'Média'
+      const urgencyMap: Record<string, string> = {
+        Baixa: 'Baixa',
+        Média: 'Média',
+        Alta: 'Alta',
+        Crítica: 'Alta',
+      }
+      const impactMap: Record<string, string> = {
+        Baixa: 'Baixo',
+        Média: 'Médio',
+        Alta: 'Alto',
+        Crítica: 'Alto',
+      }
 
       const createdTicket = await createTicket({
         number: 'PENDENTE',
@@ -395,13 +344,10 @@ export default function PortalNewTicketDialog({
         department: selectedSector !== 'none' ? selectedSector : undefined,
         title: title.trim(),
         description: description.trim(),
-        type: ticketType,
-        category: ticketCategory,
-        subcategory: ticketSubcategory,
-        queue: queueId || undefined,
-        impact: ticketImpact,
-        urgency: ticketUrgency,
-        priority: ticketPriority as any,
+        type: 'Incidente',
+        impact: impactMap[priority] || 'Médio',
+        urgency: urgencyMap[priority] || 'Média',
+        priority: priority,
         status: 'Novo',
         requester_name: contactName.trim() || user.name || 'Solicitante do Portal',
         requester_email: contactEmail.trim() || user.email,
@@ -424,6 +370,11 @@ export default function PortalNewTicketDialog({
             : undefined,
       } as any)
 
+      // Dispara triagem automática por IA (fire-and-forget: nunca bloqueia o usuário)
+      if (createdTicket?.id) {
+        triggerPortalTriageFireAndForget(createdTicket.id)
+      }
+
       // Se houver anexo, faz o upload vinculado ao chamado criado
       if (selectedFile && createdTicket?.id) {
         try {
@@ -440,20 +391,17 @@ export default function PortalNewTicketDialog({
 
       toast({
         title: 'Chamado aberto com sucesso!',
-        description: `Sua solicitação foi vinculada à empresa ${companyName} e já está na fila de atendimento.`,
+        description: `Sua solicitação foi registrada na empresa ${companyName}. A IA do Lógos categorizou e distribuiu seu chamado automaticamente.`,
       })
 
       // Limpa campos
       setTitle('')
       setDescription('')
-      setType('Incidente')
+      setPriority('Média')
       setSelectedAsset('none')
       setExtraEquipment(null)
       setSelectedSector('none')
       setPreferredContactId('')
-      setSelectedMainCategory('none')
-      setSelectedActivity('none')
-      setQueueId('')
       setSelectedFile(null)
       if (fileInputRef.current) fileInputRef.current.value = ''
 
@@ -579,12 +527,12 @@ export default function PortalNewTicketDialog({
             </div>
           </div>
 
-          {/* Linha 2: Equipamento/Ativo Envolvido e Atividade do Catálogo */}
+          {/* Linha 2: Equipamento/Ativo Envolvido e Prioridade */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <label className="text-xs font-semibold text-foreground flex items-center gap-1.5">
                 <Laptop className="h-3.5 w-3.5 text-amber-500" />
-                Equipamento / Ativo Envolvido (Opcional)
+                Equipamento / Ativo Envolvido
               </label>
               <Select value={selectedAsset} onValueChange={setSelectedAsset}>
                 <SelectTrigger className="text-xs h-9">
@@ -609,89 +557,51 @@ export default function PortalNewTicketDialog({
 
             <div className="space-y-1.5">
               <label className="text-xs font-semibold text-foreground flex items-center gap-1.5">
-                <Tag className="h-3.5 w-3.5 text-amber-500" />
-                Atividade Principal *
+                <AlertCircle className="h-3.5 w-3.5 text-amber-500" />
+                Prioridade da Solicitação
               </label>
-              <Select value={selectedMainCategory} onValueChange={handleSelectMainCategory}>
+              <Select value={priority} onValueChange={(val: any) => setPriority(val)}>
                 <SelectTrigger className="text-xs h-9">
-                  <SelectValue placeholder="Selecione a atividade principal" />
+                  <SelectValue placeholder="Selecione a prioridade" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="none">Selecione uma atividade principal...</SelectItem>
-                  {parentActivities.map((act) => (
-                    <SelectItem key={act.id} value={act.id}>
-                      {act.name}
-                    </SelectItem>
-                  ))}
+                  <SelectItem value="Baixa">
+                    <span className="flex items-center gap-1.5">
+                      <span className="h-1.5 w-1.5 rounded-full bg-slate-400" />
+                      Baixa — Pouco impacto no dia a dia
+                    </span>
+                  </SelectItem>
+                  <SelectItem value="Média">
+                    <span className="flex items-center gap-1.5">
+                      <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />
+                      Média — Trabalho normal com limitações
+                    </span>
+                  </SelectItem>
+                  <SelectItem value="Alta">
+                    <span className="flex items-center gap-1.5">
+                      <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
+                      Alta — Atividade essencial prejudicada
+                    </span>
+                  </SelectItem>
+                  <SelectItem value="Crítica">
+                    <span className="flex items-center gap-1.5">
+                      <span className="h-1.5 w-1.5 rounded-full bg-red-500 animate-pulse" />
+                      Crítica — Operação completamente parada
+                    </span>
+                  </SelectItem>
                 </SelectContent>
               </Select>
             </div>
           </div>
 
-          {/* Subatividade vinculada à Atividade Principal */}
-          <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-foreground flex items-center gap-1.5">
-              <Tag className="h-3.5 w-3.5 text-amber-500" />
-              Subatividade do Catálogo *
-            </label>
-            <Select
-              value={selectedActivity}
-              onValueChange={handleSelectActivity}
-              disabled={selectedMainCategory === 'none' || subActivitiesOfMain.length === 0}
-            >
-              <SelectTrigger className="text-xs h-9">
-                <SelectValue
-                  placeholder={
-                    selectedMainCategory === 'none'
-                      ? 'Selecione a atividade principal primeiro'
-                      : subActivitiesOfMain.length === 0
-                        ? 'Nenhuma subatividade cadastrada nesta atividade principal'
-                        : 'Selecione a subatividade...'
-                  }
-                />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">Selecione uma subatividade...</SelectItem>
-                {subActivitiesOfMain.map((act) => (
-                  <SelectItem key={act.id} value={act.id}>
-                    {act.name} {act.type ? `(${act.type})` : ''}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <p className="text-[11px] text-muted-foreground">
-              Lista somente as subatividades pertencentes à atividade principal selecionada.
-            </p>
-          </div>
-
-          {/* Linha 2.1: Equipe Responsável (Obrigatória, pré-selecionada pela atividade) */}
-          <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-foreground flex items-center gap-1.5">
-              <Users className="h-3.5 w-3.5 text-amber-500" />
-              Equipe Responsável (Fila de Atendimento) *
-            </label>
-            {queues.length === 0 ? (
-              <div className="flex items-center gap-2 h-9 px-3 rounded-md border border-amber-200 bg-amber-50 dark:bg-amber-950/30 text-xs text-amber-700 dark:text-amber-300">
-                <Inbox className="h-3.5 w-3.5 shrink-0" />
-                Nenhuma equipe cadastrada em Gerenciamento de Filas
-              </div>
-            ) : (
-              <Select value={queueId} onValueChange={setQueueId}>
-                <SelectTrigger className="text-xs h-9">
-                  <SelectValue placeholder="Selecione a equipe responsável *" />
-                </SelectTrigger>
-                <SelectContent>
-                  {queues.map((q) => (
-                    <SelectItem key={q.id} value={q.id}>
-                      {q.name} {q.level ? `(${q.level})` : ''}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
-            <p className="text-[11px] text-muted-foreground">
-              Pré-selecionada automaticamente ao escolher a atividade do catálogo, permitindo troca.
-            </p>
+          {/* Destaque chamativo: Triagem Automática por IA ativa */}
+          <div className="p-2.5 rounded-lg border border-amber-500/30 bg-amber-500/5 dark:bg-amber-500/10 flex items-center gap-2.5 text-xs text-amber-800 dark:text-amber-300">
+            <Sparkles className="h-4 w-4 text-amber-500 shrink-0" />
+            <div className="flex-1 leading-snug">
+              <span className="font-semibold">Triagem Inteligente:</span> basta descrever o
+              problema. A IA do Lógos categoriza o catálogo e encaminha para a equipe correta
+              automaticamente.
+            </div>
           </div>
 
           {/* Linha 3: Título */}

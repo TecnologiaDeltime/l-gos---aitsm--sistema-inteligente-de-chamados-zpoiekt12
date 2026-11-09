@@ -82,16 +82,26 @@ _Observação:_ No Modo Suporte do Administrador, ao alternar a empresa no selet
   - Ocultação garantida de notas internas do operador.
   - Opção para o cliente enviar réplica ou nova mensagem pública.
 
-### Módulo B: Abertura de Chamado
+### Módulo B: Abertura de Chamado Simplificada com Triagem Automática por IA (v0.0.379)
 
-- Dialog `PortalNewTicketDialog` integrado ao topo da tela.
-- Amarra automaticamente o chamado à empresa (`company: companyId`) e unidade do cliente logado.
-- Permite informar tipo (Incidente, Requisição, Dúvida, Visita Técnica), urgência, equipamento do CMDB envolvido, título e descrição detalhada.
-- **Seleção de Setor e Contato em Cascata:** o seletor "Selecionar o Setor" registra a escolha normalmente (o chamado é criado com `department` do setor escolhido). Ao selecionar um setor, o campo "Nome do contato" lista SOMENTE os colaboradores do cadastro do cliente vinculados àquele setor (`client_contacts.departments` contém o setor); a lista é refeita a cada troca de setor, o valor selecionado anteriormente é limpo e o padrão permanece "quem está logado" (`logged_user`). Sem setor específico ("Geral"), a lista mostra todos os colaboradores da empresa. Se o setor não tiver colaboradores cadastrados, o contato permanece o usuário logado e um aviso orienta o cliente.
-- **Nova Ordem dos Campos:** o formulário segue a sequência corporativa **Setor → Nome do contato → Equipamento → Tipo da solicitação**, seguida de assunto, descrição e anexos.
-- **Vínculo Automático Contato → Equipamento:** ao selecionar qualquer colaborador no campo "Nome do contato", o sistema busca automaticamente no CMDB/equipamentos os ativos cujo "Usuário responsável" corresponda àquele contato (por ID ou por nome, inclusive suportando o formato `"Nome — Departamento"` e texto livre de ativos legados) e pré-seleciona a máquina que ele usa no campo Equipamento.
-- **Atalho "Meu chamado":** botão destacado no topo do formulário que preenche automaticamente setor, contato (nome, e-mail e telefone) e equipamento com os dados do usuário logado. O equipamento é reconhecido pelo vínculo do responsável (ID) ou pelo nome do responsável cadastrado no ativo — inclusive consultando a coleção `equipments` da empresa quando o CMDB não casa — e, se o usuário não tiver nenhum ativo, o formulário continua normalmente com o equipamento vazio. O atalho respeita a permissão **"Atalho Meu chamado (Portal)"** da matriz de Perfis de Acesso (módulo Chamados, níveis Visualizar/Editar/Configurar): só aparece para quem tiver o item concedido.
-- O chamado nasce com `source: "Portal"` e entra imediatamente na fila de atendimento com status "Novo".
+- Dialog `PortalNewTicketDialog` integrado ao topo da tela, projetado para ser **simples, chamativo e direto ao ponto**: quanto menos opção para o cliente, melhor.
+- **Campos removidos do cliente:** foram totalmente eliminados os seletores burocráticos de **"Atividade principal"**, **"Subatividade do catálogo"** e **"Equipe responsável"**. O cliente não precisa tentar adivinhar a taxonomia interna do catálogo de serviços nem a fila de atendimento correta.
+- **Campos mantidos:**
+  - **Título / Assunto** do chamado (obrigatório, com placeholder chamativo e exemplos do dia a dia).
+  - **Descrição detalhada** (obrigatório, área ampla e clara com contador de caracteres e guia amigável).
+  - **Nível de Prioridade** (seleção visual em cartões: Baixa, Média, Alta, Crítica — com badges coloridos e descrições de impacto no negócio; padrão "Média").
+  - **Anexos** (upload drag-and-drop de capturas de tela, documentos PDF e imagens, com pré-visualização e remoção antes do envio).
+  - **Contexto opcional do cliente:** Setor, Nome do contato e Equipamento CMDB relacionado (com o atalho "Meu chamado" pré-preenchendo os dados do solicitante logado).
+- **Triagem Automática por IA (Agente Nativo `portal-ticket-triage-agent`):**
+  - Imediatamente após a gravação do chamado, é disparado um trigger assíncrono (_fire-and-forget_, que nunca atrasa nem bloqueia a confirmação do chamado ao cliente).
+  - O agente de IA lê o **Título** e a **Descrição** fornecidos pelo cliente, analisa o **Catálogo de Serviços** (`tkt_categories` ativas) e infere a atividade exata que melhor descreve a solicitação.
+  - O chamado é automaticamente classificado com a atividade identificada e distribuído para a **Equipe responsável (`queue`) configurada no catálogo de serviço dentro daquela atividade**.
+  - Se a confiança for menor que o limiar configurado (padrão 50%) ou a atividade não tiver fila vinculada, o chamado recebe a **Fila Padrão de Triagem** definida nas configurações do sistema.
+  - Um registro de interação automática do sistema é anexado ao chamado documentando a decisão da IA (atividade selecionada, equipe/fila atribuída, nível de confiança e justificativa em linguagem natural).
+- **Aba de Gestão e Parâmetros (Configurações → Triagem do Portal):**
+  - Acessível apenas para perfis com a permissão granular `settings.settings_portal_triage`.
+  - Permite ligar/desligar a triagem automática, alterar a fila padrão de fallback, ajustar o limiar de confiança mínima (0% a 100%) e realizar **simulações manuais** em tempo real com qualquer texto de exemplo para aferir como a IA categorizaria e para qual equipe distribuiria.
+- O chamado nasce com `source: "Portal"` e entra imediatamente no fluxo de atendimento corporativo com status "Novo".
 
 ### Módulo C: Aprovações dos Pontos Focais
 

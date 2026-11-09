@@ -38,7 +38,17 @@ import { ClientConsumptionAgentTab } from '@/components/settings/ClientConsumpti
 import { AutoAssignSettingsTab } from '@/components/settings/AutoAssignSettingsTab'
 import { ProjectDeadlinesSettingsTab } from '@/components/settings/ProjectDeadlinesSettingsTab'
 import { PrtgSettingsTab } from '@/components/settings/PrtgSettingsTab'
-import { ShieldCheck, Globe, Shield, Bot, BrainCircuit, Users, Activity } from 'lucide-react'
+import { PortalTriageSettingsTab } from '@/components/settings/PortalTriageSettingsTab'
+import {
+  ShieldCheck,
+  Globe,
+  Shield,
+  Bot,
+  BrainCircuit,
+  Users,
+  Activity,
+  Sparkles,
+} from 'lucide-react'
 import {
   getVoiceAlertsEnabled,
   setVoiceAlertsEnabled,
@@ -105,10 +115,13 @@ export default function SettingsPage() {
                         ? 'prtg'
                         : searchParams.get('tab') === 'project-deadlines'
                           ? 'project-deadlines'
-                          : 'general'
+                          : searchParams.get('tab') === 'portal_triage'
+                            ? 'portal_triage'
+                            : 'general'
   const [mainTab, setMainTab] = useState<
     | 'general'
     | 'portal'
+    | 'portal_triage'
     | 'design'
     | 'ai_reply'
     | 'client_notif'
@@ -126,6 +139,7 @@ export default function SettingsPage() {
     tab:
       | 'general'
       | 'portal'
+      | 'portal_triage'
       | 'design'
       | 'ai_reply'
       | 'client_notif'
@@ -142,29 +156,31 @@ export default function SettingsPage() {
     setSearchParams(
       tab === 'portal'
         ? { tab: 'portal' }
-        : tab === 'design'
-          ? { tab: 'design' }
-          : tab === 'ai_reply'
-            ? { tab: 'ai_reply' }
-            : tab === 'client_notif'
-              ? { tab: 'client_notif' }
-              : tab === 'email'
-                ? { tab: 'email' }
-                : tab === 'vault'
-                  ? { tab: 'vault' }
-                  : tab === 'security'
-                    ? { tab: 'security' }
-                    : tab === 'profiles'
-                      ? { tab: 'profiles' }
-                      : tab === 'consumption_agent'
-                        ? { tab: 'consumption_agent' }
-                        : tab === 'auto_assign'
-                          ? { tab: 'auto_assign' }
-                          : tab === 'prtg'
-                            ? { tab: 'prtg' }
-                            : tab === 'project-deadlines'
-                              ? { tab: 'project-deadlines' }
-                              : {},
+        : tab === 'portal_triage'
+          ? { tab: 'portal_triage' }
+          : tab === 'design'
+            ? { tab: 'design' }
+            : tab === 'ai_reply'
+              ? { tab: 'ai_reply' }
+              : tab === 'client_notif'
+                ? { tab: 'client_notif' }
+                : tab === 'email'
+                  ? { tab: 'email' }
+                  : tab === 'vault'
+                    ? { tab: 'vault' }
+                    : tab === 'security'
+                      ? { tab: 'security' }
+                      : tab === 'profiles'
+                        ? { tab: 'profiles' }
+                        : tab === 'consumption_agent'
+                          ? { tab: 'consumption_agent' }
+                          : tab === 'auto_assign'
+                            ? { tab: 'auto_assign' }
+                            : tab === 'prtg'
+                              ? { tab: 'prtg' }
+                              : tab === 'project-deadlines'
+                                ? { tab: 'project-deadlines' }
+                                : {},
     )
   }
 
@@ -173,6 +189,8 @@ export default function SettingsPage() {
     const tabFromUrl = searchParams.get('tab')
     if (tabFromUrl === 'portal' && mainTab !== 'portal') {
       setMainTab('portal')
+    } else if (tabFromUrl === 'portal_triage' && mainTab !== 'portal_triage') {
+      setMainTab('portal_triage')
     } else if (tabFromUrl === 'design' && mainTab !== 'design') {
       setMainTab('design')
     } else if (tabFromUrl === 'ai_reply' && mainTab !== 'ai_reply') {
@@ -519,6 +537,23 @@ export default function SettingsPage() {
             </Button>
           )}
 
+          {permissions.canAccessItem('settings', 'settings_portal_triage') && (
+            <Button
+              type="button"
+              size="sm"
+              variant={mainTab === 'portal_triage' ? 'default' : 'ghost'}
+              onClick={() => handleTabChange('portal_triage')}
+              className={`h-8 text-xs font-semibold rounded-lg transition-all ${
+                mainTab === 'portal_triage'
+                  ? 'bg-amber-500/20 text-amber-500 border border-amber-500/30 shadow-xs shadow-amber-500/10'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              <Sparkles className="h-3.5 w-3.5 mr-1.5 text-amber-500" />
+              Triagem do Portal (IA)
+            </Button>
+          )}
+
           {permissions.canAccessItem('settings', 'settings_design') && (
             <Button
               type="button"
@@ -719,6 +754,15 @@ export default function SettingsPage() {
       {mainTab === 'portal' && permissions.canAccessItem('settings', 'settings_portal') && (
         <ClientPortalSettingsTab />
       )}
+
+      {/* SEÇÃO TRIAGEM AUTOMÁTICA POR IA DO PORTAL */}
+      {mainTab === 'portal_triage' &&
+        permissions.canAccessItem('settings', 'settings_portal_triage') && (
+          <PortalTriageSettingsTab
+            canConfigure={permissions.canConfigure('settings_portal_triage')}
+            canEdit={permissions.canEdit('settings_portal_triage')}
+          />
+        )}
 
       {/* SEÇÃO AGENTE DE CONSUMO */}
       {mainTab === 'consumption_agent' &&
