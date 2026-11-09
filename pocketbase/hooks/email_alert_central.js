@@ -119,6 +119,9 @@
     if (normalizedData.chamado_numero && !normalizedData.numero) {
       normalizedData.numero = normalizedData.chamado_numero
     }
+    if (normalizedData.numero && !normalizedData.chamado_numero) {
+      normalizedData.chamado_numero = normalizedData.numero
+    }
     if (normalizedData.mudanca_numero && !normalizedData.numero) {
       normalizedData.numero = normalizedData.mudanca_numero
     }
@@ -295,13 +298,39 @@
   /**
    * Dispara um e-mail respeitando o switch da central de alertas por e-mail,
    * gerando o layout customizado com a marca Lógos AITSM e gravando anti-duplicidade.
+   * Suporta recipient único (string) ou múltiplos destinatários (array de strings / recipients: [...]).
    */
   globalThis.sendSystemAlertEmail = function (opts) {
     if (!opts) return { sent: false, reason: 'opts missing' }
     var alertKey = opts.alert_key
     var referenceId = opts.reference_id || ''
-    var recipient = opts.recipient
-    if (!recipient) return { sent: false, reason: 'recipient missing' }
+
+    // Normaliza destinatários: aceita opts.recipients (array) ou opts.recipient (string ou array)
+    var rawRecipients = []
+    if (Array.isArray(opts.recipients)) {
+      rawRecipients = opts.recipients
+    } else if (Array.isArray(opts.recipient)) {
+      rawRecipients = opts.recipient
+    } else if (opts.recipient) {
+      rawRecipients = [opts.recipient]
+    }
+
+    // Deduplica e sanitiza e-mails
+    var recipients = []
+    var seenRecipients = {}
+    for (var rIdx = 0; rIdx < rawRecipients.length; rIdx++) {
+      var rClean = String(rawRecipients[rIdx] || '')
+        .trim()
+        .toLowerCase()
+      if (rClean && rClean.indexOf('@') > 0 && !seenRecipients[rClean]) {
+        seenRecipients[rClean] = true
+        recipients.push(rClean)
+      }
+    }
+
+    if (recipients.length === 0) {
+      return { sent: false, reason: 'recipient missing' }
+    }
 
     // 1. Verificar se o alerta está ligado na Central de Configurações
     var cfg = globalThis.getEmailAlertConfig(alertKey)
@@ -312,29 +341,13 @@
           'sendSystemAlertEmail: alerta desligado nas configurações',
           'alert_key',
           alertKey,
-          'recipient',
-          recipient,
+          'recipients_count',
+          recipients.length,
         )
       return { sent: false, reason: 'alert_disabled_by_config', alert_key: alertKey }
     }
 
-    // 2. Anti-duplicidade estrita
-    if (referenceId && globalThis.hasEmailAlreadyBeenSent(alertKey, referenceId, recipient)) {
-      $app
-        .logger()
-        .info(
-          'sendSystemAlertEmail: e-mail já enviado anteriormente (anti-duplicidade)',
-          'alert_key',
-          alertKey,
-          'ref',
-          referenceId,
-          'to',
-          recipient,
-        )
-      return { sent: false, reason: 'already_sent', alert_key: alertKey, reference_id: referenceId }
-    }
-
-    // 3. Montar assunto e corpo HTML via template dinâmico (com fallback para template padrão)
+    // 2. Montar assunto e corpo HTML via template dinâmico (com fallback para template padrão)
     var data = opts.data || {}
     var rawSubject =
       cfg.subject_template ||
@@ -353,60 +366,107 @@
     var textFallback =
       opts.fallbackText || interpolateTemplate(rawBody, data).replace(/<[^>]+>/g, ' ')
 
-    // 4. Envio via Skip Mailer centralizado (sendSystemEmail / $app.newMailClient)
-    try {
-      var brandName = cfg.header_title || globalThis.SYSTEM_BRAND_NAME || 'Lógos AITSM'
-      var defaultEmail = globalThis.SYSTEM_DEFAULT_SENDER_EMAIL || 'noreply@logositsm.com.br'
+    var brandName = cfg.header_title || globalThis.SYSTEM_BRAND_NAME || 'Lógos AITSM'
+    var defaultEmail = globalThis.SYSTEM_DEFAULT_SENDER_EMAIL || 'noreply@logositsm.com.br'
 
-      var message = globalThis.createSystemMailMessage
-        ? globalThis.createSystemMailMessage()
-        : new MailerMessage()
+    var sentCount = 0
+    var skippedDuplicates = 0
+    var errors = []
 
-      message.from = { address: defaultEmail, name: brandName }
-      message.to = [{ address: String(recipient).trim() }]
-      message.subject = subject
-      message.html = htmlContent
-      message.text = textFallback
+    for (var i = 0; i < recipients.length; i++) {
+      var recipient = recipients[i]
 
-      if (globalThis.sendSystemMailMessage) {
-        globalThis.sendSystemMailMessage(message)
-      } else {
-        var client = $app.newMailClient()
-        client.send(message)
+      // 3. Anti-duplicidade estrita por (alertKey, referenceId, recipient)
+      if (referenceId && globalThis.hasEmailAlreadyBeenSent(alertKey, referenceId, recipient)) {
+        $app
+          .logger()
+          .info(
+            'sendSystemAlertEmail: e-mail já enviado anteriormente (anti-duplicidade)',
+            'alert_key',
+            alertKey,
+            'ref',
+            referenceId,
+            'to',
+            recipient,
+          )
+        skippedDuplicates++
+        continue
       }
 
-      // 5. Registrar no log de envios para evitar qualquer duplicação
-      if (referenceId) {
-        globalThis.recordEmailSentLog(alertKey, referenceId, recipient, subject, {
-          template_layout: cfg.template_layout,
-          primary_color: cfg.primary_color,
-        })
+      // 4. Envio via Skip Mailer centralizado (sendSystemEmail / $app.newMailClient)
+      try {
+        var message = globalThis.createSystemMailMessage
+          ? globalThis.createSystemMailMessage()
+          : new MailerMessage()
+
+        message.from = { address: defaultEmail, name: brandName }
+        message.to = [{ address: recipient }]
+        message.subject = subject
+        message.html = htmlContent
+        message.text = textFallback
+
+        if (globalThis.sendSystemMailMessage) {
+          globalThis.sendSystemMailMessage(message)
+        } else {
+          var client = $app.newMailClient()
+          client.send(message)
+        }
+
+        // 5. Registrar no log de envios para evitar qualquer duplicação
+        if (referenceId) {
+          globalThis.recordEmailSentLog(alertKey, referenceId, recipient, subject, {
+            template_layout: cfg.template_layout,
+            primary_color: cfg.primary_color,
+          })
+        }
+
+        $app
+          .logger()
+          .info(
+            'sendSystemAlertEmail: enviado com sucesso via Skip Mailer',
+            'alert_key',
+            alertKey,
+            'recipient',
+            recipient,
+          )
+        sentCount++
+      } catch (err) {
+        $app
+          .logger()
+          .error(
+            'sendSystemAlertEmail: falha no envio para ' + recipient,
+            'alert_key',
+            alertKey,
+            'error',
+            err.message,
+          )
+        errors.push({ recipient: recipient, error: err.message })
       }
+    }
 
-      $app
-        .logger()
-        .info(
-          'sendSystemAlertEmail: enviado com sucesso via Skip Mailer',
-          'alert_key',
-          alertKey,
-          'recipient',
-          recipient,
-        )
-
-      return { sent: true, alert_key: alertKey, recipient: recipient }
-    } catch (err) {
-      $app
-        .logger()
-        .error(
-          'sendSystemAlertEmail: falha no envio',
-          'alert_key',
-          alertKey,
-          'recipient',
-          recipient,
-          'error',
-          err.message,
-        )
-      return { sent: false, error: err.message }
+    if (sentCount > 0) {
+      return {
+        sent: true,
+        alert_key: alertKey,
+        sent_count: sentCount,
+        skipped_duplicates: skippedDuplicates,
+        errors: errors.length > 0 ? errors : undefined,
+      }
+    } else if (skippedDuplicates > 0) {
+      return {
+        sent: false,
+        reason: 'already_sent',
+        alert_key: alertKey,
+        reference_id: referenceId,
+        skipped_duplicates: skippedDuplicates,
+      }
+    } else {
+      return {
+        sent: false,
+        reason: 'send_failed',
+        alert_key: alertKey,
+        errors: errors,
+      }
     }
   }
 })()

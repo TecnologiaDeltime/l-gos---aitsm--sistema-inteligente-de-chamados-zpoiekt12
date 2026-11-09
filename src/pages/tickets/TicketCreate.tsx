@@ -475,8 +475,10 @@ export default function TicketCreate() {
         assigned_to: assignedTo || undefined,
         requester_name: isInternal
           ? requesterName || user?.name || 'Solicitante Interno'
-          : requesterName || 'Solicitante',
-        requester_email: isInternal ? requesterEmail || user?.email || '' : requesterEmail,
+          : requesterName || user?.name || 'Solicitante',
+        requester_email: isInternal
+          ? requesterEmail || user?.email || ''
+          : requesterEmail || user?.email || '',
         requester_phone: requesterPhone,
         source: isInternal ? 'Manual' : 'Portal',
         sla_status: 'Dentro do Prazo',
