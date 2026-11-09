@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-09T00:22:34.338Z",
+  "generatedAt": "2026-11-09T02:04:20.574Z",
   "collections": [
     {
       "name": "users",
@@ -12019,6 +12019,24 @@
         {
           "name": "prtg_auto_resolve_on_up",
           "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "portal_auto_triage_enabled",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "portal_triage_default_queue",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "portal_triage_min_confidence",
+          "type": "number",
           "required": false,
           "system": false
         }
