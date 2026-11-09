@@ -44,6 +44,220 @@ export interface EmailSentLog {
   meta?: Record<string, unknown>
 }
 
+export interface EmailAlertFactoryTemplate {
+  subject_template: string
+  body_template: string
+  header_title: string
+  header_subtitle: string
+  footer_text: string
+  button_label: string
+  button_url_template: string
+  show_button: boolean
+  primary_color: string
+  template_layout: EmailTemplateLayout
+}
+
+export const DEFAULT_EMAIL_ALERT_FACTORY_TEMPLATES: Record<string, EmailAlertFactoryTemplate> = {
+  ticket_created: {
+    subject_template: 'Chamado #{{chamado_numero}} registrado com sucesso - {{titulo}}',
+    header_title: 'Lógos AITSM',
+    header_subtitle: 'Atendimento & Central de Serviços',
+    body_template:
+      '<p>Olá <strong>{{cliente}}</strong>,</p>' +
+      '<p>Seu chamado foi registrado com sucesso em nossa central e já se encontra na fila de atendimento.</p>' +
+      '<div style="background-color: #f8fafc; border-left: 4px solid #D97706; padding: 14px 18px; margin: 20px 0; border-radius: 4px;">' +
+      '<p style="margin: 0 0 6px 0;"><strong>Número:</strong> #{{chamado_numero}}</p>' +
+      '<p style="margin: 0 0 6px 0;"><strong>Título:</strong> {{titulo}}</p>' +
+      '<p style="margin: 0 0 6px 0;"><strong>Tipo / Prioridade:</strong> {{tipo}} • {{prioridade}}</p>' +
+      '<p style="margin: 0 0 6px 0;"><strong>Fila:</strong> {{fila}}</p>' +
+      '<p style="margin: 0 0 6px 0;"><strong>Data e Hora:</strong> {{data_hora}}</p>' +
+      '<p style="margin: 0;"><strong>Descrição:</strong> {{descricao}}</p>' +
+      '</div>' +
+      '<p>Nossa equipe técnica já foi acionada e iniciará o suporte dentro do prazo acordado.</p>',
+    footer_text: 'Lógos AITSM • Central de Serviços Inteligente',
+    button_label: 'Acompanhar no Portal',
+    button_url_template: '{{link}}',
+    show_button: true,
+    primary_color: '#D97706',
+    template_layout: 'modern',
+  },
+  ticket_status_changed: {
+    subject_template: 'Atualização no Chamado #{{chamado_numero}}: status alterado para {{status}}',
+    header_title: 'Lógos AITSM',
+    header_subtitle: 'Atualização de Chamado',
+    body_template:
+      '<p>Olá <strong>{{cliente}}</strong>,</p>' +
+      '<p>Houve uma atualização no andamento do seu chamado <strong>#{{chamado_numero}}</strong>.</p>' +
+      '<div style="background-color: #f8fafc; border-left: 4px solid #2563EB; padding: 14px 18px; margin: 20px 0; border-radius: 4px;">' +
+      '<p style="margin: 0 0 6px 0;"><strong>Chamado:</strong> #{{chamado_numero}} - {{titulo}}</p>' +
+      '<p style="margin: 0 0 6px 0;"><strong>Novo Status:</strong> <span style="display: inline-block; padding: 2px 8px; background: #e0f2fe; color: #0369a1; border-radius: 4px; font-weight: bold;">{{status}}</span></p>' +
+      '<p style="margin: 0 0 6px 0;"><strong>Status Anterior:</strong> {{status_anterior}}</p>' +
+      '<p style="margin: 0 0 6px 0;"><strong>Responsável Técnico:</strong> {{responsavel}}</p>' +
+      '<p style="margin: 0;"><strong>Data e Hora:</strong> {{data_hora}}</p>' +
+      '</div>' +
+      '<p>Você pode acompanhar notas de andamento ou enviar mais informações pelo Portal.</p>',
+    footer_text: 'Lógos AITSM • Central de Serviços Inteligente',
+    button_label: 'Ver Chamado',
+    button_url_template: '{{link}}',
+    show_button: true,
+    primary_color: '#2563EB',
+    template_layout: 'modern',
+  },
+  ticket_resolved: {
+    subject_template: 'Chamado #{{chamado_numero}} foi Concluído - {{titulo}}',
+    header_title: 'Lógos AITSM',
+    header_subtitle: 'Atendimento Concluído',
+    body_template:
+      '<p>Olá <strong>{{cliente}}</strong>,</p>' +
+      '<p>Seu chamado <strong>#{{chamado_numero}}</strong> foi finalizado por nossa equipe técnica.</p>' +
+      '<div style="background-color: #f0fdf4; border-left: 4px solid #059669; padding: 14px 18px; margin: 20px 0; border-radius: 4px;">' +
+      '<p style="margin: 0 0 6px 0;"><strong>Chamado:</strong> #{{chamado_numero}} - {{titulo}}</p>' +
+      '<p style="margin: 0 0 6px 0;"><strong>Responsável:</strong> {{responsavel}}</p>' +
+      '<p style="margin: 0 0 6px 0;"><strong>Data de Conclusão:</strong> {{data_hora}}</p>' +
+      '<p style="margin: 0;"><strong>Solução Aplicada:</strong> {{solucao}}</p>' +
+      '</div>' +
+      '<p>Caso precise de suporte complementar, basta responder este e-mail ou reabrir pelo portal.</p>',
+    footer_text: 'Lógos AITSM • Central de Serviços Inteligente',
+    button_label: 'Avaliar Atendimento',
+    button_url_template: '{{link}}',
+    show_button: true,
+    primary_color: '#16A34A',
+    template_layout: 'modern',
+  },
+  ticket_delegated: {
+    subject_template: '[Atribuição] Chamado #{{chamado_numero}} atribuído a você - {{titulo}}',
+    header_title: 'Lógos AITSM',
+    header_subtitle: 'Atribuição de Tarefa',
+    body_template:
+      '<p>Olá <strong>{{responsavel}}</strong>,</p>' +
+      '<p>O chamado <strong>#{{chamado_numero}}</strong> foi atribuído para o seu atendimento técnico.</p>' +
+      '<div style="background-color: #f8fafc; border-left: 4px solid #D97706; padding: 14px 18px; margin: 20px 0; border-radius: 4px;">' +
+      '<p style="margin: 0 0 6px 0;"><strong>Chamado:</strong> #{{chamado_numero}} - {{titulo}}</p>' +
+      '<p style="margin: 0 0 6px 0;"><strong>Cliente:</strong> {{cliente}} ({{empresa}})</p>' +
+      '<p style="margin: 0 0 6px 0;"><strong>Prioridade:</strong> {{prioridade}}</p>' +
+      '<p style="margin: 0 0 6px 0;"><strong>Fila:</strong> {{fila}}</p>' +
+      '<p style="margin: 0 0 6px 0;"><strong>Prazo SLA:</strong> {{prazo_sla}}</p>' +
+      '<p style="margin: 0;"><strong>Atribuído em:</strong> {{data_hora}}</p>' +
+      '</div>' +
+      '<p>Por favor, acesse o painel técnico e registre o primeiro contato dentro do prazo estipulado.</p>',
+    footer_text: 'Lógos AITSM • Gestão Operacional de Serviços',
+    button_label: 'Atender Chamado',
+    button_url_template: '{{link}}',
+    show_button: true,
+    primary_color: '#D97706',
+    template_layout: 'corporate',
+  },
+  sla_response_alert: {
+    subject_template: '⚠️ Alerta de SLA: Chamado #{{chamado_numero}} vence em {{prazo_sla}}',
+    header_title: 'Lógos AITSM',
+    header_subtitle: 'Monitoramento de SLA',
+    body_template:
+      '<p>Atenção <strong>{{responsavel}}</strong>,</p>' +
+      '<p>O chamado <strong>#{{chamado_numero}}</strong> está próximo do limite ou em risco de estouro de SLA.</p>' +
+      '<div style="background-color: #fef2f2; border-left: 4px solid #DC2626; padding: 14px 18px; margin: 20px 0; border-radius: 4px;">' +
+      '<p style="margin: 0 0 6px 0;"><strong>Chamado:</strong> #{{chamado_numero}} - {{titulo}}</p>' +
+      '<p style="margin: 0 0 6px 0;"><strong>Cliente / Empresa:</strong> {{cliente}} ({{empresa}})</p>' +
+      '<p style="margin: 0 0 6px 0;"><strong>Prazo Limite / Restante:</strong> <span style="color: #DC2626; font-weight: bold;">{{prazo_sla}}</span></p>' +
+      '<p style="margin: 0 0 6px 0;"><strong>Fila:</strong> {{fila}}</p>' +
+      '<p style="margin: 0;"><strong>Alerta gerado em:</strong> {{data_hora}}</p>' +
+      '</div>' +
+      '<p>Aja prontamente no chamado para preservar o cumprimento dos acordos contratuais.</p>',
+    footer_text: 'Lógos AITSM • Gestão e Controle de SLA',
+    button_label: 'Acessar Chamado Imediatamente',
+    button_url_template: '{{link}}',
+    show_button: true,
+    primary_color: '#DC2626',
+    template_layout: 'corporate',
+  },
+  change_approval_request: {
+    subject_template: '[RDM] Aprovação Pendente - Mudança #{{mudanca_numero}} ({{titulo}})',
+    header_title: 'Lógos AITSM',
+    header_subtitle: 'Comitê de Gestão de Mudanças',
+    body_template:
+      '<p>Prezado(a) <strong>{{responsavel}}</strong>,</p>' +
+      '<p>Uma nova Requisição de Mudança (RDM) requer sua avaliação e voto no Comitê <strong>{{comite_tipo}}</strong>.</p>' +
+      '<div style="background-color: #f8fafc; border-left: 4px solid #D97706; padding: 14px 18px; margin: 20px 0; border-radius: 4px;">' +
+      '<p style="margin: 0 0 6px 0;"><strong>Número da RDM:</strong> #{{mudanca_numero}}</p>' +
+      '<p style="margin: 0 0 6px 0;"><strong>Título:</strong> {{titulo}}</p>' +
+      '<p style="margin: 0 0 6px 0;"><strong>Solicitante:</strong> {{cliente}}</p>' +
+      '<p style="margin: 0 0 6px 0;"><strong>Tipo / Risco:</strong> {{tipo}} | Risco: {{prioridade}}</p>' +
+      '<p style="margin: 0 0 6px 0;"><strong>Prazo Limite para Voto:</strong> {{prazo_sla}}</p>' +
+      '<p style="margin: 0;"><strong>Data de Submissão:</strong> {{data_hora}}</p>' +
+      '</div>' +
+      '<p>Por favor, acesse a plataforma para analisar o plano de execução, rollback e registrar seu voto.</p>',
+    footer_text: 'Lógos AITSM • Comitê de Gestão de Mudanças',
+    button_label: 'Votar na Mudança',
+    button_url_template: '{{link}}',
+    show_button: true,
+    primary_color: '#D97706',
+    template_layout: 'modern',
+  },
+  change_voting_deadline: {
+    subject_template: '[Comitê {{comite_tipo}}] Prazo Expirado - Mudança #{{mudanca_numero}}',
+    header_title: 'Lógos AITSM',
+    header_subtitle: 'Comitê de Mudanças - Notificação de Prazo',
+    body_template:
+      '<p>Olá <strong>{{responsavel}}</strong>,</p>' +
+      '<p>O prazo de votação da Mudança <strong>#{{mudanca_numero}} - {{titulo}}</strong> expirou em {{data_hora}}.</p>' +
+      '<div style="background-color: #f8fafc; border-left: 4px solid #4B5563; padding: 14px 18px; margin: 20px 0; border-radius: 4px;">' +
+      '<p style="margin: 0 0 6px 0;"><strong>Comitê:</strong> {{comite_tipo}}</p>' +
+      '<p style="margin: 0 0 6px 0;"><strong>Resultado:</strong> {{status}}</p>' +
+      '<p style="margin: 0 0 6px 0;"><strong>Resumo de Votos:</strong> {{descricao}}</p>' +
+      '<p style="margin: 0;"><strong>Data de Registro:</strong> {{data_hora}}</p>' +
+      '</div>' +
+      '<p>A decisão final foi consolidada e registrada no histórico de auditoria do sistema.</p>',
+    footer_text: 'Lógos AITSM • Comitê de Gestão de Mudanças',
+    button_label: 'Consultar RDM',
+    button_url_template: '{{link}}',
+    show_button: true,
+    primary_color: '#1E293B',
+    template_layout: 'corporate',
+  },
+  project_deadline: {
+    subject_template: '[Projetos] Alerta de Prazo: {{titulo}} - {{status}}',
+    header_title: 'Lógos AITSM',
+    header_subtitle: 'Gestão de Projetos & Prazos',
+    body_template:
+      '<p>Olá <strong>{{responsavel}}</strong>,</p>' +
+      '<p>Este é um aviso automático referente ao prazo de entrega do projeto ou atividade.</p>' +
+      '<div style="background-color: #faf5ff; border-left: 4px solid #7C3AED; padding: 14px 18px; margin: 20px 0; border-radius: 4px;">' +
+      '<p style="margin: 0 0 6px 0;"><strong>Projeto / Atividade:</strong> {{titulo}}</p>' +
+      '<p style="margin: 0 0 6px 0;"><strong>Situação:</strong> {{status}}</p>' +
+      '<p style="margin: 0 0 6px 0;"><strong>Data Prevista:</strong> {{prazo_sla}}</p>' +
+      '<p style="margin: 0;"><strong>Notificado em:</strong> {{data_hora}}</p>' +
+      '</div>' +
+      '<p>Acesse o painel do projeto para conferir as tarefas pendentes e manter as entregas no prazo.</p>',
+    footer_text: 'Lógos AITSM • Gestão Estratégica de Projetos',
+    button_label: 'Acessar Projeto',
+    button_url_template: '{{link}}',
+    show_button: true,
+    primary_color: '#7C3AED',
+    template_layout: 'modern',
+  },
+  portal_approval_request: {
+    subject_template: 'Solicitação de Aprovação: Chamado #{{chamado_numero}} - {{titulo}}',
+    header_title: 'Lógos AITSM',
+    header_subtitle: 'Portal de Serviços - Aprovação Pendente',
+    body_template:
+      '<p>Olá <strong>{{responsavel}}</strong>,</p>' +
+      '<p>O chamado <strong>#{{chamado_numero}}</strong> requer sua aprovação para prosseguir com o atendimento.</p>' +
+      '<div style="background-color: #f8fafc; border-left: 4px solid #D97706; padding: 14px 18px; margin: 20px 0; border-radius: 4px;">' +
+      '<p style="margin: 0 0 6px 0;"><strong>Chamado:</strong> #{{chamado_numero}} - {{titulo}}</p>' +
+      '<p style="margin: 0 0 6px 0;"><strong>Solicitante:</strong> {{cliente}} ({{empresa}})</p>' +
+      '<p style="margin: 0 0 6px 0;"><strong>Justificativa / Tipo:</strong> {{descricao}}</p>' +
+      '<p style="margin: 0 0 6px 0;"><strong>Prazo de Aprovação:</strong> {{prazo_sla}}</p>' +
+      '<p style="margin: 0;"><strong>Data da Solicitação:</strong> {{data_hora}}</p>' +
+      '</div>' +
+      '<p>Você pode analisar e aprovar ou reprovar diretamente clicando no botão abaixo.</p>',
+    footer_text: 'Lógos AITSM • Portal do Cliente',
+    button_label: 'Aprovar ou Recusar',
+    button_url_template: '{{link}}',
+    show_button: true,
+    primary_color: '#D97706',
+    template_layout: 'minimal',
+  },
+}
+
 export const EMAIL_ALERT_SAMPLE_DATA: Record<string, Record<string, string>> = {
   ticket_created: {
     chamado_numero: 'CH-2026-10482',
