@@ -17,8 +17,11 @@ import {
   getPortalTriageSettings,
   savePortalTriageSettings,
   triggerPortalTriage,
+  getPortalTriageHistory,
   PortalTriageSettings,
+  PortalTriageHistoryItem,
 } from '@/services/portal-triage'
+import { Badge } from '@/components/ui/badge'
 import {
   Sparkles,
   Bot,
@@ -53,7 +56,9 @@ export function PortalTriageSettingsTab({
   const [queues, setQueues] = useState<QueueRecord[]>([])
   const [enabled, setEnabled] = useState(true)
   const [defaultQueue, setDefaultQueue] = useState<string>('none')
-  const [minConfidence, setMinConfidence] = useState<number>(0.5)
+  const [minConfidence, setMinConfidence] = useState<number>(0.4)
+  const [historyItems, setHistoryItems] = useState<PortalTriageHistoryItem[]>([])
+  const [historyLoading, setHistoryLoading] = useState(false)
 
   useEffect(() => {
     loadData()
@@ -62,16 +67,17 @@ export function PortalTriageSettingsTab({
   const loadData = async () => {
     setLoading(true)
     try {
-      const [settings, qs] = await Promise.all([
+      const [settings, qs, hist] = await Promise.all([
         getPortalTriageSettings().catch((err) => {
           console.warn('[PortalTriageSettingsTab] falha ao ler settings:', err)
           return {
             portal_auto_triage_enabled: true,
             portal_triage_default_queue: '',
-            portal_triage_min_confidence: 0.5,
+            portal_triage_min_confidence: 0.4,
           } as PortalTriageSettings
         }),
         getQueues().catch(() => []),
+        getPortalTriageHistory(undefined, 20).catch(() => []),
       ])
 
       setEnabled(Boolean(settings.portal_auto_triage_enabled))
@@ -79,9 +85,10 @@ export function PortalTriageSettingsTab({
       setMinConfidence(
         typeof settings.portal_triage_min_confidence === 'number'
           ? settings.portal_triage_min_confidence
-          : 0.5,
+          : 0.4,
       )
       setQueues((qs as QueueRecord[]).filter((q) => q.active !== false))
+      setHistoryItems(hist)
     } catch (err: any) {
       toast({
         title: 'Erro ao carregar configurações',
@@ -90,6 +97,18 @@ export function PortalTriageSettingsTab({
       })
     } finally {
       setLoading(false)
+    }
+  }
+
+  const reloadHistory = async () => {
+    setHistoryLoading(true)
+    try {
+      const hist = await getPortalTriageHistory(undefined, 20)
+      setHistoryItems(hist)
+    } catch (err) {
+      console.warn('Erro ao atualizar histórico de triagem:', err)
+    } finally {
+      setHistoryLoading(false)
     }
   }
 
@@ -400,6 +419,130 @@ export function PortalTriageSettingsTab({
                   <strong>Justificativa da IA:</strong> {testResult.reason}
                 </p>
               )}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Histórico Geral de Triagens IA */}
+      <Card className="itsm-card">
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+                <Sparkles className="h-4 w-4 text-purple-500" />
+                Histórico Recente de Triagens IA
+              </CardTitle>
+              <CardDescription className="text-xs">
+                Registro de cada análise realizada pelo agente (atividade sugerida, confiança, fila
+                e motivo).
+              </CardDescription>
+            </div>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={reloadHistory}
+              disabled={historyLoading}
+              className="h-7 text-xs px-2 gap-1"
+            >
+              <RefreshCw className={`h-3 w-3 ${historyLoading ? 'animate-spin' : ''}`} />
+              Atualizar
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {historyItems.length === 0 ? (
+            <div className="p-4 text-center text-xs text-muted-foreground">
+              Nenhuma triagem registrada ainda. As classificações feitas pelo portal ou pelo botão
+              de teste aparecerão aqui.
+            </div>
+          ) : (
+            <div className="border rounded-lg overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-muted/50 border-b text-muted-foreground font-medium text-[11px]">
+                    <tr>
+                      <th className="p-2.5">Data/Hora</th>
+                      <th className="p-2.5">Chamado</th>
+                      <th className="p-2.5">Atividade Sugerida</th>
+                      <th className="p-2.5">Fila</th>
+                      <th className="p-2.5">Confiança</th>
+                      <th className="p-2.5">Status</th>
+                      <th className="p-2.5">Justificativa / Motivo</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border">
+                    {historyItems.map((h) => (
+                      <tr key={h.id} className="hover:bg-muted/30 transition-colors">
+                        <td className="p-2.5 whitespace-nowrap text-muted-foreground text-[11px]">
+                          {new Date(h.created).toLocaleString('pt-BR')}
+                        </td>
+                        <td className="p-2.5 font-medium whitespace-nowrap">
+                          {h.ticket_number ? (
+                            <span className="font-mono text-primary">#{h.ticket_number}</span>
+                          ) : (
+                            <span className="font-mono text-[10px] text-muted-foreground">
+                              {h.ticket_id?.slice(0, 8)}...
+                            </span>
+                          )}
+                          {h.title && (
+                            <p className="text-[10px] text-muted-foreground line-clamp-1 max-w-[180px]">
+                              {h.title}
+                            </p>
+                          )}
+                        </td>
+                        <td className="p-2.5">
+                          <span className="font-semibold text-foreground">
+                            {h.suggested_category_name || '—'}
+                          </span>
+                          {h.suggested_subcategory_name && (
+                            <span className="text-[10px] text-muted-foreground block">
+                              › {h.suggested_subcategory_name}
+                            </span>
+                          )}
+                        </td>
+                        <td className="p-2.5 text-muted-foreground whitespace-nowrap">
+                          {h.queue_name || 'Padrão'}
+                        </td>
+                        <td className="p-2.5 font-mono whitespace-nowrap">
+                          <Badge
+                            variant="outline"
+                            className={`text-[10px] ${
+                              (h.confidence || 0) >= 0.7
+                                ? 'border-emerald-500/40 text-emerald-700 dark:text-emerald-300'
+                                : (h.confidence || 0) >= 0.4
+                                  ? 'border-amber-500/40 text-amber-700 dark:text-amber-300'
+                                  : 'border-red-500/40 text-red-700 dark:text-red-300'
+                            }`}
+                          >
+                            {typeof h.confidence === 'number'
+                              ? `${Math.round(h.confidence * 100)}%`
+                              : '—'}
+                          </Badge>
+                        </td>
+                        <td className="p-2.5 whitespace-nowrap">
+                          <Badge
+                            variant="outline"
+                            className={`text-[10px] ${
+                              h.applied
+                                ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/30'
+                                : 'bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/30'
+                            }`}
+                          >
+                            {h.applied ? 'Aplicado' : 'Fila padrão'}
+                          </Badge>
+                        </td>
+                        <td className="p-2.5 text-[11px] text-muted-foreground max-w-xs">
+                          <p className="line-clamp-2" title={h.reason}>
+                            {h.reason || '—'}
+                          </p>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
         </CardContent>

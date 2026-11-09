@@ -151,6 +151,20 @@ const BASE_SYSTEM_MODULES: GranularModuleDefinition[] = [
           'Uso da IA para sugerir tags e palavras-chave relevantes na visualização interna do chamado',
         path: '/tickets',
       },
+      {
+        key: 'tickets_categoria_edit',
+        label: 'Editar Categoria e Subcategoria no Chamado',
+        description:
+          'Permite ao operador visualizar e alterar diretamente a Categoria e Subcategoria na ficha do chamado interno',
+        path: '/tickets',
+      },
+      {
+        key: 'tickets_triage_history',
+        label: 'Histórico de Triagem IA do Chamado',
+        description:
+          'Visualização do histórico e justificativas das análises de categorização por inteligência artificial',
+        path: '/tickets',
+      },
     ],
   },
   {

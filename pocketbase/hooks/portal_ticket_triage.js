@@ -1,309 +1,587 @@
+/// <reference path="../pb_data/types.d.ts" />
+
 /**
- * portal_ticket_triage.js — Triagem automática por IA do Portal do Cliente.
- *
- * Chamado a partir do frontend (fire-and-forget) via POST /backend/v1/ai/portal-triage
- * { ticketId }. O agente nativo `portal-ticket-triage-agent` lê título + descrição,
- * encontra a atividade (tkt_categories) correspondente no catálogo e distribui para
- * a fila (queues) configurada nessa atividade.
- *
- * IMPORTANTE (scoping do JSVM): TODO o corpo das lógicas deve ficar INLINE dentro
- * de cada callback — nenhum helper/constante de topo pode ser referenciado dentro
- * de callbacks do PocketBase.
+ * portal_ticket_triage.js — Triagem automática por IA do Portal do Cliente (v2).
+ * Todas as funções auxiliares são declaradas INLINE dentro do callback routerAdd para compatibilidade com o pool JSVM do PocketBase.
  */
 
 routerAdd(
   'POST',
   '/backend/v1/ai/portal-triage',
   (e) => {
-    const dbg = []
-    const applied = { applied: false, reason: '', confidence: 0, activity: '', queue: '' }
-
-    // --- 1. Autenticação: apenas operadores autenticados disparam a triagem -----
-    const auth = e.auth
-    if (!auth || !auth.id) {
-      return e.json(401, { error: 'Não autenticado.' })
-    }
-
-    // --- 2. Payload -------------------------------------------------------------
-    let payload = {}
-    try {
-      payload = e.requestInfo().body
-    } catch (err) {
-      payload = {}
-    }
-    const ticketId = payload.ticketId
-    dbg.push('ticketId=' + (ticketId || 'vazio'))
-    if (!ticketId) {
-      return e.json(400, { error: 'ticketId é obrigatório.', debug: dbg })
-    }
-
-    // --- 3. Configurações (system_settings, key=global) ---------------------------
-    let triageEnabled = true
-    let minConfidence = 0.4
-    let defaultQueueId = ''
-    try {
-      const settingsRecords = $app.findRecordsByFilter(
-        'system_settings',
-        'key = "global"',
-        '',
-        1,
-        0,
-      )
-      if (settingsRecords.length > 0) {
-        const s = settingsRecords[0]
-        triageEnabled = s.getBool('portal_auto_triage_enabled')
-        minConfidence = s.getFloat('portal_triage_min_confidence')
-        if (minConfidence <= 0) minConfidence = 0.4
-        defaultQueueId = s.getString('portal_triage_default_queue')
-        dbg.push('settings: enabled=' + triageEnabled + ' minConf=' + minConfidence)
-      } else {
-        dbg.push('settings: registro global não encontrado, usando defaults')
+    // --- Helpers inline ---
+    const recordHistory = function (app, data) {
+      try {
+        const col = app.findCollectionByNameOrId('portal_triage_history')
+        if (!col) return
+        const rec = new Record(col)
+        rec.set('ticket_id', data.ticketId || '')
+        rec.set('ticket_number', data.ticketNumber || '')
+        rec.set('title', (data.title || '').slice(0, 300))
+        rec.set('suggested_category_id', data.suggestedCategoryId || '')
+        rec.set('suggested_category_name', data.suggestedCategoryName || '')
+        rec.set('suggested_subcategory_id', data.suggestedSubcategoryId || '')
+        rec.set('suggested_subcategory_name', data.suggestedSubcategoryName || '')
+        rec.set('queue_id', data.queueId || '')
+        rec.set('queue_name', data.queueName || '')
+        rec.set('confidence', data.confidence || 0)
+        rec.set('reason', (data.reason || '').slice(0, 1000))
+        rec.set('applied', Boolean(data.applied))
+        rec.set('source', data.source || 'portal')
+        rec.set('match_method', data.matchMethod || 'ai')
+        app.save(rec)
+      } catch (err) {
+        console.warn('[PORTAL_TRIAGE] Falha ao registrar portal_triage_history:', err)
       }
+    }
+
+    const getQueueName = function (app, queueId) {
+      if (!queueId) return ''
+      try {
+        const q = app.findRecordById('queues', queueId)
+        return q ? q.getString('name') || '' : ''
+      } catch (_) {
+        return ''
+      }
+    }
+
+    const heuristicMatch = function (text, categories) {
+      if (!text) return null
+      const clean = text.toLowerCase()
+      const keywordsMap = [
+        { words: ['vpn', 'acesso remoto', 'anydesk', 'teamviewer', 'openvpn'], boost: 0.85 },
+        {
+          words: [
+            'internet',
+            'navegação',
+            'sem rede',
+            'conexão',
+            'wi-fi',
+            'wifi',
+            'cabo de rede',
+            'roteador',
+            'link',
+          ],
+          boost: 0.8,
+        },
+        {
+          words: [
+            'email',
+            'e-mail',
+            'outlook',
+            'webmail',
+            'caixa postal',
+            'troca de senha de email',
+          ],
+          boost: 0.8,
+        },
+        {
+          words: ['impressora', 'impressão', 'toner', 'imprimir', 'papel preso', 'scanner'],
+          boost: 0.8,
+        },
+        {
+          words: [
+            'computador',
+            'notebook',
+            'desktop',
+            'não liga',
+            'tela azul',
+            'formatação',
+            'lentidão',
+          ],
+          boost: 0.75,
+        },
+        {
+          words: [
+            'senha',
+            'login',
+            'bloqueio',
+            'desbloqueio',
+            'reset de senha',
+            'usuário bloqueado',
+          ],
+          boost: 0.8,
+        },
+        { words: ['sistema', 'erp', 'software', 'erro no sistema', 'banco de dados'], boost: 0.7 },
+      ]
+
+      let best = null
+      let maxScore = 0
+
+      for (let i = 0; i < categories.length; i++) {
+        const cat = categories[i]
+        const name = (cat.getString('name') || '').toLowerCase()
+        const desc = (cat.getString('description') || '').toLowerCase()
+
+        let score = 0
+        if (name.length >= 4 && clean.includes(name)) {
+          score += 0.6
+        }
+
+        for (let k = 0; k < keywordsMap.length; k++) {
+          const entry = keywordsMap[k]
+          for (let w = 0; w < entry.words.length; w++) {
+            const word = entry.words[w]
+            if (clean.includes(word) && (name.includes(word) || desc.includes(word))) {
+              score = Math.max(score, entry.boost)
+            }
+          }
+        }
+
+        if (score > maxScore) {
+          maxScore = score
+          best = cat
+        }
+      }
+
+      if (best && maxScore >= 0.5) {
+        const isSub = Boolean(best.getString('parent'))
+        return {
+          categoryId: isSub ? best.getString('parent') : best.id,
+          subcategoryId: isSub ? best.id : '',
+          name: best.getString('name'),
+          confidence: maxScore,
+          reason: 'Encaixe heurístico por termos-chave ("' + best.getString('name') + '").',
+        }
+      }
+
+      return null
+    }
+
+    const dbg = []
+    const applied = {
+      applied: false,
+      ticketId: '',
+      category: '',
+      subcategory: '',
+      queue: '',
+      confidence: 0,
+      reason: '',
+    }
+
+    let body = {}
+    try {
+      body = e.requestInfo().body || {}
+    } catch (_) {}
+
+    const ticketId = body.ticketId || body.ticket_id
+    if (!ticketId) {
+      return e.json(400, { error: 'ticketId é obrigatório' })
+    }
+    applied.ticketId = ticketId
+
+    // 1. Carregar chamado
+    let ticket
+    try {
+      ticket = $app.findRecordById('tickets', ticketId)
     } catch (err) {
-      dbg.push('settings: erro ao ler (' + err + '), usando defaults')
+      return e.json(404, { error: 'Chamado não encontrado: ' + ticketId })
+    }
+
+    const title = ticket.getString('title') || ''
+    const description = ticket.getString('description') || ''
+    const ticketNumber = ticket.getString('number') || ticket.id
+    dbg.push('chamado carregado: ' + ticketNumber + ' | "' + title + '"')
+
+    // 2. Ler configurações globais
+    let triageEnabled = true
+    let minConfidence = 0.45
+    let defaultQueueId = ''
+
+    try {
+      const settingsRecs = $app.findRecordsByFilter('system_settings', 'key = "global"', '', 1, 0)
+      if (settingsRecs && settingsRecs.length > 0) {
+        const s = settingsRecs[0]
+        triageEnabled = s.getBool('portal_auto_triage_enabled')
+        const cfgConf = s.getFloat('portal_triage_min_confidence')
+        if (cfgConf && cfgConf > 0) minConfidence = cfgConf
+        defaultQueueId = s.getString('portal_triage_default_queue') || ''
+      }
+    } catch (errSettings) {
+      dbg.push('erro ao ler system_settings: ' + errSettings)
+    }
+
+    if (!defaultQueueId) {
+      try {
+        const queues = $app.findRecordsByFilter('queues', 'id != ""', 'name', 1, 0)
+        if (queues.length > 0) defaultQueueId = queues[0].id
+      } catch (_) {}
     }
 
     if (!triageEnabled) {
       applied.reason = 'Triagem automática desativada nas configurações.'
       dbg.push('triagem desativada')
+      recordHistory($app, {
+        ticketId,
+        ticketNumber,
+        title,
+        suggestedCategoryId: '',
+        suggestedCategoryName: '',
+        suggestedSubcategoryId: '',
+        suggestedSubcategoryName: '',
+        queueId: defaultQueueId,
+        queueName: getQueueName($app, defaultQueueId),
+        confidence: 0,
+        reason: applied.reason,
+        applied: false,
+        source: 'disabled',
+        matchMethod: 'none',
+      })
       return e.json(200, { ...applied, debug: dbg })
     }
 
-    // --- 4. Carregar o chamado ---------------------------------------------------
-    let ticket = null
+    // 3. Montar catálogo completo de atividades e subatividades
+    let allCategories = []
     try {
-      ticket = $app.findRecordById('tickets', ticketId)
-    } catch (err) {
-      return e.json(404, { error: 'Chamado não encontrado.', debug: dbg })
+      allCategories = $app.findRecordsByFilter('tkt_categories', 'id != ""', 'name', 0, 0)
+    } catch (errCats) {
+      dbg.push('falha ao ler tkt_categories: ' + errCats)
     }
 
-    // Segurança: o chamado precisa pertencer à empresa do usuário autenticado
-    // (portal) OU o usuário precisa ser admin/gestor disparando manualmente.
-    const authEmail = auth.getString('email') || ''
-    const ticketRequesterEmail = ticket.getString('requester_email') || ''
-    let isOwnerCompany = false
-    try {
-      const companyId = ticket.getString('company')
-      if (companyId && auth.getString('company')) {
-        isOwnerCompany = companyId === auth.getString('company')
+    const parentCategories = []
+    const subcategoryMap = {}
+    const categoryById = {}
+
+    for (let i = 0; i < allCategories.length; i++) {
+      const cat = allCategories[i]
+      categoryById[cat.id] = cat
+      const parentId = cat.getString('parent')
+      if (parentId) {
+        if (!subcategoryMap[parentId]) subcategoryMap[parentId] = []
+        subcategoryMap[parentId].push(cat)
+      } else {
+        parentCategories.push(cat)
       }
-    } catch (err) {
-      isOwnerCompany = false
-    }
-    const role = (auth.getString('role') || '').toLowerCase()
-    const isPrivileged = role === 'admin' || role === 'gestor'
-    const matchesRequester = authEmail && ticketRequesterEmail && authEmail === ticketRequesterEmail
-    if (!matchesRequester && !isOwnerCompany && !isPrivileged) {
-      return e.json(403, {
-        error: 'Sem permissão para disparar a triagem deste chamado.',
-        debug: dbg,
-      })
     }
 
-    // --- 5. Já triagido? (com fila e categoria preenchidas, não refaz) -----------
+    // 4. Montar resumo de artigos da Base de Conhecimento
+    let kbArticles = []
     try {
-      const currentQueue = ticket.getString('queue')
-      const currentCategory = ticket.getString('category')
-      if (currentQueue && currentCategory) {
-        applied.reason = 'Chamado já possui fila e categoria definidas — triagem ignorada.'
-        dbg.push('já triagido: queue=' + currentQueue + ' category=' + currentCategory)
-        return e.json(200, { ...applied, reason: applied.reason, debug: dbg })
-      }
-    } catch (err) {
-      dbg.push('verificação de triagem prévia: ' + err)
-    }
-
-    // --- 6. Texto do chamado ------------------------------------------------------
-    const title = ticket.getString('title') || ''
-    const description = ticket.getString('description') || ''
-    if (!title && !description) {
-      applied.reason = 'Chamado sem título e descrição — nada para o agente analisar.'
-      dbg.push('sem texto')
-      return e.json(200, { ...applied, reason: applied.reason, debug: dbg })
-    }
-
-    // --- 7. Catálogo: atividades (tkt_categories) + filas (queues) ---------------
-    // tkt_categories: id, name, queue (relation -> queues), parent (self)
-    // queues: id, name
-    let activityList = []
-    try {
-      activityList = $app.findRecordsByFilter('tkt_categories', '', '-created', 500, 0)
-    } catch (err) {
-      dbg.push('catálogo: erro ao listar tkt_categories (' + err + ')')
-    }
-    if (!activityList || activityList.length === 0) {
-      applied.reason = 'Catálogo de atividades vazio — sem destino possível.'
-      dbg.push('catálogo vazio')
-      return e.json(200, { ...applied, reason: applied.reason, debug: dbg })
-    }
-
-    // Mapa id->nome para exibição, e lista textual para o prompt do agente.
-    let catalogLines = []
-    for (const act of activityList) {
-      const actId = act.id
-      const actName = act.getString('name') || 'Sem nome'
-      let actQueue = act.getString('queue')
-      let queueName = ''
-      if (actQueue) {
-        try {
-          const q = $app.findRecordById('queues', actQueue)
-          queueName = q ? q.getString('name') || '' : ''
-        } catch (err) {
-          queueName = ''
-        }
-      }
-      catalogLines.push(
-        '- id: ' + actId + ' | atividade: ' + actName + ' | fila vinculada: ' + queueName,
+      kbArticles = $app.findRecordsByFilter(
+        'knowledge_articles',
+        'status = "published"',
+        '-created',
+        30,
+        0,
       )
-      applied.activity = applied.activity || actName
-    }
-    dbg.push('catálogo: ' + catalogLines.length + ' atividades')
+    } catch (_) {}
 
-    // --- 8. Agente nativo (definido na migração 0141) ----------------------------
-    let agentResponse = null
+    const kbContext = []
+    for (let k = 0; k < kbArticles.length; k++) {
+      const art = kbArticles[k]
+      const artTitle = art.getString('title') || ''
+      const artCategory = art.getString('category') || ''
+      const artActivity = art.getString('activity') || ''
+      const artTokens = art.getString('tokens') || art.getString('tags') || ''
+      const artSummary = (art.getString('content') || '').replace(/<[^>]*>?/gm, ' ').slice(0, 160)
+      kbContext.push(
+        '- ' +
+          artTitle +
+          ' (Ref: ' +
+          (artActivity || artCategory || 'Geral') +
+          (artTokens ? ', tags: ' + artTokens : '') +
+          '): ' +
+          artSummary,
+      )
+    }
+
+    // 5. Montar texto do catálogo formatado para o prompt
+    const catalogLines = []
+    for (let p = 0; p < parentCategories.length; p++) {
+      const pCat = parentCategories[p]
+      const pId = pCat.id
+      const pName = pCat.getString('name') || ''
+      const pDesc = pCat.getString('description') || ''
+      const pQueue = pCat.getString('queue') || ''
+      let line = '[' + pId + '] ' + pName + (pDesc ? ' — ' + pDesc : '')
+      if (pQueue) line += ' (Fila: ' + pQueue + ')'
+      catalogLines.push(line)
+
+      const subs = subcategoryMap[pId] || []
+      for (let s = 0; s < subs.length; s++) {
+        const sub = subs[s]
+        const sId = sub.id
+        const sName = sub.getString('name') || ''
+        const sDesc = sub.getString('description') || ''
+        const sQueue = sub.getString('queue') || pQueue
+        let subLine = '   └── [' + sId + '] Sub: ' + sName + (sDesc ? ' — ' + sDesc : '')
+        if (sQueue) subLine += ' (Fila: ' + sQueue + ')'
+        catalogLines.push(subLine)
+      }
+    }
+
+    // 6. Preparar prompt de triagem
+    const promptText =
+      'Analise o chamado abaixo aberto pelo cliente e classifique-o no catálogo de serviços:\n\n' +
+      'TÍTULO: ' +
+      title +
+      '\n' +
+      'DESCRIÇÃO: ' +
+      (description || '(sem descrição)') +
+      '\n\n' +
+      '=== CATÁLOGO DE ATIVIDADES E SUBATIVIDADES ===\n' +
+      catalogLines.join('\n') +
+      '\n\n' +
+      (kbContext.length > 0
+        ? '=== REFERÊNCIAS DA BASE DE CONHECIMENTO ===\n' + kbContext.join('\n') + '\n\n'
+        : '') +
+      'INSTRUÇÕES:\n' +
+      '1. Encontre a atividade principal (category_id) e a subatividade (subcategory_id, se houver correspondente no catálogo).\n' +
+      '2. Considere termos do dia a dia: VPN, rede, internet, conexão, Wi-Fi, e-mail, Outlook, impressora, sistema, senha, login, lentidão, formatação, backup, acesso, etc.\n' +
+      '3. Responda ESTRITAMENTE em formato JSON puro, sem crases e sem explicações externas:\n' +
+      '{"category_id": "...", "subcategory_id": "...", "confidence": 0.85, "reason": "justificativa sucinta"}'
+
+    dbg.push('prompt montado (' + promptText.length + ' chars)')
+
+    // 7. Chamada ao agente ou $ai.chat
+    let rawResponse = ''
+    let matchMethod = 'agent'
     try {
-      agentResponse = $ai
-        .agent('portal-ticket-triage-agent')
-        .prompt(
-          'Analise o chamado abaixo e escolha a atividade do catálogo que melhor se ' +
-            'enquadra. Responda ESTRITAMENTE em JSON com as chaves activity_id (string), ' +
-            'confidence (número de 0 a 1) e reason (string curta).\n\n' +
-            '=== CATÁLOGO DE ATIVIDADES ===\n' +
-            catalogLines.join('\n') +
-            '\n\n=== CHAMADO ===\n' +
-            'Título: ' +
-            title +
-            '\n' +
-            'Descrição: ' +
-            description +
-            '\n',
-        )
-    } catch (err) {
-      dbg.push('agente: erro (' + err + ')')
-      applied.reason = 'Falha ao consultar o agente de IA.'
-      return e.json(200, { ...applied, reason: applied.reason, debug: dbg })
+      const agent = $ai.agent('portal-ticket-triage-agent')
+      if (agent && typeof agent.send === 'function') {
+        const res = agent.send(promptText)
+        rawResponse = typeof res === 'string' ? res : res.text || res.reply || JSON.stringify(res)
+        dbg.push('agente respondeu via .send()')
+      } else if (agent && typeof agent.chat === 'function') {
+        const res = agent.chat({ message: promptText })
+        rawResponse = typeof res === 'string' ? res : res.content || res.text || JSON.stringify(res)
+        dbg.push('agente respondeu via .chat()')
+      } else {
+        throw new Error('Agente não possui método send() nem chat()')
+      }
+    } catch (errAgent) {
+      dbg.push('agente nativo falhou: ' + errAgent + ' — tentando fallback $ai.chat')
+      try {
+        const chatRes = $ai.chat({
+          model: 'fast',
+          messages: [
+            {
+              role: 'system',
+              content:
+                'Você é o classificador automático de chamados do Lógos AITSM. Responda APENAS com JSON: {"category_id", "subcategory_id", "confidence", "reason"}.',
+            },
+            { role: 'user', content: promptText },
+          ],
+        })
+        if (chatRes && chatRes.choices && chatRes.choices.length > 0) {
+          rawResponse = chatRes.choices[0].message.content || ''
+          matchMethod = 'ai_chat'
+          dbg.push('$ai.chat respondeu com sucesso')
+        }
+      } catch (errChat) {
+        dbg.push('$ai.chat falhou: ' + errChat)
+      }
     }
 
-    // --- 9. Interpretar resposta do agente ---------------------------------------
-    let chosenActivityId = ''
+    // 8. Fazer parse do JSON retornado pela IA
+    let parsed = null
+    if (rawResponse) {
+      try {
+        let clean = rawResponse.trim()
+        if (clean.startsWith('```json')) clean = clean.slice(7)
+        if (clean.startsWith('```')) clean = clean.slice(3)
+        if (clean.endsWith('```')) clean = clean.slice(0, -3)
+        clean = clean.trim()
+
+        const startIdx = clean.indexOf('{')
+        const endIdx = clean.lastIndexOf('}')
+        if (startIdx >= 0 && endIdx > startIdx) {
+          clean = clean.slice(startIdx, endIdx + 1)
+        }
+        parsed = JSON.parse(clean)
+        dbg.push('JSON parseado com sucesso: ' + JSON.stringify(parsed))
+      } catch (errParse) {
+        dbg.push('falha ao parsear JSON: ' + errParse + ' | raw: ' + rawResponse.slice(0, 100))
+      }
+    }
+
+    let chosenCategoryId = ''
+    let chosenSubcategoryId = ''
     let chosenConfidence = 0
     let chosenReason = ''
-    try {
-      const raw = agentResponse.reply || agentResponse || ''
-      let text = typeof raw === 'string' ? raw : JSON.stringify(raw)
-      // Extrair o primeiro bloco JSON da resposta
-      const start = text.indexOf('{')
-      const end = text.lastIndexOf('}')
-      if (start >= 0 && end > start) {
-        const parsed = JSON.parse(text.slice(start, end + 1))
-        chosenActivityId = parsed.activity_id || parsed.activityId || ''
-        chosenConfidence = typeof parsed.confidence === 'number' ? parsed.confidence : 0
-        chosenReason = parsed.reason || ''
+
+    if (parsed) {
+      chosenCategoryId = (parsed.category_id || parsed.activity_id || '').trim()
+      chosenSubcategoryId = (parsed.subcategory_id || parsed.subactivity_id || '').trim()
+      chosenConfidence = typeof parsed.confidence === 'number' ? parsed.confidence : 0
+      chosenReason = parsed.reason || ''
+    }
+
+    // 9. Fallback heurístico inteligente se IA não conseguiu ou confiança foi baixa
+    if ((!chosenCategoryId || chosenConfidence < minConfidence) && allCategories.length > 0) {
+      dbg.push('ativando busca heurística de contingência no catálogo')
+      const hMatch = heuristicMatch(title + ' ' + description, allCategories)
+      if (hMatch && hMatch.confidence >= 0.5) {
+        dbg.push('match heurístico encontrado: ' + hMatch.name + ' (' + hMatch.confidence + ')')
+        if (!chosenCategoryId || hMatch.confidence > chosenConfidence) {
+          chosenCategoryId = hMatch.categoryId
+          chosenSubcategoryId = hMatch.subcategoryId
+          chosenConfidence = hMatch.confidence
+          chosenReason = hMatch.reason
+          matchMethod = 'heuristic'
+        }
+      }
+    }
+
+    // 10. Validar e resolver categorias e subcategorias encontradas
+    let validCategory = null
+    let validSubcategory = null
+
+    if (chosenCategoryId && categoryById[chosenCategoryId]) {
+      const candidate = categoryById[chosenCategoryId]
+      if (candidate.getString('parent')) {
+        validSubcategory = candidate
+        const parentId = candidate.getString('parent')
+        if (categoryById[parentId]) {
+          validCategory = categoryById[parentId]
+        }
       } else {
-        dbg.push('agente: resposta sem JSON')
-      }
-    } catch (err) {
-      dbg.push('agente: falha ao interpretar resposta (' + err + ')')
-      applied.reason = 'Resposta do agente não pôde ser interpretada.'
-      return e.json(200, { ...applied, reason: applied.reason, debug: dbg })
-    }
-
-    dbg.push(
-      'agente: id=' + chosenActivityId + ' conf=' + chosenConfidence + ' reason=' + chosenReason,
-    )
-
-    // --- 10. Validar atividade escolhida contra o catálogo -----------------------
-    let chosen = null
-    if (chosenActivityId) {
-      for (const act of activityList) {
-        if (act.id === chosenActivityId) {
-          chosen = act
-          break
-        }
+        validCategory = candidate
       }
     }
-    if (!chosen) {
-      applied.reason = 'Atividade escolhida pelo agente não existe no catálogo.'
-      dbg.push('atividade inexistente: ' + chosenActivityId)
-      return e.json(200, { ...applied, reason: applied.reason, debug: dbg })
+
+    if (chosenSubcategoryId && categoryById[chosenSubcategoryId]) {
+      const candidateSub = categoryById[chosenSubcategoryId]
+      validSubcategory = candidateSub
+      const pId = candidateSub.getString('parent')
+      if (pId && !validCategory && categoryById[pId]) {
+        validCategory = categoryById[pId]
+      }
     }
 
-    // --- 11. Destino: fila da atividade escolhida, com fallback -------------------
-    let matchedActivityName = ''
-    let matchedQueueId = ''
-    let matchedCategoryId = ''
-    let matchedSubcategoryId = ''
-    let matchedConfidence = 0
-    let matchedReason = chosenReason
+    // 11. Determinar fila de destino
+    let targetQueueId = ''
+    if (validSubcategory && validSubcategory.getString('queue')) {
+      targetQueueId = validSubcategory.getString('queue')
+    } else if (validCategory && validCategory.getString('queue')) {
+      targetQueueId = validCategory.getString('queue')
+    }
 
-    if (chosen && chosenConfidence >= minConfidence) {
-      matchedActivityName = chosen.getString('name') || ''
-      matchedQueueId = chosen.getString('queue') || ''
-      matchedCategoryId = chosen.id
-      matchedConfidence = chosenConfidence
-      // Se a atividade escolhida é uma subatividade (tem parent), a categoria
-      // do chamado é a atividade principal e a subatividade é a escolhida.
-      try {
-        const parentId = chosen.getString('parent')
-        if (parentId) {
-          matchedSubcategoryId = chosen.id
-          matchedCategoryId = parentId
-        }
-      } catch (err) {
-        dbg.push('parent/subcategory: ' + err)
-      }
-      if (!matchedQueueId) {
-        matchedQueueId = defaultQueueId
-        dbg.push('atividade sem fila; usando fila padrão das settings')
+    // 12. Avaliar se aplica ou cai em fallback
+    let shouldApply = false
+    let finalReason = chosenReason || ''
+
+    if (validCategory && chosenConfidence >= minConfidence) {
+      shouldApply = true
+      if (!targetQueueId) {
+        targetQueueId = defaultQueueId
       }
     } else {
-      // Fallback: agente não encaixou (atividade inexistente ou confiança
-      // abaixo do mínimo) — o chamado vai para o destino padrão configurável.
-      matchedQueueId = defaultQueueId
-      matchedReason = chosen
-        ? 'Confiança ' + chosenConfidence + ' abaixo do mínimo (' + minConfidence + ').'
-        : 'Atividade escolhida pelo agente não existe no catálogo.'
-      dbg.push('fallback para fila padrão')
-    }
-
-    if (!matchedQueueId) {
-      applied.reason = matchedReason || 'Sem fila vinculada à atividade e sem fila padrão.'
-      dbg.push('sem destino')
-      return e.json(200, { ...applied, reason: applied.reason, debug: dbg })
-    }
-
-    let queueName = ''
-    try {
-      const q = $app.findRecordById('queues', matchedQueueId)
-      queueName = q ? q.getString('name') || '' : ''
-    } catch (err) {
-      dbg.push('fila destino não encontrada: ' + matchedQueueId)
-      return e.json(200, { ...applied, reason: 'Fila destino inexistente.', debug: dbg })
-    }
-
-    // --- 12. Aplicar: categoria (se houve encaixe) + fila no chamado -------------
-    try {
-      if (matchedCategoryId) {
-        ticket.set('category', matchedCategoryId)
+      targetQueueId = defaultQueueId
+      if (!validCategory) {
+        finalReason = chosenReason || 'Atividade não identificada com precisão no catálogo.'
+      } else {
+        finalReason =
+          'Confiança (' +
+          chosenConfidence.toFixed(2) +
+          ') abaixo do mínimo exigido (' +
+          minConfidence +
+          '). ' +
+          (chosenReason ? 'Motivo IA: ' + chosenReason : '')
       }
-      if (matchedSubcategoryId) {
-        ticket.set('subcategory', matchedSubcategoryId)
-      }
-      ticket.set('queue', matchedQueueId)
-      $app.save(ticket)
-      applied.applied = true
-      applied.confidence = matchedConfidence
-      applied.queue = queueName
-      applied.activity = matchedActivityName
-      applied.reason = matchedReason
-      dbg.push('aplicado: category=' + matchedCategoryId + ' queue=' + matchedQueueId)
-    } catch (err) {
-      dbg.push('falha ao salvar chamado: ' + err)
-      applied.reason = 'Falha ao persistir categoria e fila no chamado.'
-      return e.json(200, { ...applied, reason: applied.reason, debug: dbg })
     }
+
+    const finalCategoryName = validCategory ? validCategory.getString('name') : ''
+    const finalSubcategoryName = validSubcategory ? validSubcategory.getString('name') : ''
+    const finalQueueName = getQueueName($app, targetQueueId)
+
+    // 13. Persistir no chamado
+    try {
+      let changed = false
+      if (shouldApply && validCategory) {
+        ticket.set('category', validCategory.id)
+        changed = true
+      }
+      if (shouldApply && validSubcategory) {
+        ticket.set('subcategory', validSubcategory.id)
+        changed = true
+      }
+      if (targetQueueId) {
+        ticket.set('queue', targetQueueId)
+        changed = true
+      }
+
+      if (changed) {
+        $app.save(ticket)
+        dbg.push('chamado atualizado com sucesso!')
+      }
+
+      applied.applied = shouldApply
+      applied.category = finalCategoryName
+      applied.subcategory = finalSubcategoryName
+      applied.queue = finalQueueName
+      applied.confidence = chosenConfidence
+      applied.reason = finalReason
+    } catch (errSave) {
+      dbg.push('falha ao salvar chamado: ' + errSave)
+      applied.reason = 'Erro ao persistir no chamado: ' + errSave
+    }
+
+    // 14. Registrar no histórico de triagem (portal_triage_history)
+    recordHistory($app, {
+      ticketId,
+      ticketNumber,
+      title,
+      suggestedCategoryId: validCategory ? validCategory.id : '',
+      suggestedCategoryName: finalCategoryName,
+      suggestedSubcategoryId: validSubcategory ? validSubcategory.id : '',
+      suggestedSubcategoryName: finalSubcategoryName,
+      queueId: targetQueueId,
+      queueName: finalQueueName,
+      confidence: chosenConfidence,
+      reason: finalReason,
+      applied: applied.applied,
+      source: 'portal',
+      matchMethod: matchMethod,
+    })
 
     return e.json(200, { ...applied, debug: dbg })
+  },
+  $apis.requireAuth(),
+)
+
+// ROTA AUXILIAR: GET /backend/v1/ai/portal-triage/history?ticketId=...
+routerAdd(
+  'GET',
+  '/backend/v1/ai/portal-triage/history',
+  (e) => {
+    try {
+      const ticketId = e.requestInfo().query.ticketId || e.requestInfo().query.ticket_id || ''
+      const limit = parseInt(e.requestInfo().query.limit || '50', 10)
+
+      let filter = 'id != ""'
+      if (ticketId) {
+        filter += ' && ticket_id = "' + ticketId.replace(/"/g, '') + '"'
+      }
+
+      const recs = $app.findRecordsByFilter('portal_triage_history', filter, '-created', limit, 0)
+      const list = []
+      for (let i = 0; i < recs.length; i++) {
+        const r = recs[i]
+        list.push({
+          id: r.id,
+          ticket_id: r.getString('ticket_id'),
+          ticket_number: r.getString('ticket_number'),
+          title: r.getString('title'),
+          suggested_category_id: r.getString('suggested_category_id'),
+          suggested_category_name: r.getString('suggested_category_name'),
+          suggested_subcategory_id: r.getString('suggested_subcategory_id'),
+          suggested_subcategory_name: r.getString('suggested_subcategory_name'),
+          queue_id: r.getString('queue_id'),
+          queue_name: r.getString('queue_name'),
+          confidence: r.getFloat('confidence'),
+          reason: r.getString('reason'),
+          applied: r.getBool('applied'),
+          source: r.getString('source'),
+          match_method: r.getString('match_method'),
+          created: r.getString('created'),
+        })
+      }
+
+      return e.json(200, { items: list, total: list.length })
+    } catch (err) {
+      return e.json(500, { error: 'Falha ao buscar histórico de triagem: ' + err })
+    }
   },
   $apis.requireAuth(),
 )

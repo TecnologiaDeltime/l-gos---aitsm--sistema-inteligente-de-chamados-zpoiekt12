@@ -363,9 +363,10 @@ const FEATURE_CATEGORIES: FeatureCategory[] = [
       },
       {
         id: 'portal-14-auto-triage',
-        title: 'Abertura Simplificada e Triagem Automática por IA (v0.0.379)',
+        title:
+          'Abertura Simplificada, Triagem por IA com Catálogo/KB e Auditoria Completa (v0.0.380)',
         description:
-          'O formulário de abertura de chamados do Portal do Cliente foi radicalmente simplificado: foram removidos os campos "Atividade principal", "Subatividade do catálogo" e "Equipe responsável", mantendo exclusivamente título, descrição, prioridade (com badges e descritivos) e anexos, além do seletor opcional de ativo e setor. Ao submeter, o sistema dispara imediatamente uma triagem inteligente por IA (agente nativo portal-ticket-triage-agent, tier rápido, JSON estrito) que lê o título e a descrição, identifica a atividade correspondente no Catálogo de Serviços e distribui o chamado para a equipe configurada naquela atividade. Se a confiança for insuficiente ou a atividade não tiver equipe, o chamado é encaminhado para a fila padrão configurável. Inclui aba de gestão dedicada em Configurações > Triagem do Portal (IA) protegida pela permissão settings_portal_triage para ativar/desativar, selecionar fila de fallback, ajustar o limiar de confiança e simular triagens manualmente.',
+          'Evolução da triagem automática por IA: o agente nativo agora recebe o contexto do Catálogo de Atividades (com subatividades e descrições) e dos artigos da Base de Conhecimento, associando problemas a soluções já documentadas e identificando sinônimos em português (VPN, firewall, rede, lentidão, e-mail, senha, etc.). Conta com camada de fallback heurístico resiliente garantindo que chamados técnicos nunca fiquem sem categorização. Foi criada a coleção portal_triage_history gravando a atividade/subcategoria sugerida, confiança, motivo da IA, fila e status de aplicação para cada chamado analisado. Na visão do operador, foram adicionados os seletores editáveis de Categoria e Subcategoria logo abaixo de "Apurações de horas" (com permissão tickets_categoria_edit), além de card de Histórico de Triagem IA (permissão tickets_triage_history) com botão de reclassificação em 1 clique.',
         tag: 'IA & Autoatendimento',
       },
     ],

@@ -23,8 +23,29 @@ export interface PortalTriageResult {
   reason?: string
   confidence?: number
   activity?: string
+  category?: string
+  subcategory?: string
   queue?: string
   debug?: string[]
+}
+
+export interface PortalTriageHistoryItem {
+  id: string
+  ticket_id: string
+  ticket_number?: string
+  title?: string
+  suggested_category_id?: string
+  suggested_category_name?: string
+  suggested_subcategory_id?: string
+  suggested_subcategory_name?: string
+  queue_id?: string
+  queue_name?: string
+  confidence?: number
+  reason?: string
+  applied: boolean
+  source?: string
+  match_method?: string
+  created: string
 }
 
 export const DEFAULT_TRIAGE_SETTINGS: PortalTriageSettings = {
@@ -106,4 +127,41 @@ export const triggerPortalTriageFireAndForget = (ticketId: string): void => {
   void triggerPortalTriage(ticketId).catch((err) => {
     console.warn('[portal-triage] erro em background:', err)
   })
+}
+
+/**
+ * Busca histórico de triagens da IA.
+ * Se ticketId for fornecido, filtra pelo chamado. Caso contrário, traz os registros mais recentes.
+ */
+export const getPortalTriageHistory = async (
+  ticketId?: string,
+  limit: number = 30,
+): Promise<PortalTriageHistoryItem[]> => {
+  try {
+    const queryParams = new URLSearchParams()
+    if (ticketId) queryParams.set('ticketId', ticketId)
+    if (limit) queryParams.set('limit', String(limit))
+
+    const url = `/backend/v1/ai/portal-triage/history?${queryParams.toString()}`
+    const res = await pb.send<{ items: PortalTriageHistoryItem[]; total: number }>(url, {
+      method: 'GET',
+    })
+    return res?.items || []
+  } catch (err) {
+    // Fallback: consulta direta na coleção via SDK se a rota falhar
+    try {
+      let filter = 'id != ""'
+      if (ticketId) filter += ` && ticket_id = "${ticketId}"`
+      const recs = await pb
+        .collection('portal_triage_history')
+        .getList<PortalTriageHistoryItem>(1, limit, {
+          filter,
+          sort: '-created',
+        })
+      return recs.items
+    } catch (sdkErr) {
+      console.warn('[portal-triage] falha ao buscar histórico de triagem:', sdkErr)
+      return []
+    }
+  }
 }

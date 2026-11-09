@@ -92,15 +92,23 @@ _Observação:_ No Modo Suporte do Administrador, ao alternar a empresa no selet
   - **Nível de Prioridade** (seleção visual em cartões: Baixa, Média, Alta, Crítica — com badges coloridos e descrições de impacto no negócio; padrão "Média").
   - **Anexos** (upload drag-and-drop de capturas de tela, documentos PDF e imagens, com pré-visualização e remoção antes do envio).
   - **Contexto opcional do cliente:** Setor, Nome do contato e Equipamento CMDB relacionado (com o atalho "Meu chamado" pré-preenchendo os dados do solicitante logado).
-- **Triagem Automática por IA (Agente Nativo `portal-ticket-triage-agent`):**
-  - Imediatamente após a gravação do chamado, é disparado um trigger assíncrono (_fire-and-forget_, que nunca atrasa nem bloqueia a confirmação do chamado ao cliente).
-  - O agente de IA lê o **Título** e a **Descrição** fornecidos pelo cliente, analisa o **Catálogo de Serviços** (`tkt_categories` ativas) e infere a atividade exata que melhor descreve a solicitação.
-  - O chamado é automaticamente classificado com a atividade identificada e distribuído para a **Equipe responsável (`queue`) configurada no catálogo de serviço dentro daquela atividade**.
-  - Se a confiança for menor que o limiar configurado (padrão 50%) ou a atividade não tiver fila vinculada, o chamado recebe a **Fila Padrão de Triagem** definida nas configurações do sistema.
-  - Um registro de interação automática do sistema é anexado ao chamado documentando a decisão da IA (atividade selecionada, equipe/fila atribuída, nível de confiança e justificativa em linguagem natural).
+- **Triagem Automática por IA e Aprendizado Contínuo (v0.0.380):**
+  - Imediatamente após a gravação do chamado pelo portal, é disparado um trigger assíncrono (_fire-and-forget_, que nunca atrasa nem bloqueia a confirmação da abertura do chamado para o cliente).
+  - **Leitura Enriquecida com Catálogo e Base de Conhecimento:** O agente de IA analisa o **Título** e a **Descrição** do chamado cruzando com todas as atividades e subatividades do catálogo (`tkt_categories`) e com a Base de Conhecimento ativa (`knowledge_articles`), aprendendo a partir das soluções e artigos documentados para prever a atividade correta.
+  - **Mecanismo Multi-Camadas com Resiliência:**
+    1. _Agente Nativo Skip Cloud (`$ai.agents.portal-ticket-triage-agent`)_ para interpretação semântica de alta precisão;
+    2. _Fallback Heurístico Léxico/N-gramas_ com normalização de acentos, sinônimos em português (ex.: VPN, firewall, rede, lentidão, e-mail, senha, bloqueio, certificado) garantindo que chamados com termos técnicos nunca fiquem sem categorização;
+    3. _Atribuição de Equipe / Fila:_ Aplica a equipe configurada na atividade do catálogo ou direciona com segurança para a Fila Padrão configurada.
+  - **Histórico Completo de Triagens da IA (`portal_triage_history`):**
+    - Cada análise registra a atividade sugerida, subatividade, confiança calculada, motivo/justificativa gerada pela IA, fila de destino e se a classificação foi aplicada diretamente ou encaminhada como fallback.
+    - O histórico fica auditável na aba de Configurações do Portal e também na ficha do chamado no painel interno do operador.
+- **Campos Categoria e Subcategoria no Chamado (Visão do Operador):**
+  - Na ficha interna do chamado (`/tickets/:id`), logo abaixo da seção **Apurações de Horas**, o operador visualiza os campos de seleção de **Categoria Principal (Atividade)** e **Subcategoria (Subatividade)** populados diretamente a partir do Catálogo de Atividades.
+  - Editáveis pelo operador autorizado com permissão `tickets.tickets_categoria_edit` e auditoria de histórico `tickets.tickets_triage_history`.
+  - Permite reclassificar manualmente o chamado ou solicitar reavaliação imediata da IA com o botão _"Reclassificar IA"_.
 - **Aba de Gestão e Parâmetros (Configurações → Triagem do Portal):**
-  - Acessível apenas para perfis com a permissão granular `settings.settings_portal_triage`.
-  - Permite ligar/desligar a triagem automática, alterar a fila padrão de fallback, ajustar o limiar de confiança mínima (0% a 100%) e realizar **simulações manuais** em tempo real com qualquer texto de exemplo para aferir como a IA categorizaria e para qual equipe distribuiria.
+  - Acessível para perfis com a permissão `settings.settings_portal_triage`.
+  - Permite ligar/desligar a triagem automática, alterar a fila padrão de fallback, ajustar o limiar de confiança mínima (0% a 100%), realizar simulações e consultar a tabela de histórico de triagens recentes.
 - O chamado nasce com `source: "Portal"` e entra imediatamente no fluxo de atendimento corporativo com status "Novo".
 
 ### Módulo C: Aprovações dos Pontos Focais
