@@ -900,6 +900,14 @@ const FEATURE_CATEGORIES: FeatureCategory[] = [
           'Balanceamento e apropriação de apontamentos conforme nível de suporte atribuído.',
         tag: 'Distribuição N1/N2',
       },
+      {
+        id: 'inf-email-alerts-central',
+        title:
+          'Central de Alertas por E-mail e Editor Visual de Templates (/settings?tab=email_alerts)',
+        description:
+          'Módulo institucional centralizado com 9 tipos de alertas por e-mail (Aviso de SLA para operadores, chamado aberto pelo portal, mudança de status do chamado, conclusão, delegação, solicitação/expiração de comitê de mudanças, tarefas de projetos e aprovações do portal). Todos os alertas iniciam rigorosamente desligados por padrão (enabled=false) com interruptores individuais por tipo. Motor de despacho unificado (pocketbase/hooks/email_alert_central.js) via Skip Cloud Mailer com proteção anti-duplicidade em email_sent_logs por (alert_key, reference_id, recipient). Editor visual com três layouts (Moderno, Corporativo, Minimalista), marca oficial Lógos AITSM, paleta de cores corporativa, pré-visualização ao vivo com interpolação de variáveis e governança por permissão granular settings_email_alerts.',
+        tag: 'Alertas & E-mails',
+      },
     ],
   },
   {

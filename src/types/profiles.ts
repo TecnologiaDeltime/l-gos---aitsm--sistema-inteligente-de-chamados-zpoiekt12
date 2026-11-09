@@ -185,6 +185,14 @@ export const PROFILE_LANDING_OPTIONS: ProfileLandingOption[] = [
     moduleKey: 'projects',
     itemKey: 'projects_list',
   },
+  {
+    route: '/settings?tab=email_alerts',
+    label: 'Central de Alertas por E-mail',
+    description:
+      'Configuração dos alertas por e-mail, interruptores e editor de templates com a marca Lógos AITSM',
+    moduleKey: 'settings',
+    itemKey: 'settings_email_alerts',
+  },
 ]
 
 export interface ProfileRecord {
