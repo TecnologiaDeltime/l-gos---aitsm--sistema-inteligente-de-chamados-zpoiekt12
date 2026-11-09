@@ -20,6 +20,7 @@ export interface EmailAlertSetting {
   show_button: boolean
   button_label: string
   button_url_template: string
+  variables_hint?: Array<{ key: string; desc: string }> | string
   updated?: string
   created?: string
 }

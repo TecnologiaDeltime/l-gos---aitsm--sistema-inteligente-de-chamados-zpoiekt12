@@ -39,6 +39,7 @@ import { AutoAssignSettingsTab } from '@/components/settings/AutoAssignSettingsT
 import { ProjectDeadlinesSettingsTab } from '@/components/settings/ProjectDeadlinesSettingsTab'
 import { PrtgSettingsTab } from '@/components/settings/PrtgSettingsTab'
 import { PortalTriageSettingsTab } from '@/components/settings/PortalTriageSettingsTab'
+import { EmailAlertsSettingsTab } from '@/components/settings/EmailAlertsSettingsTab'
 import {
   ShieldCheck,
   Globe,
@@ -48,6 +49,7 @@ import {
   Users,
   Activity,
   Sparkles,
+  Send,
 } from 'lucide-react'
 import {
   getVoiceAlertsEnabled,
@@ -117,7 +119,9 @@ export default function SettingsPage() {
                           ? 'project-deadlines'
                           : searchParams.get('tab') === 'portal_triage'
                             ? 'portal_triage'
-                            : 'general'
+                            : searchParams.get('tab') === 'email_alerts'
+                              ? 'email_alerts'
+                              : 'general'
   const [mainTab, setMainTab] = useState<
     | 'general'
     | 'portal'
@@ -126,6 +130,7 @@ export default function SettingsPage() {
     | 'ai_reply'
     | 'client_notif'
     | 'email'
+    | 'email_alerts'
     | 'vault'
     | 'security'
     | 'profiles'
@@ -144,6 +149,7 @@ export default function SettingsPage() {
       | 'ai_reply'
       | 'client_notif'
       | 'email'
+      | 'email_alerts'
       | 'vault'
       | 'security'
       | 'profiles'
@@ -166,21 +172,23 @@ export default function SettingsPage() {
                 ? { tab: 'client_notif' }
                 : tab === 'email'
                   ? { tab: 'email' }
-                  : tab === 'vault'
-                    ? { tab: 'vault' }
-                    : tab === 'security'
-                      ? { tab: 'security' }
-                      : tab === 'profiles'
-                        ? { tab: 'profiles' }
-                        : tab === 'consumption_agent'
-                          ? { tab: 'consumption_agent' }
-                          : tab === 'auto_assign'
-                            ? { tab: 'auto_assign' }
-                            : tab === 'prtg'
-                              ? { tab: 'prtg' }
-                              : tab === 'project-deadlines'
-                                ? { tab: 'project-deadlines' }
-                                : {},
+                  : tab === 'email_alerts'
+                    ? { tab: 'email_alerts' }
+                    : tab === 'vault'
+                      ? { tab: 'vault' }
+                      : tab === 'security'
+                        ? { tab: 'security' }
+                        : tab === 'profiles'
+                          ? { tab: 'profiles' }
+                          : tab === 'consumption_agent'
+                            ? { tab: 'consumption_agent' }
+                            : tab === 'auto_assign'
+                              ? { tab: 'auto_assign' }
+                              : tab === 'prtg'
+                                ? { tab: 'prtg' }
+                                : tab === 'project-deadlines'
+                                  ? { tab: 'project-deadlines' }
+                                  : {},
     )
   }
 
@@ -199,6 +207,8 @@ export default function SettingsPage() {
       setMainTab('client_notif')
     } else if (tabFromUrl === 'email' && mainTab !== 'email') {
       setMainTab('email')
+    } else if (tabFromUrl === 'email_alerts' && mainTab !== 'email_alerts') {
+      setMainTab('email_alerts')
     } else if (tabFromUrl === 'vault' && mainTab !== 'vault') {
       setMainTab('vault')
     } else if (tabFromUrl === 'security' && mainTab !== 'security') {
@@ -707,6 +717,23 @@ export default function SettingsPage() {
             </Button>
           )}
 
+          {permissions.canAccessItem('settings', 'settings_email_alerts') && (
+            <Button
+              type="button"
+              size="sm"
+              variant={mainTab === 'email_alerts' ? 'default' : 'ghost'}
+              onClick={() => handleTabChange('email_alerts')}
+              className={`h-8 text-xs font-semibold rounded-lg transition-all ${
+                mainTab === 'email_alerts'
+                  ? 'bg-amber-500/20 text-amber-500 border border-amber-500/30 shadow-xs shadow-amber-500/10'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              <Send className="h-3.5 w-3.5 mr-1.5 text-amber-500" />
+              Alertas por E-mail
+            </Button>
+          )}
+
           {permissions.canAccessItem('settings', 'settings_email') && (
             <Button
               type="button"
@@ -816,6 +843,14 @@ export default function SettingsPage() {
       {mainTab === 'security' && permissions.canAccessItem('settings', 'settings_security') && (
         <SecuritySettingsTab isAdmin={permissions.isAdmin} />
       )}
+
+      {/* SEÇÃO CENTRAL DE ALERTAS POR E-MAIL */}
+      {mainTab === 'email_alerts' &&
+        permissions.canAccessItem('settings', 'settings_email_alerts') && (
+          <EmailAlertsSettingsTab
+            canEdit={permissions.canEdit('settings_email_alerts') || permissions.isGestor}
+          />
+        )}
 
       {/* SEÇÃO 0: COFRE DE SENHAS */}
       {mainTab === 'vault' && permissions.canAccessItem('vault', 'vault_cofre') && (

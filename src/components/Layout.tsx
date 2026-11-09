@@ -60,6 +60,7 @@ import {
   MessageSquare,
   History,
   FolderKanban,
+  Send,
 } from 'lucide-react'
 import { useAuth } from '@/hooks/use-auth'
 import { useTheme } from '@/hooks/use-theme'
@@ -660,6 +661,14 @@ export default function Layout() {
       path: '/settings/ticket-templates',
       icon: FileText,
       show: permissions.canAccessItem('settings', 'settings_ticket_templates'),
+    },
+    {
+      label: 'Alertas por E-mail',
+      path: '/settings?tab=email_alerts',
+      icon: Send,
+      show:
+        permissions.canAccessItem('settings', 'settings_email_alerts') &&
+        permissions.canWriteModule('settings'),
     },
     {
       label: 'Caixa de E-mail & IMAP',
