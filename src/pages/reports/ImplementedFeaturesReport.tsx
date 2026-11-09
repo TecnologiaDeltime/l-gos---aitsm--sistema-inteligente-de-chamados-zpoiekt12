@@ -109,10 +109,10 @@ const FEATURE_CATEGORIES: FeatureCategory[] = [
       },
       {
         id: 'tk-5',
-        title: 'Ticket Filho (Hierarquia)',
+        title: 'Ticket Filho (Hierarquia) com Feedback de IA e Parâmetros Derivados do Catálogo',
         description:
-          'Abertura a partir de chamado pai, banner "Ticket Filho de #XXXX" no detalhe e ícone GitBranch na listagem.',
-        tag: 'Hierarquia',
+          'Abertura a partir de chamado pai, banner "Ticket Filho de #XXXX" no detalhe e ícone GitBranch na listagem. Conta com sugestão inteligente de Categoria e Subcategoria por IA (motor treinado no catálogo de atividades e base de conhecimento) disparada em tempo real enquanto o operador preenche título e descrição, com exibição de nível de confiança, justificativa da IA e botão "Aplicar Sugestão" em 1 clique. Registra auditoria completa na coleção portal_triage_history e contabiliza acertos ou correções humanas no painel de Métricas de Satisfação da IA. Herda automaticamente o contrato do chamado pai e pré-visualiza em tempo real Tipo, Impacto, Urgência e Prioridade derivados da atividade selecionada. Controlado pela permissão tickets_child_ai_feedback no catálogo de permissões.',
+        tag: 'Hierarquia & IA',
       },
       {
         id: 'tk-6',

@@ -12,7 +12,7 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
-import { Loader2, GitBranch, Layers, Info } from 'lucide-react'
+import { Loader2, GitBranch, Layers, Info, Sparkles, Check, RefreshCw } from 'lucide-react'
 import {
   Select,
   SelectContent,
@@ -27,8 +27,14 @@ import { getCompanyDepartments, CompanyDepartmentRecord } from '@/services/compa
 import { calculateSlaFromMinutes } from '@/lib/sla-utils'
 import { computePriority } from '@/lib/itil-matrix'
 import { useToast } from '@/hooks/use-toast'
+import { usePermissions } from '@/hooks/use-permissions'
 import { getErrorMessage } from '@/lib/pocketbase/errors'
 import { PriorityBadge } from '@/components/PriorityBadge'
+import {
+  suggestTriageForText,
+  recordChildTicketTriage,
+  TriageSuggestionResult,
+} from '@/services/portal-triage'
 
 interface SlaDeadlines {
   sla_response_deadline?: string
@@ -65,6 +71,15 @@ export function ChildTicketDialog({
 
   const [submitting, setSubmitting] = useState(false)
   const [loadingCatalog, setLoadingCatalog] = useState(false)
+
+  // Feedback e sugestão de IA
+  const perms = usePermissions()
+  const canUseAiFeedback =
+    perms.canAccessItem('tickets', 'tickets_child_ai_feedback') || perms.isAdmin || perms.isGestor
+
+  const [aiSuggestion, setAiSuggestion] = useState<TriageSuggestionResult | null>(null)
+  const [aiLoading, setAiLoading] = useState(false)
+  const [aiApplied, setAiApplied] = useState(false)
 
   // Categorias pai (atividades principais)
   const parentCategories = useMemo(
@@ -107,6 +122,9 @@ export function ChildTicketDialog({
     setTitle('')
     setDescription('')
     setDepartment(parent.department || '')
+    setAiSuggestion(null)
+    setAiLoading(false)
+    setAiApplied(false)
 
     // Carrega catálogo de atividades
     setLoadingCatalog(true)
@@ -149,6 +167,59 @@ export function ChildTicketDialog({
         .catch(() => setDepartments([]))
     }
   }, [open, parent])
+
+  // Debounce para sugestão de IA ao digitar título e descrição
+  useEffect(() => {
+    if (!open || !canUseAiFeedback) return
+
+    const trimmedTitle = title.trim()
+    const trimmedDesc = description.trim()
+
+    // Requer ao menos título com 4 caracteres ou descrição significativa
+    if (trimmedTitle.length < 4 && trimmedDesc.length < 10) {
+      setAiSuggestion(null)
+      return
+    }
+
+    const timer = setTimeout(async () => {
+      setAiLoading(true)
+      try {
+        const result = await suggestTriageForText({
+          title: trimmedTitle,
+          description: trimmedDesc,
+        })
+        if (result && result.category_id) {
+          setAiSuggestion(result)
+        } else {
+          setAiSuggestion(null)
+        }
+      } catch (err) {
+        console.warn('Erro ao carregar sugestão de IA para chamado filho:', err)
+      } finally {
+        setAiLoading(false)
+      }
+    }, 750)
+
+    return () => clearTimeout(timer)
+  }, [open, title, description, canUseAiFeedback])
+
+  const handleApplyAiSuggestion = () => {
+    if (!aiSuggestion || !aiSuggestion.category_id) return
+
+    setMainCategory(aiSuggestion.category_id)
+    if (aiSuggestion.subcategory_id) {
+      setSubCategory(aiSuggestion.subcategory_id)
+    } else {
+      setSubCategory('')
+    }
+    setAiApplied(true)
+    toast({
+      title: 'Sugestão da IA aplicada!',
+      description: `Categoria: ${aiSuggestion.category_name}${
+        aiSuggestion.subcategory_name ? ` → ${aiSuggestion.subcategory_name}` : ''
+      }`,
+    })
+  }
 
   const handleMainCategoryChange = (catId: string) => {
     setMainCategory(catId)
@@ -196,7 +267,7 @@ export function ChildTicketDialog({
         )
       }
 
-      await createTicket({
+      const createdChild = await createTicket({
         number: 'PENDENTE',
         company: parent.company,
         unit: parent.unit || undefined,
@@ -227,6 +298,26 @@ export function ChildTicketDialog({
         sla_response_deadline: sla.sla_response_deadline,
         sla_solution_deadline: sla.sla_solution_deadline,
       } as any)
+
+      // Registrar triagem no histórico portal_triage_history se houve sugestão da IA
+      if (aiSuggestion && createdChild) {
+        const catObj = categories.find((c) => c.id === mainCategory)
+        const subObj = categories.find((c) => c.id === subCategory)
+
+        recordChildTicketTriage({
+          ticketId: createdChild.id,
+          ticketNumber: createdChild.number || 'FILHO',
+          title: title.trim(),
+          suggestion: aiSuggestion,
+          applied: aiApplied,
+          chosenCategoryId: mainCategory || '',
+          chosenCategoryName: catObj?.name || '',
+          chosenSubcategoryId: subCategory || '',
+          chosenSubcategoryName: subObj?.name || '',
+        }).catch((err) => {
+          console.warn('Erro ao registrar histórico de triagem do chamado filho:', err)
+        })
+      }
 
       toast({ title: 'Chamado filho criado com sucesso!' })
       onOpenChange(false)
@@ -282,6 +373,91 @@ export function ChildTicketDialog({
               placeholder="Descreva o escopo e detalhes do chamado filho..."
             />
           </div>
+
+          {/* Card de Sugestão de IA (Feedback da IA no chamado filho) */}
+          {canUseAiFeedback && (
+            <div className="rounded-lg border border-purple-200 bg-gradient-to-r from-purple-50/80 to-indigo-50/80 p-3.5 dark:border-purple-900/60 dark:from-purple-950/20 dark:to-indigo-950/20">
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <div className="flex h-6 w-6 items-center justify-center rounded-full bg-purple-600 text-white shadow-sm dark:bg-purple-500">
+                    <Sparkles className="h-3.5 w-3.5" />
+                  </div>
+                  <span className="text-xs font-semibold uppercase tracking-wider text-purple-900 dark:text-purple-300">
+                    Feedback de IA (Classificação Automática)
+                  </span>
+                </div>
+                {aiLoading && (
+                  <div className="flex items-center gap-1.5 text-xs text-purple-700 dark:text-purple-300">
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    <span>Analisando solicitação...</span>
+                  </div>
+                )}
+              </div>
+
+              {aiSuggestion && !aiLoading ? (
+                <div className="mt-2.5 space-y-2 text-xs">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="space-y-0.5">
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium text-foreground">
+                          {aiSuggestion.category_name}
+                          {aiSuggestion.subcategory_name
+                            ? ` → ${aiSuggestion.subcategory_name}`
+                            : ''}
+                        </span>
+                        <Badge
+                          variant="secondary"
+                          className={
+                            aiSuggestion.confidence >= 0.8
+                              ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300'
+                              : aiSuggestion.confidence >= 0.6
+                                ? 'bg-blue-100 text-blue-800 dark:bg-blue-950/60 dark:text-blue-300'
+                                : 'bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300'
+                          }
+                        >
+                          Confiança: {Math.round(aiSuggestion.confidence * 100)}%
+                        </Badge>
+                      </div>
+                      {aiSuggestion.reason && (
+                        <p className="text-[11px] text-muted-foreground line-clamp-2">
+                          <span className="font-semibold">Motivo:</span> {aiSuggestion.reason}
+                        </p>
+                      )}
+                    </div>
+
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant={aiApplied ? 'outline' : 'default'}
+                      onClick={handleApplyAiSuggestion}
+                      className={
+                        aiApplied
+                          ? 'border-purple-300 text-purple-700 hover:bg-purple-100 dark:border-purple-800 dark:text-purple-300'
+                          : 'bg-purple-600 text-white hover:bg-purple-700 dark:bg-purple-500'
+                      }
+                    >
+                      {aiApplied ? (
+                        <>
+                          <Check className="mr-1.5 h-3.5 w-3.5 text-emerald-600" />
+                          Sugestão Aplicada
+                        </>
+                      ) : (
+                        <>
+                          <Sparkles className="mr-1.5 h-3.5 w-3.5" />
+                          Aplicar Sugestão
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              ) : !aiLoading ? (
+                <p className="mt-1 text-[11px] text-purple-800/80 dark:text-purple-300/80">
+                  Digite o título e descrição do chamado filho para que a IA sugira automaticamente
+                  a categoria e subcategoria no catálogo de serviços.
+                </p>
+              ) : null}
+            </div>
+          )}
 
           {/* Categoria e Subcategoria alimentadas pelo catálogo de atividades */}
           <div className="space-y-3 rounded-lg border bg-slate-50/70 p-3.5 dark:bg-slate-900/40">

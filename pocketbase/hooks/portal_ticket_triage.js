@@ -587,3 +587,391 @@ routerAdd(
   },
   $apis.requireAuth(),
 )
+
+// ROTA DE SUGESTÃO PRÉ-CRIAÇÃO (Chamados Filhos / Formulários Interativos): POST /backend/v1/ai/portal-triage/suggest
+routerAdd(
+  'POST',
+  '/backend/v1/ai/portal-triage/suggest',
+  (e) => {
+    const heuristicMatch = function (text, categories) {
+      if (!text) return null
+      const clean = text.toLowerCase()
+      const keywordsMap = [
+        { words: ['vpn', 'acesso remoto', 'anydesk', 'teamviewer', 'openvpn'], boost: 0.85 },
+        {
+          words: [
+            'internet',
+            'navegação',
+            'sem rede',
+            'conexão',
+            'wi-fi',
+            'wifi',
+            'cabo de rede',
+            'roteador',
+            'link',
+          ],
+          boost: 0.8,
+        },
+        {
+          words: [
+            'email',
+            'e-mail',
+            'outlook',
+            'webmail',
+            'caixa postal',
+            'troca de senha de email',
+          ],
+          boost: 0.8,
+        },
+        {
+          words: ['impressora', 'impressão', 'toner', 'imprimir', 'papel preso', 'scanner'],
+          boost: 0.8,
+        },
+        {
+          words: [
+            'computador',
+            'notebook',
+            'desktop',
+            'não liga',
+            'tela azul',
+            'formatação',
+            'lentidão',
+          ],
+          boost: 0.75,
+        },
+        {
+          words: [
+            'senha',
+            'login',
+            'bloqueio',
+            'desbloqueio',
+            'reset de senha',
+            'usuário bloqueado',
+          ],
+          boost: 0.8,
+        },
+        { words: ['sistema', 'erp', 'software', 'erro no sistema', 'banco de dados'], boost: 0.7 },
+      ]
+
+      let best = null
+      let maxScore = 0
+
+      for (let i = 0; i < categories.length; i++) {
+        const cat = categories[i]
+        const name = (cat.getString('name') || '').toLowerCase()
+        const desc = (cat.getString('description') || '').toLowerCase()
+
+        let score = 0
+        if (name.length >= 4 && clean.includes(name)) {
+          score += 0.6
+        }
+
+        for (let k = 0; k < keywordsMap.length; k++) {
+          const entry = keywordsMap[k]
+          for (let w = 0; w < entry.words.length; w++) {
+            const word = entry.words[w]
+            if (clean.includes(word) && (name.includes(word) || desc.includes(word))) {
+              score = Math.max(score, entry.boost)
+            }
+          }
+        }
+
+        if (score > maxScore) {
+          maxScore = score
+          best = cat
+        }
+      }
+
+      if (best && maxScore >= 0.5) {
+        const isSub = Boolean(best.getString('parent'))
+        return {
+          categoryId: isSub ? best.getString('parent') : best.id,
+          subcategoryId: isSub ? best.id : '',
+          name: best.getString('name'),
+          confidence: maxScore,
+          reason: 'Encaixe heurístico por termos-chave ("' + best.getString('name') + '").',
+        }
+      }
+
+      return null
+    }
+
+    const getQueueName = function (app, queueId) {
+      if (!queueId) return ''
+      try {
+        const q = app.findRecordById('queues', queueId)
+        return q ? q.getString('name') || '' : ''
+      } catch (_) {
+        return ''
+      }
+    }
+
+    let body = {}
+    try {
+      body = e.requestInfo().body || {}
+    } catch (_) {}
+
+    const title = (body.title || '').trim()
+    const description = (body.description || '').trim()
+
+    if (!title && !description) {
+      return e.json(400, { error: 'Título ou descrição devem ser fornecidos para sugestão.' })
+    }
+
+    // 1. Ler configurações globais
+    let triageEnabled = true
+    let minConfidence = 0.45
+    let defaultQueueId = ''
+
+    try {
+      const settingsRecs = $app.findRecordsByFilter('system_settings', 'key = "global"', '', 1, 0)
+      if (settingsRecs && settingsRecs.length > 0) {
+        const s = settingsRecs[0]
+        triageEnabled = s.getBool('portal_auto_triage_enabled')
+        const cfgConf = s.getFloat('portal_triage_min_confidence')
+        if (cfgConf && cfgConf > 0) minConfidence = cfgConf
+        defaultQueueId = s.getString('portal_triage_default_queue') || ''
+      }
+    } catch (_) {}
+
+    if (!defaultQueueId) {
+      try {
+        const queues = $app.findRecordsByFilter('queues', 'id != ""', 'name', 1, 0)
+        if (queues.length > 0) defaultQueueId = queues[0].id
+      } catch (_) {}
+    }
+
+    // 2. Montar catálogo completo de atividades e subatividades
+    let allCategories = []
+    try {
+      allCategories = $app.findRecordsByFilter('tkt_categories', 'id != ""', 'name', 0, 0)
+    } catch (_) {}
+
+    const parentCategories = []
+    const subcategoryMap = {}
+    const categoryById = {}
+
+    for (let i = 0; i < allCategories.length; i++) {
+      const cat = allCategories[i]
+      categoryById[cat.id] = cat
+      const parentId = cat.getString('parent')
+      if (parentId) {
+        if (!subcategoryMap[parentId]) subcategoryMap[parentId] = []
+        subcategoryMap[parentId].push(cat)
+      } else {
+        parentCategories.push(cat)
+      }
+    }
+
+    // 3. Montar resumo de artigos da Base de Conhecimento
+    let kbArticles = []
+    try {
+      kbArticles = $app.findRecordsByFilter(
+        'knowledge_articles',
+        'status = "published"',
+        '-created',
+        30,
+        0,
+      )
+    } catch (_) {}
+
+    const kbContext = []
+    for (let k = 0; k < kbArticles.length; k++) {
+      const art = kbArticles[k]
+      const artTitle = art.getString('title') || ''
+      const artCategory = art.getString('category') || ''
+      const artActivity = art.getString('activity') || ''
+      const artTokens = art.getString('tokens') || art.getString('tags') || ''
+      const artSummary = (art.getString('content') || '').replace(/<[^>]*>?/gm, ' ').slice(0, 160)
+      kbContext.push(
+        '- ' +
+          artTitle +
+          ' (Ref: ' +
+          (artActivity || artCategory || 'Geral') +
+          (artTokens ? ', tags: ' + artTokens : '') +
+          '): ' +
+          artSummary,
+      )
+    }
+
+    // 4. Montar texto do catálogo formatado para o prompt
+    const catalogLines = []
+    for (let p = 0; p < parentCategories.length; p++) {
+      const pCat = parentCategories[p]
+      const pId = pCat.id
+      const pName = pCat.getString('name') || ''
+      const pDesc = pCat.getString('description') || ''
+      const pQueue = pCat.getString('queue') || ''
+      let line = '[' + pId + '] ' + pName + (pDesc ? ' — ' + pDesc : '')
+      if (pQueue) line += ' (Fila: ' + pQueue + ')'
+      catalogLines.push(line)
+
+      const subs = subcategoryMap[pId] || []
+      for (let s = 0; s < subs.length; s++) {
+        const sub = subs[s]
+        const sId = sub.id
+        const sName = sub.getString('name') || ''
+        const sDesc = sub.getString('description') || ''
+        const sQueue = sub.getString('queue') || pQueue
+        let subLine = '   └── [' + sId + '] Sub: ' + sName + (sDesc ? ' — ' + sDesc : '')
+        if (sQueue) subLine += ' (Fila: ' + sQueue + ')'
+        catalogLines.push(subLine)
+      }
+    }
+
+    // 5. Preparar prompt
+    const promptText =
+      'Analise a solicitação abaixo para categorização no catálogo de serviços:\n\n' +
+      'TÍTULO: ' +
+      title +
+      '\n' +
+      'DESCRIÇÃO: ' +
+      (description || '(sem descrição)') +
+      '\n\n' +
+      '=== CATÁLOGO DE ATIVIDADES E SUBATIVIDADES ===\n' +
+      catalogLines.join('\n') +
+      '\n\n' +
+      (kbContext.length > 0
+        ? '=== REFERÊNCIAS DA BASE DE CONHECIMENTO ===\n' + kbContext.join('\n') + '\n\n'
+        : '') +
+      'INSTRUÇÕES:\n' +
+      '1. Encontre a atividade principal (category_id) e a subatividade (subcategory_id, se houver correspondente no catálogo).\n' +
+      '2. Considere termos do dia a dia: VPN, rede, internet, conexão, Wi-Fi, e-mail, Outlook, impressora, sistema, senha, login, lentidão, formatação, backup, acesso, etc.\n' +
+      '3. Responda ESTRITAMENTE em formato JSON puro, sem crases e sem explicações externas:\n' +
+      '{"category_id": "...", "subcategory_id": "...", "confidence": 0.85, "reason": "justificativa sucinta"}'
+
+    // 6. Chamada à IA
+    let rawResponse = ''
+    let matchMethod = 'agent'
+    try {
+      const agent = $ai.agent('portal-ticket-triage-agent')
+      if (agent && typeof agent.send === 'function') {
+        const res = agent.send(promptText)
+        rawResponse = typeof res === 'string' ? res : res.text || res.reply || JSON.stringify(res)
+      } else if (agent && typeof agent.chat === 'function') {
+        const res = agent.chat({ message: promptText })
+        rawResponse = typeof res === 'string' ? res : res.content || res.text || JSON.stringify(res)
+      } else {
+        throw new Error('Agente sem send ou chat')
+      }
+    } catch (_) {
+      try {
+        const chatRes = $ai.chat({
+          model: 'fast',
+          messages: [
+            {
+              role: 'system',
+              content:
+                'Você é o classificador automático de chamados do Lógos AITSM. Responda APENAS com JSON: {"category_id", "subcategory_id", "confidence", "reason"}.',
+            },
+            { role: 'user', content: promptText },
+          ],
+        })
+        if (chatRes && chatRes.choices && chatRes.choices.length > 0) {
+          rawResponse = chatRes.choices[0].message.content || ''
+          matchMethod = 'ai_chat'
+        }
+      } catch (_) {}
+    }
+
+    // 7. Parse do JSON
+    let parsed = null
+    if (rawResponse) {
+      try {
+        let clean = rawResponse.trim()
+        if (clean.startsWith('```json')) clean = clean.slice(7)
+        if (clean.startsWith('```')) clean = clean.slice(3)
+        if (clean.endsWith('```')) clean = clean.slice(0, -3)
+        clean = clean.trim()
+
+        const startIdx = clean.indexOf('{')
+        const endIdx = clean.lastIndexOf('}')
+        if (startIdx >= 0 && endIdx > startIdx) {
+          clean = clean.slice(startIdx, endIdx + 1)
+        }
+        parsed = JSON.parse(clean)
+      } catch (_) {}
+    }
+
+    let chosenCategoryId = ''
+    let chosenSubcategoryId = ''
+    let chosenConfidence = 0
+    let chosenReason = ''
+
+    if (parsed) {
+      chosenCategoryId = (parsed.category_id || parsed.activity_id || '').trim()
+      chosenSubcategoryId = (parsed.subcategory_id || parsed.subactivity_id || '').trim()
+      chosenConfidence = typeof parsed.confidence === 'number' ? parsed.confidence : 0
+      chosenReason = parsed.reason || ''
+    }
+
+    // 8. Fallback heurístico
+    if ((!chosenCategoryId || chosenConfidence < minConfidence) && allCategories.length > 0) {
+      const hMatch = heuristicMatch(title + ' ' + description, allCategories)
+      if (hMatch && hMatch.confidence >= 0.5) {
+        if (!chosenCategoryId || hMatch.confidence > chosenConfidence) {
+          chosenCategoryId = hMatch.categoryId
+          chosenSubcategoryId = hMatch.subcategoryId
+          chosenConfidence = hMatch.confidence
+          chosenReason = hMatch.reason
+          matchMethod = 'heuristic'
+        }
+      }
+    }
+
+    // 9. Validar ids existentes
+    let validCategory = null
+    let validSubcategory = null
+
+    if (chosenCategoryId && categoryById[chosenCategoryId]) {
+      const candidate = categoryById[chosenCategoryId]
+      if (candidate.getString('parent')) {
+        validSubcategory = candidate
+        const parentId = candidate.getString('parent')
+        if (categoryById[parentId]) {
+          validCategory = categoryById[parentId]
+        }
+      } else {
+        validCategory = candidate
+      }
+    }
+
+    if (chosenSubcategoryId && categoryById[chosenSubcategoryId]) {
+      const candidateSub = categoryById[chosenSubcategoryId]
+      validSubcategory = candidateSub
+      const pId = candidateSub.getString('parent')
+      if (pId && !validCategory && categoryById[pId]) {
+        validCategory = categoryById[pId]
+      }
+    }
+
+    // 10. Fila associada
+    let targetQueueId = ''
+    if (validSubcategory && validSubcategory.getString('queue')) {
+      targetQueueId = validSubcategory.getString('queue')
+    } else if (validCategory && validCategory.getString('queue')) {
+      targetQueueId = validCategory.getString('queue')
+    }
+    if (!targetQueueId) {
+      targetQueueId = defaultQueueId
+    }
+
+    return e.json(200, {
+      category_id: validCategory ? validCategory.id : '',
+      category_name: validCategory ? validCategory.getString('name') : '',
+      subcategory_id: validSubcategory ? validSubcategory.id : '',
+      subcategory_name: validSubcategory ? validSubcategory.getString('name') : '',
+      queue_id: targetQueueId,
+      queue_name: getQueueName($app, targetQueueId),
+      confidence: chosenConfidence,
+      reason:
+        chosenReason ||
+        (validCategory
+          ? 'Classificado com base no catálogo de serviços.'
+          : 'Não foi possível identificar categoria com confiança.'),
+      match_method: matchMethod,
+      min_confidence: minConfidence,
+    })
+  },
+  $apis.requireAuth(),
+)

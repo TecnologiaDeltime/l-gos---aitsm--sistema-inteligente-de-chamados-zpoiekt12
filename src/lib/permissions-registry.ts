@@ -165,6 +165,13 @@ const BASE_SYSTEM_MODULES: GranularModuleDefinition[] = [
           'Visualização do histórico e justificativas das análises de categorização por inteligência artificial',
         path: '/tickets',
       },
+      {
+        key: 'tickets_child_ai_feedback',
+        label: 'Feedback de IA em Chamados Filhos',
+        description:
+          'Sugestão automática de categoria e subcategoria por IA no diálogo de abertura de chamados filhos',
+        path: '/tickets',
+      },
     ],
   },
   {

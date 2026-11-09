@@ -99,6 +99,19 @@ export const DEFAULT_TRIAGE_SETTINGS: PortalTriageSettings = {
   portal_triage_min_confidence: 0.4,
 }
 
+export interface TriageSuggestionResult {
+  category_id: string
+  category_name: string
+  subcategory_id?: string
+  subcategory_name?: string
+  queue_id?: string
+  queue_name?: string
+  confidence: number
+  reason: string
+  match_method?: string
+  min_confidence?: number
+}
+
 /** Carrega as configurações de triagem do portal (system_settings, key=global). */
 export const getPortalTriageSettings = async (): Promise<
   (PortalTriageSettings & { id?: string }) | null
@@ -215,6 +228,99 @@ export const getPortalTriageHistory = async (
  * Registra a correção manual feita pelo operador na ficha do chamado.
  * Vincula ao último registro de triagem do chamado em questão.
  */
+/**
+ * Consulta a IA para sugerir categoria e subcategoria com base no título e descrição fornecidos.
+ * Utilizado interativamente antes da criação do chamado (por exemplo, no diálogo de Chamado Filho).
+ */
+export async function suggestTriageForText(params: {
+  title: string
+  description?: string
+}): Promise<TriageSuggestionResult | null> {
+  const cleanTitle = (params.title || '').trim()
+  const cleanDesc = (params.description || '').trim()
+
+  if (!cleanTitle && !cleanDesc) {
+    return null
+  }
+
+  try {
+    const res = await pb.send<TriageSuggestionResult>('/backend/v1/ai/portal-triage/suggest', {
+      method: 'POST',
+      body: {
+        title: cleanTitle,
+        description: cleanDesc,
+      },
+    })
+    return res || null
+  } catch (err) {
+    console.warn('[portal-triage] Erro ao obter sugestão da IA:', err)
+    return null
+  }
+}
+
+/**
+ * Registra no histórico portal_triage_history a triagem de um chamado filho recém-criado,
+ * incluindo a sugestão da IA e se o operador aceitou ou corrigiu a categoria/subcategoria.
+ */
+export async function recordChildTicketTriage(params: {
+  ticketId: string
+  ticketNumber: string
+  title: string
+  suggestion: TriageSuggestionResult
+  applied: boolean
+  chosenCategoryId: string
+  chosenCategoryName: string
+  chosenSubcategoryId?: string
+  chosenSubcategoryName?: string
+  operatorId?: string
+}): Promise<string | null> {
+  try {
+    const isDifferent =
+      Boolean(params.suggestion.category_id) &&
+      (params.chosenCategoryId !== params.suggestion.category_id ||
+        Boolean(
+          params.chosenSubcategoryId &&
+          params.chosenSubcategoryId !== (params.suggestion.subcategory_id || ''),
+        ))
+
+    const now = new Date().toISOString()
+
+    const recordData: Record<string, any> = {
+      ticket_id: params.ticketId,
+      ticket_number: params.ticketNumber,
+      ticket_title: params.title,
+      suggested_category_id: params.suggestion.category_id || '',
+      suggested_category_name: params.suggestion.category_name || '',
+      suggested_subcategory_id: params.suggestion.subcategory_id || '',
+      suggested_subcategory_name: params.suggestion.subcategory_name || '',
+      queue_id: params.suggestion.queue_id || '',
+      queue_name: params.suggestion.queue_name || '',
+      confidence: params.suggestion.confidence || 0,
+      reason: params.suggestion.reason || '',
+      applied: params.applied,
+      source: 'child_ticket',
+      match_method: params.suggestion.match_method || 'agent',
+      operator_corrected: isDifferent,
+      final_category_id: params.chosenCategoryId || '',
+      final_category_name: params.chosenCategoryName || '',
+      final_subcategory_id: params.chosenSubcategoryId || '',
+      final_subcategory_name: params.chosenSubcategoryName || '',
+    }
+
+    if (isDifferent) {
+      recordData.corrected_at = now
+      recordData.corrected_by = params.operatorId || pb.authStore.model?.id || ''
+      recordData.correction_seconds = 0
+    }
+
+    const createdRecord = await pb.collection('portal_triage_history').create(recordData)
+    return createdRecord.id
+  } catch (err) {
+    console.warn('[portal-triage] Erro ao registrar triagem de chamado filho no histórico:', err)
+    return null
+  }
+}
+
 export async function recordOperatorCorrection(params: {
   ticketId: string
   finalCategoryId: string
