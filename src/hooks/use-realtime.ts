@@ -76,7 +76,11 @@ export function useRealtime<TRecord extends RecordModel = RecordModel>(
       if (unsubscribeFn) {
         unsubscribeFn().catch(() => {})
       }
-      connectSub.then((fn) => fn().catch(() => {})).catch(() => {})
+      connectSub
+        .then((fn) => {
+          if (typeof fn === 'function') fn().catch(() => {})
+        })
+        .catch(() => {})
     }
   }, [collectionName, enabled])
 }

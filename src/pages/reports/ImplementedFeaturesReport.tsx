@@ -245,6 +245,14 @@ const FEATURE_CATEGORIES: FeatureCategory[] = [
           'Envio de mensagem (texto ou anexo) para operadores offline sem bloqueio de presença: a lista de contatos e o histórico permitem selecionar/iniciar conversa normalmente e a mensagem é criada na coleção operator_chat_messages como qualquer outra. Estado offline explícito na lista (ponto cinza + "Offline — visto há X" pela session_last_activity, recalculado a cada 30 s) e no cabeçalho da conversa, com aviso de que a mensagem será entregue quando ele voltar. A entrega usa o realtime e os mecanismos existentes (badge de não lidas, alerta sonoro e refresh periódico de 30 s) — sem fila nova. Permissão: reutiliza o item existente chat.chat_operadores do catálogo.',
         tag: 'Comunicação / Chat',
       },
+      {
+        id: 'tk-chat-fluidez',
+        title:
+          'Chat Interno: correção de fluidez — envio ágil, erros claros e áudio em todos os navegadores (v0.0.375)',
+        description:
+          'Tratamento de especialista no chat em tempo real (/chat): a coleção operator_chat_messages recebeu autodate created/updated (migração 0138), corrigindo o erro 400 que derrubava as listagens ordenadas por -created e o envio; a gravação de áudio passou a cobrir os codecs reais dos navegadores (application/ogg do Firefox e audio/x-m4a do Safari na allowlist do campo file, migração 0138) com backfill de created (0139). Na UI, o campo de mensagem nunca fica desabilitado durante o envio, falhas exibem faixa de erro com o motivo traduzido (describeChatError) e botão "Tentar de novo", além de toast descritivo; realtime com aviso único de queda de conexão e reconexão automática. Todos os recursos anteriores preservados: bolhas em cores distintas, ticks de entrega/leitura, badge no ícone da barra superior, som discreto, presença online/offline, histórico com paginação, busca interna e menções @. Permissão: reutiliza o item existente chat.chat_operadores do catálogo.',
+        tag: 'Comunicação / Chat',
+      },
     ],
   },
   {
