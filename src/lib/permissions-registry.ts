@@ -851,6 +851,13 @@ const BASE_SYSTEM_MODULES: GranularModuleDefinition[] = [
           'Integração com PRTG Network Monitor para abertura automática de chamados, deduplicação de alertas e auto-resolução',
         path: '/settings?tab=prtg',
       },
+      {
+        key: 'settings_email_alerts',
+        label: 'Central de Alertas por E-mail',
+        description:
+          'Gerenciar ativação individual de alertas por e-mail, anti-duplicidade e editor de templates com a marca Lógos AITSM',
+        path: '/settings?tab=email_alerts',
+      },
     ],
   },
 ]

@@ -165,119 +165,31 @@ cronAdd('approval_escalation_cron', '* * * * *', function () {
   }
 
   function sendSystemMailMessage(message, mailerConfig) {
-    if (!mailerConfig) mailerConfig = resolveSystemMailerConfig()
-    var originalSmtp = null
-    var needsRestore = false
+    var brandName =
+      (mailerConfig && mailerConfig.brandName) || globalThis.SYSTEM_BRAND_NAME || 'Lógos AITSM'
+    var brandEmail =
+      (mailerConfig && mailerConfig.senderEmail) ||
+      globalThis.SYSTEM_DEFAULT_SENDER_EMAIL ||
+      'noreply@logositsm.com.br'
 
-    if (
-      mailerConfig.isDedicated &&
-      mailerConfig.host &&
-      mailerConfig.user &&
-      mailerConfig.password
-    ) {
-      try {
-        var s = $app.settings
-        if (typeof s === 'function') s = s()
-        if (s && s.smtp) {
-          originalSmtp = {
-            enabled: s.smtp.enabled,
-            host: s.smtp.host,
-            port: s.smtp.port,
-            username: s.smtp.username,
-            password: s.smtp.password,
-            tls: s.smtp.tls,
-            authMethod: s.smtp.authMethod,
-          }
-          var resolvedPassword = safeDecryptSecret(mailerConfig.password)
-          if (
-            resolvedPassword === '__DECRYPT_FAILED__' ||
-            resolvedPassword.indexOf('enc:v1:') === 0
-          ) {
-            throw new Error('Falha interna de descriptografia da senha SMTP — envio abortado.')
-          }
-          s.smtp.enabled = true
-          s.smtp.host = mailerConfig.host
-          s.smtp.port = mailerConfig.port
-          s.smtp.username = mailerConfig.user
-          s.smtp.password = resolvedPassword
-          s.smtp.tls = mailerConfig.encryption === 'SSL/TLS' || mailerConfig.port === 465
-          needsRestore = true
-        }
-      } catch (applyErr) {
-        $app
-          .logger()
-          .warn('approval_escalation_cron: cannot set runtime smtp', 'err', applyErr.message)
-      }
-    }
-
-    var restoreSettings = function () {
-      if (needsRestore && originalSmtp) {
-        try {
-          var sRestore = $app.settings
-          if (typeof sRestore === 'function') sRestore = sRestore()
-          if (sRestore && sRestore.smtp) {
-            sRestore.smtp.enabled = originalSmtp.enabled
-            sRestore.smtp.host = originalSmtp.host
-            sRestore.smtp.port = originalSmtp.port
-            sRestore.smtp.username = originalSmtp.username
-            sRestore.smtp.password = originalSmtp.password
-            sRestore.smtp.tls = originalSmtp.tls
-            sRestore.smtp.authMethod = originalSmtp.authMethod
-          }
-        } catch (_) {}
-      }
-    }
-
-    try {
-      var client = $app.newMailClient()
-      client.send(message)
+    if (globalThis.sendSystemMailMessage) {
+      globalThis.sendSystemMailMessage(message)
       return {
         success: true,
-        smtp_used: mailerConfig.isDedicated ? 'dedicated_mailbox' : 'logos_fallback',
-        host: mailerConfig.host,
-        user: mailerConfig.user || mailerConfig.senderEmail,
+        smtp_used: 'skip_cloud_mailer',
+        host: 'skip_mail',
+        user: brandEmail,
       }
-    } catch (primaryErr) {
-      restoreSettings()
-      needsRestore = false
-      if (mailerConfig.isDedicated) {
-        $app
-          .logger()
-          .warn(
-            'approval_escalation_cron: falha no envio via caixa dedicada, tentando fallback SMTP',
-            'err',
-            primaryErr.message,
-          )
-        try {
-          var fallbackClient = $app.newMailClient()
-          fallbackClient.send(message)
-          return {
-            success: true,
-            smtp_used: 'logos_fallback',
-            fallback_reason: primaryErr.message,
-            host: originalSmtp ? originalSmtp.host : '',
-            user: originalSmtp ? originalSmtp.username : '',
-          }
-        } catch (fallbackErr) {
-          $app
-            .logger()
-            .error(
-              'approval_escalation_cron: falha também no fallback SMTP',
-              'err',
-              fallbackErr.message,
-            )
-          throw new Error(
-            'Falha no envio pela caixa dedicada (' +
-              primaryErr.message +
-              ') e no fallback (' +
-              fallbackErr.message +
-              ')',
-          )
-        }
-      }
-      throw primaryErr
-    } finally {
-      restoreSettings()
+    }
+
+    message.from = { address: brandEmail, name: brandName }
+    var client = $app.newMailClient()
+    client.send(message)
+    return {
+      success: true,
+      smtp_used: 'skip_cloud_mailer',
+      host: 'skip_mail',
+      user: brandEmail,
     }
   }
 

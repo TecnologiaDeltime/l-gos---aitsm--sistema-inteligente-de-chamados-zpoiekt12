@@ -4,21 +4,34 @@ cronAdd('change_voting_deadline', '*/15 * * * *', function () {
   var now = new Date()
   var nowIso = now.toISOString()
 
-  // Mudanças pendentes cujo prazo expirou
+  // Mudanças pendentes cujo prazo expirou e que ainda NÃO foram notificadas (anti-duplicidade estrita)
   var pending = []
   try {
     pending = $app.findRecordsByFilter(
       'changes',
       'approval_status = "Pendente" && voting_deadline_at != "" && voting_deadline_at <= "' +
         nowIso +
-        '"',
+        '" && (voting_deadline_notified_at = "" || voting_deadline_notified_at = null)',
       'voting_deadline_at',
       0,
       0,
     )
   } catch (err) {
-    $app.logger().error('change_voting_deadline: query failed', 'error', err.message)
-    return
+    // Fallback caso voting_deadline_notified_at ainda não exista
+    try {
+      pending = $app.findRecordsByFilter(
+        'changes',
+        'approval_status = "Pendente" && voting_deadline_at != "" && voting_deadline_at <= "' +
+          nowIso +
+          '"',
+        'voting_deadline_at',
+        0,
+        0,
+      )
+    } catch (fallbackErr) {
+      $app.logger().error('change_voting_deadline: query failed', 'error', fallbackErr.message)
+      return
+    }
   }
 
   if (pending.length === 0) return
@@ -111,6 +124,9 @@ cronAdd('change_voting_deadline', '*/15 * * * *', function () {
 
     var reasonText = ''
     var escalationTs = nowIso
+
+    // Marca imediatamente voting_deadline_notified_at para nunca reenviar no ciclo de 15 minutos
+    change.set('voting_deadline_notified_at', escalationTs)
 
     if (finalizeAs === 'Aprovada' || finalizeAs === 'Recusada') {
       change.set('approval_status', finalizeAs === 'Aprovada' ? 'Aprovada' : 'Recusada')
@@ -333,24 +349,56 @@ cronAdd('change_voting_deadline', '*/15 * * * *', function () {
       'Link: ' +
       link
 
+    // Envio com verificação de switch individual (change_voting_deadline) e anti-duplicidade
     for (var e = 0; e < notifRecipients.length; e++) {
-      if (!notifRecipients[e].email) continue
+      var recipientEmail = notifRecipients[e].email
+      if (!recipientEmail) continue
+
       try {
-        var message = new MailerMessage()
-        var brand = globalThis.SYSTEM_BRAND_NAME || 'Lógos AITSM'
-        var brandEmail = globalThis.SYSTEM_DEFAULT_SENDER_EMAIL || 'noreply@logositsm.com.br'
-        message.from = { address: brandEmail, name: brand }
-        message.to = [{ address: notifRecipients[e].email }]
-        message.subject = subject
-        message.text = bodyText
-        if (globalThis.sendSystemMailMessage) {
-          globalThis.sendSystemMailMessage(message)
+        if (typeof globalThis.sendSystemAlertEmail === 'function') {
+          globalThis.sendSystemAlertEmail({
+            alert_key: 'change_voting_deadline',
+            reference_id: changeId,
+            recipient: recipientEmail,
+            subject: subject,
+            data: {
+              mudanca_numero: changeNumber,
+              titulo: changeTitle,
+              comite_tipo: committeeType,
+              data_expiracao: new Date(escalationTs).toLocaleString('pt-BR'),
+              resultado_escalonamento: humanResult,
+              resumo_votos:
+                approved + ' aprovado(s), ' + refused + ' recusado(s), ' + revision + ' revisão',
+              link: link,
+            },
+            fallbackText: bodyText,
+          })
         } else {
-          var mailClient = $app.newMailClient()
-          mailClient.send(message)
+          // Fallback seguro usando Skip Mailer
+          var mailMsg = new MailerMessage()
+          var brandName = globalThis.SYSTEM_BRAND_NAME || 'Lógos AITSM'
+          var defaultSender = globalThis.SYSTEM_DEFAULT_SENDER_EMAIL || 'noreply@logositsm.com.br'
+          mailMsg.from = { address: defaultSender, name: brandName }
+          mailMsg.to = [{ address: recipientEmail }]
+          mailMsg.subject = subject
+          mailMsg.text = bodyText
+          if (globalThis.sendSystemMailMessage) {
+            globalThis.sendSystemMailMessage(mailMsg)
+          } else {
+            var client = $app.newMailClient()
+            client.send(mailMsg)
+          }
         }
       } catch (err) {
-        $app.logger().error('change_voting_deadline mail error', 'error', err.message)
+        $app
+          .logger()
+          .error(
+            'change_voting_deadline mail error',
+            'recipient',
+            recipientEmail,
+            'error',
+            err.message,
+          )
       }
     }
   }

@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-09T04:19:58.548Z",
+  "generatedAt": "2026-11-09T19:13:26.136Z",
   "collections": [
     {
       "name": "users",
@@ -7051,6 +7051,12 @@
           "type": "text",
           "required": false,
           "system": false
+        },
+        {
+          "name": "voting_deadline_notified_at",
+          "type": "date",
+          "required": false,
+          "system": false
         }
       ],
       "indexes": [
@@ -12783,6 +12789,174 @@
         }
       ],
       "indexes": []
+    },
+    {
+      "name": "email_alert_settings",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != \"\"",
+        "view": "@request.auth.id != \"\"",
+        "create": "@request.auth.id != \"\"",
+        "update": "@request.auth.id != \"\"",
+        "delete": "@request.auth.id != \"\""
+      },
+      "fields": [
+        {
+          "name": "alert_key",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "name",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "description",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "category",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "enabled",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "recipient_types",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "template_layout",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "primary_color",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "subject_template",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "header_title",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "header_subtitle",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "body_template",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "footer_text",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "show_button",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "button_label",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "button_url_template",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "variables_hint",
+          "type": "json",
+          "required": false,
+          "system": false
+        }
+      ],
+      "indexes": ["CREATE UNIQUE INDEX idx_email_alert_key ON email_alert_settings (alert_key)"]
+    },
+    {
+      "name": "email_sent_logs",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != \"\"",
+        "view": "@request.auth.id != \"\"",
+        "create": "@request.auth.id != \"\"",
+        "update": "@request.auth.id != \"\"",
+        "delete": "@request.auth.id != \"\""
+      },
+      "fields": [
+        {
+          "name": "alert_key",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "reference_id",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "recipient",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "sent_at",
+          "type": "date",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "subject",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "meta",
+          "type": "json",
+          "required": false,
+          "system": false
+        }
+      ],
+      "indexes": [
+        "CREATE INDEX idx_email_sent_lookup ON email_sent_logs (alert_key, reference_id, recipient)"
+      ]
     }
   ]
 }

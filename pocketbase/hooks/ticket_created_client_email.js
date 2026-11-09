@@ -130,6 +130,49 @@ onRecordAfterCreateSuccess((e) => {
               .replace(/"/g, '&quot;')
           }
 
+    var ticketLink = publicTicketUrl || ''
+
+    // Se a Central de Alertas estiver disponível, usamos o dispatcher com verificação de switch individual
+    if (typeof globalThis.sendSystemAlertEmail === 'function') {
+      var alertResult = globalThis.sendSystemAlertEmail({
+        alert_key: 'ticket_created',
+        reference_id: ticket.id,
+        recipient: recipientEmail,
+        subject: 'Chamado #' + ticketNumber + ' registrado com sucesso - ' + ticketTitle,
+        data: {
+          chamado_numero: ticketNumber,
+          titulo: ticketTitle,
+          descricao: cleanDescription,
+          cliente: requesterName,
+          prioridade: priority,
+          tipo: type,
+          data_abertura: dateFormatted,
+          empresa: companyName,
+          link: ticketLink,
+        },
+      })
+
+      if (alertResult && alertResult.sent) {
+        $app
+          .logger()
+          .info(
+            'ticket_created_client_email: notificação enviada via Central de Alertas para ' +
+              recipientEmail +
+              ' (chamado #' +
+              ticketNumber +
+              ')',
+          )
+        return e.next()
+      } else if (alertResult && alertResult.reason === 'alert_disabled_by_config') {
+        $app
+          .logger()
+          .info(
+            'ticket_created_client_email: envio suprimido pois o alerta ticket_created está DESLIGADO nas configurações.',
+          )
+        return e.next()
+      }
+    }
+
     var subject = 'Chamado #' + ticketNumber + ' aberto com sucesso: ' + ticketTitle
 
     // Montagem do bloco de conteúdo HTML sintético e profissional

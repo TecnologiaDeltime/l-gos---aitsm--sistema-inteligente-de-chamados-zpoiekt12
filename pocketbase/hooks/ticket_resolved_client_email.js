@@ -213,6 +213,49 @@ onRecordAfterUpdateSuccess((e) => {
               .replace(/"/g, '&quot;')
           }
 
+    // Se a Central de Alertas estiver disponível, usamos o dispatcher com verificação de switch individual
+    if (typeof globalThis.sendSystemAlertEmail === 'function' && recipientEmail) {
+      var resolvedAlertResult = globalThis.sendSystemAlertEmail({
+        alert_key: 'ticket_resolved',
+        reference_id: ticket.id + '_resolved',
+        recipient: recipientEmail,
+        subject: 'Chamado #' + ticketNumber + ' concluído: ' + ticketTitle,
+        data: {
+          chamado_numero: ticketNumber,
+          titulo: ticketTitle,
+          solucao: cleanSolution,
+          cliente: requesterName,
+          data_conclusao: resFormatted,
+          link:
+            portalBaseUrl || frontendUrl
+              ? (portalBaseUrl || frontendUrl) +
+                '/portal?tab=tickets&openTicketId=' +
+                encodeURIComponent(ticket.id)
+              : '',
+        },
+      })
+
+      if (resolvedAlertResult && resolvedAlertResult.sent) {
+        $app
+          .logger()
+          .info(
+            'ticket_resolved_client_email: notificação enviada via Central de Alertas para ' +
+              recipientEmail +
+              ' (chamado #' +
+              ticketNumber +
+              ')',
+          )
+        return e.next()
+      } else if (resolvedAlertResult && resolvedAlertResult.reason === 'alert_disabled_by_config') {
+        $app
+          .logger()
+          .info(
+            'ticket_resolved_client_email: envio suprimido pois o alerta ticket_resolved está DESLIGADO nas configurações.',
+          )
+        return e.next()
+      }
+    }
+
     var subject = 'Chamado #' + ticketNumber + ' concluído: ' + ticketTitle
 
     // Montagem do bloco de conteúdo HTML
