@@ -106,8 +106,13 @@ _Observação:_ No Modo Suporte do Administrador, ao alternar a empresa no selet
   - Na ficha interna do chamado (`/tickets/:id`), logo abaixo da seção **Apurações de Horas**, o operador visualiza os campos de seleção de **Categoria Principal (Atividade)** e **Subcategoria (Subatividade)** populados diretamente a partir do Catálogo de Atividades.
   - Editáveis pelo operador autorizado com permissão `tickets.tickets_categoria_edit` e auditoria de histórico `tickets.tickets_triage_history`.
   - Permite reclassificar manualmente o chamado ou solicitar reavaliação imediata da IA com o botão _"Reclassificar IA"_.
-- **Aba de Gestão e Parâmetros (Configurações → Triagem do Portal):**
+- **Aba de Gestão e Parâmetros (Configurações → Triagem do Portal) e Métricas de Satisfação da IA (v0.0.381):**
   - Acessível para perfis com a permissão `settings.settings_portal_triage`.
+  - **Painel de Métricas de Satisfação e Desempenho da IA:** Apresenta total de triagens no período, % de chamados aplicados direto, % de acurácia percebida (% sem correção manual), % de chamados corrigidos pelo operador e confiança média.
+  - **Filtro de Período Dinâmico:** Seleção entre últimos 7, 15, 30, 90 dias ou histórico completo, com botão de recarregamento em tempo real.
+  - **Distribuição de Confiança:** Barras de alta confiança (≥80%), média (60% a 79%) e baixa confiança (<60% — encaminhados para a fila padrão).
+  - **Ranking de Erros por Atividade:** Tabela com as atividades sugeridas pela IA que mais sofreram reclassificação pelo operador humano, indicando a atividade de destino para orientar melhorias no Catálogo de Serviços e na Base de Conhecimento.
+  - **Cruzamento com Ficha do Chamado:** Toda vez que um operador reclassifica a categoria de um chamado (`TicketCategoryCard`), o sistema grava automaticamente `operator_corrected: true`, a categoria final e o tempo de correção no histórico (`portal_triage_history`), retroalimentando as métricas de qualidade.
   - Permite ligar/desligar a triagem automática, alterar a fila padrão de fallback, ajustar o limiar de confiança mínima (0% a 100%), realizar simulações e consultar a tabela de histórico de triagens recentes.
 - O chamado nasce com `source: "Portal"` e entra imediatamente no fluxo de atendimento corporativo com status "Novo".
 

@@ -33,6 +33,7 @@ export interface PortalTriageHistoryItem {
   id: string
   ticket_id: string
   ticket_number?: string
+  ticket_title?: string
   title?: string
   suggested_category_id?: string
   suggested_category_name?: string
@@ -45,7 +46,51 @@ export interface PortalTriageHistoryItem {
   applied: boolean
   source?: string
   match_method?: string
+  operator_corrected?: boolean
+  final_category_id?: string
+  final_category_name?: string
+  final_subcategory_id?: string
+  final_subcategory_name?: string
+  corrected_at?: string
+  corrected_by?: string
+  correction_seconds?: number
   created: string
+  updated?: string
+}
+
+export interface PortalTriageMetricsSummary {
+  periodDays: number
+  totalTriages: number
+  appliedCount: number
+  appliedPct: number
+  defaultQueueCount: number
+  defaultQueuePct: number
+  correctedCount: number
+  correctedPct: number
+  accuracyPct: number // % que permaneceu sem correção pelo operador
+  avgConfidence: number
+  avgCorrectionMinutes: number
+  lowConfidenceCount: number
+  confidenceBuckets: {
+    high: number // >= 80%
+    medium: number // 60% a 79%
+    low: number // < 60%
+  }
+  topCorrectedActivities: Array<{
+    categoryName: string
+    categoryId: string
+    totalSuggested: number
+    correctedCount: number
+    errorRatePct: number
+    finalCategoriesSummary: Record<string, number>
+  }>
+  topAccurateActivities: Array<{
+    categoryName: string
+    categoryId: string
+    totalSuggested: number
+    accurateCount: number
+    accuracyRatePct: number
+  }>
 }
 
 export const DEFAULT_TRIAGE_SETTINGS: PortalTriageSettings = {
@@ -138,30 +183,279 @@ export const getPortalTriageHistory = async (
   limit: number = 30,
 ): Promise<PortalTriageHistoryItem[]> => {
   try {
-    const queryParams = new URLSearchParams()
-    if (ticketId) queryParams.set('ticketId', ticketId)
-    if (limit) queryParams.set('limit', String(limit))
-
-    const url = `/backend/v1/ai/portal-triage/history?${queryParams.toString()}`
-    const res = await pb.send<{ items: PortalTriageHistoryItem[]; total: number }>(url, {
-      method: 'GET',
-    })
-    return res?.items || []
+    let filter = 'id != ""'
+    if (ticketId) filter += ` && ticket_id = "${ticketId}"`
+    const recs = await pb
+      .collection('portal_triage_history')
+      .getList<PortalTriageHistoryItem>(1, limit, {
+        filter,
+        sort: '-created',
+      })
+    return recs.items
   } catch (err) {
-    // Fallback: consulta direta na coleção via SDK se a rota falhar
+    // Fallback: rota customizada se SDK direto falhar
     try {
-      let filter = 'id != ""'
-      if (ticketId) filter += ` && ticket_id = "${ticketId}"`
-      const recs = await pb
-        .collection('portal_triage_history')
-        .getList<PortalTriageHistoryItem>(1, limit, {
-          filter,
-          sort: '-created',
-        })
-      return recs.items
-    } catch (sdkErr) {
-      console.warn('[portal-triage] falha ao buscar histórico de triagem:', sdkErr)
+      const queryParams = new URLSearchParams()
+      if (ticketId) queryParams.set('ticketId', ticketId)
+      if (limit) queryParams.set('limit', String(limit))
+
+      const url = `/backend/v1/ai/portal-triage/history?${queryParams.toString()}`
+      const res = await pb.send<{ items: PortalTriageHistoryItem[]; total: number }>(url, {
+        method: 'GET',
+      })
+      return res?.items || []
+    } catch (routeErr) {
+      console.warn('[portal-triage] falha ao buscar histórico de triagem:', routeErr)
       return []
     }
+  }
+}
+
+/**
+ * Registra a correção manual feita pelo operador na ficha do chamado.
+ * Vincula ao último registro de triagem do chamado em questão.
+ */
+export async function recordOperatorCorrection(params: {
+  ticketId: string
+  finalCategoryId: string
+  finalCategoryName: string
+  finalSubcategoryId?: string
+  finalSubcategoryName?: string
+  operatorId?: string
+}): Promise<boolean> {
+  try {
+    if (!params.ticketId) return false
+
+    // Buscar a última triagem associada a este chamado
+    const historyList = await pb.collection('portal_triage_history').getList(1, 1, {
+      filter: `ticket_id = "${params.ticketId}"`,
+      sort: '-created',
+    })
+
+    if (historyList.items.length === 0) {
+      return false
+    }
+
+    const latest = historyList.items[0]
+    const suggestedCatId = latest.suggested_category_id || ''
+    const suggestedSubcatId = latest.suggested_subcategory_id || ''
+
+    // Se a categoria e subcategoria finais forem iguais às sugeridas pela IA,
+    // não conta como erro/correção (ou pode ser confirmação da IA).
+    const isDifferent =
+      params.finalCategoryId !== suggestedCatId ||
+      Boolean(params.finalSubcategoryId && params.finalSubcategoryId !== suggestedSubcatId)
+
+    const now = new Date()
+    const createdAt = latest.created ? new Date(latest.created) : now
+    const diffSeconds = Math.max(0, Math.floor((now.getTime() - createdAt.getTime()) / 1000))
+
+    await pb.collection('portal_triage_history').update(latest.id, {
+      operator_corrected: isDifferent,
+      final_category_id: params.finalCategoryId,
+      final_category_name: params.finalCategoryName,
+      final_subcategory_id: params.finalSubcategoryId || '',
+      final_subcategory_name: params.finalSubcategoryName || '',
+      corrected_at: now.toISOString(),
+      corrected_by: params.operatorId || pb.authStore.model?.id || '',
+      correction_seconds: diffSeconds,
+    })
+
+    return true
+  } catch (err) {
+    console.warn('Falha ao registrar correção de triagem pelo operador:', err)
+    return false
+  }
+}
+
+/**
+ * Calcula as métricas agregadas de satisfação e acurácia da IA no período especificado.
+ */
+export async function getPortalTriageMetrics(
+  periodDays: number = 30,
+): Promise<PortalTriageMetricsSummary> {
+  const cutoffDate = new Date()
+  if (periodDays > 0) {
+    cutoffDate.setDate(cutoffDate.getDate() - periodDays)
+  }
+  const cutoffIso = cutoffDate.toISOString().replace('T', ' ')
+
+  const filter = periodDays > 0 ? `created >= "${cutoffIso}"` : ''
+
+  let allTriages: PortalTriageHistoryItem[] = []
+  try {
+    const res = await pb.collection('portal_triage_history').getFullList({
+      filter: filter || undefined,
+      sort: '-created',
+    })
+    allTriages = res.map((r: any) => ({
+      id: r.id,
+      ticket_id: r.ticket_id,
+      ticket_number: r.ticket_number,
+      ticket_title: r.ticket_title || r.title,
+      suggested_category_id: r.suggested_category_id,
+      suggested_category_name: r.suggested_category_name,
+      suggested_subcategory_id: r.suggested_subcategory_id,
+      suggested_subcategory_name: r.suggested_subcategory_name,
+      queue_id: r.queue_id,
+      queue_name: r.queue_name,
+      confidence: typeof r.confidence === 'number' ? r.confidence : 0,
+      reason: r.reason,
+      applied: Boolean(r.applied),
+      source: r.source,
+      match_method: r.match_method,
+      operator_corrected: Boolean(r.operator_corrected),
+      final_category_id: r.final_category_id,
+      final_category_name: r.final_category_name,
+      final_subcategory_id: r.final_subcategory_id,
+      final_subcategory_name: r.final_subcategory_name,
+      corrected_at: r.corrected_at,
+      corrected_by: r.corrected_by,
+      correction_seconds: r.correction_seconds || 0,
+      created: r.created,
+      updated: r.updated,
+    }))
+  } catch (err) {
+    console.warn('Erro ao carregar lista de triagens para métricas:', err)
+  }
+
+  const total = allTriages.length
+  if (total === 0) {
+    return {
+      periodDays,
+      totalTriages: 0,
+      appliedCount: 0,
+      appliedPct: 0,
+      defaultQueueCount: 0,
+      defaultQueuePct: 0,
+      correctedCount: 0,
+      correctedPct: 0,
+      accuracyPct: 100,
+      avgConfidence: 0,
+      avgCorrectionMinutes: 0,
+      lowConfidenceCount: 0,
+      confidenceBuckets: { high: 0, medium: 0, low: 0 },
+      topCorrectedActivities: [],
+      topAccurateActivities: [],
+    }
+  }
+
+  let appliedCount = 0
+  let defaultQueueCount = 0
+  let correctedCount = 0
+  let sumConfidence = 0
+  let sumCorrectionSeconds = 0
+  let correctionsCountWithTime = 0
+  let lowConfidenceCount = 0
+
+  const buckets = { high: 0, medium: 0, low: 0 }
+  const categoryStats: Record<
+    string,
+    {
+      name: string
+      total: number
+      corrected: number
+      accurate: number
+      finalCats: Record<string, number>
+    }
+  > = {}
+
+  for (const item of allTriages) {
+    const conf = item.confidence || 0
+    sumConfidence += conf
+
+    if (conf >= 0.8) buckets.high++
+    else if (conf >= 0.6) buckets.medium++
+    else {
+      buckets.low++
+      lowConfidenceCount++
+    }
+
+    if (item.applied) {
+      appliedCount++
+    } else {
+      defaultQueueCount++
+    }
+
+    if (item.operator_corrected) {
+      correctedCount++
+      if (item.correction_seconds && item.correction_seconds > 0) {
+        sumCorrectionSeconds += item.correction_seconds
+        correctionsCountWithTime++
+      }
+    }
+
+    // Acompanhamento por atividade sugerida
+    const catName = item.suggested_category_name || 'Sem atividade'
+    const catId = item.suggested_category_id || 'unknown'
+    if (!categoryStats[catId]) {
+      categoryStats[catId] = {
+        name: catName,
+        total: 0,
+        corrected: 0,
+        accurate: 0,
+        finalCats: {},
+      }
+    }
+    categoryStats[catId].total++
+
+    if (item.operator_corrected) {
+      categoryStats[catId].corrected++
+      const finalName = item.final_category_name || 'Outra'
+      categoryStats[catId].finalCats[finalName] =
+        (categoryStats[catId].finalCats[finalName] || 0) + 1
+    } else {
+      categoryStats[catId].accurate++
+    }
+  }
+
+  const appliedPct = total > 0 ? Math.round((appliedCount / total) * 100) : 0
+  const defaultQueuePct = total > 0 ? Math.round((defaultQueueCount / total) * 100) : 0
+  const correctedPct = total > 0 ? Math.round((correctedCount / total) * 100) : 0
+  const accuracyPct = Math.max(0, 100 - correctedPct)
+  const avgConfidence = total > 0 ? Math.round((sumConfidence / total) * 100) / 100 : 0
+  const avgCorrectionMinutes =
+    correctionsCountWithTime > 0
+      ? Math.round((sumCorrectionSeconds / correctionsCountWithTime / 60) * 10) / 10
+      : 0
+
+  // Atividades mais erradas (maior taxa de correção e volume)
+  const categoryList = Object.entries(categoryStats).map(([id, st]) => ({
+    categoryId: id,
+    categoryName: st.name,
+    totalSuggested: st.total,
+    correctedCount: st.corrected,
+    errorRatePct: st.total > 0 ? Math.round((st.corrected / st.total) * 100) : 0,
+    finalCategoriesSummary: st.finalCats,
+    accurateCount: st.accurate,
+    accuracyRatePct: st.total > 0 ? Math.round((st.accurate / st.total) * 100) : 0,
+  }))
+
+  const topCorrected = [...categoryList]
+    .filter((c) => c.correctedCount > 0)
+    .sort((a, b) => b.correctedCount - a.correctedCount || b.errorRatePct - a.errorRatePct)
+    .slice(0, 8)
+
+  const topAccurate = [...categoryList]
+    .filter((c) => c.accurateCount > 0)
+    .sort((a, b) => b.accurateCount - a.accurateCount || b.accuracyRatePct - a.accuracyRatePct)
+    .slice(0, 8)
+
+  return {
+    periodDays,
+    totalTriages: total,
+    appliedCount,
+    appliedPct,
+    defaultQueueCount,
+    defaultQueuePct,
+    correctedCount,
+    correctedPct,
+    accuracyPct,
+    avgConfidence,
+    avgCorrectionMinutes,
+    lowConfidenceCount,
+    confidenceBuckets: buckets,
+    topCorrectedActivities: topCorrected,
+    topAccurateActivities: topAccurate,
   }
 }

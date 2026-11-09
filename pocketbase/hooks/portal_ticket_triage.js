@@ -227,7 +227,8 @@ routerAdd(
         source: 'disabled',
         matchMethod: 'none',
       })
-      return e.json(200, { ...applied, debug: dbg })
+      var resObj = Object.assign({}, applied, { debug: dbg })
+      return e.json(200, resObj)
     }
 
     // 3. Montar catálogo completo de atividades e subatividades
@@ -535,7 +536,8 @@ routerAdd(
       matchMethod: matchMethod,
     })
 
-    return e.json(200, { ...applied, debug: dbg })
+    var finalRes = Object.assign({}, applied, { debug: dbg })
+    return e.json(200, finalRes)
   },
   $apis.requireAuth(),
 )

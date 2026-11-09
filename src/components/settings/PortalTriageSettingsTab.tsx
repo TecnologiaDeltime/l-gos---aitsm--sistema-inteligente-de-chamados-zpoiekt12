@@ -33,7 +33,9 @@ import {
   Gauge,
   Sliders,
   HelpCircle,
+  ThumbsUp,
 } from 'lucide-react'
+import { PortalTriageMetricsSection } from './PortalTriageMetricsSection'
 
 interface PortalTriageSettingsTabProps {
   canConfigure?: boolean
@@ -187,6 +189,9 @@ export function PortalTriageSettingsTab({
 
   return (
     <div className="space-y-6">
+      {/* Painel de Métricas de Satisfação e Desempenho da IA */}
+      <PortalTriageMetricsSection canView={!isReadOnly || canConfigure || canEdit} />
+
       {/* Cabeçalho */}
       <Card className="itsm-card border-amber-500/20 bg-gradient-to-r from-amber-500/5 via-card to-card">
         <CardHeader className="pb-3">
@@ -468,7 +473,8 @@ export function PortalTriageSettingsTab({
                       <th className="p-2.5">Atividade Sugerida</th>
                       <th className="p-2.5">Fila</th>
                       <th className="p-2.5">Confiança</th>
-                      <th className="p-2.5">Status</th>
+                      <th className="p-2.5">Status IA</th>
+                      <th className="p-2.5">Correção Humana</th>
                       <th className="p-2.5">Justificativa / Motivo</th>
                     </tr>
                   </thead>
@@ -532,6 +538,28 @@ export function PortalTriageSettingsTab({
                           >
                             {h.applied ? 'Aplicado' : 'Fila padrão'}
                           </Badge>
+                        </td>
+                        <td className="p-2.5 whitespace-nowrap">
+                          {h.operator_corrected ? (
+                            <div className="space-y-0.5">
+                              <Badge
+                                variant="outline"
+                                className="text-[10px] bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/30"
+                              >
+                                Corrigido p/ {h.final_category_name || 'Outra'}
+                              </Badge>
+                              {typeof h.correction_seconds === 'number' &&
+                                h.correction_seconds > 0 && (
+                                  <span className="text-[10px] text-muted-foreground block">
+                                    em {Math.round(h.correction_seconds / 60)} min
+                                  </span>
+                                )}
+                            </div>
+                          ) : (
+                            <span className="text-[11px] text-emerald-600 dark:text-emerald-400 font-medium">
+                              ✓ Mantido
+                            </span>
+                          )}
                         </td>
                         <td className="p-2.5 text-[11px] text-muted-foreground max-w-xs">
                           <p className="line-clamp-2" title={h.reason}>

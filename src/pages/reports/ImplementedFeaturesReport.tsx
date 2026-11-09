@@ -369,6 +369,13 @@ const FEATURE_CATEGORIES: FeatureCategory[] = [
           'Evolução da triagem automática por IA: o agente nativo agora recebe o contexto do Catálogo de Atividades (com subatividades e descrições) e dos artigos da Base de Conhecimento, associando problemas a soluções já documentadas e identificando sinônimos em português (VPN, firewall, rede, lentidão, e-mail, senha, etc.). Conta com camada de fallback heurístico resiliente garantindo que chamados técnicos nunca fiquem sem categorização. Foi criada a coleção portal_triage_history gravando a atividade/subcategoria sugerida, confiança, motivo da IA, fila e status de aplicação para cada chamado analisado. Na visão do operador, foram adicionados os seletores editáveis de Categoria e Subcategoria logo abaixo de "Apurações de horas" (com permissão tickets_categoria_edit), além de card de Histórico de Triagem IA (permissão tickets_triage_history) com botão de reclassificação em 1 clique.',
         tag: 'IA & Autoatendimento',
       },
+      {
+        id: 'portal-15-ai-satisfaction-metrics',
+        title: 'Painel de Métricas de Satisfação e Desempenho da IA (v0.0.381)',
+        description:
+          'Painel analítico completo integrado na aba "Triagem do Portal (IA)" em Configurações (protegido pela permissão settings_portal_triage). Apresenta: total de triagens no período, % aplicadas direto, % corrigidas pelo operador humano, % de acurácia percebida, confiança média da IA e tempo médio até o ajuste. Inclui filtro dinâmico de período (7, 15, 30, 90 dias ou histórico completo), gráfico de distribuição de confiança (alta ≥80%, média 60-79%, baixa <60%) e ranking de atividades mais reclassificadas com sugestões para melhoria de sinônimos no catálogo e artigos na base de conhecimento.',
+        tag: 'IA / Métricas & CSAT',
+      },
     ],
   },
   {

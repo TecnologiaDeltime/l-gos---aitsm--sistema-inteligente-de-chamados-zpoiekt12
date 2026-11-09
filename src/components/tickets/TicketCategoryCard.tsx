@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/button'
 import { Tag, Check, Loader2, Sparkles, AlertCircle, RefreshCw } from 'lucide-react'
 import { getCategories, type CategoryRecord } from '@/services/categories'
 import { updateTicket } from '@/services/tickets'
+import { recordOperatorCorrection } from '@/services/portal-triage'
 import { useToast } from '@/hooks/use-toast'
 
 interface TicketCategoryCardProps {
@@ -96,6 +97,23 @@ export const TicketCategoryCard: React.FC<TicketCategoryCardProps> = ({
         category: selectedCategory || null,
         subcategory: selectedSubcategory || null,
       })
+
+      // Registrar correção da IA se houve alteração na categoria
+      const catObj = categories.find((c) => c.id === selectedCategory)
+      const subcatObj = categories.find((c) => c.id === selectedSubcategory)
+
+      if (selectedCategory) {
+        void recordOperatorCorrection({
+          ticketId,
+          finalCategoryId: selectedCategory,
+          finalCategoryName: catObj?.name || '',
+          finalSubcategoryId: selectedSubcategory || '',
+          finalSubcategoryName: subcatObj?.name || '',
+        }).catch((err) => {
+          console.warn('[TicketCategoryCard] falha ao registrar métrica de correção:', err)
+        })
+      }
+
       toast({
         title: 'Classificação atualizada',
         description: 'Categoria e subcategoria salvas com sucesso no chamado.',

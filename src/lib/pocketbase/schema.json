@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-09T03:24:43.850Z",
+  "generatedAt": "2026-11-09T03:36:21.279Z",
   "collections": [
     {
       "name": "users",
@@ -12610,13 +12610,178 @@
       "name": "portal_triage_history",
       "type": "base",
       "apiRules": {
-        "list": null,
-        "view": null,
-        "create": null,
-        "update": "@request.auth.role = \"admin\" || @request.auth.role = \"gestor\"",
+        "list": "@request.auth.id != \"\"",
+        "view": "@request.auth.id != \"\"",
+        "create": "@request.auth.id != \"\"",
+        "update": "@request.auth.id != \"\" && (@request.auth.role = \"admin\" || @request.auth.role = \"gestor\" || @request.auth.role = \"operador\" || @request.auth.role = \"tecnico\")",
         "delete": "@request.auth.role = \"admin\""
       },
-      "fields": [],
+      "fields": [
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        },
+        {
+          "name": "operator_corrected",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "final_category_id",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "final_category_name",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "final_subcategory_id",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "final_subcategory_name",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "corrected_at",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "corrected_by",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "correction_seconds",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "ticket_id",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "ticket_number",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "ticket_title",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "source",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "suggested_category_id",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "suggested_category_name",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "suggested_subcategory_id",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "suggested_subcategory_name",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "queue_id",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "queue_name",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "confidence",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "reason",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "applied",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "min_confidence_used",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "match_method",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "tokens_used",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "duration_ms",
+          "type": "number",
+          "required": false,
+          "system": false
+        }
+      ],
       "indexes": []
     }
   ]
