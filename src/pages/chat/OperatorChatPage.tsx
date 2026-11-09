@@ -53,11 +53,13 @@ import {
   X,
   Clock,
 } from 'lucide-react'
+import { useSearchParams } from 'react-router-dom'
 import { formatTicketAge } from '@/lib/date-format'
 
 export default function OperatorChatPage() {
   const { user } = useAuth()
   const { toast } = useToast()
+  const [searchParams, setSearchParams] = useSearchParams()
   // Feedback de falha de envio (motivo claro em vez de "engolir" a mensagem)
   const [sendError, setSendError] = useState<string | null>(null)
   const [operators, setOperators] = useState<ChatOperatorUser[]>([])
@@ -166,6 +168,18 @@ export default function OperatorChatPage() {
       setSelectedOperator(operators[0])
     }
   }, [operators, selectedOperator])
+
+  // Deep link das notificações push (?partner=<id>): abre a conversa clicada.
+  // Dispara só quando a lista de operadores já chegou, para achar o parceiro.
+  useEffect(() => {
+    const partnerId = searchParams.get('partner')
+    if (!partnerId || operators.length === 0) return
+    const target = operators.find((o) => o.id === partnerId)
+    if (target) {
+      setSelectedOperator(target)
+      setSearchParams({}, { replace: true })
+    }
+  }, [searchParams, operators])
 
   // Carrega conversa do operador selecionado
   const loadConversation = async (operatorId: string) => {

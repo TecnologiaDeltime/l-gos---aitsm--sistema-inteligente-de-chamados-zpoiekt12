@@ -6,8 +6,31 @@ import { initAudio, playTicketChime } from '@/lib/ticket-alerts'
 import { useRealtime } from '@/hooks/use-realtime'
 import { useAuth } from '@/hooks/use-auth'
 import { getTicket } from '@/services/tickets'
+import {
+  chatPushPreview,
+  getPushPreference,
+  initPushNavigationListener,
+  isTabHidden,
+  pushBrandTitle,
+  registerPushServiceWorker,
+  requestPushPermission,
+  showPushNotification,
+} from '@/lib/push-notifications'
 import { MessageSquare } from 'lucide-react'
 
+/**
+ * Barramento central de notificações (sino global + chat interno) e ponte para as
+ * notificações push do navegador.
+ *
+ * Push (Notification API + service worker mínimo public/push-sw.js):
+ * - Dispara apenas quando a aba NÃO está visível (segundo plano/minimizada) e o
+ *   usuário ligou a preferência "Notificações push" (campo push_enabled, migração 0140).
+ * - Opt-in no login: se a preferência está ligada mas a permissão ainda não foi
+ *   concedida, pede UMA vez (sem loop). Se negada, reativar é pelo toggle nas
+ *   Configurações > Notificações (com dica de liberar no navegador).
+ * - Evita duplicidade: quando dispara push para um item (chat ou sino), o toast
+ *   intrusivo local do mesmo item é suprimido na mesma passagem.
+ */
 export function GlobalNotifications() {
   useSlaNotifications()
   const { user } = useAuth()
@@ -28,11 +51,43 @@ export function GlobalNotifications() {
     return () => clearTimeout(timer)
   }, [])
 
+  // Service worker mínimo + listener de navegação vinda do SW (clique na notificação).
   useEffect(() => {
-    if (typeof Notification !== 'undefined' && Notification.permission === 'default') {
-      Notification.requestPermission().catch(() => {})
-    }
+    registerPushServiceWorker()
+    initPushNavigationListener()
   }, [])
+
+  // Opt-in ao logar: se o usuário JÁ ligou "Notificações push" (push_enabled) mas o
+  // navegador ainda não concedeu a permissão, pede UMA vez por sessão de aba (nunca
+  // em loop). Se negada, o toggle em Configurações mostra como reativar.
+  const pushAskRef = useRef(false)
+  useEffect(() => {
+    if (!user || !user.push_enabled || pushAskRef.current) return
+    pushAskRef.current = true
+    if (typeof Notification !== 'undefined' && Notification.permission === 'default') {
+      requestPushPermission().catch(() => {})
+    }
+  }, [user])
+
+  /** Dispara o push do navegador quando a preferência/permissão/visibilidade permitem. */
+  const firePushIfEligible = (
+    opts: { chatBody?: string; fallbackTitle?: string; body: string; tag: string; url: string },
+    chime: () => void,
+  ): boolean => {
+    if (!user) return false
+    if (!isTabHidden()) return false
+    if (!getPushPreference(user.id)) return false
+    if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return false
+
+    showPushNotification({
+      title: pushBrandTitle(opts.chatBody ? 'Nova mensagem' : (opts.fallbackTitle ?? '')),
+      body: opts.chatBody ? `${opts.chatBody}: ${opts.body}` : opts.body,
+      tag: opts.tag,
+      url: opts.url,
+    }).catch(() => {})
+    chime()
+    return true
+  }
 
   useRealtime('notifications', (e) => {
     if (!initialized.current) return
@@ -47,6 +102,19 @@ export function GlobalNotifications() {
     knownNotifIds.current.add(e.record.id)
 
     const ticketId = e.record.ticket || ''
+
+    // Push do navegador (aba em segundo plano). Quando dispara, o toast intrusivo
+    // local do mesmo item é suprimido (evita push duplo).
+    const pushed = firePushIfEligible(
+      {
+        fallbackTitle: 'Chamado delegado',
+        body: message,
+        tag: `logos-delegation-${e.record.id}`,
+        url: ticketId ? `/tickets/${ticketId}` : '/tickets',
+      },
+      () => playTicketChime('Média'),
+    )
+    if (pushed) return
 
     toast.custom(
       (t) => (
@@ -116,14 +184,29 @@ export function GlobalNotifications() {
     if (knownNotifIds.current.has(e.record.id)) return
     knownNotifIds.current.add(e.record.id)
 
+    const content = e.record.content || 'Nova mensagem recebida'
+    const preview = content.length > 80 ? content.slice(0, 80) + '...' : content
+    const senderName = e.record.expand?.sender?.name || 'Alguém'
+
+    // Push do navegador (aba em segundo plano): título com marca oficial, corpo com
+    // nome do remetente + prévia ([Áudio]/[Foto]/[Vídeo] para anexos). Quando dispara,
+    // o toast intrusivo local do mesmo item é suprimido (evita push duplo).
+    const pushed = firePushIfEligible(
+      {
+        chatBody: senderName,
+        body: chatPushPreview(content, e.record.file),
+        tag: `logos-chat-${e.record.id}`,
+        url: '/chat',
+      },
+      () => playTicketChime('Baixa'),
+    )
+    if (pushed) return
+
     // Se já estiver na tela de chat (/chat), não dispara toast intrusivo duplicado
     if (window.location.pathname.startsWith('/chat')) {
       playTicketChime('Baixa')
       return
     }
-
-    const content = e.record.content || 'Nova mensagem recebida'
-    const preview = content.length > 80 ? content.slice(0, 80) + '...' : content
 
     toast.custom(
       (t) => (
