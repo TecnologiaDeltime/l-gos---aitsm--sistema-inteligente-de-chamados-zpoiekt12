@@ -76,7 +76,7 @@ export function GlobalNotifications() {
   ): boolean => {
     if (!user) return false
     if (!isTabHidden()) return false
-    if (!getPushPreference(user.id)) return false
+    if (!getPushPreference(user.id, user.push_enabled)) return false
     if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return false
 
     showPushNotification({
@@ -196,7 +196,7 @@ export function GlobalNotifications() {
         chatBody: senderName,
         body: chatPushPreview(content, e.record.file),
         tag: `logos-chat-${e.record.id}`,
-        url: '/chat',
+        url: e.record.sender ? `/chat?partner=${e.record.sender}` : '/chat',
       },
       () => playTicketChime('Baixa'),
     )

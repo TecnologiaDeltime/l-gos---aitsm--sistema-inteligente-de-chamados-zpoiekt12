@@ -401,6 +401,15 @@ Canal de comunicação direta 1:1 entre operadores e equipes internas (`/chat`):
 - **Controle de Acesso**: permissões `tickets.tickets_interno` e `chat.chat_operadores` com 3 níveis na matriz de perfis de acesso.
 - Documentação técnica completa em `docs/CHAMADOS_INTERNOS_E_CHAT.md`.
 
+### 11.3 Notificações Push do Navegador
+
+Notificações nativas do navegador exibidas com o título da marca **Lógos AITSM** quando a aba do sistema está em segundo plano (`document.visibilityState !== 'visible'`), construídas 100% localmente (Notification API + service worker público `push-sw.js`, zero dependências externas):
+
+- **Como ativar por usuário**: `Configurações → Gerais → card "Notificações e Alertas" → toggle "Notificações push"`. Ao ligar, o navegador pede permissão; a preferência individual fica salva no campo `push_enabled` da coleção `users` (migração 0140), com fallback local no navegador.
+- **Eventos cobertos**: nova mensagem do chat interno (deep-link que abre o sistema direto na conversa do remetente via `/chat?partner=<senderId>`), novo chamado delegado ou que chegou à fila do operador e SLA de solução prestes a vencer (deep-link para o chamado).
+- **Comportamento**: ao disparar o push, o toast intrusivo local do mesmo evento é suprimido (sem notificação dupla); com a aba visível, só os alertas internos (sino, som e voz) são exibidos.
+- **Limitações**: disponível em navegadores desktop e PWA instalado — não há push nativo em celular (iOS Safari não suporta Notification API em aba de navegador comum); a permissão é gerenciada pelo navegador (se negada, o sistema exibe orientação para liberar o site nas configurações do navegador); push sem servidor (não há web-push com VAPID — as notificações dependem da aba do sistema estar aberta, ainda que em segundo plano).
+
 ---
 
 ## 12. Módulo de Gestão de Projetos (`/projetos`)

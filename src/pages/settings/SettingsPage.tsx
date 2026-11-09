@@ -61,13 +61,24 @@ import {
   StaleTicketAlertSettings,
 } from '@/services/stale-ticket-alert-settings'
 import { usePermissions } from '@/hooks/use-permissions'
+import pb from '@/lib/pocketbase/client'
+import {
+  getPushPermissionState,
+  getPushPreference,
+  isPushSupported,
+  requestPushPermission,
+  setPushPreferenceLocally,
+} from '@/lib/push-notifications'
 
 export default function SettingsPage() {
-  const { user } = useAuth()
+  const { user, refreshUser } = useAuth()
   const { toast } = useToast()
   const [searchParams, setSearchParams] = useSearchParams()
   const [voiceEnabled, setVoiceEnabled] = useState(true)
   const [slaThreshold, setSlaThreshold] = useState(30)
+  const [pushEnabled, setPushEnabled] = useState(false)
+  const [pushSaving, setPushSaving] = useState(false)
+  const [pushDenied, setPushDenied] = useState(false)
   const permissions = usePermissions()
 
   // Aba ativa de primeiro nível em Configurações
@@ -206,6 +217,16 @@ export default function SettingsPage() {
   const [emailConfigLoading, setEmailConfigLoading] = useState(true)
   const [emailConfigSaving, setEmailConfigSaving] = useState(false)
   const [emailConfig, setEmailConfig] = useState<EmailConfigRecord | null>(null)
+
+  // Estado inicial do toggle "Notificações push": campo persistido no usuário
+  // (push_enabled) com fallback para a preferência local do navegador.
+  useEffect(() => {
+    if (!user) return
+    setPushEnabled(
+      user.push_enabled !== undefined ? !!user.push_enabled : getPushPreference(user.id),
+    )
+    setPushDenied(getPushPermissionState() === 'denied')
+  }, [user?.id, user?.push_enabled])
 
   useEffect(() => {
     setVoiceEnabled(getVoiceAlertsEnabled())
@@ -366,6 +387,81 @@ export default function SettingsPage() {
     setVoiceEnabled(checked)
     setVoiceAlertsEnabled(checked)
     toast({ title: checked ? 'Alertas de voz ativados' : 'Alertas de voz desativados' })
+  }
+
+  /**
+   * Toggle "Notificações push": salva a preferência no usuário (campo push_enabled,
+   * migração 0140) e pede permissão ao navegador ao ligar. Com a permissão negada,
+   * a orientação de liberar nas configurações do navegador é exibida sob o toggle.
+   */
+  const handlePushToggle = async (checked: boolean) => {
+    if (!user || pushSaving) return
+    setPushSaving(true)
+    try {
+      if (checked) {
+        const permission = await requestPushPermission()
+        if (permission === 'denied') {
+          setPushDenied(true)
+          setPushEnabled(false)
+          setPushPreferenceLocally(false)
+          await pb.collection('users').update(user.id, { push_enabled: false })
+          await refreshUser()
+          toast({
+            title: 'Permissão negada pelo navegador',
+            description:
+              'Para receber notificações push, libere o Lógos AITSM nas configurações de ' +
+              'notificações do seu navegador (ícone de cadeado na barra de endereço) e tente ' +
+              'ativar novamente.',
+            variant: 'destructive',
+            duration: 12000,
+          })
+          return
+        }
+        if (permission === 'unsupported') {
+          setPushEnabled(false)
+          toast({
+            title: 'Navegador sem suporte',
+            description:
+              'Este navegador não suporta notificações push (disponível em navegadores ' +
+              'desktop e PWA instalado).',
+            variant: 'destructive',
+          })
+          return
+        }
+        if (permission !== 'granted') {
+          setPushEnabled(false)
+          toast({
+            title: 'Permissão não concedida',
+            description:
+              'A permissão de notificações não foi concedida. Tente ativar novamente para ' +
+              'o navegador pedir de novo.',
+            variant: 'destructive',
+          })
+          return
+        }
+        setPushDenied(false)
+      } else {
+        setPushPreferenceLocally(false)
+      }
+      setPushEnabled(checked)
+      setPushPreferenceLocally(checked)
+      await pb.collection('users').update(user.id, { push_enabled: checked })
+      await refreshUser()
+      toast({
+        title: checked ? 'Notificações push ativadas' : 'Notificações push desativadas',
+        description: checked
+          ? 'Você receberá notificações do navegador quando a aba estiver em segundo plano.'
+          : undefined,
+      })
+    } catch {
+      toast({
+        title: 'Erro ao salvar preferência de push',
+        description: 'Não foi possível salvar a preferência. Tente novamente.',
+        variant: 'destructive',
+      })
+    } finally {
+      setPushSaving(false)
+    }
   }
 
   const handleSlaThresholdChange = (value: string) => {
@@ -773,6 +869,30 @@ export default function SettingsPage() {
                   </p>
                 </div>
                 <Switch checked={voiceEnabled} onCheckedChange={handleVoiceToggle} />
+              </div>
+              <div className="flex items-center justify-between pt-4 border-t border-slate-100 dark:border-slate-800">
+                <div className="space-y-1">
+                  <Label className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                    Notificações push
+                  </Label>
+                  <p className="text-xs text-slate-500 max-w-md">
+                    Envia notificações do navegador (push) quando a aba do Lógos AITSM estiver em
+                    segundo plano — nova mensagem de chat, chamado delegado ou SLA prestes a vencer.
+                    Disponível em navegadores desktop e PWA instalado.
+                  </p>
+                  {pushDenied && (
+                    <p className="text-xs text-amber-600 dark:text-amber-400 max-w-md">
+                      As notificações deste site estão bloqueadas nas configurações do navegador.
+                      Libere o Lógos AITSM clicando no ícone de cadeado na barra de endereço (ou nas
+                      configurações de sites do navegador) e ative o toggle novamente.
+                    </p>
+                  )}
+                </div>
+                <Switch
+                  checked={pushEnabled}
+                  disabled={pushSaving || !isPushSupported()}
+                  onCheckedChange={handlePushToggle}
+                />
               </div>
               <div className="space-y-2 pt-4 border-t border-slate-100 dark:border-slate-800">
                 <Label className="text-sm font-medium text-slate-700 dark:text-slate-300">

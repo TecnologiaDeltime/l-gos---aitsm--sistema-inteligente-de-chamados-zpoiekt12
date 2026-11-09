@@ -11,6 +11,12 @@ import {
   getSlaThresholdMinutes,
   getOperatorAlertsMuted,
 } from '@/lib/notification-settings'
+import {
+  getPushPreference,
+  isTabHidden,
+  pushBrandTitle,
+  showPushNotification,
+} from '@/lib/push-notifications'
 
 function speak(text: string) {
   if (document.visibilityState !== 'visible') return
@@ -34,6 +40,29 @@ const CLOSED_TICKET_STATUSES = new Set(['Encerrado', 'Cancelado', 'Resolvido'])
 export function useSlaNotifications() {
   const { user } = useAuth()
   const navigate = useNavigate()
+
+  /**
+   * Push do navegador para eventos do sino de SLA (chamado delegado / SLA prestes a
+   * vencer): dispara somente com a aba oculta, preferência ligada (push_enabled,
+   * migração 0140) e permissão concedida. Retorna true quando o push foi disparado —
+   * nesse caso o toast intrusivo local do mesmo item é suprimido.
+   */
+  const fireSlaPush = useCallback(
+    (body: string, ticketId: string): boolean => {
+      if (!user?.id) return false
+      if (!isTabHidden()) return false
+      if (!getPushPreference(user.id, user.push_enabled)) return false
+      if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return false
+      showPushNotification({
+        title: pushBrandTitle(),
+        body,
+        tag: `logos-sla-${ticketId}`,
+        url: ticketId ? `/tickets/${ticketId}` : '/tickets',
+      }).catch(() => {})
+      return true
+    },
+    [user?.id, user?.push_enabled],
+  )
   const slaAlertedRef = useRef<Set<string>>(new Set())
   const newTicketAlertedRef = useRef<Set<string>>(new Set())
   const queueIdsRef = useRef<string[]>([])
@@ -95,6 +124,10 @@ export function useSlaNotifications() {
       if (diff <= thresholdMs && diff > 0) {
         slaAlertedRef.current.add(ticket.id)
         speak('Você tem SLA prestes a vencer')
+        // Push do navegador (aba em segundo plano): quando dispara, o toast
+        // intrusivo local do mesmo item é suprimido (evita push duplo).
+        const slaPushBody = `SLA prestes a vencer — chamado #${ticket.number}: ${ticket.title} (${ticket.priority})`
+        if (fireSlaPush(slaPushBody, ticket.id)) continue
         toast.warning('SLA prestes a vencer', {
           description: `Chamado #${ticket.number}: ${ticket.title} – ${ticket.priority}`,
           duration: 10000,
@@ -106,7 +139,7 @@ export function useSlaNotifications() {
         })
       }
     }
-  }, [user?.id, navigate])
+  }, [user?.id, navigate, fireSlaPush])
 
   useEffect(() => {
     if (!user?.id) return
@@ -133,15 +166,23 @@ export function useSlaNotifications() {
         if (isAssigned || isInQueue) {
           newTicketAlertedRef.current.add(record.id)
           speak('Você possui um novo chamado na sua fila de atendimento')
-          toast.info('Novo chamado na sua fila', {
-            description: `Chamado #${record.number}: ${record.title} – ${record.priority}`,
-            duration: 10000,
-            icon: <Inbox className="h-5 w-5 text-blue-500" />,
-            action: {
-              label: 'Abrir',
-              onClick: () => navigate(`/tickets/${record.id}`),
-            },
-          })
+          // Push do navegador (aba em segundo plano): quando dispara, o toast
+          // intrusivo local do mesmo item é suprimido (evita push duplo).
+          const newPushBody = isAssigned
+            ? `Novo chamado delegado a você — #${record.number}: ${record.title} (${record.priority})`
+            : `Novo chamado na sua fila — #${record.number}: ${record.title} (${record.priority})`
+          const pushed = fireSlaPush(newPushBody, record.id)
+          if (!pushed) {
+            toast.info('Novo chamado na sua fila', {
+              description: `Chamado #${record.number}: ${record.title} – ${record.priority}`,
+              duration: 10000,
+              icon: <Inbox className="h-5 w-5 text-blue-500" />,
+              action: {
+                label: 'Abrir',
+                onClick: () => navigate(`/tickets/${record.id}`),
+              },
+            })
+          }
           if (isAssigned && !CLOSED_TICKET_STATUSES.has(record.status)) {
             assignedTicketsRef.current = [...assignedTicketsRef.current, record]
           }

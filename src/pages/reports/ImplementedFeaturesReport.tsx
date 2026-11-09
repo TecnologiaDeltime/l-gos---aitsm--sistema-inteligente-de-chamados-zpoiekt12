@@ -604,6 +604,13 @@ const FEATURE_CATEGORIES: FeatureCategory[] = [
           'Página com filtros por status, listagem completa, contadores de não lidas e marcação de leitura.',
         tag: 'Central de Mensagens',
       },
+      {
+        id: 'notif-push',
+        title: 'Notificações Push do navegador (v0.0.377)',
+        description:
+          'Notificações nativas do navegador (Notification API + service worker público push-sw.js, zero dependências externas) exibidas com o título da marca Lógos AITSM quando a aba está em segundo plano, cobrindo: nova mensagem do chat interno (com deep-link que abre o sistema direto na conversa do remetente via /chat?partner=<senderId>), novo chamado delegado ou que chegou à fila e SLA de solução prestes a vencer (deep-link para o chamado). Preferência individual por usuário, campo push_enabled na coleção users (migração 0140), ativada em Configurações > Gerais > card Notificações e Alertas — ao ligar, o navegador pede permissão; se negada, o sistema exibe orientação para liberar o site nas configurações do navegador. Ao disparar o push, o toast intrusivo local do mesmo evento é suprimido (sem notificação dupla). Limitações: navegadores desktop e PWA instalado (sem push nativo em celular); permissão gerenciada pelo navegador.',
+        tag: 'Push do Navegador',
+      },
     ],
   },
   {

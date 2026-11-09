@@ -40,6 +40,7 @@ export interface UserRecord {
   locked_until?: string
   session_last_activity?: string
   must_change_password?: boolean
+  push_enabled?: boolean
   created?: string
   updated?: string
   profile_id?: string
@@ -97,6 +98,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       locked_until: record.locked_until,
       session_last_activity: record.session_last_activity,
       must_change_password: !!record.must_change_password,
+      push_enabled: !!record.push_enabled,
       created: record.created,
       updated: record.updated,
       profile_id: record.profile_id,

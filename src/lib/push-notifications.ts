@@ -22,11 +22,20 @@ export function isPushSupported(): boolean {
   return typeof window !== 'undefined' && 'Notification' in window
 }
 
-/** Preferência do usuário (campo persistido + fallback localStorage). */
-export function getPushPreference(userId?: string): boolean {
+/**
+ * Preferência do usuário. Fonte da verdade: campo persistido `push_enabled` na
+ * coleção users (migração 0140) — o chamador injeta o valor do usuário logado.
+ * O localStorage (`logos_push_prompted`) serve só como fallback quando ainda
+ * não há valor persistido para este usuário (ex.: primeiro acesso pós-login).
+ */
+export function getPushPreference(userId?: string, userPushEnabled?: boolean): boolean {
+  if (typeof userPushEnabled === 'boolean') return userPushEnabled
   try {
-    const stored = localStorage.getItem(PUSH_PREF_KEY)
+    const stored = localStorage.getItem(userId ? `${PUSH_PREF_KEY}:${userId}` : PUSH_PREF_KEY)
     if (stored !== null) return stored === 'true'
+    // Legado: chave antiga sem sufixo de usuário.
+    const legacy = localStorage.getItem(PUSH_PREF_KEY)
+    if (legacy !== null) return legacy === 'true'
   } catch {
     /* intentionally ignored */
   }
@@ -93,7 +102,7 @@ export async function showPushNotification(opts: {
   url?: string
 }): Promise<void> {
   if (!isPushSupported() || Notification.permission !== 'granted') return
-  const targetUrl = opts.url || '/'
+  const targetUrl = opts.url || window.location.pathname + window.location.search
   const options: NotificationOptions & { data?: { url: string } } = {
     body: opts.body,
     icon: '/favicon.ico',
