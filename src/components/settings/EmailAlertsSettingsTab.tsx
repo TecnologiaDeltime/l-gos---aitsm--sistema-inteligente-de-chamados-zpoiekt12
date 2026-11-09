@@ -336,10 +336,19 @@ export function EmailAlertsSettingsTab({ canEdit = true }: EmailAlertsSettingsTa
                   <CardContent className="p-4 pt-2 space-y-3">
                     <div className="p-2.5 rounded-md bg-muted/40 border border-border/60 text-[11px] space-y-1">
                       <div className="flex items-center justify-between">
-                        <span className="text-muted-foreground">Layout Visual:</span>
-                        <span className="font-semibold text-foreground capitalize">
-                          {item.template_layout}
-                        </span>
+                        <span className="text-muted-foreground">Template:</span>
+                        <div className="flex items-center gap-1.5">
+                          <span className="font-semibold text-foreground capitalize">
+                            {item.template_layout}
+                          </span>
+                          {item.is_customized ? (
+                            <Badge className="bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30 text-[9px] px-1 py-0 h-4 uppercase">
+                              Dinâmico
+                            </Badge>
+                          ) : (
+                            <span className="text-[10px] text-muted-foreground">(Padrão)</span>
+                          )}
+                        </div>
                       </div>
                       <div className="flex items-center justify-between">
                         <span className="text-muted-foreground">Destinatários:</span>

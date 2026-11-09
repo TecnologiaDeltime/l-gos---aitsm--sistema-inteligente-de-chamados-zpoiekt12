@@ -19,6 +19,9 @@ import {
   EmailTemplateLayout,
   updateEmailAlertSetting,
   EMAIL_ALERT_SAMPLE_DATA,
+  interpolateSampleText,
+  VariableHint,
+  DEFAULT_EMAIL_ALERT_FACTORY_TEMPLATES,
 } from '@/services/email-alert-settings'
 import { EmailLivePreview } from '@/components/settings/EmailLivePreview'
 import {
@@ -31,6 +34,9 @@ import {
   Sparkles,
   Link as LinkIcon,
   HelpCircle,
+  Braces,
+  AtSign,
+  FileText,
 } from 'lucide-react'
 
 interface EmailTemplateEditorDialogProps {
@@ -61,6 +67,9 @@ export function EmailTemplateEditorDialog({
   const [draft, setDraft] = useState<EmailAlertSetting | null>(null)
   const [saving, setSaving] = useState(false)
   const [activeTab, setActiveTab] = useState<'editor' | 'preview'>('editor')
+  const [insertTarget, setInsertTarget] = useState<'body' | 'subject'>('body')
+  const subjectInputRef = React.useRef<HTMLInputElement | null>(null)
+  const bodyTextareaRef = React.useRef<HTMLTextAreaElement | null>(null)
 
   useEffect(() => {
     if (setting) {
@@ -71,25 +80,43 @@ export function EmailTemplateEditorDialog({
     }
   }, [setting])
 
-  const parsedVariables = useMemo(() => {
+  const parsedVariables = useMemo<VariableHint[]>(() => {
     if (!draft) return []
+    let list: VariableHint[] = []
     if (Array.isArray(draft.variables_hint)) {
-      return draft.variables_hint
-    }
-    if (typeof draft.variables_hint === 'string') {
+      list = draft.variables_hint as VariableHint[]
+    } else if (typeof draft.variables_hint === 'string') {
       try {
-        return JSON.parse(draft.variables_hint)
+        list = JSON.parse(draft.variables_hint) as VariableHint[]
       } catch {
         /* intentionally ignored */
       }
     }
-    // Fallback das chaves de sample data
-    const sample = EMAIL_ALERT_SAMPLE_DATA[draft.alert_key] || {}
-    return Object.keys(sample).map((k) => ({
-      key: k,
-      desc: k.replace(/_/g, ' '),
-    }))
+    if (!list || list.length === 0) {
+      // Fallback das chaves de sample data
+      const sample = EMAIL_ALERT_SAMPLE_DATA[draft.alert_key] || {}
+      list = Object.keys(sample).map((k) => ({ key: k, desc: k.replace(/_/g, ' ') }))
+    }
+    // Deduplica por chave, mantendo a ordem
+    const seen = new Set<string>()
+    return list.filter((v) => {
+      if (!v?.key || seen.has(v.key)) return false
+      seen.add(v.key)
+      return true
+    })
   }, [draft])
+
+  const sampleData = useMemo(() => {
+    return (
+      EMAIL_ALERT_SAMPLE_DATA[draft?.alert_key || ''] || {
+        chamado_numero: 'CH-2026-99999',
+        titulo: 'Título de Exemplo',
+        cliente: 'Usuário Solicitante',
+      }
+    )
+  }, [draft?.alert_key])
+
+  const isCustomized = Boolean(draft?.is_customized)
 
   if (!draft) return null
 
@@ -100,18 +127,78 @@ export function EmailTemplateEditorDialog({
     setDraft((prev) => (prev ? { ...prev, [field]: value } : prev))
   }
 
+  const handleRestoreDefaultTemplate = async () => {
+    if (!draft || !canEdit) return
+    const key = draft.alert_key
+    const factory = DEFAULT_EMAIL_ALERT_FACTORY_TEMPLATES[key]
+    if (!factory) {
+      toast({
+        title: 'Sem template padrão mapeado',
+        description: 'Não há template de fábrica registrado para esta chave.',
+        variant: 'destructive',
+      })
+      return
+    }
+    const restoredDraft: EmailAlertSetting = {
+      ...draft,
+      subject_template: factory.subject_template,
+      body_template: factory.body_template,
+      header_title: factory.header_title,
+      header_subtitle: factory.header_subtitle,
+      footer_text: factory.footer_text,
+      button_label: factory.button_label,
+      button_url_template: factory.button_url_template,
+      show_button: factory.show_button,
+      primary_color: factory.primary_color,
+      template_layout: factory.template_layout,
+      is_customized: false,
+    }
+    setDraft(restoredDraft)
+    toast({
+      title: 'Template padrão restaurado no formulário',
+      description: 'Clique em "Salvar Alterações" para aplicar no banco de dados.',
+    })
+  }
+
+  /**
+   * Insere a variável no campo ativo (assunto ou corpo) na posição do cursor.
+   * Sem cursor mapeado, anexa ao final do campo ativo.
+   */
   const handleInsertVariable = (varKey: string) => {
+    if (!canEdit) return
     const token = `{{${varKey}}}`
+    const target = insertTarget
+
     setDraft((prev) => {
       if (!prev) return prev
-      return {
-        ...prev,
-        body_template: (prev.body_template || '') + ' ' + token,
+      if (target === 'subject') {
+        const el = subjectInputRef.current
+        if (el && typeof el.selectionStart === 'number') {
+          const start = el.selectionStart
+          const end = el.selectionEnd ?? start
+          const current = prev.subject_template || ''
+          const next = current.slice(0, start) + token + current.slice(end)
+          requestAnimationFrame(() => {
+            el.focus()
+            el.setSelectionRange(start + token.length, start + token.length)
+          })
+          return { ...prev, subject_template: next }
+        }
+        return { ...prev, subject_template: (prev.subject_template || '') + token }
       }
-    })
-    toast({
-      title: 'Variável inserida',
-      description: `Tag ${token} adicionada ao corpo do e-mail.`,
+      const el = bodyTextareaRef.current
+      if (el && typeof el.selectionStart === 'number') {
+        const start = el.selectionStart
+        const end = el.selectionEnd ?? start
+        const current = prev.body_template || ''
+        const next = current.slice(0, start) + token + current.slice(end)
+        requestAnimationFrame(() => {
+          el.focus()
+          el.setSelectionRange(start + token.length, start + token.length)
+        })
+        return { ...prev, body_template: next }
+      }
+      return { ...prev, body_template: (prev.body_template || '') + ' ' + token }
     })
   }
 
@@ -130,10 +217,11 @@ export function EmailTemplateEditorDialog({
         show_button: draft.show_button,
         button_label: draft.button_label,
         button_url_template: draft.button_url_template,
+        is_customized: true,
       })
       toast({
         title: 'Template salvo com sucesso',
-        description: `Visual do alerta "${draft.name}" atualizado.`,
+        description: `Visual e variáveis do alerta "${draft.name}" atualizados.`,
       })
       onSaved(updated)
       onOpenChange(false)
@@ -154,14 +242,23 @@ export function EmailTemplateEditorDialog({
         <DialogHeader className="p-5 pb-3 border-b bg-muted/30">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <DialogTitle className="text-lg font-bold flex items-center gap-2">
                   <LayoutTemplate className="h-5 w-5 text-amber-500" />
-                  Editor de Template Visual
+                  Editor de Template Dinâmico
                 </DialogTitle>
                 <Badge variant="outline" className="text-xs font-mono uppercase bg-background">
                   {draft.alert_key}
                 </Badge>
+                {isCustomized ? (
+                  <Badge className="bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30 text-[10px] uppercase font-semibold">
+                    Personalizado
+                  </Badge>
+                ) : (
+                  <Badge variant="secondary" className="text-[10px] uppercase font-semibold">
+                    Padrão de Fábrica
+                  </Badge>
+                )}
               </div>
               <p className="text-xs text-muted-foreground mt-0.5">
                 {draft.name} — Personalize o design institucional com a marca Lógos AITSM e veja a
@@ -293,17 +390,46 @@ export function EmailTemplateEditorDialog({
 
                 {/* Assunto */}
                 <div className="space-y-1.5">
-                  <Label className="text-xs font-semibold">Linha de Assunto</Label>
+                  <div className="flex items-center justify-between">
+                    <Label className="text-xs font-semibold flex items-center gap-1.5">
+                      <AtSign className="h-3.5 w-3.5 text-amber-500" />
+                      Linha de Assunto (com suporte a variáveis)
+                    </Label>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setInsertTarget('subject')
+                        subjectInputRef.current?.focus()
+                      }}
+                      className={`text-[10px] px-2 py-0.5 rounded border transition-colors ${
+                        insertTarget === 'subject'
+                          ? 'border-amber-500 bg-amber-500/10 text-amber-500 font-bold'
+                          : 'border-border text-muted-foreground hover:text-foreground'
+                      }`}
+                    >
+                      {insertTarget === 'subject' ? 'Alvo ativo de variáveis' : 'Definir como alvo'}
+                    </button>
+                  </div>
                   <Input
+                    ref={subjectInputRef}
                     value={draft.subject_template || ''}
+                    onFocus={() => setInsertTarget('subject')}
                     onChange={(e) => handleFieldChange('subject_template', e.target.value)}
                     placeholder="Ex: Chamado #{{chamado_numero}} registrado com sucesso"
-                    className="text-xs h-9"
+                    className={`text-xs h-9 transition-all ${
+                      insertTarget === 'subject' ? 'ring-1 ring-amber-500/60 border-amber-500' : ''
+                    }`}
                     disabled={!canEdit}
                   />
-                  <p className="text-[11px] text-muted-foreground">
-                    Suporta variáveis como {'{{chamado_numero}}'} e {'{{titulo}}'}.
-                  </p>
+                  <div className="flex items-center justify-between text-[11px] text-muted-foreground">
+                    <span>
+                      Suporta variáveis como {'{{chamado_numero}}'}, {'{{titulo}}'}, {'{{status}}'}.
+                    </span>
+                    <span className="font-mono text-[10px] text-amber-600 dark:text-amber-400">
+                      Preview: &ldquo;
+                      {interpolateSampleText(draft.subject_template || '', sampleData)}&rdquo;
+                    </span>
+                  </div>
                 </div>
 
                 {/* Cabeçalho: Título e Subtítulo */}
@@ -333,49 +459,86 @@ export function EmailTemplateEditorDialog({
                 {/* Corpo do E-mail */}
                 <div className="space-y-1.5">
                   <div className="flex items-center justify-between">
-                    <Label className="text-xs font-semibold">
-                      Corpo da Mensagem (HTML / Texto)
+                    <Label className="text-xs font-semibold flex items-center gap-1.5">
+                      <FileText className="h-3.5 w-3.5 text-amber-500" />
+                      Corpo da Mensagem (HTML / Texto Dinâmico)
                     </Label>
-                    <span className="text-[10px] text-muted-foreground">
-                      Tags HTML básicas permitidas (&lt;p&gt;, &lt;strong&gt;, &lt;div&gt;)
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setInsertTarget('body')
+                          bodyTextareaRef.current?.focus()
+                        }}
+                        className={`text-[10px] px-2 py-0.5 rounded border transition-colors ${
+                          insertTarget === 'body'
+                            ? 'border-amber-500 bg-amber-500/10 text-amber-500 font-bold'
+                            : 'border-border text-muted-foreground hover:text-foreground'
+                        }`}
+                      >
+                        {insertTarget === 'body' ? 'Alvo ativo de variáveis' : 'Definir como alvo'}
+                      </button>
+                      <span className="text-[10px] text-muted-foreground hidden sm:inline">
+                        Tags: &lt;p&gt;, &lt;strong&gt;, &lt;div&gt;
+                      </span>
+                    </div>
                   </div>
                   <Textarea
+                    ref={bodyTextareaRef}
                     value={draft.body_template || ''}
+                    onFocus={() => setInsertTarget('body')}
                     onChange={(e) => handleFieldChange('body_template', e.target.value)}
-                    rows={6}
+                    rows={7}
                     placeholder="<p>Olá <strong>{{cliente}}</strong>,</p><p>Seu chamado foi registrado...</p>"
-                    className="font-mono text-xs leading-relaxed"
+                    className={`font-mono text-xs leading-relaxed transition-all ${
+                      insertTarget === 'body' ? 'ring-1 ring-amber-500/60 border-amber-500' : ''
+                    }`}
                     disabled={!canEdit}
                   />
                 </div>
 
                 {/* Variáveis Disponíveis */}
                 {parsedVariables.length > 0 && (
-                  <div className="p-3 bg-muted/40 rounded-lg border border-border/80 space-y-2">
+                  <div className="p-3 bg-muted/40 rounded-lg border border-border/80 space-y-2.5">
                     <div className="flex items-center justify-between text-xs font-semibold text-foreground">
                       <span className="flex items-center gap-1.5">
-                        <HelpCircle className="h-3.5 w-3.5 text-amber-500" />
-                        Variáveis Dinâmicas Disponíveis
+                        <Braces className="h-3.5 w-3.5 text-amber-500" />
+                        Biblioteca de Variáveis Dinâmicas ({parsedVariables.length})
                       </span>
                       <span className="text-[10px] text-muted-foreground">
-                        Clique para inserir no corpo
+                        Inserir em:{' '}
+                        <strong className="text-foreground">
+                          {insertTarget === 'subject' ? 'Assunto' : 'Corpo'}
+                        </strong>{' '}
+                        (clique para injetar)
                       </span>
                     </div>
-                    <div className="flex flex-wrap gap-1.5">
-                      {parsedVariables.map((v: any) => (
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5 max-h-48 overflow-y-auto pr-1">
+                      {parsedVariables.map((v) => (
                         <button
                           key={v.key}
                           type="button"
                           onClick={() => handleInsertVariable(v.key)}
                           disabled={!canEdit}
-                          className="px-2 py-1 bg-background hover:bg-amber-500/10 hover:border-amber-500 border border-border rounded text-[11px] font-mono text-slate-700 dark:text-slate-300 flex items-center gap-1 transition-colors"
-                          title={v.desc}
+                          className="p-1.5 text-left bg-background hover:bg-amber-500/10 hover:border-amber-500 border border-border rounded text-[11px] transition-colors group"
+                          title={`${v.desc} (ex: ${sampleData[v.key] ?? '—'})`}
                         >
-                          <span className="text-amber-500 font-bold">+</span>
-                          <span>{`{{${v.key}}}`}</span>
+                          <div className="font-mono text-amber-600 dark:text-amber-400 font-semibold truncate flex items-center justify-between">
+                            <span>{`{{${v.key}}}`}</span>
+                            <span className="text-[10px] text-muted-foreground group-hover:text-amber-500 font-sans">
+                              +
+                            </span>
+                          </div>
+                          <div className="text-[10px] text-muted-foreground truncate">{v.desc}</div>
                         </button>
                       ))}
+                    </div>
+                    <div className="text-[10px] text-muted-foreground flex items-center gap-1">
+                      <Sparkles className="h-3 w-3 text-amber-500 shrink-0" />
+                      <span>
+                        Variáveis são preenchidas com dados reais no envio; tags não reconhecidas
+                        são omitidas sem falhar o e-mail.
+                      </span>
                     </div>
                   </div>
                 )}
@@ -479,14 +642,13 @@ export function EmailTemplateEditorDialog({
               type="button"
               variant="outline"
               size="sm"
-              onClick={() => {
-                if (setting) setDraft({ ...setting })
-              }}
-              disabled={saving}
+              onClick={handleRestoreDefaultTemplate}
+              disabled={saving || !canEdit}
               className="text-xs gap-1.5"
+              title="Restaura os textos, assunto e variáveis oficiais de fábrica da Lógos AITSM"
             >
-              <RotateCcw className="h-3.5 w-3.5" />
-              Restaurar Original
+              <RotateCcw className="h-3.5 w-3.5 text-amber-500" />
+              Template Padrão de Fábrica
             </Button>
 
             <Button

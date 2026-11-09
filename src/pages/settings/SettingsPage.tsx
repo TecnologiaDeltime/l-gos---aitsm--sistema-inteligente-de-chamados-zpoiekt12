@@ -848,7 +848,11 @@ export default function SettingsPage() {
       {mainTab === 'email_alerts' &&
         permissions.canAccessItem('settings', 'settings_email_alerts') && (
           <EmailAlertsSettingsTab
-            canEdit={permissions.canEdit('settings_email_alerts') || permissions.isGestor}
+            canEdit={
+              permissions.canEdit('settings_email_alerts') ||
+              permissions.canEdit('settings_email_alert_templates') ||
+              permissions.isGestor
+            }
           />
         )}
 

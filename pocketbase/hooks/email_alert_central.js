@@ -101,18 +101,67 @@
 
   /**
    * Substitui placeholders no formato {{chave}} pelos valores fornecidos.
+   * Variáveis ausentes são removidas com segurança para nunca quebrar o envio.
+   * Suporta aliases padronizados comuns do Lógos AITSM.
    */
   function interpolateTemplate(template, data) {
     if (!template) return ''
-    if (!data || typeof data !== 'object') return template
+    var normalizedData = {}
+    if (data && typeof data === 'object') {
+      var inKeys = Object.keys(data)
+      for (var j = 0; j < inKeys.length; j++) {
+        var key = inKeys[j]
+        normalizedData[key] = data[key]
+      }
+    }
+
+    // Aliases bidirecionais comuns para tolerância a formatos
+    if (normalizedData.chamado_numero && !normalizedData.numero) {
+      normalizedData.numero = normalizedData.chamado_numero
+    }
+    if (normalizedData.mudanca_numero && !normalizedData.numero) {
+      normalizedData.numero = normalizedData.mudanca_numero
+    }
+    if (normalizedData.cliente && !normalizedData.solicitante) {
+      normalizedData.solicitante = normalizedData.cliente
+    }
+    if (normalizedData.solicitante && !normalizedData.cliente) {
+      normalizedData.cliente = normalizedData.solicitante
+    }
+    if (normalizedData.responsavel && !normalizedData.operador) {
+      normalizedData.operador = normalizedData.responsavel
+    }
+    if (normalizedData.operador && !normalizedData.responsavel) {
+      normalizedData.responsavel = normalizedData.operador
+    }
+    if (normalizedData.prazo_sla && !normalizedData.prazo) {
+      normalizedData.prazo = normalizedData.prazo_sla
+    }
+    if (normalizedData.prazo && !normalizedData.prazo_sla) {
+      normalizedData.prazo_sla = normalizedData.prazo
+    }
+    if (normalizedData.data_abertura && !normalizedData.data_hora) {
+      normalizedData.data_hora = normalizedData.data_abertura
+    }
+    if (normalizedData.data_hora && !normalizedData.data_abertura) {
+      normalizedData.data_abertura = normalizedData.data_hora
+    }
+    if (normalizedData.projeto_nome && !normalizedData.titulo) {
+      normalizedData.titulo = normalizedData.projeto_nome
+    }
+
     var result = template
-    var keys = Object.keys(data)
+    var keys = Object.keys(normalizedData)
     for (var i = 0; i < keys.length; i++) {
       var k = keys[i]
-      var val = data[k] == null ? '' : String(data[k])
-      var regex = new RegExp('\\{\\{\\s*' + k + '\\s*\\}\\}', 'g')
+      var val = normalizedData[k] == null ? '' : String(normalizedData[k])
+      var regex = new RegExp('\\{\\{\\s*' + k + '\\s*\\}\\}', 'gi')
       result = result.replace(regex, val)
     }
+
+    // Limpar quaisquer placeholders {{restantes}} que não puderam ser preenchidos para não quebrar a legibilidade
+    result = result.replace(/\{\{\s*[a-zA-Z0-9_\-.]+\s*\}\}/g, '')
+
     return result
   }
   globalThis.interpolateEmailTemplate = interpolateTemplate
@@ -285,16 +334,24 @@
       return { sent: false, reason: 'already_sent', alert_key: alertKey, reference_id: referenceId }
     }
 
-    // 3. Montar assunto e corpo HTML via template configurado
+    // 3. Montar assunto e corpo HTML via template dinâmico (com fallback para template padrão)
     var data = opts.data || {}
-    var subject = opts.subject
-    if (cfg.subject_template) {
-      subject = interpolateTemplate(cfg.subject_template, data)
+    var rawSubject =
+      cfg.subject_template ||
+      cfg.default_subject_template ||
+      opts.subject ||
+      'Notificação Lógos AITSM'
+    var subject = interpolateTemplate(rawSubject, data)
+
+    // Se o body_template estiver vazio, utiliza o default_body_template de fábrica
+    if (!cfg.body_template && cfg.default_body_template) {
+      cfg.body_template = cfg.default_body_template
     }
 
     var htmlContent = globalThis.buildEmailHtmlFromConfig(cfg, data)
+    var rawBody = cfg.body_template || cfg.default_body_template || ''
     var textFallback =
-      opts.fallbackText || interpolateTemplate(cfg.body_template, data).replace(/<[^>]+>/g, ' ')
+      opts.fallbackText || interpolateTemplate(rawBody, data).replace(/<[^>]+>/g, ' ')
 
     // 4. Envio via Skip Mailer centralizado (sendSystemEmail / $app.newMailClient)
     try {

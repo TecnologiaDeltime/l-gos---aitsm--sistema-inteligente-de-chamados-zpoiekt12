@@ -858,6 +858,13 @@ const BASE_SYSTEM_MODULES: GranularModuleDefinition[] = [
           'Gerenciar ativação individual de alertas por e-mail, anti-duplicidade e editor de templates com a marca Lógos AITSM',
         path: '/settings?tab=email_alerts',
       },
+      {
+        key: 'settings_email_alert_templates',
+        label: 'Templates Dinâmicos de Alerta',
+        description:
+          'Personalizar assunto, corpo e variáveis dinâmicas por tipo de alerta com preview ao vivo e layouts Lógos AITSM',
+        path: '/settings?tab=email_alerts#templates',
+      },
     ],
   },
 ]

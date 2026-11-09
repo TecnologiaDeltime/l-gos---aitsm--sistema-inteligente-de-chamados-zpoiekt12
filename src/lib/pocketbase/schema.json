@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-09T19:51:57.484Z",
+  "generatedAt": "2026-11-09T20:20:07.207Z",
   "collections": [
     {
       "name": "users",
@@ -12900,6 +12900,24 @@
         {
           "name": "variables_hint",
           "type": "json",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "is_customized",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "default_subject_template",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "default_body_template",
+          "type": "text",
           "required": false,
           "system": false
         }
