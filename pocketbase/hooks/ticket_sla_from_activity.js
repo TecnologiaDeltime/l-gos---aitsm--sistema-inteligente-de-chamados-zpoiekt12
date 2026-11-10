@@ -58,11 +58,21 @@ onRecordUpdate((e) => {
 
     var now = new Date()
 
+    // Contabilidade por expediente (empresa operadora): sem cadastro => calendário contínuo.
+    var respDeadline = bhComputeDeadline(now.getTime(), resp, TZ_OFFSET_SAO_PAULO_MIN)
+    var solDeadline = bhComputeDeadline(now.getTime(), sol, TZ_OFFSET_SAO_PAULO_MIN)
+
     // Prazo de resposta: só reinicia se a primeira resposta ainda não foi registrada
     if (!rec.getString('sla_response_at')) {
-      rec.set('sla_response_deadline', new Date(now.getTime() + resp * 60000).toISOString())
+      rec.set(
+        'sla_response_deadline',
+        respDeadline || new Date(now.getTime() + resp * 60000).toISOString(),
+      )
     }
-    rec.set('sla_solution_deadline', new Date(now.getTime() + sol * 60000).toISOString())
+    rec.set(
+      'sla_solution_deadline',
+      solDeadline || new Date(now.getTime() + sol * 60000).toISOString(),
+    )
     rec.set('sla_source', 'Atividade: ' + (act.getString('name') || 'Catálogo'))
 
     console.log(

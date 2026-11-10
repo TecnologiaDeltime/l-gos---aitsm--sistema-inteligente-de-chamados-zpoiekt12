@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-10T16:32:28.955Z",
+  "generatedAt": "2026-11-10T17:09:01.482Z",
   "collections": [
     {
       "name": "users",
@@ -12975,6 +12975,124 @@
       "indexes": [
         "CREATE INDEX idx_email_sent_lookup ON email_sent_logs (alert_key, reference_id, recipient)"
       ]
+    },
+    {
+      "name": "company_settings",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != ''",
+        "view": "@request.auth.id != ''",
+        "create": "@request.auth.id != ''",
+        "update": "@request.auth.id != ''",
+        "delete": "@request.auth.id != ''"
+      },
+      "fields": [
+        {
+          "name": "legal_name",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "trade_name",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "cnpj",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "email",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "phone",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "address_street",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "address_number",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "address_complement",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "address_neighborhood",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "address_city",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "address_state",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "address_zipcode",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "business_hours",
+          "type": "json",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "holidays",
+          "type": "json",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "timezone",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": ["CREATE UNIQUE INDEX idx_company_settings_single ON company_settings (id)"]
     }
   ]
 }

@@ -70,7 +70,14 @@ routerAdd(
           targetRespMin = 30
         }
 
-        var calculatedDeadline = new Date(createdTime + targetRespMin * 60000).toISOString()
+        var calculatedDeadline = bhComputeDeadline(
+          createdTime,
+          targetRespMin,
+          TZ_OFFSET_SAO_PAULO_MIN,
+        )
+        if (!calculatedDeadline) {
+          calculatedDeadline = new Date(createdTime + targetRespMin * 60000).toISOString()
+        }
         ticket.set('sla_response_deadline', calculatedDeadline)
         slaResponseDeadlineStr = calculatedDeadline
       }

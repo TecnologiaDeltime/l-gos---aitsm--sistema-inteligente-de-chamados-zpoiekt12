@@ -852,6 +852,13 @@ const BASE_SYSTEM_MODULES: GranularModuleDefinition[] = [
         path: '/settings?tab=prtg',
       },
       {
+        key: 'settings_company_profile',
+        label: 'Empresa Operadora (SLA por Expediente)',
+        description:
+          'Cadastro da empresa que usa o Lógos AITSM (razão social, CNPJ, contato, endereço, horário de funcionamento e feriados) usado na contabilidade do SLA',
+        path: '/settings?tab=operator_company',
+      },
+      {
         key: 'settings_email_alerts',
         label: 'Central de Alertas por E-mail',
         description:

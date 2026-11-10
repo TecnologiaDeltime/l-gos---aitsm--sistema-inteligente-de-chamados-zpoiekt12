@@ -352,7 +352,14 @@ const App = () => (
                 <Route path="/cmdb/import" element={<CiImport />} />
                 <Route path="/cmdb/types" element={<CiTypes />} />
                 <Route path="/satisfaction" element={<SatisfactionDashboard />} />
-                <Route path="/settings" element={<SettingsPage />} />
+                <Route
+                  path="/settings"
+                  element={
+                    <ProtectedRoute requiredModule="settings">
+                      <SettingsPage />
+                    </ProtectedRoute>
+                  }
+                />
                 <Route path="/settings/sla" element={<SlaSettings />} />
                 <Route path="/settings/ticket-templates" element={<TicketTemplates />} />
                 <Route

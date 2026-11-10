@@ -125,17 +125,31 @@ onRecordCreate((e) => {
       slaSource = 'Padrão do Sistema'
     }
 
+    // Contabilidade por expediente (empresa operadora, company_settings):
+    // só desloca o prazo quando há horário de funcionamento cadastrado;
+    // sem cadastro => calendário contínuo 24x7 (comportamento atual).
+    var createdMs = now.getTime()
+    try {
+      var createdStr = e.record.getString('created')
+      if (createdStr) {
+        var cMs = new Date(createdStr).getTime()
+        if (!isNaN(cMs)) createdMs = cMs
+      }
+    } catch (_) {}
+
     if (!e.record.getString('sla_response_deadline') && targetResp > 0) {
-      e.record.set(
-        'sla_response_deadline',
-        new Date(now.getTime() + targetResp * 60000).toISOString(),
-      )
+      var respDeadline = bhComputeDeadline(createdMs, targetResp, TZ_OFFSET_SAO_PAULO_MIN)
+      if (!respDeadline) {
+        respDeadline = new Date(createdMs + targetResp * 60000).toISOString()
+      }
+      e.record.set('sla_response_deadline', respDeadline)
     }
     if (!e.record.getString('sla_solution_deadline') && targetSol > 0) {
-      e.record.set(
-        'sla_solution_deadline',
-        new Date(now.getTime() + targetSol * 60000).toISOString(),
-      )
+      var solDeadline = bhComputeDeadline(createdMs, targetSol, TZ_OFFSET_SAO_PAULO_MIN)
+      if (!solDeadline) {
+        solDeadline = new Date(createdMs + targetSol * 60000).toISOString()
+      }
+      e.record.set('sla_solution_deadline', solDeadline)
     }
     if (slaSource && !e.record.getString('sla_source')) {
       e.record.set('sla_source', slaSource)

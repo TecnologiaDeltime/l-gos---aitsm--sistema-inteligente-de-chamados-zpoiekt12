@@ -36,6 +36,8 @@ import ClientPortalSettingsTab from '@/components/settings/ClientPortalSettingsT
 import { AiTicketSettingsTab } from '@/components/settings/AiTicketSettingsTab'
 import { ClientConsumptionAgentTab } from '@/components/settings/ClientConsumptionAgentTab'
 import { AutoAssignSettingsTab } from '@/components/settings/AutoAssignSettingsTab'
+import { OperatorCompanyTab } from '@/components/settings/OperatorCompanyTab'
+import { Building2 } from 'lucide-react'
 import { ProjectDeadlinesSettingsTab } from '@/components/settings/ProjectDeadlinesSettingsTab'
 import { PrtgSettingsTab } from '@/components/settings/PrtgSettingsTab'
 import { PortalTriageSettingsTab } from '@/components/settings/PortalTriageSettingsTab'
@@ -121,7 +123,9 @@ export default function SettingsPage() {
                             ? 'portal_triage'
                             : searchParams.get('tab') === 'email_alerts'
                               ? 'email_alerts'
-                              : 'general'
+                              : searchParams.get('tab') === 'operator_company'
+                                ? 'operator_company'
+                                : 'general'
   const [mainTab, setMainTab] = useState<
     | 'general'
     | 'portal'
@@ -138,6 +142,7 @@ export default function SettingsPage() {
     | 'auto_assign'
     | 'prtg'
     | 'project-deadlines'
+    | 'operator_company'
   >(initialTab as any)
 
   const handleTabChange = (
@@ -156,7 +161,8 @@ export default function SettingsPage() {
       | 'consumption_agent'
       | 'auto_assign'
       | 'prtg'
-      | 'project-deadlines',
+      | 'project-deadlines'
+      | 'operator_company',
   ) => {
     setMainTab(tab)
     setSearchParams(
@@ -188,7 +194,9 @@ export default function SettingsPage() {
                                 ? { tab: 'prtg' }
                                 : tab === 'project-deadlines'
                                   ? { tab: 'project-deadlines' }
-                                  : {},
+                                  : tab === 'operator_company'
+                                    ? { tab: 'operator_company' }
+                                    : {},
     )
   }
 
@@ -223,6 +231,8 @@ export default function SettingsPage() {
       setMainTab('prtg')
     } else if (tabFromUrl === 'project-deadlines' && mainTab !== 'project-deadlines') {
       setMainTab('project-deadlines')
+    } else if (tabFromUrl === 'operator_company' && mainTab !== 'operator_company') {
+      setMainTab('operator_company')
     }
   }, [searchParams])
 
@@ -615,6 +625,23 @@ export default function SettingsPage() {
             </Button>
           )}
 
+          {permissions.canAccessItem('settings', 'settings_company_profile') && (
+            <Button
+              type="button"
+              size="sm"
+              variant={mainTab === 'operator_company' ? 'default' : 'ghost'}
+              onClick={() => handleTabChange('operator_company')}
+              className={`h-8 text-xs font-semibold rounded-lg transition-all ${
+                mainTab === 'operator_company'
+                  ? 'bg-amber-500/20 text-amber-500 border border-amber-500/30 shadow-xs shadow-amber-500/10'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              <Building2 className="h-3.5 w-3.5 mr-1.5 text-amber-500" />
+              Empresa Operadora
+            </Button>
+          )}
+
           {permissions.canAccessItem('settings', 'settings_auto_assign') && (
             <Button
               type="button"
@@ -797,6 +824,15 @@ export default function SettingsPage() {
           <ClientConsumptionAgentTab
             canConfigure={permissions.canConfigure('settings_consumption_agent')}
             canEdit={permissions.canEdit('settings_consumption_agent')}
+          />
+        )}
+
+      {/* SEÇÃO EMPRESA OPERADORA (contabilidade de SLA por expediente) */}
+      {mainTab === 'operator_company' &&
+        permissions.canAccessItem('settings', 'settings_company_profile') && (
+          <OperatorCompanyTab
+            canConfigure={permissions.canConfigure('settings_company_profile')}
+            canEdit={permissions.canEdit('settings_company_profile')}
           />
         )}
 
