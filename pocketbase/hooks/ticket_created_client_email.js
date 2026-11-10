@@ -24,6 +24,14 @@
 // 6. Registro completo de logs explicativos para auditoria clara.
 
 onRecordAfterCreateSuccess((e) => {
+  try {
+    var __logTicket = e.record
+    console.log(
+      '[Central de Alertas] hook disparado | chamado #' +
+        (__logTicket ? __logTicket.getString('number') || __logTicket.id : '?'),
+    )
+  } catch (_) {}
+
   var ticket = e.record
   if (!ticket) return e.next()
 

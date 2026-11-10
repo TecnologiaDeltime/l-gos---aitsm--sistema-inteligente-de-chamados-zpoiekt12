@@ -597,7 +597,7 @@ routerAdd('POST', '/backend/v1/ai/ticket-settings', (e) => {
 onRecordAfterCreateSuccess((e) => {
   try {
     const ticket = e.record
-    if (!ticket) return
+    if (!ticket) return e.next()
 
     let settings = {
       enabled: true,
@@ -627,16 +627,16 @@ onRecordAfterCreateSuccess((e) => {
       }
     } catch (_) {}
 
-    if (!settings.enabled) return
+    if (!settings.enabled) return e.next()
 
     // Resposta automática ativa apenas nos modos 'automatic' ou 'both'
-    if (settings.mode !== 'automatic' && settings.mode !== 'both') return
+    if (settings.mode !== 'automatic' && settings.mode !== 'both') return e.next()
 
     const source = (ticket.getString('source') || '').toLowerCase()
     const isPortal = source === 'portal'
 
-    if (isPortal && !settings.auto_reply_portal) return
-    if (!isPortal && !settings.auto_reply_internal) return
+    if (isPortal && !settings.auto_reply_portal) return e.next()
+    if (!isPortal && !settings.auto_reply_internal) return e.next()
 
     // Evitar duplicidade se já houver interações
     const existingInteractions = e.app.findRecordsByFilter(
@@ -646,7 +646,7 @@ onRecordAfterCreateSuccess((e) => {
       1,
       0,
     )
-    if (existingInteractions.length > 0) return
+    if (existingInteractions.length > 0) return e.next()
 
     console.log('[AI_TICKET] Gerando resposta automática para o chamado:', ticket.id)
 
@@ -805,7 +805,7 @@ onRecordAfterCreateSuccess((e) => {
       }
     }
 
-    if (!replyText || replyText.trim().length === 0) return
+    if (!replyText || replyText.trim().length === 0) return e.next()
 
     // Criar interação pública no chamado
     // IMPORTANTE:
@@ -834,9 +834,10 @@ onRecordAfterCreateSuccess((e) => {
     e.app.save(newInter)
 
     console.log('[AI_TICKET] Resposta automática salva com sucesso para o chamado:', ticket.id)
+    return e.next()
   } catch (err) {
     console.warn('[AI_TICKET] Erro ao executar resposta automática de IA:', err)
-  } finally {
-    e.next()
   }
+
+  return e.next()
 }, 'tickets')

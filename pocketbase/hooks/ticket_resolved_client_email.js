@@ -11,6 +11,14 @@
 // Autocontido, seguro e com registro de auditoria em email_audit_logs (tipo 'resolucao_chamado').
 
 onRecordAfterUpdateSuccess((e) => {
+  try {
+    var __logTicket = e.record
+    console.log(
+      '[Central de Alertas] hook disparado | chamado #' +
+        (__logTicket ? __logTicket.getString('number') || __logTicket.id : '?'),
+    )
+  } catch (_) {}
+
   var ticket = e.record
   if (!ticket) return e.next()
 
