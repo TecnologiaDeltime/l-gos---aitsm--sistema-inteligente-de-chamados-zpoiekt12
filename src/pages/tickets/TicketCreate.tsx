@@ -138,6 +138,9 @@ export default function TicketCreate() {
   const [requesterPhone, setRequesterPhone] = useState('')
   const [type, setType] = useState('Incidente')
   const [mainCategory, setMainCategory] = useState('')
+  // SLA efetivo lido do catálogo (subatividade > atividade; 0 = padrão do sistema)
+  const [catalogRespMin, setCatalogRespMin] = useState(0)
+  const [catalogSolMin, setCatalogSolMin] = useState(0)
   const [subActivity, setSubActivity] = useState('')
   const [selectedFiles, setSelectedFiles] = useState<File[]>([])
   const [autoImpact, setAutoImpact] = useState('')
@@ -174,7 +177,19 @@ export default function TicketCreate() {
     setAutoImpact('')
     setAutoUrgency('')
     setAutoPriority('')
+    // SLA imediato: mostra os prazos da atividade principal já no ato da seleção
+    const cat = categories.find((c) => c.id === parentId)
+    setCatalogRespMin(cat?.sla_response_minutes || 0)
+    setCatalogSolMin(cat?.sla_solution_minutes || 0)
   }
+
+  // SLA do catálogo da atividade/subatividade selecionada (subatividade > atividade)
+  useEffect(() => {
+    const sub = categories.find((c) => c.id === subActivity)
+    const main = categories.find((c) => c.id === mainCategory)
+    setCatalogRespMin(sub?.sla_response_minutes || main?.sla_response_minutes || 0)
+    setCatalogSolMin(sub?.sla_solution_minutes || main?.sla_solution_minutes || 0)
+  }, [categories, subActivity, mainCategory])
 
   /**
    * Filas/Equipes de atendimento ativas cadastradas em Gerenciamento de Filas.
@@ -443,10 +458,14 @@ export default function TicketCreate() {
 
     setSubmitting(true)
     try {
+      // Fonte única de SLA: catálogo de atividades (subatividade > atividade).
+      // Sem SLA cadastrado no catálogo => padrões do sistema (30 min / 240 min),
+      // espelhando o hook ticket_on_create; nunca grava chamado sem prazos.
       const sub = categories.find((c) => c.id === subActivity)
-      const sla = sub
-        ? calculateSlaFromMinutes(sub.sla_response_minutes, sub.sla_solution_minutes)
-        : { sla_response_deadline: undefined, sla_solution_deadline: undefined }
+      const mainCat = categories.find((c) => c.id === mainCategory)
+      const respMin = sub?.sla_response_minutes || mainCat?.sla_response_minutes || 30
+      const solMin = sub?.sla_solution_minutes || mainCat?.sla_solution_minutes || 240
+      const sla = calculateSlaFromMinutes(respMin, solMin)
       const isInternal = ticketScope === 'internal'
       const created = await createTicket({
         number: 'PENDENTE',
@@ -799,6 +818,22 @@ export default function TicketCreate() {
                 </p>
               </div>
             </div>
+            {mainCategory && (
+              <div className="flex flex-wrap items-center gap-x-6 gap-y-1 rounded-lg bg-slate-50 px-4 py-3 text-xs dark:bg-slate-800/50">
+                <span className="text-slate-500 dark:text-slate-400">
+                  SLA Resposta:{' '}
+                  <strong className="text-slate-800 dark:text-slate-100">
+                    {catalogRespMin > 0 ? `${catalogRespMin} min` : '30 min (padrão do sistema)'}
+                  </strong>
+                </span>
+                <span className="text-slate-500 dark:text-slate-400">
+                  SLA Solução:{' '}
+                  <strong className="text-slate-800 dark:text-slate-100">
+                    {catalogSolMin > 0 ? `${catalogSolMin} min` : '240 min (padrão do sistema)'}
+                  </strong>
+                </span>
+              </div>
+            )}
             {subActivity && (
               <div className="grid gap-4 sm:grid-cols-4 rounded-lg bg-slate-50 p-4 dark:bg-slate-800/50">
                 <div className="space-y-1">

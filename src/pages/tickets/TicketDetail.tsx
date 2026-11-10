@@ -197,10 +197,16 @@ export default function TicketDetail({
     getTicket(id)
       .then((t) => {
         setTicket(t)
-        if (t.expand?.category) {
+        // Sempre resolve a atividade do catálogo (subatividade tem prioridade para SLA)
+        const catId = t.category || ''
+        const subId = t.subcategory || ''
+        const wantId = catId || subId
+        if (!wantId) {
+          setCategoryData(null)
+        } else if (t.expand?.category && t.expand.category.id === wantId) {
           setCategoryData(t.expand.category)
-        } else if (t.category) {
-          getCategoryById(t.category)
+        } else {
+          getCategoryById(wantId)
             .then(setCategoryData)
             .catch(() => {})
         }

@@ -74,6 +74,19 @@ export const TicketCategoryCard: React.FC<TicketCategoryCardProps> = ({
   const currentCategoryObj = categories.find((c) => c.id === currentCategoryId)
   const currentSubcategoryObj = categories.find((c) => c.id === currentSubcategoryId)
 
+  // SLA efetivo da atividade/subatividade ATUALMENTE SELECIONADA (não só a persistida),
+  // com precedência por campo: subatividade > atividade principal. Quando o catálogo
+  // não define um dos prazos, vale o padrão do sistema (30 min resp / 240 min sol).
+  const selectedCategoryObj = categories.find((c) => c.id === selectedCategory)
+  const selectedSubcategoryObj = categories.find((c) => c.id === selectedSubcategory)
+  const slaResp =
+    selectedSubcategoryObj?.sla_response_minutes || selectedCategoryObj?.sla_response_minutes || 0
+  const slaSol =
+    selectedSubcategoryObj?.sla_solution_minutes || selectedCategoryObj?.sla_solution_minutes || 0
+  const slaSelected = selectedSubcategoryObj || selectedCategoryObj || null
+  const slaRespLabel = slaResp > 0 ? `${slaResp}m` : 'Padrão 30m'
+  const slaSolLabel = slaSol > 0 ? `${slaSol}m` : 'Padrão 240m'
+
   const handleCategoryChange = (value: string) => {
     const newCat = value === '__none__' ? '' : value
     setSelectedCategory(newCat)
@@ -240,27 +253,20 @@ export const TicketCategoryCard: React.FC<TicketCategoryCardProps> = ({
             )}
           </div>
 
-          {/* Resumo do SLA da atividade */}
-          {currentCategoryObj && (
+          {/* Resumo do SLA da atividade selecionada no catálogo (subatividade > atividade) */}
+          {slaSelected && (
             <div className="pt-2 border-t border-border/60 flex items-center justify-between text-[11px] text-muted-foreground">
-              <span>SLA Atividade:</span>
+              <span>
+                SLA {slaSelected === currentSubcategoryObj ? 'Subatividade' : 'Atividade'}:{' '}
+                <span className="text-foreground font-medium">{slaSelected.name}</span>
+              </span>
               <div className="flex gap-2">
                 <span>
-                  Resp:{' '}
-                  <strong className="text-foreground">
-                    {currentCategoryObj.sla_response_minutes
-                      ? `${currentCategoryObj.sla_response_minutes}m`
-                      : 'N/A'}
-                  </strong>
+                  Resp: <strong className="text-foreground">{slaRespLabel}</strong>
                 </span>
                 <span>•</span>
                 <span>
-                  Sol:{' '}
-                  <strong className="text-foreground">
-                    {currentCategoryObj.sla_solution_minutes
-                      ? `${currentCategoryObj.sla_solution_minutes}m`
-                      : 'N/A'}
-                  </strong>
+                  Sol: <strong className="text-foreground">{slaSolLabel}</strong>
                 </span>
               </div>
             </div>
