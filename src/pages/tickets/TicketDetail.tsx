@@ -200,7 +200,7 @@ export default function TicketDetail({
         // Sempre resolve a atividade do catálogo (subatividade tem prioridade para SLA)
         const catId = t.category || ''
         const subId = t.subcategory || ''
-        const wantId = catId || subId
+        const wantId = subId || catId
         if (!wantId) {
           setCategoryData(null)
         } else if (t.expand?.category && t.expand.category.id === wantId) {
@@ -1766,13 +1766,17 @@ export default function TicketDetail({
                     Resp:{' '}
                     {categoryData.sla_response_minutes
                       ? formatMinutes(categoryData.sla_response_minutes)
-                      : 'Não definido'}
+                      : ticket.sla_response_deadline
+                        ? 'Padrão do sistema'
+                        : 'Não definido'}
                   </span>
                   <span className="text-muted-foreground">
                     Sol:{' '}
                     {categoryData.sla_solution_minutes
                       ? formatMinutes(categoryData.sla_solution_minutes)
-                      : 'Não definido'}
+                      : ticket.sla_solution_deadline
+                        ? 'Padrão do sistema'
+                        : 'Não definido'}
                   </span>
                 </div>
               </div>

@@ -80,6 +80,50 @@ routerAdd(
         }
         ticket.set('sla_response_deadline', calculatedDeadline)
         slaResponseDeadlineStr = calculatedDeadline
+
+        // Prazo de solução: também é garantido no Play/Start (fonte: catálogo,
+        // precedência sub > atividade; fallback 240 min) — nenhum chamado fica
+        // sem sla_solution_deadline, mesmo nascer sem categoria.
+        if (!ticket.getString('sla_solution_deadline')) {
+          var targetSolMin = 0
+          if (subCatId) {
+            try {
+              var subRecSol = $app.findRecordById('tkt_categories', subCatId)
+              var sSol = subRecSol.getInt('sla_solution_minutes') || 0
+              if (sSol > 0) targetSolMin = sSol
+            } catch (_) {}
+          }
+          if (!targetSolMin && catId) {
+            try {
+              var catRecSol = $app.findRecordById('tkt_categories', catId)
+              var cSol = catRecSol.getInt('sla_solution_minutes') || 0
+              if (cSol > 0) targetSolMin = cSol
+            } catch (_) {}
+          }
+          if (!targetSolMin && companyId) {
+            try {
+              var compRecSol = $app.findRecordById('companies', companyId)
+              var compSol = compRecSol.getInt('sla_solution_minutes') || 0
+              if (compSol > 0) targetSolMin = compSol
+            } catch (_) {}
+          }
+          if (!targetSolMin && contractId) {
+            try {
+              var cntrRecSol = $app.findRecordById('contracts', contractId)
+              var cntrSol = cntrRecSol.getInt('sla_solution_time') || 0
+              if (cntrSol > 0) targetSolMin = cntrSol
+            } catch (_) {}
+          }
+          if (!targetSolMin) {
+            targetSolMin = 240
+          }
+
+          var solDeadline = bhComputeDeadline(createdTime, targetSolMin, TZ_OFFSET_SAO_PAULO_MIN)
+          if (!solDeadline) {
+            solDeadline = new Date(createdTime + targetSolMin * 60000).toISOString()
+          }
+          ticket.set('sla_solution_deadline', solDeadline)
+        }
       }
 
       if (slaResponseDeadlineStr) {
@@ -488,9 +532,68 @@ routerAdd(
           targetRespMin = 30
         }
 
-        var calculatedDeadline = new Date(createdTime + targetRespMin * 60000).toISOString()
+        var calculatedDeadline = bhComputeDeadline(
+          createdTime,
+          targetRespMin,
+          TZ_OFFSET_SAO_PAULO_MIN,
+        )
+        if (!calculatedDeadline) {
+          calculatedDeadline = new Date(createdTime + targetRespMin * 60000).toISOString()
+        }
         ticket.set('sla_response_deadline', calculatedDeadline)
         slaResponseDeadlineStr = calculatedDeadline
+      }
+
+      // Prazo de solução: garantido no Play (fonte: catálogo, precedência
+      // sub > atividade; fallback 240 min), respeitando o expediente.
+      if (!ticket.getString('sla_solution_deadline')) {
+        var targetSolMinPlay = 0
+        var subCatIdPlay = ticket.getString('subcategory')
+        var catIdPlay = ticket.getString('category')
+        var companyIdPlay = ticket.getString('company')
+        var contractIdPlay = ticket.getString('contract')
+
+        if (subCatIdPlay) {
+          try {
+            var subRecSolPlay = $app.findRecordById('tkt_categories', subCatIdPlay)
+            var sSolPlay = subRecSolPlay.getInt('sla_solution_minutes') || 0
+            if (sSolPlay > 0) targetSolMinPlay = sSolPlay
+          } catch (_) {}
+        }
+        if (!targetSolMinPlay && catIdPlay) {
+          try {
+            var catRecSolPlay = $app.findRecordById('tkt_categories', catIdPlay)
+            var cSolPlay = catRecSolPlay.getInt('sla_solution_minutes') || 0
+            if (cSolPlay > 0) targetSolMinPlay = cSolPlay
+          } catch (_) {}
+        }
+        if (!targetSolMinPlay && companyIdPlay) {
+          try {
+            var compRecSolPlay = $app.findRecordById('companies', companyIdPlay)
+            var compSolPlay = compRecSolPlay.getInt('sla_solution_minutes') || 0
+            if (compSolPlay > 0) targetSolMinPlay = compSolPlay
+          } catch (_) {}
+        }
+        if (!targetSolMinPlay && contractIdPlay) {
+          try {
+            var cntrRecSolPlay = $app.findRecordById('contracts', contractIdPlay)
+            var cntrSolPlay = cntrRecSolPlay.getInt('sla_solution_time') || 0
+            if (cntrSolPlay > 0) targetSolMinPlay = cntrSolPlay
+          } catch (_) {}
+        }
+        if (!targetSolMinPlay) {
+          targetSolMinPlay = 240
+        }
+
+        var solDeadlinePlay = bhComputeDeadline(
+          createdTime,
+          targetSolMinPlay,
+          TZ_OFFSET_SAO_PAULO_MIN,
+        )
+        if (!solDeadlinePlay) {
+          solDeadlinePlay = new Date(createdTime + targetSolMinPlay * 60000).toISOString()
+        }
+        ticket.set('sla_solution_deadline', solDeadlinePlay)
       }
 
       // Cumprimento do SLA Resposta:

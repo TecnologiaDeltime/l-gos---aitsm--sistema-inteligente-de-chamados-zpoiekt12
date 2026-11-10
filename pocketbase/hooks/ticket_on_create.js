@@ -34,23 +34,26 @@ onRecordCreate((e) => {
     }
   }
 
+  // IMPORTANTE: NÃO há early-return sem subcategoria — a resolução de SLA abaixo
+  // roda SEMPRE (atividade > atividade-mãe > cliente > contrato > padrão 30/240),
+  // para nenhum chamado nascer sem prazo (causa-raiz do bug do CLI-001 - 00031).
   var subCategoryId = e.record.getString('subcategory')
-  if (!subCategoryId) return e.next()
+  if (subCategoryId) {
+    try {
+      var subCat = $app.findRecordById('tkt_categories', subCategoryId)
+      var parent = subCat.getString('parent')
+      if (parent) {
+        var impact = subCat.getString('impact')
+        var urgency = subCat.getString('urgency')
+        var priority = subCat.getString('priority')
 
-  try {
-    var subCat = $app.findRecordById('tkt_categories', subCategoryId)
-    var parent = subCat.getString('parent')
-    if (!parent) return e.next()
-
-    var impact = subCat.getString('impact')
-    var urgency = subCat.getString('urgency')
-    var priority = subCat.getString('priority')
-
-    if (impact) e.record.set('impact', impact)
-    if (urgency) e.record.set('urgency', urgency)
-    if (priority) e.record.set('priority', priority)
-  } catch (err) {
-    $app.logger().error('ticket_on_create: failed to read subcategory', 'error', err.message)
+        if (impact) e.record.set('impact', impact)
+        if (urgency) e.record.set('urgency', urgency)
+        if (priority) e.record.set('priority', priority)
+      }
+    } catch (err) {
+      $app.logger().error('ticket_on_create: failed to read subcategory', 'error', err.message)
+    }
   }
 
   // Resolução de SLA conforme ordem de precedência:

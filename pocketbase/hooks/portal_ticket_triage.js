@@ -487,6 +487,55 @@ routerAdd(
     const finalQueueName = getQueueName($app, targetQueueId)
 
     // 13. Persistir no chamado
+    // SLA: fonte ÚNICA de verdade é o catálogo (subatividade > atividade,
+    // por campo), com fallback do sistema (30/240 min). Gravado AQUI, junto com
+    // a categorização da IA — não depende de nenhum outro caminho preencher.
+    const applyCatalogSla = function (app, rec, categoryId, subId) {
+      let resp = 0
+      let sol = 0
+      let actName = ''
+      if (subId) {
+        try {
+          const sub = app.findRecordById('tkt_categories', subId)
+          resp = sub.getInt('sla_response_minutes') || 0
+          sol = sub.getInt('sla_solution_minutes') || 0
+          actName = sub.getString('name') || ''
+        } catch (_) {}
+      }
+      if (categoryId && (resp <= 0 || sol <= 0)) {
+        try {
+          const main = app.findRecordById('tkt_categories', categoryId)
+          if (main) {
+            if (resp <= 0) resp = main.getInt('sla_response_minutes') || 0
+            if (sol <= 0) sol = main.getInt('sla_solution_minutes') || 0
+            if (!actName) actName = main.getString('name') || ''
+          }
+        } catch (_) {}
+      }
+      if (resp <= 0) resp = 30
+      if (sol <= 0) sol = 240
+
+      // Contabilidade por expediente (empresa operadora, globalThis.bh*);
+      // sem cadastro => calendário contínuo 24x7.
+      let respDl = null
+      let solDl = null
+      const offset =
+        typeof globalThis.TZ_OFFSET_SAO_PAULO_MIN !== 'undefined'
+          ? globalThis.TZ_OFFSET_SAO_PAULO_MIN
+          : -180
+      try {
+        if (typeof globalThis.bhComputeDeadline === 'function') {
+          const nowMs = Date.now()
+          respDl = globalThis.bhComputeDeadline(nowMs, resp, offset)
+          solDl = globalThis.bhComputeDeadline(nowMs, sol, offset)
+        }
+      } catch (_) {}
+      if (!respDl) respDl = new Date(Date.now() + resp * 60000).toISOString()
+      if (!solDl) solDl = new Date(Date.now() + sol * 60000).toISOString()
+
+      return { resp: resp, sol: sol, respDl: respDl, solDl: solDl, actName: actName }
+    }
+
     try {
       let changed = false
       if (shouldApply && validCategory) {
@@ -499,6 +548,30 @@ routerAdd(
       }
       if (targetQueueId) {
         ticket.set('queue', targetQueueId)
+        changed = true
+      }
+
+      if (shouldApply && (validCategory || validSubcategory)) {
+        const sla = applyCatalogSla(
+          $app,
+          ticket,
+          validCategory ? validCategory.id : '',
+          validSubcategory ? validSubcategory.id : '',
+        )
+        if (!ticket.getString('sla_response_at')) {
+          ticket.set('sla_response_deadline', sla.respDl)
+        }
+        ticket.set('sla_solution_deadline', sla.solDl)
+        ticket.set('sla_source', 'Atividade: ' + (sla.actName || 'Catálogo'))
+        dbg.push(
+          'SLA aplicado pela IA: resp ' +
+            sla.resp +
+            'min / sol ' +
+            sla.sol +
+            'min (' +
+            sla.actName +
+            ')',
+        )
         changed = true
       }
 
