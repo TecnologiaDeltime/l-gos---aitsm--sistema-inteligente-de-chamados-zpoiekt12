@@ -793,47 +793,143 @@
       }
     }
 
-    // Variáveis
-    var vars = {
+    // Anti-duplicidade estrita via Central de Alertas (mesmo alert_key do chamado aberto)
+    var referenceId = params.ticketId || params.ticketNumber || ''
+    if (referenceId && typeof globalThis.hasEmailAlreadyBeenSent === 'function') {
+      if (globalThis.hasEmailAlreadyBeenSent('ticket_created', referenceId, recipient)) {
+        $app
+          .logger()
+          .info(
+            'email_auto_reply: envio suprimido pois notificação/auto-reply já foi enviada anteriormente para chamado #' +
+              params.ticketNumber +
+              ' e destinatário ' +
+              recipient,
+          )
+        return {
+          status: 'skipped',
+          reason: 'anti_duplication: e-mail já enviado para este chamado e destinatário',
+        }
+      }
+    }
+
+    // Busca configuração oficial do alerta "Chamado aberto" na Central de Alertas
+    var alertCfg =
+      typeof globalThis.getEmailAlertConfig === 'function'
+        ? globalThis.getEmailAlertConfig('ticket_created')
+        : null
+
+    if (alertCfg && alertCfg.enabled === false) {
+      $app
+        .logger()
+        .info(
+          'email_auto_reply: envio suprimido pois alerta ticket_created está desabilitado na Central de Alertas',
+        )
+      return {
+        status: 'skipped',
+        reason: 'Alerta ticket_created desabilitado na Central de Alertas',
+      }
+    }
+
+    var portalUrl = 'https://logos-aitsm.goskip.app/portal/login'
+    var ticketLink = portalUrl + (params.ticketId ? '?ticket=' + params.ticketId : '')
+
+    // Variáveis universais preenchidas para templates
+    var tplData = {
+      chamado_numero: params.ticketNumber || '',
       numero: params.ticketNumber || '',
+      titulo: params.ticketTitle || 'Solicitação',
       assunto: params.ticketTitle || 'Solicitação',
+      descricao:
+        params.ticketDescription || params.ticketTitle || 'Chamado registrado via e-mail/portal.',
+      cliente: params.requesterName || 'Cliente',
       solicitante: params.requesterName || 'Cliente',
       empresa: params.companyName || 'Empresa Cliente',
       data: params.createdDateFormatted || new Date().toLocaleString('pt-BR'),
-      prioridade: params.priority || '',
+      data_abertura: params.createdDateFormatted || new Date().toLocaleString('pt-BR'),
+      prioridade: params.priority || 'Normal',
+      tipo: params.ticketType || 'Incidente',
       atividade: params.activity || '',
       prazo: params.deadlineFormatted || '',
-      operador: params.assignedOperatorName || 'Ainda sem atribuição',
+      operador: params.assignedOperatorName || 'Fila de Atendimento',
       status: params.status || 'Novo',
+      link: ticketLink,
     }
 
-    var rawSubject = isOutOfOffice ? cfg.out_of_office_subject : cfg.receipt_subject
-    var rawBody = isOutOfOffice ? cfg.out_of_office_body : cfg.receipt_body
     var replyType = isOutOfOffice ? 'ausencia' : 'recebimento'
+    var finalSubject = ''
+    var finalHtml = ''
+    var finalBodyText = ''
 
-    var finalSubject = replaceVariables(rawSubject, vars)
-    var finalBodyText = replaceVariables(rawBody, vars)
-    var contentHtml = textToStyledHtml(finalBodyText)
+    if (alertCfg && typeof globalThis.buildEmailHtmlFromConfig === 'function') {
+      var rawSubject = isOutOfOffice
+        ? cfg.out_of_office_subject || alertCfg.subject_template
+        : alertCfg.subject_template ||
+          alertCfg.default_subject_template ||
+          'Chamado #{{chamado_numero}} registrado com sucesso - {{titulo}}'
 
-    var badgeText = isOutOfOffice ? 'Ausência / Fora do Expediente' : 'Recebimento Confirmado'
-    var badgeColor = isOutOfOffice ? '#f59e0b' : '#d97706'
-    var title = isOutOfOffice
-      ? 'Aviso de Ausência e Confirmação de Recebimento'
-      : 'Confirmação de Recebimento de Chamado'
-    var subtitle = 'Chamado #' + vars.numero + ' registrado com sucesso'
+      if (typeof globalThis.interpolateEmailTemplate === 'function') {
+        finalSubject = globalThis.interpolateEmailTemplate(rawSubject, tplData)
+      } else {
+        finalSubject = replaceVariables(rawSubject, tplData)
+      }
 
-    var finalHtml = renderInstitutionalTemplate({
-      preheader: 'Recebemos seu e-mail. Chamado #' + vars.numero + ' registrado.',
-      badgeText: badgeText,
-      badgeColor: badgeColor,
-      title: title,
-      subtitle: subtitle,
-      contentHtml: contentHtml,
-      footerNote:
-        'Esta é uma mensagem automática de confirmação de recebimento. Para interagir com o suporte, responda mantendo o número #' +
-        vars.numero +
-        ' no assunto.',
-    })
+      // Se for ausência, podemos customizar o corpo do template do alerta com a nota de expediente
+      var alertCfgForSend = alertCfg
+      if (isOutOfOffice && cfg.out_of_office_body) {
+        alertCfgForSend = Object.assign({}, alertCfg, {
+          body_template:
+            '<div style="background-color: #fef3c7; border-left: 4px solid #f59e0b; padding: 12px 16px; border-radius: 4px; margin-bottom: 16px; color: #92400e; font-size: 14px;"><strong>Aviso de Expediente:</strong> Informamos que no momento nossa equipe está fora do horário regular de atendimento. Sua solicitação está preservada e será atendida assim que o expediente for retomado.</div>' +
+            (alertCfg.body_template || alertCfg.default_body_template || ''),
+        })
+      }
+
+      finalHtml = globalThis.buildEmailHtmlFromConfig(alertCfgForSend, tplData)
+      var rawBody = alertCfgForSend.body_template || alertCfgForSend.default_body_template || ''
+      if (typeof globalThis.interpolateEmailTemplate === 'function') {
+        finalBodyText = globalThis
+          .interpolateEmailTemplate(rawBody, tplData)
+          .replace(/<[^>]+>/g, ' ')
+          .replace(/\s+/g, ' ')
+          .trim()
+      } else {
+        finalBodyText = replaceVariables(cfg.receipt_body, tplData)
+      }
+    } else {
+      // Fallback seguro usando buildEmailHtmlFromConfig de fábrica
+      var fallbackCfg = {
+        alert_key: 'ticket_created',
+        name: 'Aviso de Chamado Aberto',
+        template_layout: 'corporate',
+        primary_color: '#D97706',
+        header_title: 'Lógos AITSM',
+        header_subtitle: 'Atendimento & Central de Serviços',
+        subject_template: 'Chamado #{{chamado_numero}} registrado com sucesso - {{titulo}}',
+        body_template:
+          '<p>Olá <strong>{{cliente}}</strong>,</p><p>Confirmamos o registro do seu chamado em nossa central. Ele já se encontra na fila de atendimento da equipe técnica.</p><div style="background-color: #f8fafc; border-left: 4px solid #D97706; padding: 12px 16px; margin: 16px 0; border-radius: 4px;"><p style="margin: 0 0 6px 0;"><strong>Número:</strong> #{{chamado_numero}}</p><p style="margin: 0 0 6px 0;"><strong>Assunto:</strong> {{titulo}}</p><p style="margin: 0;"><strong>Empresa:</strong> {{empresa}}</p></div><p>Você pode acompanhar o andamento pelo Portal do Cliente Lógos AITSM.</p>',
+        footer_text: 'Central de Serviços de TI — Lógos AITSM',
+        show_button: true,
+        button_label: 'Acompanhar no Portal',
+        button_url_template: '{{link}}',
+      }
+      if (typeof globalThis.buildEmailHtmlFromConfig === 'function') {
+        finalHtml = globalThis.buildEmailHtmlFromConfig(fallbackCfg, tplData)
+        finalSubject =
+          typeof globalThis.interpolateEmailTemplate === 'function'
+            ? globalThis.interpolateEmailTemplate(fallbackCfg.subject_template, tplData)
+            : replaceVariables(fallbackCfg.subject_template, tplData)
+      } else {
+        finalSubject =
+          'Chamado #' + tplData.chamado_numero + ' registrado com sucesso - ' + tplData.titulo
+        finalHtml =
+          '<div><p>Olá <strong>' +
+          escapeHtml(tplData.cliente) +
+          '</strong>,</p><p>Seu chamado #' +
+          escapeHtml(tplData.chamado_numero) +
+          ' foi registrado com sucesso.</p></div>'
+      }
+      finalBodyText =
+        'Chamado #' + tplData.chamado_numero + ' registrado com sucesso: ' + tplData.titulo
+    }
 
     var mailerConfig = resolveSystemMailerConfig()
     var senderEmail = mailerConfig.user || mailerConfig.senderEmail || 'noreply@logositsm.com.br'
@@ -885,6 +981,24 @@
           'err',
           errorMsg,
         )
+    }
+
+    // Registra envio na Central de Alertas (email_sent_logs) para anti-duplicidade estrita
+    if (success && referenceId && typeof globalThis.recordEmailSentLog === 'function') {
+      try {
+        globalThis.recordEmailSentLog('ticket_created', referenceId, recipient, finalSubject, {
+          source: 'email_auto_reply_service',
+          reply_type: replyType,
+          ticket_number: params.ticketNumber,
+        })
+      } catch (logErr) {
+        $app
+          .logger()
+          .warn(
+            'email_auto_reply: aviso ao gravar email_sent_logs: ' +
+              (logErr && logErr.message ? logErr.message : String(logErr)),
+          )
+      }
     }
 
     // Registra na auditoria
@@ -961,25 +1075,65 @@
       var contentHtml = textToStyledHtml(finalBodyText)
 
       var isOutOfOffice = type === 'out_of_office'
-      var badgeText = isOutOfOffice ? 'Ausência / Fora do Expediente' : 'Recebimento Confirmado'
-      var badgeColor = isOutOfOffice ? '#f59e0b' : '#d97706'
-      var title = isOutOfOffice
-        ? 'Aviso de Ausência e Confirmação de Recebimento'
-        : 'Confirmação de Recebimento de Chamado'
-      var subtitle = 'Chamado #' + vars.numero + ' registrado com sucesso'
 
-      var finalHtml = renderInstitutionalTemplate({
-        preheader: 'Recebemos seu e-mail. Chamado #' + vars.numero + ' registrado.',
-        badgeText: badgeText,
-        badgeColor: badgeColor,
-        title: title,
-        subtitle: subtitle,
-        contentHtml: contentHtml,
-        footerNote:
-          'Esta é uma mensagem automática de confirmação de recebimento. Para interagir com o suporte, responda mantendo o número #' +
-          vars.numero +
-          ' no assunto.',
-      })
+      // Usa os helpers da Central de Alertas para renderizar o layout do alerta ticket_created
+      var alertCfg =
+        typeof globalThis.getEmailAlertConfig === 'function'
+          ? globalThis.getEmailAlertConfig('ticket_created')
+          : null
+
+      var tplData = {
+        chamado_numero: vars.numero,
+        numero: vars.numero,
+        titulo: vars.assunto,
+        assunto: vars.assunto,
+        descricao: vars.assunto + ' (Pré-visualização do chamado)',
+        cliente: vars.solicitante,
+        solicitante: vars.solicitante,
+        empresa: vars.empresa,
+        data: vars.data,
+        data_abertura: vars.data,
+        prioridade: vars.prioridade,
+        tipo: 'Incidente',
+        atividade: vars.atividade,
+        prazo: vars.prazo,
+        operador: vars.operador,
+        status: vars.status,
+        link: 'https://logos-aitsm.goskip.app/portal/login',
+      }
+
+      var finalHtml = ''
+      if (alertCfg && typeof globalThis.buildEmailHtmlFromConfig === 'function') {
+        var alertCfgForPreview = alertCfg
+        if (isOutOfOffice) {
+          alertCfgForPreview = Object.assign({}, alertCfg, {
+            body_template:
+              '<div style="background-color: #fef3c7; border-left: 4px solid #f59e0b; padding: 12px 16px; border-radius: 4px; margin-bottom: 16px; color: #92400e; font-size: 14px;"><strong>Aviso de Expediente:</strong> Informamos que no momento nossa equipe está fora do horário regular de atendimento. Sua solicitação está preservada e será atendida assim que o expediente for retomado.</div>' +
+              (alertCfg.body_template || alertCfg.default_body_template || ''),
+          })
+        }
+        finalHtml = globalThis.buildEmailHtmlFromConfig(alertCfgForPreview, tplData)
+      } else if (typeof renderInstitutionalTemplate === 'function') {
+        var badgeText = isOutOfOffice ? 'Ausência / Fora do Expediente' : 'Recebimento Confirmado'
+        var badgeColor = isOutOfOffice ? '#f59e0b' : '#d97706'
+        var title = isOutOfOffice
+          ? 'Aviso de Ausência e Confirmação de Recebimento'
+          : 'Confirmação de Recebimento de Chamado'
+        var subtitle = 'Chamado #' + vars.numero + ' registrado com sucesso'
+
+        finalHtml = renderInstitutionalTemplate({
+          preheader: 'Recebemos seu e-mail. Chamado #' + vars.numero + ' registrado.',
+          badgeText: badgeText,
+          badgeColor: badgeColor,
+          title: title,
+          subtitle: subtitle,
+          contentHtml: contentHtml,
+          footerNote:
+            'Esta é uma mensagem automática de confirmação de recebimento. Para interagir com o suporte, responda mantendo o número #' +
+            vars.numero +
+            ' no assunto.',
+        })
+      }
 
       return e.json(200, {
         subject: finalSubject,

@@ -29,6 +29,7 @@ import {
   ShieldCheck,
   Info,
   Loader2,
+  ExternalLink,
 } from 'lucide-react'
 import {
   emailAutoReplyService,
@@ -39,6 +40,8 @@ import {
   DEFAULT_OUT_OF_OFFICE_BODY,
   PreviewAutoReplyResponse,
 } from '@/services/email-auto-reply'
+import { emailAlertSettingsService, EmailAlertSetting } from '@/services/email-alert-settings'
+import { EmailTemplateEditorDialog } from '@/components/settings/EmailTemplateEditorDialog'
 
 interface EmailAutoReplySettingsTabProps {
   isGestor: boolean
@@ -70,6 +73,10 @@ export function EmailAutoReplySettingsTab({ isGestor }: EmailAutoReplySettingsTa
   const [previewData, setPreviewData] = useState<PreviewAutoReplyResponse | null>(null)
   const [previewMode, setPreviewMode] = useState<'html' | 'text'>('html')
 
+  // Vínculo com a Central de Alertas (ticket_created)
+  const [centralAlert, setCentralAlert] = useState<EmailAlertSetting | null>(null)
+  const [editorOpen, setEditorOpen] = useState(false)
+
   useEffect(() => {
     loadSettings()
   }, [])
@@ -77,8 +84,13 @@ export function EmailAutoReplySettingsTab({ isGestor }: EmailAutoReplySettingsTa
   const loadSettings = async () => {
     setLoading(true)
     try {
-      const data = await emailAutoReplyService.getSettings()
+      const [data, alerts] = await Promise.all([
+        emailAutoReplyService.getSettings(),
+        emailAlertSettingsService.getAll().catch(() => []),
+      ])
       setSettings(data)
+      const ticketCreatedAlert = alerts.find((a) => a.alert_key === 'ticket_created') || null
+      setCentralAlert(ticketCreatedAlert)
     } catch (err) {
       console.error('Falha ao carregar configurações de respostas automáticas:', err)
       toast({
@@ -88,6 +100,29 @@ export function EmailAutoReplySettingsTab({ isGestor }: EmailAutoReplySettingsTa
       })
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleSaveCentralAlert = async (updated: EmailAlertSetting) => {
+    try {
+      const saved = await emailAlertSettingsService.update(updated.id, updated)
+      setCentralAlert(saved)
+      // Sincroniza também assunto e corpo se o usuário desejar espelhar
+      setSettings((prev) => ({
+        ...prev,
+        receipt_subject: saved.subject_template || prev.receipt_subject,
+      }))
+      toast({
+        title: 'Template da Central atualizado!',
+        description: 'O template oficial de abertura de chamados foi sincronizado com sucesso.',
+      })
+    } catch (err: any) {
+      toast({
+        title: 'Erro ao salvar template da Central',
+        description: err?.message || 'Falha ao atualizar alerta na Central de Alertas.',
+        variant: 'destructive',
+      })
+      throw err
     }
   }
 
@@ -284,17 +319,46 @@ export function EmailAutoReplySettingsTab({ isGestor }: EmailAutoReplySettingsTa
         </div>
       </div>
 
-      {/* Regra de Independência com Notificações do Cliente */}
-      <Alert className="border-blue-500/20 bg-blue-500/5 text-blue-950 dark:text-blue-100 text-xs">
-        <Info className="h-4 w-4 text-blue-600 dark:text-blue-400 mt-0.5" />
-        <AlertTitle className="font-bold text-xs mb-1">Controles Independentes</AlertTitle>
-        <AlertDescription className="text-slate-600 dark:text-slate-300 text-[11.5px] leading-relaxed">
-          Esta resposta automática é direcionada especificamente para mensagens que entram pelo
-          fluxo de ingestão de e-mail. Caso o toggle de &quot;Notificações do Cliente (Abertura de
-          Chamado)&quot; esteja desligado, a resposta automática continuará obedecendo
-          exclusivamente ao toggle configurado abaixo.
-        </AlertDescription>
+      {/* Sincronização Unificada com a Central de Alertas */}
+      <Alert className="border-emerald-500/30 bg-emerald-500/5 text-emerald-950 dark:text-emerald-100 text-xs">
+        <ShieldCheck className="h-4 w-4 text-emerald-600 dark:text-emerald-400 mt-0.5" />
+        <div className="flex-1 space-y-1">
+          <AlertTitle className="font-bold text-xs flex items-center justify-between">
+            <span>Template Unificado pela Central de Alertas</span>
+            {centralAlert && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-7 text-[11px] gap-1.5 border-emerald-500/40 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500/10"
+                onClick={() => setEditorOpen(true)}
+              >
+                <Sparkles className="h-3 w-3 text-amber-500" />
+                Editar no Editor Visual da Central ({centralAlert.template_layout})
+                <ExternalLink className="h-3 w-3" />
+              </Button>
+            )}
+          </AlertTitle>
+          <AlertDescription className="text-slate-600 dark:text-slate-300 text-[11.5px] leading-relaxed">
+            As respostas automáticas e confirmações de abertura utilizam exclusivamente o template
+            configurado na Central de Alertas por E-mail (layout:{' '}
+            <strong className="text-slate-900 dark:text-white uppercase font-mono">
+              {centralAlert?.template_layout || 'corporate'}
+            </strong>
+            ). Você pode personalizar fontes, cores, cabeçalho e variáveis em um único lugar
+            clicando no botão ao lado ou pela aba &quot;Alertas por E-mail&quot;.
+          </AlertDescription>
+        </div>
       </Alert>
+
+      {centralAlert && (
+        <EmailTemplateEditorDialog
+          open={editorOpen}
+          onOpenChange={setEditorOpen}
+          setting={centralAlert}
+          onSave={handleSaveCentralAlert}
+        />
+      )}
 
       {/* Navegação entre Sub-abas */}
       <Tabs

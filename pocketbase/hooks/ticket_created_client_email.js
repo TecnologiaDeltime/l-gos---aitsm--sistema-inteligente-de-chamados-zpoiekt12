@@ -430,103 +430,56 @@ onRecordAfterCreateSuccess((e) => {
         )
     }
 
-    // Se cfg for nulo ou falhou montar htmlBody, usa a montagem hardcoded legada como último recurso
+    // Se cfg for nulo ou falhou montar htmlBody, usa configuração padrão da Central processada por buildEmailHtmlFromConfig
     if (!htmlBody) {
-      var esc =
-        typeof globalThis.itsmEscapeHtml === 'function'
-          ? globalThis.itsmEscapeHtml
-          : function (s) {
-              return String(s || '')
-                .replace(/&/g, '&amp;')
-                .replace(/</g, '&lt;')
-                .replace(/>/g, '&gt;')
-                .replace(/"/g, '&quot;')
-            }
-
-      if (!subject) {
-        subject = 'Chamado #' + ticketNumber + ' aberto com sucesso: ' + ticketTitle
+      var factoryCfg = {
+        alert_key: 'ticket_created',
+        name: 'Chamado aberto',
+        template_layout: 'corporate',
+        primary_color: '#D97706',
+        header_title: 'Lógos AITSM',
+        header_subtitle: 'Atendimento & Central de Serviços',
+        subject_template: 'Chamado #{{chamado_numero}} registrado com sucesso - {{titulo}}',
+        body_template:
+          '<p>Olá <strong>{{cliente}}</strong>,</p><p>Confirmamos o registro do seu chamado em nossa central. Ele já se encontra na fila de atendimento da equipe técnica.</p><div style="background-color: #f8fafc; border-left: 4px solid #D97706; padding: 12px 16px; margin: 16px 0; border-radius: 4px;"><p style="margin: 0 0 6px 0;"><strong>Número:</strong> #{{chamado_numero}}</p><p style="margin: 0 0 6px 0;"><strong>Assunto:</strong> {{titulo}}</p><p style="margin: 0;"><strong>Empresa:</strong> {{empresa}}</p></div><p>Você pode acompanhar o andamento pelo Portal do Cliente Lógos AITSM.</p>',
+        footer_text: 'Central de Serviços de TI — Lógos AITSM',
+        show_button: true,
+        button_label: 'Acompanhar Chamado',
+        button_url_template: '{{link}}',
       }
 
-      var contentHtml =
-        '<p style="margin: 0 0 16px 0; font-size: 15px; color: #334155; line-height: 24px;">' +
-        '  Olá, <strong>' +
-        esc(primaryName) +
-        '</strong>,' +
-        '</p>' +
-        '<p style="margin: 0 0 20px 0; font-size: 14px; color: #475569; line-height: 22px;">' +
-        '  Confirmamos o recebimento da sua solicitação. Seu chamado foi registrado com sucesso e <strong>já está na fila de atendimento</strong> da nossa equipe técnica.' +
-        '</p>' +
-        '<table border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; margin-bottom: 20px;">' +
-        '  <tr><td style="padding: 16px 20px;">' +
-        '    <p style="margin: 0 0 8px 0; font-size: 14px; color: #1e293b;"><strong>Número do Chamado:</strong> #' +
-        esc(ticketNumber) +
-        '</p>' +
-        '    <p style="margin: 0 0 8px 0; font-size: 14px; color: #1e293b;"><strong>Data de Abertura:</strong> ' +
-        esc(dateFormatted) +
-        '</p>' +
-        '    <p style="margin: 0 0 8px 0; font-size: 14px; color: #1e293b;"><strong>Tipo / Prioridade:</strong> ' +
-        esc(type) +
-        ' • ' +
-        esc(priority) +
-        '</p>' +
-        (companyName
-          ? '    <p style="margin: 0 0 8px 0; font-size: 14px; color: #1e293b;"><strong>Empresa:</strong> ' +
-            esc(companyName) +
-            '</p>'
-          : '') +
-        '    <p style="margin: 0 0 4px 0; font-size: 14px; color: #1e293b;"><strong>Problema Informado:</strong> ' +
-        esc(ticketTitle) +
-        '</p>' +
-        '    <div style="font-size: 13px; color: #475569; background-color: #ffffff; padding: 10px 12px; border-radius: 6px; border: 1px solid #e2e8f0; margin-top: 6px;">' +
-        esc(cleanDescription) +
-        '</div>' +
-        '  </td></tr>' +
-        '</table>' +
-        '<div style="background-color: #eff6ff; border-left: 4px solid #0284c7; padding: 12px 16px; border-radius: 0 6px 6px 0; margin-bottom: 16px;">' +
-        '  <p style="margin: 0; font-size: 13px; color: #1e40af; line-height: 20px;">' +
-        '    <strong>Próximos passos:</strong> Seu chamado já está na fila de atendimento e um operador técnico entrará em contato em breve.' +
-        '  </p>' +
-        '</div>'
-
-      if (typeof globalThis.itsmRenderBaseEmailTemplate === 'function') {
-        htmlBody = globalThis.itsmRenderBaseEmailTemplate({
-          preheader: 'Seu chamado #' + ticketNumber + ' foi aberto e está na fila de atendimento.',
-          badgeText: 'Chamado Aberto',
-          badgeColor: '#0284c7',
-          title: 'Confirmação de Abertura de Chamado',
-          subtitle: 'Chamado #' + ticketNumber + ' registrado no sistema ITSM',
-          contentHtml: contentHtml,
-          footerNote:
-            'Para acompanhar o andamento deste chamado, consulte o Portal do Cliente Lógos AITSM.',
-        })
+      if (typeof globalThis.interpolateEmailTemplate === 'function') {
+        subject = globalThis.interpolateEmailTemplate(factoryCfg.subject_template, templateData)
       } else {
-        htmlBody = '<div>' + contentHtml + '</div>'
+        subject = 'Chamado #' + ticketNumber + ' registrado com sucesso - ' + ticketTitle
       }
 
-      if (!textBody) {
-        textBody =
-          'Olá ' +
+      if (typeof globalThis.buildEmailHtmlFromConfig === 'function') {
+        htmlBody = globalThis.buildEmailHtmlFromConfig(factoryCfg, templateData)
+      } else {
+        htmlBody =
+          '<div><p>Olá <strong>' +
           primaryName +
-          ',\n\n' +
-          'Seu chamado foi aberto com sucesso no sistema Lógos AITSM e já está na fila de atendimento.\n\n' +
-          'Número do Chamado: #' +
+          '</strong>,</p><p>Seu chamado #' +
           ticketNumber +
-          '\n' +
-          'Problema informado: ' +
-          ticketTitle +
-          '\n' +
-          'Descrição: ' +
-          cleanDescription +
-          '\n' +
-          'Data e Hora de Abertura: ' +
-          dateFormatted +
-          '\n' +
-          'Prioridade: ' +
-          priority +
-          '\n\n' +
-          'Um operador técnico entrará em contato em breve.\n\n' +
-          '-- Lógos AITSM'
+          ' foi registrado com sucesso.</p></div>'
       }
+
+      textBody =
+        'Olá ' +
+        primaryName +
+        ',\n\n' +
+        'Seu chamado foi registrado com sucesso no sistema Lógos AITSM e já está na fila de atendimento.\n\n' +
+        'Número: #' +
+        ticketNumber +
+        '\n' +
+        'Assunto: ' +
+        ticketTitle +
+        '\n' +
+        'Data: ' +
+        dateFormatted +
+        '\n\n' +
+        '-- Lógos AITSM'
     }
 
     for (var fIdx = 0; fIdx < recipientsList.length; fIdx++) {

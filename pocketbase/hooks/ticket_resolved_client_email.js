@@ -365,127 +365,44 @@ onRecordAfterUpdateSuccess((e) => {
     }
 
     if (!htmlBody) {
-      var defaultSubject = 'Chamado #' + ticketNumber + ' concluído: ' + ticketTitle
-      if (!subject) subject = defaultSubject
+      var factoryResolvedCfg = {
+        alert_key: 'ticket_resolved',
+        name: 'Chamado resolvido',
+        template_layout: 'corporate',
+        primary_color: '#16a34a',
+        header_title: 'Lógos AITSM',
+        header_subtitle: 'Atendimento & Central de Serviços',
+        subject_template: 'Chamado #{{chamado_numero}} concluído com sucesso - {{titulo}}',
+        body_template:
+          '<p>Olá <strong>{{cliente}}</strong>,</p><p>Temos uma ótima notícia! O seu chamado foi concluído pela nossa equipe técnica.</p><div style="background-color: #f0fdf4; border-left: 4px solid #16a34a; padding: 12px 16px; margin: 16px 0; border-radius: 4px;"><p style="margin: 0 0 6px 0;"><strong>Número:</strong> #{{chamado_numero}}</p><p style="margin: 0 0 6px 0;"><strong>Assunto:</strong> {{titulo}}</p><p style="margin: 0 0 6px 0;"><strong>Status:</strong> ' +
+          esc(newStatus) +
+          '</p><p style="margin: 0;"><strong>Solução:</strong> ' +
+          esc(cleanSolution) +
+          '</p></div><p>Caso tenha alguma dúvida, você pode reabrir a solicitação pelo Portal do Cliente.</p>',
+        footer_text: 'Central de Serviços de TI — Lógos AITSM',
+        show_button: true,
+        button_label: 'Ver Chamado no Portal',
+        button_url_template: '{{link}}',
+      }
 
-      // Montagem do bloco de conteúdo HTML
-      var contentHtml =
-        '<!-- SAUDAÇÃO -->\n' +
-        '<p style="margin: 0 0 16px 0; font-size: 15px; color: #334155; line-height: 24px;">\n' +
-        '  Olá, <strong>' +
-        esc(requesterName) +
-        '</strong>,\n' +
-        '</p>\n' +
-        '<p style="margin: 0 0 20px 0; font-size: 14px; color: #475569; line-height: 22px;">\n' +
-        '  Temos uma ótima notícia! O seu chamado <strong>foi concluído com sucesso</strong> pela nossa equipe de suporte e está registrado como <strong>' +
-        esc(newStatus) +
-        '</strong>.\n' +
-        '</p>\n' +
-        '\n' +
-        '<!-- CARD DE RESUMO DO CHAMADO RESOLVIDO -->\n' +
-        '<table border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; margin-bottom: 20px;">\n' +
-        '  <tr>\n' +
-        '    <td style="padding: 16px 20px;">\n' +
-        '      <table border="0" cellpadding="0" cellspacing="0" width="100%">\n' +
-        '        <tr>\n' +
-        '          <td style="padding-bottom: 10px; width: 50%; vertical-align: top;">\n' +
-        '            <div style="font-size: 11px; text-transform: uppercase; color: #64748b; font-weight: 600; letter-spacing: 0.5px;">Número do Chamado</div>\n' +
-        '            <div style="font-size: 16px; font-weight: 800; color: #16a34a; margin-top: 2px;">#' +
-        esc(ticketNumber) +
-        '</div>\n' +
-        '          </td>\n' +
-        '          <td style="padding-bottom: 10px; width: 50%; vertical-align: top;">\n' +
-        '            <div style="font-size: 11px; text-transform: uppercase; color: #64748b; font-weight: 600; letter-spacing: 0.5px;">Status</div>\n' +
-        '            <div style="display: inline-block; background-color: #dcfce7; color: #166534; font-size: 12px; font-weight: 700; padding: 2px 8px; border-radius: 4px; margin-top: 2px;">' +
-        esc(newStatus) +
-        '</div>\n' +
-        '          </td>\n' +
-        '        </tr>\n' +
-        '        <tr>\n' +
-        '          <td style="padding-bottom: 10px; vertical-align: top;">\n' +
-        '            <div style="font-size: 11px; text-transform: uppercase; color: #64748b; font-weight: 600; letter-spacing: 0.5px;">Data de Abertura</div>\n' +
-        '            <div style="font-size: 13px; font-weight: 500; color: #334155; margin-top: 2px;">' +
-        esc(createdFormatted) +
-        '</div>\n' +
-        '          </td>\n' +
-        '          <td style="padding-bottom: 10px; vertical-align: top;">\n' +
-        '            <div style="font-size: 11px; text-transform: uppercase; color: #64748b; font-weight: 600; letter-spacing: 0.5px;">Data de Conclusão</div>\n' +
-        '            <div style="font-size: 13px; font-weight: 700; color: #16a34a; margin-top: 2px;">' +
-        esc(resFormatted) +
-        '</div>\n' +
-        '          </td>\n' +
-        '        </tr>\n' +
-        '        <tr>\n' +
-        '          <td style="padding-bottom: 10px; vertical-align: top;">\n' +
-        '            <div style="font-size: 11px; text-transform: uppercase; color: #64748b; font-weight: 600; letter-spacing: 0.5px;">Operador Responsável</div>\n' +
-        '            <div style="font-size: 13px; font-weight: 600; color: #334155; margin-top: 2px;">' +
-        esc(operatorName) +
-        '</div>\n' +
-        '          </td>\n' +
-        '          <td style="padding-bottom: 10px; vertical-align: top;">\n' +
-        '            <div style="font-size: 11px; text-transform: uppercase; color: #64748b; font-weight: 600; letter-spacing: 0.5px;">Tipo / Prioridade</div>\n' +
-        '            <div style="font-size: 13px; font-weight: 500; color: #334155; margin-top: 2px;">' +
-        esc(type) +
-        ' • ' +
-        esc(priority) +
-        '</div>\n' +
-        '          </td>\n' +
-        '        </tr>\n' +
-        (companyName
-          ? '        <tr>\n' +
-            '          <td colspan="2" style="padding-bottom: 10px; vertical-align: top;">\n' +
-            '            <div style="font-size: 11px; text-transform: uppercase; color: #64748b; font-weight: 600; letter-spacing: 0.5px;">Empresa</div>\n' +
-            '            <div style="font-size: 13px; font-weight: 500; color: #334155; margin-top: 2px;">' +
-            esc(companyName) +
-            '</div>\n' +
-            '          </td>\n' +
-            '        </tr>\n'
-          : '') +
-        '        <tr>\n' +
-        '          <td colspan="2" style="padding-top: 8px; border-top: 1px dashed #cbd5e1; vertical-align: top;">\n' +
-        '            <div style="font-size: 11px; text-transform: uppercase; color: #64748b; font-weight: 600; letter-spacing: 0.5px; margin-bottom: 4px;">Problema Informado</div>\n' +
-        '            <div style="font-size: 14px; font-weight: 700; color: #0f172a; margin-bottom: 6px;">' +
-        esc(ticketTitle) +
-        '</div>\n' +
-        '            <div style="font-size: 13px; color: #475569; line-height: 20px; background-color: #ffffff; padding: 10px 12px; border-radius: 6px; border: 1px solid #e2e8f0;">' +
-        esc(cleanDescription) +
-        '</div>\n' +
-        '          </td>\n' +
-        '        </tr>\n' +
-        '        <tr>\n' +
-        '          <td colspan="2" style="padding-top: 12px; vertical-align: top;">\n' +
-        '            <div style="font-size: 11px; text-transform: uppercase; color: #166534; font-weight: 700; letter-spacing: 0.5px; margin-bottom: 4px;">Solução Aplicada</div>\n' +
-        '            <div style="font-size: 13px; color: #15803d; line-height: 20px; background-color: #f0fdf4; padding: 12px 14px; border-radius: 6px; border: 1px solid #bbf7d0; font-weight: 500;">' +
-        esc(cleanSolution) +
-        '</div>\n' +
-        '          </td>\n' +
-        '        </tr>\n' +
-        '      </table>\n' +
-        '    </td>\n' +
-        '  </tr>\n' +
-        '</table>\n' +
-        '\n' +
-        '<!-- AVISO DE SATISFAÇÃO / FEEDBACK -->\n' +
-        '<div style="background-color: #f0fdf4; border-left: 4px solid #16a34a; padding: 12px 16px; border-radius: 0 6px 6px 0; margin-bottom: 16px;">\n' +
-        '  <p style="margin: 0; font-size: 13px; color: #166534; line-height: 20px;">\n' +
-        '    <strong>Chamado Finalizado:</strong> Caso a solução apresentada não tenha atendido completamente sua solicitação ou você precise de suporte complementar, basta responder a este e-mail ou reabrir o chamado através do Portal do Cliente.\n' +
-        '  </p>\n' +
-        '</div>'
-
-      var htmlBody = ''
-      if (typeof globalThis.itsmRenderBaseEmailTemplate === 'function') {
-        htmlBody = globalThis.itsmRenderBaseEmailTemplate({
-          preheader: 'Seu chamado #' + ticketNumber + ' foi concluído pela nossa equipe técnica.',
-          badgeText: 'Chamado Concluído',
-          badgeColor: '#16a34a',
-          title: 'Chamado Concluído com Sucesso',
-          subtitle: 'Chamado #' + ticketNumber + ' — Resolução aplicada',
-          contentHtml: contentHtml,
-          footerNote:
-            'Agradecemos a sua parceria. Para dúvidas ou novas solicitações, entre em contato através dos nossos canais de suporte ou portal do cliente.',
-        })
+      if (typeof globalThis.interpolateEmailTemplate === 'function') {
+        subject = globalThis.interpolateEmailTemplate(
+          factoryResolvedCfg.subject_template,
+          resolvedTemplateData,
+        )
       } else {
-        htmlBody = '<div>' + contentHtml + '</div>'
+        subject = 'Chamado #' + ticketNumber + ' concluído com sucesso - ' + ticketTitle
+      }
+
+      if (typeof globalThis.buildEmailHtmlFromConfig === 'function') {
+        htmlBody = globalThis.buildEmailHtmlFromConfig(factoryResolvedCfg, resolvedTemplateData)
+      } else {
+        htmlBody =
+          '<div><p>Olá <strong>' +
+          esc(requesterName) +
+          '</strong>,</p><p>Seu chamado #' +
+          ticketNumber +
+          ' foi concluído com sucesso.</p></div>'
       }
 
       var textBody =
@@ -504,19 +421,9 @@ onRecordAfterUpdateSuccess((e) => {
         'Problema informado: ' +
         ticketTitle +
         '\n' +
-        'Data de Abertura: ' +
-        createdFormatted +
-        '\n' +
-        'Data de Conclusão: ' +
-        resFormatted +
-        '\n' +
-        'Operador Responsável: ' +
-        operatorName +
-        '\n\n' +
         'Solução Aplicada:\n' +
         cleanSolution +
         '\n\n' +
-        'Caso precise de suporte adicional, entre em contato através do portal do cliente.\n\n' +
         '-- Lógos AITSM'
     }
 

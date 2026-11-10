@@ -914,6 +914,13 @@ const FEATURE_CATEGORIES: FeatureCategory[] = [
           'Disponibilização de template dinâmico corporativo oficial para o alerta de Chamado Fechado / Resolvido (migração 0149), ativado por padrão (enabled=true) com layout "corporate", marca Lógos AITSM, assunto "Chamado #{{chamado_numero}} resolvido - {{titulo}}" e corpo estilizado com identificação do chamado, solução técnica aplicada, responsável e botão direto "Acompanhar no Portal". O hook de resolução (pocketbase/hooks/ticket_resolved_client_email.js) despacha via Central de Alertas com interpolação dinâmica e garantia anti-duplicidade estrita, preservando integridade das configurações dos demais 8 alertas.',
         tag: 'Alertas & E-mails',
       },
+      {
+        id: 'inf-email-alert-unified-auto-reply',
+        title: 'Unificação Total de E-mails Transacionais na Central de Alertas',
+        description:
+          'Extirpação definitiva de templates legados hardcoded em todo o sistema. O serviço de auto-respostas (pocketbase/hooks/email_auto_reply_service.js) e os hooks de abertura e resolução de chamados foram 100% unificados através dos helpers da Central (getEmailAlertConfig e buildEmailHtmlFromConfig). Qualquer customização feita no editor visual (como o layout Corporate e assunto personalizado para "Chamado aberto") é automaticamente respeitada em todos os canais de entrada com proteção anti-duplicidade em email_sent_logs e atalho direto de edição na aba de Respostas Automáticas.',
+        tag: 'Alertas & E-mails',
+      },
     ],
   },
   {
