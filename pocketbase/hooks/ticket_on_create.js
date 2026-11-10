@@ -64,32 +64,35 @@ onRecordCreate((e) => {
     var targetSol = 0
     var slaSource = ''
 
+    var actName = ''
     if (subCategoryId) {
       try {
         var act = $app.findRecordById('tkt_categories', subCategoryId)
         var actResp = act.getInt('sla_response_minutes') || 0
         var actSol = act.getInt('sla_solution_minutes') || 0
-        if (actResp > 0 || actSol > 0) {
-          targetResp = actResp > 0 ? actResp : 30
-          targetSol = actSol > 0 ? actSol : 240
-          slaSource = 'Atividade: ' + (act.getString('name') || 'Catálogo')
-        }
+        if (actResp > 0) targetResp = actResp
+        if (actSol > 0) targetSol = actSol
+        actName = act.getString('name') || ''
       } catch (_) {}
     }
 
-    // 1b. Categoria principal (se subcategoria não possuir SLA próprio)
+    // 1b. Categoria principal (atividade): preenche POR CAMPO o que a
+    // subatividade não define — 0/0 no pai NUNCA vence a subatividade.
     var categoryId = e.record.getString('category')
-    if (!targetResp && !targetSol && categoryId) {
+    if (categoryId && (targetResp <= 0 || targetSol <= 0)) {
       try {
         var mainCat = $app.findRecordById('tkt_categories', categoryId)
-        var mainResp = mainCat.getInt('sla_response_minutes') || 0
-        var mainSol = mainCat.getInt('sla_solution_minutes') || 0
-        if (mainResp > 0 || mainSol > 0) {
-          targetResp = mainResp > 0 ? mainResp : 30
-          targetSol = mainSol > 0 ? mainSol : 240
-          slaSource = 'Atividade: ' + (mainCat.getString('name') || 'Catálogo')
+        if (mainCat) {
+          if (targetResp <= 0) targetResp = mainCat.getInt('sla_response_minutes') || 0
+          if (targetSol <= 0) targetSol = mainCat.getInt('sla_solution_minutes') || 0
+          if (!actName) actName = mainCat.getString('name') || ''
         }
       } catch (_) {}
+    }
+    if (targetResp > 0 || targetSol > 0) {
+      if (targetResp <= 0) targetResp = 30
+      if (targetSol <= 0) targetSol = 240
+      slaSource = 'Atividade: ' + (actName || 'Catálogo')
     }
 
     if (!targetResp && !targetSol && companyId) {
