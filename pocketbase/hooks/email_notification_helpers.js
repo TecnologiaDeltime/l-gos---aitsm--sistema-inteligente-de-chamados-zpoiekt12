@@ -522,6 +522,20 @@
         })
 
         $app.save(rec)
+
+        // Se o envio teve sucesso, registrar também na coleção email_sent_logs (anti-duplicidade e auditoria)
+        if (sendSuccess && typeof globalThis.recordEmailSentLog === 'function') {
+          var alertKey = (opts.meta && opts.meta.alert_key) || opts.testType || 'generic'
+          var referenceId =
+            (opts.meta && opts.meta.reference_id) || (opts.meta && opts.meta.ticket_id) || rec.id
+          globalThis.recordEmailSentLog(
+            alertKey,
+            referenceId,
+            targetEmail,
+            opts.subject,
+            opts.meta || {},
+          )
+        }
       }
     } catch (auditErr) {
       if (typeof $app !== 'undefined' && $app && typeof $app.logger === 'function') {

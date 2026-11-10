@@ -79,6 +79,14 @@
   }
 
   /**
+   * Formata data no formato datetime exigido pelo PocketBase: 'YYYY-MM-DD HH:MM:SS.sssZ'
+   */
+  function formatPbDate(d) {
+    var dt = d instanceof Date ? d : new Date()
+    return dt.toISOString().replace('T', ' ')
+  }
+
+  /**
    * Registra no log de anti-duplicidade que o e-mail foi disparado.
    */
   globalThis.recordEmailSentLog = function (alertKey, referenceId, recipient, subject, meta) {
@@ -90,7 +98,15 @@
       log.set('alert_key', alertKey)
       log.set('reference_id', referenceId)
       log.set('recipient', cleanRecipient)
-      log.set('sent_at', new Date().toISOString())
+      try {
+        if (typeof DateTime !== 'undefined') {
+          log.set('sent_at', new DateTime())
+        } else {
+          log.set('sent_at', formatPbDate(new Date()))
+        }
+      } catch (_) {
+        log.set('sent_at', formatPbDate(new Date()))
+      }
       log.set('subject', subject || '')
       if (meta) log.set('meta', meta)
       $app.save(log)

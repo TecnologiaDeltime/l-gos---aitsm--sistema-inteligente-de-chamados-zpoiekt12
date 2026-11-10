@@ -228,14 +228,71 @@ routerAdd('POST', '/backend/v1/ai/ticket-draft', (e) => {
       requesterName +
       '. A resposta deve ter introdução cordial, diagnóstico claro com passos práticos numerados (se aplicável), e orientações de próximos passos. Não inclua placeholders como "[Seu Nome]", assine como "Equipe de Suporte e Atendimento".'
 
-    // Invocar o agente nativo do Skip Cloud
-    const agent = $ai.agent('ticket-responder-agent')
-    const agentResponse = agent.send(promptText)
+    // Invocar o agente nativo do Skip Cloud com fallback robusto
+    let replyText = ''
+    let agentInvoked = false
 
-    const replyText =
-      typeof agentResponse === 'string'
-        ? agentResponse
-        : agentResponse.reply || agentResponse.text || JSON.stringify(agentResponse)
+    try {
+      const agent = $ai.agent('ticket-responder-agent')
+      if (agent && typeof agent.chat === 'function') {
+        const agentResponse = agent.chat({ message: promptText })
+        replyText =
+          typeof agentResponse === 'string'
+            ? agentResponse
+            : (agentResponse &&
+                (agentResponse.content ||
+                  agentResponse.reply ||
+                  agentResponse.text ||
+                  agentResponse.message)) ||
+              ''
+        agentInvoked = Boolean(replyText && replyText.trim().length > 0)
+      } else if (agent && typeof agent.send === 'function') {
+        const agentResponse = agent.send(promptText)
+        replyText =
+          typeof agentResponse === 'string'
+            ? agentResponse
+            : (agentResponse &&
+                (agentResponse.content ||
+                  agentResponse.reply ||
+                  agentResponse.text ||
+                  agentResponse.message)) ||
+              ''
+        agentInvoked = Boolean(replyText && replyText.trim().length > 0)
+      }
+    } catch (agentErr) {
+      console.warn(
+        '[AI_TICKET] Falha na chamada de agent.chat/send, acionando fallback $ai.chat:',
+        agentErr.message || agentErr,
+      )
+    }
+
+    if (!agentInvoked) {
+      try {
+        const fallbackRes = $ai.chat({
+          model: 'fast',
+          messages: [
+            {
+              role: 'system',
+              content:
+                'Você é o Agente de IA do Lógos AITSM especialista em atendimento e suporte técnico ITIL. Elabore respostas cordiais, resolutivas, com diagnóstico claro e passos práticos numerados. Assine sempre como "Equipe de Suporte e Atendimento".',
+            },
+            {
+              role: 'user',
+              content: promptText,
+            },
+          ],
+        })
+        replyText =
+          typeof fallbackRes === 'string'
+            ? fallbackRes
+            : (fallbackRes && (fallbackRes.content || fallbackRes.reply || fallbackRes.text)) || ''
+      } catch (fallbackErr) {
+        console.error(
+          '[AI_TICKET] Fallback $ai.chat também falhou:',
+          fallbackErr.message || fallbackErr,
+        )
+      }
+    }
 
     return e.json(200, {
       ticketId: ticket.id,
@@ -683,12 +740,70 @@ onRecordAfterCreateSuccess((e) => {
       requesterName +
       ' e fornecendo orientações práticas preliminares ou próximos passos. Assine como "Equipe de Suporte e Atendimento".'
 
-    const agent = $ai.agent('ticket-responder-agent')
-    const agentResponse = agent.send(promptText)
-    const replyText =
-      typeof agentResponse === 'string'
-        ? agentResponse
-        : agentResponse.reply || agentResponse.text || JSON.stringify(agentResponse)
+    let replyText = ''
+    let agentInvoked = false
+
+    try {
+      const agent = $ai.agent('ticket-responder-agent')
+      if (agent && typeof agent.chat === 'function') {
+        const agentResponse = agent.chat({ message: promptText })
+        replyText =
+          typeof agentResponse === 'string'
+            ? agentResponse
+            : (agentResponse &&
+                (agentResponse.content ||
+                  agentResponse.reply ||
+                  agentResponse.text ||
+                  agentResponse.message)) ||
+              ''
+        agentInvoked = Boolean(replyText && replyText.trim().length > 0)
+      } else if (agent && typeof agent.send === 'function') {
+        const agentResponse = agent.send(promptText)
+        replyText =
+          typeof agentResponse === 'string'
+            ? agentResponse
+            : (agentResponse &&
+                (agentResponse.content ||
+                  agentResponse.reply ||
+                  agentResponse.text ||
+                  agentResponse.message)) ||
+              ''
+        agentInvoked = Boolean(replyText && replyText.trim().length > 0)
+      }
+    } catch (agentErr) {
+      console.warn(
+        '[AI_TICKET] Falha na chamada de agent.chat/send em onRecordAfterCreateSuccess, acionando fallback $ai.chat:',
+        agentErr.message || agentErr,
+      )
+    }
+
+    if (!agentInvoked) {
+      try {
+        const fallbackRes = $ai.chat({
+          model: 'fast',
+          messages: [
+            {
+              role: 'system',
+              content:
+                'Você é o Agente de IA do Lógos AITSM especialista em atendimento e suporte técnico ITIL. Elabore respostas cordiais, resolutivas, com diagnóstico claro e passos práticos numerados. Assine sempre como "Equipe de Suporte e Atendimento".',
+            },
+            {
+              role: 'user',
+              content: promptText,
+            },
+          ],
+        })
+        replyText =
+          typeof fallbackRes === 'string'
+            ? fallbackRes
+            : (fallbackRes && (fallbackRes.content || fallbackRes.reply || fallbackRes.text)) || ''
+      } catch (fallbackErr) {
+        console.error(
+          '[AI_TICKET] Fallback $ai.chat em onRecordAfterCreateSuccess também falhou:',
+          fallbackErr.message || fallbackErr,
+        )
+      }
+    }
 
     if (!replyText || replyText.trim().length === 0) return
 
