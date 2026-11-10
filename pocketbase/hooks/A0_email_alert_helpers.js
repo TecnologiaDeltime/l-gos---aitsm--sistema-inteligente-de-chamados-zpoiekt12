@@ -548,4 +548,337 @@
 
   // Marcador global de diagnóstico (Central carregada)
   globalThis.emailAlertCentralLoaded = true
+
+  // ==========================================================================
+  // Funções REUTILIZÁVEIS de disparo (chamadas pelo hook de evento E por
+  // caminhos explícitos que podem não emitir onRecordAfterCreate/UpdateSuccess,
+  // ex.: rotas customizadas do portal e resolução em massa).
+  // Anti-duplicidade garantida por (alert_key, reference_id, recipient).
+  // ==========================================================================
+
+  globalThis.resolveTicketClientRecipients = function (ticket, auth) {
+    var companyId = ticket.getString('company')
+    var primaryEmail = (ticket.getString('requester_email') || '').trim()
+    var primaryName = (ticket.getString('requester_name') || '').trim()
+
+    if (!primaryEmail && auth && typeof auth.getString === 'function') {
+      primaryEmail = (auth.getString('email') || '').trim()
+      if (!primaryName) primaryName = (auth.getString('name') || '').trim()
+    }
+
+    if (!primaryEmail && primaryName && companyId) {
+      try {
+        var safeName = primaryName.replace(/"/g, '\\"')
+        var contactByName = $app.findFirstRecordByFilter(
+          'client_contacts',
+          'client = "' + companyId + '" && full_name ~ "' + safeName + '"',
+        )
+        if (contactByName && contactByName.getString('email')) {
+          primaryEmail = contactByName.getString('email').trim()
+        }
+      } catch (_) {}
+    }
+
+    if (!primaryEmail && companyId) {
+      try {
+        var focal = $app.findFirstRecordByFilter(
+          'client_contacts',
+          'client = "' + companyId + '" && is_focal_point = true && email != ""',
+        )
+        if (focal && focal.getString('email')) {
+          primaryEmail = focal.getString('email').trim()
+          if (!primaryName) primaryName = focal.getString('full_name').trim()
+        }
+      } catch (_) {}
+    }
+
+    if (!primaryName) primaryName = 'Solicitante'
+
+    var list = []
+    var seen = {}
+    function add(emailStr) {
+      var clean = String(emailStr || '')
+        .trim()
+        .toLowerCase()
+      if (clean && clean.indexOf('@') > 0 && !seen[clean]) {
+        seen[clean] = true
+        list.push(clean)
+      }
+    }
+    if (primaryEmail) add(primaryEmail)
+
+    try {
+      var parts = ticket.get('participants')
+      if (Array.isArray(parts)) {
+        for (var i = 0; i < parts.length; i++) {
+          var p = parts[i]
+          if (typeof p === 'string') {
+            if (p.indexOf('@') > 0) {
+              add(p)
+            } else {
+              try {
+                var u = $app.findRecordById('users', p)
+                if (u && u.getString('email')) add(u.getString('email'))
+              } catch (_) {}
+            }
+          } else if (p && typeof p === 'object') {
+            add(p.email || p.userEmail || p.address)
+          }
+        }
+      }
+    } catch (_) {}
+
+    return { recipients: list, requesterName: primaryName, companyId: companyId }
+  }
+
+  globalThis.getTicketBaseUrl = function () {
+    try {
+      var host = $os.getenv('PUBLIC_URL') || $os.getenv('APP_URL') || ''
+      if (host) return host.replace(/\/+$/, '')
+    } catch (_) {}
+    return ''
+  }
+
+  globalThis.formatTicketDate = function (raw) {
+    var d = raw ? new Date(raw) : new Date()
+    if (isNaN(d.getTime())) d = new Date()
+    return (
+      ('0' + d.getDate()).slice(-2) +
+      '/' +
+      ('0' + (d.getMonth() + 1)).slice(-2) +
+      '/' +
+      d.getFullYear() +
+      ' às ' +
+      ('0' + d.getHours()).slice(-2) +
+      ':' +
+      ('0' + d.getMinutes()).slice(-2)
+    )
+  }
+
+  /**
+   * Envia o e-mail de ABERTURA do chamado (alert_key 'ticket_created') pela
+   * Central de Alertas. Pode ser chamado pelo hook de criação OU por rotas
+   * customizadas — dedup evita envio duplo.
+   */
+  globalThis.notifyTicketCreatedEmails = function (ticket, auth) {
+    if (!ticket) return { sent: false, reason: 'no_ticket' }
+    var ticketNumber = ticket.getString('number') || ticket.id
+    console.log('[Central de Alertas] notifyTicketCreatedEmails | chamado #' + ticketNumber)
+
+    try {
+      // Supressão herdada de client_notification_settings (comportamento preservado)
+      var companyId = ticket.getString('company')
+      try {
+        var clientSettingsRec = null
+        if (companyId) {
+          try {
+            clientSettingsRec = $app.findFirstRecordByFilter(
+              'client_notification_settings',
+              'company = "' + companyId + '"',
+            )
+          } catch (_) {}
+        }
+        if (!clientSettingsRec) {
+          try {
+            clientSettingsRec = $app.findFirstRecordByFilter(
+              'client_notification_settings',
+              'scope = "global"',
+            )
+          } catch (_) {}
+        }
+        if (clientSettingsRec && clientSettingsRec.getBool('notify_ticket_created') === false) {
+          console.warn(
+            '[Central de Alertas] ticket_created: envio SUPRIMIDO por client_notification_settings | chamado #' +
+              ticketNumber,
+          )
+          return { sent: false, reason: 'suppressed_by_client_settings' }
+        }
+      } catch (_) {}
+
+      var resolved = globalThis.resolveTicketClientRecipients(ticket, auth)
+      var recipientsList = resolved.recipients
+
+      if (recipientsList.length === 0) {
+        console.warn(
+          '[Central de Alertas] ticket_created: envio SUPRIMIDO — nenhum destinatário encontrado | chamado #' +
+            ticketNumber,
+        )
+        return { sent: false, reason: 'no_recipients' }
+      }
+
+      var ticketTitle = ticket.getString('title') || 'Chamado sem título'
+      var cleanDescription = (ticket.getString('description') || '')
+        .replace(/<[^>]*>/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim()
+      if (cleanDescription.length > 500)
+        cleanDescription = cleanDescription.substring(0, 497) + '...'
+      if (!cleanDescription) cleanDescription = ticketTitle
+
+      var companyName = ''
+      if (resolved.companyId) {
+        try {
+          var comp = $app.findRecordById('companies', resolved.companyId)
+          companyName = comp.getString('trade_name') || comp.getString('legal_name') || ''
+        } catch (_) {}
+      }
+
+      var baseUrl = globalThis.getTicketBaseUrl()
+      var templateData = {
+        chamado_numero: ticketNumber,
+        numero: ticketNumber,
+        titulo: ticketTitle,
+        descricao: cleanDescription,
+        cliente: resolved.requesterName,
+        solicitante: resolved.requesterName,
+        prioridade: ticket.getString('priority') || 'Média',
+        tipo: ticket.getString('type') || 'Incidente',
+        data_abertura: globalThis.formatTicketDate(ticket.getString('created')),
+        empresa: companyName,
+        link: baseUrl ? baseUrl + '/portal/tickets/' + ticket.id : '',
+      }
+
+      if (typeof globalThis.sendSystemAlertEmail !== 'function') {
+        console.error(
+          '[Central de Alertas] ticket_created: FALHA — Central indisponível (sendSystemAlertEmail ausente) | chamado #' +
+            ticketNumber,
+        )
+        return { sent: false, reason: 'central_unavailable' }
+      }
+
+      var result = globalThis.sendSystemAlertEmail({
+        alert_key: 'ticket_created',
+        reference_id: ticket.id,
+        recipients: recipientsList,
+        subject: 'Chamado #' + ticketNumber + ' registrado com sucesso - ' + ticketTitle,
+        data: templateData,
+      })
+
+      if (result && result.sent) {
+        console.log(
+          '[Central de Alertas] ticket_created: enviado com sucesso | chamado #' +
+            ticketNumber +
+            ' | destinatários=' +
+            recipientsList.join(', '),
+        )
+      } else if (result && result.reason && result.reason !== 'already_sent') {
+        console.error(
+          '[Central de Alertas] ticket_created: envio não realizado | motivo=' +
+            result.reason +
+            ' | chamado #' +
+            ticketNumber,
+        )
+      }
+      return result
+    } catch (err) {
+      console.error(
+        '[Central de Alertas] ticket_created: FALHA inesperada | chamado #' +
+          ticketNumber +
+          ' | motivo: ' +
+          (err && err.message ? err.message : String(err)),
+      )
+      return { sent: false, reason: 'unexpected_error' }
+    }
+  }
+
+  /**
+   * Envia o e-mail de RESOLUÇÃO do chamado (alert_key 'ticket_resolved') pela
+   * Central de Alertas. Pode ser chamado pelo hook de update OU por rotas
+   * customizadas (resolução em massa etc.) — dedup evita envio duplo.
+   * opts.oldStatus: status anterior (para não duplicar Resolvido→Encerrado).
+   */
+  globalThis.notifyTicketResolvedEmails = function (record, auth, opts) {
+    if (!record) return { sent: false, reason: 'no_ticket' }
+    var opts = opts || {}
+    var ticketNumber = record.getString('number') || record.id
+    console.log('[Central de Alertas] notifyTicketResolvedEmails | chamado #' + ticketNumber)
+
+    try {
+      // Mesma regra do hook: Resolvido→Encerrado não duplica notificação ao cliente
+      if (opts.oldStatus === 'Resolvido' && (opts.newStatus || '') === 'Encerrado') {
+        return { sent: false, reason: 'resolvido_to_encerrado_skipped' }
+      }
+
+      var resolved = globalThis.resolveTicketClientRecipients(record, auth)
+      var recipientsList = resolved.recipients
+      if (recipientsList.length === 0) {
+        console.warn(
+          '[Central de Alertas] ticket_resolved: envio SUPRIMIDO — nenhum destinatário encontrado | chamado #' +
+            ticketNumber,
+        )
+        return { sent: false, reason: 'no_recipients' }
+      }
+
+      var ticketTitle = record.getString('title') || 'Chamado sem título'
+      var solution = (record.getString('solution') || '')
+        .replace(/<[^>]*>/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim()
+      if (solution.length > 500) solution = solution.substring(0, 497) + '...'
+
+      var companyName = ''
+      if (resolved.companyId) {
+        try {
+          var comp = $app.findRecordById('companies', resolved.companyId)
+          companyName = comp.getString('trade_name') || comp.getString('legal_name') || ''
+        } catch (_) {}
+      }
+
+      var baseUrl = globalThis.getTicketBaseUrl()
+      var templateData = {
+        chamado_numero: ticketNumber,
+        numero: ticketNumber,
+        titulo: ticketTitle,
+        cliente: resolved.requesterName,
+        solicitante: resolved.requesterName,
+        empresa: companyName,
+        solucao: solution || '(sem descrição de solução)',
+        data_resolucao: globalThis.formatTicketDate(
+          record.getString('resolution_date') || record.getString('updated'),
+        ),
+        link: baseUrl ? baseUrl + '/portal/tickets/' + record.id : '',
+      }
+
+      if (typeof globalThis.sendSystemAlertEmail !== 'function') {
+        console.error(
+          '[Central de Alertas] ticket_resolved: FALHA — Central indisponível (sendSystemAlertEmail ausente) | chamado #' +
+            ticketNumber,
+        )
+        return { sent: false, reason: 'central_unavailable' }
+      }
+
+      var result = globalThis.sendSystemAlertEmail({
+        alert_key: 'ticket_resolved',
+        reference_id: record.id,
+        recipients: recipientsList,
+        subject: 'Chamado #' + ticketNumber + ' resolvido - ' + ticketTitle,
+        data: templateData,
+      })
+
+      if (result && result.sent) {
+        console.log(
+          '[Central de Alertas] ticket_resolved: enviado com sucesso | chamado #' +
+            ticketNumber +
+            ' | destinatários=' +
+            recipientsList.join(', '),
+        )
+      } else if (result && result.reason && result.reason !== 'already_sent') {
+        console.error(
+          '[Central de Alertas] ticket_resolved: envio não realizado | motivo=' +
+            result.reason +
+            ' | chamado #' +
+            ticketNumber,
+        )
+      }
+      return result
+    } catch (err) {
+      console.error(
+        '[Central de Alertas] ticket_resolved: FALHA inesperada | chamado #' +
+          ticketNumber +
+          ' | motivo: ' +
+          (err && err.message ? err.message : String(err)),
+      )
+      return { sent: false, reason: 'unexpected_error' }
+    }
+  }
 })()
