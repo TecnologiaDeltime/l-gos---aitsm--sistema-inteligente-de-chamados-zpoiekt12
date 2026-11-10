@@ -293,149 +293,241 @@ onRecordAfterCreateSuccess((e) => {
     // 5. Tenta enviar pela Central de Alertas por E-mail (sendSystemAlertEmail)
     // Respeita o switch de alerta (alerta 'ticket_created' ativo por padrão na migração 0148)
     var centralSuccess = false
+    var centralFailureReason = ''
     if (typeof globalThis.sendSystemAlertEmail === 'function') {
-      var alertResult = globalThis.sendSystemAlertEmail({
-        alert_key: 'ticket_created',
-        reference_id: ticket.id,
-        recipients: recipientsList,
-        subject: 'Chamado #' + ticketNumber + ' aberto com sucesso: ' + ticketTitle,
-        data: templateData,
-      })
+      try {
+        var alertResult = globalThis.sendSystemAlertEmail({
+          alert_key: 'ticket_created',
+          reference_id: ticket.id,
+          recipients: recipientsList,
+          subject: 'Chamado #' + ticketNumber + ' aberto com sucesso: ' + ticketTitle,
+          data: templateData,
+        })
 
-      if (alertResult && alertResult.sent) {
+        if (alertResult && alertResult.sent) {
+          $app
+            .logger()
+            .info(
+              'ticket_created_client_email: notificação enviada via Central de Alertas para ' +
+                alertResult.sent_count +
+                ' destinatário(s) (chamado #' +
+                ticketNumber +
+                ')',
+              'recipients',
+              recipientsList.join(', '),
+            )
+          return e.next()
+        } else if (alertResult && alertResult.reason === 'alert_disabled_by_config') {
+          $app
+            .logger()
+            .info(
+              'ticket_created_client_email: envio suprimido pois o alerta ticket_created está DESLIGADO na Central de Alertas por E-mail.',
+              'chamado',
+              ticketNumber,
+            )
+          return e.next()
+        } else if (alertResult && alertResult.reason === 'already_sent') {
+          $app
+            .logger()
+            .info(
+              'ticket_created_client_email: notificação de abertura já enviada anteriormente (anti-duplicidade) para chamado #' +
+                ticketNumber,
+            )
+          return e.next()
+        } else {
+          centralFailureReason = alertResult ? alertResult.reason : 'resultado_indefinido'
+          $app
+            .logger()
+            .warn(
+              'ticket_created_client_email: Central de Alertas retornou status não-positivo, acionando fallback de envio.',
+              'reason',
+              centralFailureReason,
+            )
+        }
+      } catch (centralErr) {
+        centralFailureReason = 'exception: ' + centralErr.message
         $app
           .logger()
-          .info(
-            'ticket_created_client_email: notificação enviada via Central de Alertas para ' +
-              alertResult.sent_count +
-              ' destinatário(s) (chamado #' +
-              ticketNumber +
-              ')',
-            'recipients',
-            recipientsList.join(', '),
+          .warn(
+            'ticket_created_client_email: erro inesperado ao invocar sendSystemAlertEmail, acionando fallback.',
+            'error',
+            centralErr.message,
           )
-        return e.next()
-      } else if (alertResult && alertResult.reason === 'alert_disabled_by_config') {
+      }
+    } else {
+      centralFailureReason = 'sendSystemAlertEmail_not_a_function'
+      $app
+        .logger()
+        .warn(
+          'ticket_created_client_email: globalThis.sendSystemAlertEmail indisponível, acionando fallback.',
+        )
+    }
+
+    // 6. Fallback seguro: lê a configuração do template da Central para NUNCA ignorar personalização
+    var cfg =
+      typeof globalThis.getEmailAlertConfig === 'function'
+        ? globalThis.getEmailAlertConfig('ticket_created')
+        : null
+
+    var subject = ''
+    var htmlBody = ''
+    var textBody = ''
+
+    if (cfg) {
+      // Se o alerta estiver explicitamente desligado na central de alertas, respeita e não envia
+      if (cfg.enabled === false) {
         $app
           .logger()
           .info(
-            'ticket_created_client_email: envio suprimido pois o alerta ticket_created está DESLIGADO na Central de Alertas por E-mail.',
+            'ticket_created_client_email: fallback interrompido pois alerta ticket_created está desligado nas configurações.',
             'chamado',
             ticketNumber,
           )
         return e.next()
-      } else if (alertResult && alertResult.reason === 'already_sent') {
-        $app
-          .logger()
-          .info(
-            'ticket_created_client_email: notificação de abertura já enviada anteriormente (anti-duplicidade) para chamado #' +
-              ticketNumber,
-          )
-        return e.next()
+      }
+
+      var rawSubject =
+        cfg.subject_template ||
+        cfg.default_subject_template ||
+        'Chamado #' + ticketNumber + ' aberto com sucesso: ' + ticketTitle
+
+      if (typeof globalThis.interpolateEmailTemplate === 'function') {
+        subject = globalThis.interpolateEmailTemplate(rawSubject, templateData)
       } else {
-        $app
-          .logger()
-          .warn(
-            'ticket_created_client_email: Central de Alertas retornou status não-positivo, acionando fallback de envio.',
-            'reason',
-            alertResult ? alertResult.reason : 'desconhecido',
-          )
+        subject = rawSubject
+      }
+
+      if (typeof globalThis.buildEmailHtmlFromConfig === 'function') {
+        htmlBody = globalThis.buildEmailHtmlFromConfig(cfg, templateData)
+      }
+
+      var rawBody = cfg.body_template || cfg.default_body_template || ''
+      if (typeof globalThis.interpolateEmailTemplate === 'function') {
+        var interpolatedBody = globalThis.interpolateEmailTemplate(rawBody, templateData)
+        textBody = interpolatedBody
+          .replace(/<[^>]+>/g, ' ')
+          .replace(/\s+/g, ' ')
+          .trim()
+      } else {
+        textBody = rawBody
+          .replace(/<[^>]+>/g, ' ')
+          .replace(/\s+/g, ' ')
+          .trim()
+      }
+
+      $app
+        .logger()
+        .info(
+          'ticket_created_client_email: fallback utilizando template configurado na Central de Alertas.',
+          'alert_key',
+          'ticket_created',
+          'template_layout',
+          cfg.template_layout || 'modern',
+          'subject',
+          subject,
+          'central_failure_reason',
+          centralFailureReason || 'none',
+        )
+    }
+
+    // Se cfg for nulo ou falhou montar htmlBody, usa a montagem hardcoded legada como último recurso
+    if (!htmlBody) {
+      var esc =
+        typeof globalThis.itsmEscapeHtml === 'function'
+          ? globalThis.itsmEscapeHtml
+          : function (s) {
+              return String(s || '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+            }
+
+      if (!subject) {
+        subject = 'Chamado #' + ticketNumber + ' aberto com sucesso: ' + ticketTitle
+      }
+
+      var contentHtml =
+        '<p style="margin: 0 0 16px 0; font-size: 15px; color: #334155; line-height: 24px;">' +
+        '  Olá, <strong>' +
+        esc(primaryName) +
+        '</strong>,' +
+        '</p>' +
+        '<p style="margin: 0 0 20px 0; font-size: 14px; color: #475569; line-height: 22px;">' +
+        '  Confirmamos o recebimento da sua solicitação. Seu chamado foi registrado com sucesso e <strong>já está na fila de atendimento</strong> da nossa equipe técnica.' +
+        '</p>' +
+        '<table border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; margin-bottom: 20px;">' +
+        '  <tr><td style="padding: 16px 20px;">' +
+        '    <p style="margin: 0 0 8px 0; font-size: 14px; color: #1e293b;"><strong>Número do Chamado:</strong> #' +
+        esc(ticketNumber) +
+        '</p>' +
+        '    <p style="margin: 0 0 8px 0; font-size: 14px; color: #1e293b;"><strong>Data de Abertura:</strong> ' +
+        esc(dateFormatted) +
+        '</p>' +
+        '    <p style="margin: 0 0 8px 0; font-size: 14px; color: #1e293b;"><strong>Tipo / Prioridade:</strong> ' +
+        esc(type) +
+        ' • ' +
+        esc(priority) +
+        '</p>' +
+        (companyName
+          ? '    <p style="margin: 0 0 8px 0; font-size: 14px; color: #1e293b;"><strong>Empresa:</strong> ' +
+            esc(companyName) +
+            '</p>'
+          : '') +
+        '    <p style="margin: 0 0 4px 0; font-size: 14px; color: #1e293b;"><strong>Problema Informado:</strong> ' +
+        esc(ticketTitle) +
+        '</p>' +
+        '    <div style="font-size: 13px; color: #475569; background-color: #ffffff; padding: 10px 12px; border-radius: 6px; border: 1px solid #e2e8f0; margin-top: 6px;">' +
+        esc(cleanDescription) +
+        '</div>' +
+        '  </td></tr>' +
+        '</table>' +
+        '<div style="background-color: #eff6ff; border-left: 4px solid #0284c7; padding: 12px 16px; border-radius: 0 6px 6px 0; margin-bottom: 16px;">' +
+        '  <p style="margin: 0; font-size: 13px; color: #1e40af; line-height: 20px;">' +
+        '    <strong>Próximos passos:</strong> Seu chamado já está na fila de atendimento e um operador técnico entrará em contato em breve.' +
+        '  </p>' +
+        '</div>'
+
+      if (typeof globalThis.itsmRenderBaseEmailTemplate === 'function') {
+        htmlBody = globalThis.itsmRenderBaseEmailTemplate({
+          preheader: 'Seu chamado #' + ticketNumber + ' foi aberto e está na fila de atendimento.',
+          badgeText: 'Chamado Aberto',
+          badgeColor: '#0284c7',
+          title: 'Confirmação de Abertura de Chamado',
+          subtitle: 'Chamado #' + ticketNumber + ' registrado no sistema ITSM',
+          contentHtml: contentHtml,
+          footerNote:
+            'Para acompanhar o andamento deste chamado, consulte o Portal do Cliente Lógos AITSM.',
+        })
+      } else {
+        htmlBody = '<div>' + contentHtml + '</div>'
+      }
+
+      if (!textBody) {
+        textBody =
+          'Olá ' +
+          primaryName +
+          ',\n\n' +
+          'Seu chamado foi aberto com sucesso no sistema Lógos AITSM e já está na fila de atendimento.\n\n' +
+          'Número do Chamado: #' +
+          ticketNumber +
+          '\n' +
+          'Problema informado: ' +
+          ticketTitle +
+          '\n' +
+          'Descrição: ' +
+          cleanDescription +
+          '\n' +
+          'Data e Hora de Abertura: ' +
+          dateFormatted +
+          '\n' +
+          'Prioridade: ' +
+          priority +
+          '\n\n' +
+          'Um operador técnico entrará em contato em breve.\n\n' +
+          '-- Lógos AITSM'
       }
     }
-
-    // 6. Fallback de envio seguro se a Central não despachou (ex: erro temporário de template)
-    var esc =
-      typeof globalThis.itsmEscapeHtml === 'function'
-        ? globalThis.itsmEscapeHtml
-        : function (s) {
-            return String(s || '')
-              .replace(/&/g, '&amp;')
-              .replace(/</g, '&lt;')
-              .replace(/>/g, '&gt;')
-              .replace(/"/g, '&quot;')
-          }
-
-    var subject = 'Chamado #' + ticketNumber + ' aberto com sucesso: ' + ticketTitle
-
-    var contentHtml =
-      '<p style="margin: 0 0 16px 0; font-size: 15px; color: #334155; line-height: 24px;">' +
-      '  Olá, <strong>' +
-      esc(primaryName) +
-      '</strong>,' +
-      '</p>' +
-      '<p style="margin: 0 0 20px 0; font-size: 14px; color: #475569; line-height: 22px;">' +
-      '  Confirmamos o recebimento da sua solicitação. Seu chamado foi registrado com sucesso e <strong>já está na fila de atendimento</strong> da nossa equipe técnica.' +
-      '</p>' +
-      '<table border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; margin-bottom: 20px;">' +
-      '  <tr><td style="padding: 16px 20px;">' +
-      '    <p style="margin: 0 0 8px 0; font-size: 14px; color: #1e293b;"><strong>Número do Chamado:</strong> #' +
-      esc(ticketNumber) +
-      '</p>' +
-      '    <p style="margin: 0 0 8px 0; font-size: 14px; color: #1e293b;"><strong>Data de Abertura:</strong> ' +
-      esc(dateFormatted) +
-      '</p>' +
-      '    <p style="margin: 0 0 8px 0; font-size: 14px; color: #1e293b;"><strong>Tipo / Prioridade:</strong> ' +
-      esc(type) +
-      ' • ' +
-      esc(priority) +
-      '</p>' +
-      (companyName
-        ? '    <p style="margin: 0 0 8px 0; font-size: 14px; color: #1e293b;"><strong>Empresa:</strong> ' +
-          esc(companyName) +
-          '</p>'
-        : '') +
-      '    <p style="margin: 0 0 4px 0; font-size: 14px; color: #1e293b;"><strong>Problema Informado:</strong> ' +
-      esc(ticketTitle) +
-      '</p>' +
-      '    <div style="font-size: 13px; color: #475569; background-color: #ffffff; padding: 10px 12px; border-radius: 6px; border: 1px solid #e2e8f0; margin-top: 6px;">' +
-      esc(cleanDescription) +
-      '</div>' +
-      '  </td></tr>' +
-      '</table>' +
-      '<div style="background-color: #eff6ff; border-left: 4px solid #0284c7; padding: 12px 16px; border-radius: 0 6px 6px 0; margin-bottom: 16px;">' +
-      '  <p style="margin: 0; font-size: 13px; color: #1e40af; line-height: 20px;">' +
-      '    <strong>Próximos passos:</strong> Seu chamado já está na fila de atendimento e um operador técnico entrará em contato em breve.' +
-      '  </p>' +
-      '</div>'
-
-    var htmlBody = ''
-    if (typeof globalThis.itsmRenderBaseEmailTemplate === 'function') {
-      htmlBody = globalThis.itsmRenderBaseEmailTemplate({
-        preheader: 'Seu chamado #' + ticketNumber + ' foi aberto e está na fila de atendimento.',
-        badgeText: 'Chamado Aberto',
-        badgeColor: '#0284c7',
-        title: 'Confirmação de Abertura de Chamado',
-        subtitle: 'Chamado #' + ticketNumber + ' registrado no sistema ITSM',
-        contentHtml: contentHtml,
-        footerNote:
-          'Para acompanhar o andamento deste chamado, consulte o Portal do Cliente Lógos AITSM.',
-      })
-    } else {
-      htmlBody = '<div>' + contentHtml + '</div>'
-    }
-
-    var textBody =
-      'Olá ' +
-      primaryName +
-      ',\n\n' +
-      'Seu chamado foi aberto com sucesso no sistema Lógos AITSM e já está na fila de atendimento.\n\n' +
-      'Número do Chamado: #' +
-      ticketNumber +
-      '\n' +
-      'Problema informado: ' +
-      ticketTitle +
-      '\n' +
-      'Descrição: ' +
-      cleanDescription +
-      '\n' +
-      'Data e Hora de Abertura: ' +
-      dateFormatted +
-      '\n' +
-      'Prioridade: ' +
-      priority +
-      '\n\n' +
-      'Um operador técnico entrará em contato em breve.\n\n' +
-      '-- Lógos AITSM'
 
     for (var fIdx = 0; fIdx < recipientsList.length; fIdx++) {
       var rEmail = recipientsList[fIdx]

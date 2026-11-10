@@ -213,201 +213,312 @@ onRecordAfterUpdateSuccess((e) => {
               .replace(/"/g, '&quot;')
           }
 
-    // Se a Central de Alertas estiver disponível, usamos o dispatcher com verificação de switch individual
-    if (typeof globalThis.sendSystemAlertEmail === 'function' && recipientEmail) {
-      var resolvedAlertResult = globalThis.sendSystemAlertEmail({
-        alert_key: 'ticket_resolved',
-        reference_id: ticket.id + '_resolved',
-        recipient: recipientEmail,
-        subject: 'Chamado #' + ticketNumber + ' concluído: ' + ticketTitle,
-        data: {
-          chamado_numero: ticketNumber,
-          titulo: ticketTitle,
-          solucao: cleanSolution,
-          cliente: requesterName,
-          data_conclusao: resFormatted,
-          link:
-            portalBaseUrl || frontendUrl
-              ? (portalBaseUrl || frontendUrl) +
-                '/portal?tab=tickets&openTicketId=' +
-                encodeURIComponent(ticket.id)
-              : '',
-        },
-      })
+    // Monta dados para template
+    var resolvedTemplateData = {
+      chamado_numero: ticketNumber,
+      numero: ticketNumber,
+      titulo: ticketTitle,
+      solucao: cleanSolution,
+      cliente: requesterName,
+      solicitante: requesterName,
+      operador: operatorName,
+      data_abertura: createdFormatted,
+      data_conclusao: resFormatted,
+      status: newStatus,
+      empresa: companyName,
+      prioridade: priority,
+      tipo: type,
+      link:
+        portalBaseUrl || frontendUrl
+          ? (portalBaseUrl || frontendUrl) +
+            '/portal?tab=tickets&openTicketId=' +
+            encodeURIComponent(ticket.id)
+          : '',
+    }
 
-      if (resolvedAlertResult && resolvedAlertResult.sent) {
+    // Se a Central de Alertas estiver disponível, usamos o dispatcher com verificação de switch individual
+    var centralFailureReason = ''
+    if (typeof globalThis.sendSystemAlertEmail === 'function' && recipientEmail) {
+      try {
+        var resolvedAlertResult = globalThis.sendSystemAlertEmail({
+          alert_key: 'ticket_resolved',
+          reference_id: ticket.id + '_resolved',
+          recipient: recipientEmail,
+          subject: 'Chamado #' + ticketNumber + ' concluído: ' + ticketTitle,
+          data: resolvedTemplateData,
+        })
+
+        if (resolvedAlertResult && resolvedAlertResult.sent) {
+          $app
+            .logger()
+            .info(
+              'ticket_resolved_client_email: notificação enviada via Central de Alertas para ' +
+                recipientEmail +
+                ' (chamado #' +
+                ticketNumber +
+                ')',
+            )
+          return e.next()
+        } else if (
+          resolvedAlertResult &&
+          resolvedAlertResult.reason === 'alert_disabled_by_config'
+        ) {
+          $app
+            .logger()
+            .info(
+              'ticket_resolved_client_email: envio suprimido pois o alerta ticket_resolved está DESLIGADO nas configurações.',
+            )
+          return e.next()
+        } else if (resolvedAlertResult && resolvedAlertResult.reason === 'already_sent') {
+          $app
+            .logger()
+            .info(
+              'ticket_resolved_client_email: envio suprimido pois notificação de resolução já foi enviada anteriormente (anti-duplicidade).',
+            )
+          return e.next()
+        } else {
+          centralFailureReason = resolvedAlertResult ? resolvedAlertResult.reason : 'desconhecido'
+          $app
+            .logger()
+            .warn(
+              'ticket_resolved_client_email: Central de Alertas retornou status não-positivo, acionando fallback de envio.',
+              'reason',
+              centralFailureReason,
+            )
+        }
+      } catch (centralErr) {
+        centralFailureReason = 'exception: ' + centralErr.message
         $app
           .logger()
-          .info(
-            'ticket_resolved_client_email: notificação enviada via Central de Alertas para ' +
-              recipientEmail +
-              ' (chamado #' +
-              ticketNumber +
-              ')',
+          .warn(
+            'ticket_resolved_client_email: erro ao invocar sendSystemAlertEmail, acionando fallback.',
+            'error',
+            centralErr.message,
           )
-        return e.next()
-      } else if (resolvedAlertResult && resolvedAlertResult.reason === 'alert_disabled_by_config') {
-        $app
-          .logger()
-          .info(
-            'ticket_resolved_client_email: envio suprimido pois o alerta ticket_resolved está DESLIGADO nas configurações.',
-          )
-        return e.next()
       }
     }
 
-    var subject = 'Chamado #' + ticketNumber + ' concluído: ' + ticketTitle
+    // Fallback seguro: lê a configuração do template da Central para NUNCA ignorar personalização
+    var cfg =
+      typeof globalThis.getEmailAlertConfig === 'function'
+        ? globalThis.getEmailAlertConfig('ticket_resolved')
+        : null
 
-    // Montagem do bloco de conteúdo HTML
-    var contentHtml =
-      '<!-- SAUDAÇÃO -->\n' +
-      '<p style="margin: 0 0 16px 0; font-size: 15px; color: #334155; line-height: 24px;">\n' +
-      '  Olá, <strong>' +
-      esc(requesterName) +
-      '</strong>,\n' +
-      '</p>\n' +
-      '<p style="margin: 0 0 20px 0; font-size: 14px; color: #475569; line-height: 22px;">\n' +
-      '  Temos uma ótima notícia! O seu chamado <strong>foi concluído com sucesso</strong> pela nossa equipe de suporte e está registrado como <strong>' +
-      esc(newStatus) +
-      '</strong>.\n' +
-      '</p>\n' +
-      '\n' +
-      '<!-- CARD DE RESUMO DO CHAMADO RESOLVIDO -->\n' +
-      '<table border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; margin-bottom: 20px;">\n' +
-      '  <tr>\n' +
-      '    <td style="padding: 16px 20px;">\n' +
-      '      <table border="0" cellpadding="0" cellspacing="0" width="100%">\n' +
-      '        <tr>\n' +
-      '          <td style="padding-bottom: 10px; width: 50%; vertical-align: top;">\n' +
-      '            <div style="font-size: 11px; text-transform: uppercase; color: #64748b; font-weight: 600; letter-spacing: 0.5px;">Número do Chamado</div>\n' +
-      '            <div style="font-size: 16px; font-weight: 800; color: #16a34a; margin-top: 2px;">#' +
-      esc(ticketNumber) +
-      '</div>\n' +
-      '          </td>\n' +
-      '          <td style="padding-bottom: 10px; width: 50%; vertical-align: top;">\n' +
-      '            <div style="font-size: 11px; text-transform: uppercase; color: #64748b; font-weight: 600; letter-spacing: 0.5px;">Status</div>\n' +
-      '            <div style="display: inline-block; background-color: #dcfce7; color: #166534; font-size: 12px; font-weight: 700; padding: 2px 8px; border-radius: 4px; margin-top: 2px;">' +
-      esc(newStatus) +
-      '</div>\n' +
-      '          </td>\n' +
-      '        </tr>\n' +
-      '        <tr>\n' +
-      '          <td style="padding-bottom: 10px; vertical-align: top;">\n' +
-      '            <div style="font-size: 11px; text-transform: uppercase; color: #64748b; font-weight: 600; letter-spacing: 0.5px;">Data de Abertura</div>\n' +
-      '            <div style="font-size: 13px; font-weight: 500; color: #334155; margin-top: 2px;">' +
-      esc(createdFormatted) +
-      '</div>\n' +
-      '          </td>\n' +
-      '          <td style="padding-bottom: 10px; vertical-align: top;">\n' +
-      '            <div style="font-size: 11px; text-transform: uppercase; color: #64748b; font-weight: 600; letter-spacing: 0.5px;">Data de Conclusão</div>\n' +
-      '            <div style="font-size: 13px; font-weight: 700; color: #16a34a; margin-top: 2px;">' +
-      esc(resFormatted) +
-      '</div>\n' +
-      '          </td>\n' +
-      '        </tr>\n' +
-      '        <tr>\n' +
-      '          <td style="padding-bottom: 10px; vertical-align: top;">\n' +
-      '            <div style="font-size: 11px; text-transform: uppercase; color: #64748b; font-weight: 600; letter-spacing: 0.5px;">Operador Responsável</div>\n' +
-      '            <div style="font-size: 13px; font-weight: 600; color: #334155; margin-top: 2px;">' +
-      esc(operatorName) +
-      '</div>\n' +
-      '          </td>\n' +
-      '          <td style="padding-bottom: 10px; vertical-align: top;">\n' +
-      '            <div style="font-size: 11px; text-transform: uppercase; color: #64748b; font-weight: 600; letter-spacing: 0.5px;">Tipo / Prioridade</div>\n' +
-      '            <div style="font-size: 13px; font-weight: 500; color: #334155; margin-top: 2px;">' +
-      esc(type) +
-      ' • ' +
-      esc(priority) +
-      '</div>\n' +
-      '          </td>\n' +
-      '        </tr>\n' +
-      (companyName
-        ? '        <tr>\n' +
-          '          <td colspan="2" style="padding-bottom: 10px; vertical-align: top;">\n' +
-          '            <div style="font-size: 11px; text-transform: uppercase; color: #64748b; font-weight: 600; letter-spacing: 0.5px;">Empresa</div>\n' +
-          '            <div style="font-size: 13px; font-weight: 500; color: #334155; margin-top: 2px;">' +
-          esc(companyName) +
-          '</div>\n' +
-          '          </td>\n' +
-          '        </tr>\n'
-        : '') +
-      '        <tr>\n' +
-      '          <td colspan="2" style="padding-top: 8px; border-top: 1px dashed #cbd5e1; vertical-align: top;">\n' +
-      '            <div style="font-size: 11px; text-transform: uppercase; color: #64748b; font-weight: 600; letter-spacing: 0.5px; margin-bottom: 4px;">Problema Informado</div>\n' +
-      '            <div style="font-size: 14px; font-weight: 700; color: #0f172a; margin-bottom: 6px;">' +
-      esc(ticketTitle) +
-      '</div>\n' +
-      '            <div style="font-size: 13px; color: #475569; line-height: 20px; background-color: #ffffff; padding: 10px 12px; border-radius: 6px; border: 1px solid #e2e8f0;">' +
-      esc(cleanDescription) +
-      '</div>\n' +
-      '          </td>\n' +
-      '        </tr>\n' +
-      '        <tr>\n' +
-      '          <td colspan="2" style="padding-top: 12px; vertical-align: top;">\n' +
-      '            <div style="font-size: 11px; text-transform: uppercase; color: #166534; font-weight: 700; letter-spacing: 0.5px; margin-bottom: 4px;">Solução Aplicada</div>\n' +
-      '            <div style="font-size: 13px; color: #15803d; line-height: 20px; background-color: #f0fdf4; padding: 12px 14px; border-radius: 6px; border: 1px solid #bbf7d0; font-weight: 500;">' +
-      esc(cleanSolution) +
-      '</div>\n' +
-      '          </td>\n' +
-      '        </tr>\n' +
-      '      </table>\n' +
-      '    </td>\n' +
-      '  </tr>\n' +
-      '</table>\n' +
-      '\n' +
-      '<!-- AVISO DE SATISFAÇÃO / FEEDBACK -->\n' +
-      '<div style="background-color: #f0fdf4; border-left: 4px solid #16a34a; padding: 12px 16px; border-radius: 0 6px 6px 0; margin-bottom: 16px;">\n' +
-      '  <p style="margin: 0; font-size: 13px; color: #166534; line-height: 20px;">\n' +
-      '    <strong>Chamado Finalizado:</strong> Caso a solução apresentada não tenha atendido completamente sua solicitação ou você precise de suporte complementar, basta responder a este e-mail ou reabrir o chamado através do Portal do Cliente.\n' +
-      '  </p>\n' +
-      '</div>'
-
+    var subject = ''
     var htmlBody = ''
-    if (typeof globalThis.itsmRenderBaseEmailTemplate === 'function') {
-      htmlBody = globalThis.itsmRenderBaseEmailTemplate({
-        preheader: 'Seu chamado #' + ticketNumber + ' foi concluído pela nossa equipe técnica.',
-        badgeText: 'Chamado Concluído',
-        badgeColor: '#16a34a',
-        title: 'Chamado Concluído com Sucesso',
-        subtitle: 'Chamado #' + ticketNumber + ' — Resolução aplicada',
-        contentHtml: contentHtml,
-        footerNote:
-          'Agradecemos a sua parceria. Para dúvidas ou novas solicitações, entre em contato através dos nossos canais de suporte ou portal do cliente.',
-      })
-    } else {
-      htmlBody = '<div>' + contentHtml + '</div>'
+    var textBody = ''
+
+    if (cfg) {
+      if (cfg.enabled === false) {
+        $app
+          .logger()
+          .info(
+            'ticket_resolved_client_email: fallback interrompido pois alerta ticket_resolved está desligado nas configurações.',
+            'chamado',
+            ticketNumber,
+          )
+        return e.next()
+      }
+
+      var rawSubject =
+        cfg.subject_template ||
+        cfg.default_subject_template ||
+        'Chamado #' + ticketNumber + ' concluído: ' + ticketTitle
+
+      if (typeof globalThis.interpolateEmailTemplate === 'function') {
+        subject = globalThis.interpolateEmailTemplate(rawSubject, resolvedTemplateData)
+      } else {
+        subject = rawSubject
+      }
+
+      if (typeof globalThis.buildEmailHtmlFromConfig === 'function') {
+        htmlBody = globalThis.buildEmailHtmlFromConfig(cfg, resolvedTemplateData)
+      }
+
+      var rawBody = cfg.body_template || cfg.default_body_template || ''
+      if (typeof globalThis.interpolateEmailTemplate === 'function') {
+        var interpolatedBody = globalThis.interpolateEmailTemplate(rawBody, resolvedTemplateData)
+        textBody = interpolatedBody
+          .replace(/<[^>]+>/g, ' ')
+          .replace(/\s+/g, ' ')
+          .trim()
+      } else {
+        textBody = rawBody
+          .replace(/<[^>]+>/g, ' ')
+          .replace(/\s+/g, ' ')
+          .trim()
+      }
+
+      $app
+        .logger()
+        .info(
+          'ticket_resolved_client_email: fallback utilizando template configurado na Central de Alertas.',
+          'alert_key',
+          'ticket_resolved',
+          'template_layout',
+          cfg.template_layout || 'modern',
+          'subject',
+          subject,
+          'central_failure_reason',
+          centralFailureReason || 'none',
+        )
     }
 
-    var textBody =
-      'Olá ' +
-      requesterName +
-      ',\n\n' +
-      'Seu chamado #' +
-      ticketNumber +
-      ' foi concluído com sucesso pela nossa equipe de suporte.\n\n' +
-      'Número do Chamado: #' +
-      ticketNumber +
-      '\n' +
-      'Status: ' +
-      newStatus +
-      '\n' +
-      'Problema informado: ' +
-      ticketTitle +
-      '\n' +
-      'Data de Abertura: ' +
-      createdFormatted +
-      '\n' +
-      'Data de Conclusão: ' +
-      resFormatted +
-      '\n' +
-      'Operador Responsável: ' +
-      operatorName +
-      '\n\n' +
-      'Solução Aplicada:\n' +
-      cleanSolution +
-      '\n\n' +
-      'Caso precise de suporte adicional, entre em contato através do portal do cliente.\n\n' +
-      '-- Lógos AITSM'
+    if (!htmlBody) {
+      var defaultSubject = 'Chamado #' + ticketNumber + ' concluído: ' + ticketTitle
+      if (!subject) subject = defaultSubject
+
+      // Montagem do bloco de conteúdo HTML
+      var contentHtml =
+        '<!-- SAUDAÇÃO -->\n' +
+        '<p style="margin: 0 0 16px 0; font-size: 15px; color: #334155; line-height: 24px;">\n' +
+        '  Olá, <strong>' +
+        esc(requesterName) +
+        '</strong>,\n' +
+        '</p>\n' +
+        '<p style="margin: 0 0 20px 0; font-size: 14px; color: #475569; line-height: 22px;">\n' +
+        '  Temos uma ótima notícia! O seu chamado <strong>foi concluído com sucesso</strong> pela nossa equipe de suporte e está registrado como <strong>' +
+        esc(newStatus) +
+        '</strong>.\n' +
+        '</p>\n' +
+        '\n' +
+        '<!-- CARD DE RESUMO DO CHAMADO RESOLVIDO -->\n' +
+        '<table border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; margin-bottom: 20px;">\n' +
+        '  <tr>\n' +
+        '    <td style="padding: 16px 20px;">\n' +
+        '      <table border="0" cellpadding="0" cellspacing="0" width="100%">\n' +
+        '        <tr>\n' +
+        '          <td style="padding-bottom: 10px; width: 50%; vertical-align: top;">\n' +
+        '            <div style="font-size: 11px; text-transform: uppercase; color: #64748b; font-weight: 600; letter-spacing: 0.5px;">Número do Chamado</div>\n' +
+        '            <div style="font-size: 16px; font-weight: 800; color: #16a34a; margin-top: 2px;">#' +
+        esc(ticketNumber) +
+        '</div>\n' +
+        '          </td>\n' +
+        '          <td style="padding-bottom: 10px; width: 50%; vertical-align: top;">\n' +
+        '            <div style="font-size: 11px; text-transform: uppercase; color: #64748b; font-weight: 600; letter-spacing: 0.5px;">Status</div>\n' +
+        '            <div style="display: inline-block; background-color: #dcfce7; color: #166534; font-size: 12px; font-weight: 700; padding: 2px 8px; border-radius: 4px; margin-top: 2px;">' +
+        esc(newStatus) +
+        '</div>\n' +
+        '          </td>\n' +
+        '        </tr>\n' +
+        '        <tr>\n' +
+        '          <td style="padding-bottom: 10px; vertical-align: top;">\n' +
+        '            <div style="font-size: 11px; text-transform: uppercase; color: #64748b; font-weight: 600; letter-spacing: 0.5px;">Data de Abertura</div>\n' +
+        '            <div style="font-size: 13px; font-weight: 500; color: #334155; margin-top: 2px;">' +
+        esc(createdFormatted) +
+        '</div>\n' +
+        '          </td>\n' +
+        '          <td style="padding-bottom: 10px; vertical-align: top;">\n' +
+        '            <div style="font-size: 11px; text-transform: uppercase; color: #64748b; font-weight: 600; letter-spacing: 0.5px;">Data de Conclusão</div>\n' +
+        '            <div style="font-size: 13px; font-weight: 700; color: #16a34a; margin-top: 2px;">' +
+        esc(resFormatted) +
+        '</div>\n' +
+        '          </td>\n' +
+        '        </tr>\n' +
+        '        <tr>\n' +
+        '          <td style="padding-bottom: 10px; vertical-align: top;">\n' +
+        '            <div style="font-size: 11px; text-transform: uppercase; color: #64748b; font-weight: 600; letter-spacing: 0.5px;">Operador Responsável</div>\n' +
+        '            <div style="font-size: 13px; font-weight: 600; color: #334155; margin-top: 2px;">' +
+        esc(operatorName) +
+        '</div>\n' +
+        '          </td>\n' +
+        '          <td style="padding-bottom: 10px; vertical-align: top;">\n' +
+        '            <div style="font-size: 11px; text-transform: uppercase; color: #64748b; font-weight: 600; letter-spacing: 0.5px;">Tipo / Prioridade</div>\n' +
+        '            <div style="font-size: 13px; font-weight: 500; color: #334155; margin-top: 2px;">' +
+        esc(type) +
+        ' • ' +
+        esc(priority) +
+        '</div>\n' +
+        '          </td>\n' +
+        '        </tr>\n' +
+        (companyName
+          ? '        <tr>\n' +
+            '          <td colspan="2" style="padding-bottom: 10px; vertical-align: top;">\n' +
+            '            <div style="font-size: 11px; text-transform: uppercase; color: #64748b; font-weight: 600; letter-spacing: 0.5px;">Empresa</div>\n' +
+            '            <div style="font-size: 13px; font-weight: 500; color: #334155; margin-top: 2px;">' +
+            esc(companyName) +
+            '</div>\n' +
+            '          </td>\n' +
+            '        </tr>\n'
+          : '') +
+        '        <tr>\n' +
+        '          <td colspan="2" style="padding-top: 8px; border-top: 1px dashed #cbd5e1; vertical-align: top;">\n' +
+        '            <div style="font-size: 11px; text-transform: uppercase; color: #64748b; font-weight: 600; letter-spacing: 0.5px; margin-bottom: 4px;">Problema Informado</div>\n' +
+        '            <div style="font-size: 14px; font-weight: 700; color: #0f172a; margin-bottom: 6px;">' +
+        esc(ticketTitle) +
+        '</div>\n' +
+        '            <div style="font-size: 13px; color: #475569; line-height: 20px; background-color: #ffffff; padding: 10px 12px; border-radius: 6px; border: 1px solid #e2e8f0;">' +
+        esc(cleanDescription) +
+        '</div>\n' +
+        '          </td>\n' +
+        '        </tr>\n' +
+        '        <tr>\n' +
+        '          <td colspan="2" style="padding-top: 12px; vertical-align: top;">\n' +
+        '            <div style="font-size: 11px; text-transform: uppercase; color: #166534; font-weight: 700; letter-spacing: 0.5px; margin-bottom: 4px;">Solução Aplicada</div>\n' +
+        '            <div style="font-size: 13px; color: #15803d; line-height: 20px; background-color: #f0fdf4; padding: 12px 14px; border-radius: 6px; border: 1px solid #bbf7d0; font-weight: 500;">' +
+        esc(cleanSolution) +
+        '</div>\n' +
+        '          </td>\n' +
+        '        </tr>\n' +
+        '      </table>\n' +
+        '    </td>\n' +
+        '  </tr>\n' +
+        '</table>\n' +
+        '\n' +
+        '<!-- AVISO DE SATISFAÇÃO / FEEDBACK -->\n' +
+        '<div style="background-color: #f0fdf4; border-left: 4px solid #16a34a; padding: 12px 16px; border-radius: 0 6px 6px 0; margin-bottom: 16px;">\n' +
+        '  <p style="margin: 0; font-size: 13px; color: #166534; line-height: 20px;">\n' +
+        '    <strong>Chamado Finalizado:</strong> Caso a solução apresentada não tenha atendido completamente sua solicitação ou você precise de suporte complementar, basta responder a este e-mail ou reabrir o chamado através do Portal do Cliente.\n' +
+        '  </p>\n' +
+        '</div>'
+
+      var htmlBody = ''
+      if (typeof globalThis.itsmRenderBaseEmailTemplate === 'function') {
+        htmlBody = globalThis.itsmRenderBaseEmailTemplate({
+          preheader: 'Seu chamado #' + ticketNumber + ' foi concluído pela nossa equipe técnica.',
+          badgeText: 'Chamado Concluído',
+          badgeColor: '#16a34a',
+          title: 'Chamado Concluído com Sucesso',
+          subtitle: 'Chamado #' + ticketNumber + ' — Resolução aplicada',
+          contentHtml: contentHtml,
+          footerNote:
+            'Agradecemos a sua parceria. Para dúvidas ou novas solicitações, entre em contato através dos nossos canais de suporte ou portal do cliente.',
+        })
+      } else {
+        htmlBody = '<div>' + contentHtml + '</div>'
+      }
+
+      var textBody =
+        'Olá ' +
+        requesterName +
+        ',\n\n' +
+        'Seu chamado #' +
+        ticketNumber +
+        ' foi concluído com sucesso pela nossa equipe de suporte.\n\n' +
+        'Número do Chamado: #' +
+        ticketNumber +
+        '\n' +
+        'Status: ' +
+        newStatus +
+        '\n' +
+        'Problema informado: ' +
+        ticketTitle +
+        '\n' +
+        'Data de Abertura: ' +
+        createdFormatted +
+        '\n' +
+        'Data de Conclusão: ' +
+        resFormatted +
+        '\n' +
+        'Operador Responsável: ' +
+        operatorName +
+        '\n\n' +
+        'Solução Aplicada:\n' +
+        cleanSolution +
+        '\n\n' +
+        'Caso precise de suporte adicional, entre em contato através do portal do cliente.\n\n' +
+        '-- Lógos AITSM'
+    }
 
     // Lista consolidada de destinatários (solicitante + contatos/focais extras se configurados)
     var allDestinations = []
