@@ -111,16 +111,7 @@ import { AccompanimentDialog } from '@/components/AccompanimentDialog'
 import { formatMinutes, formatSeconds, parseDurationToSeconds } from '@/lib/duration'
 import { DurationInput } from '@/components/ui/DurationInput'
 import { validateTimeSpentValue } from '@/lib/time-mask'
-import {
-  Inbox,
-  Sparkles,
-  Check,
-  CheckCheck,
-  BookOpen,
-  ExternalLink,
-  Play,
-  Pause,
-} from 'lucide-react'
+import { Inbox, Check, BookOpen, ExternalLink, Play, Pause } from 'lucide-react'
 import { getKnowledgeArticles, KnowledgeArticle } from '@/services/knowledge'
 import { ArticleDetailDialog } from '@/components/knowledge/ArticleDetailDialog'
 import { trackTicketView, getTicketViews, TicketViewRecord } from '@/services/ticket-views'
@@ -193,7 +184,7 @@ export default function TicketDetail({
   const [associatedTickets, setAssociatedTickets] = useState<AssociatedTicket[]>([])
   const [showBatchResolve, setShowBatchResolve] = useState(false)
   const [resolveBlockMessage, setResolveBlockMessage] = useState<string | null>(null)
-  const [applyingTriage, setApplyingTriage] = useState(false)
+
   const [suggestedArticles, setSuggestedArticles] = useState<KnowledgeArticle[]>([])
   const [selectedKbArticle, setSelectedKbArticle] = useState<KnowledgeArticle | null>(null)
   const [kbDetailOpen, setKbDetailOpen] = useState(false)
@@ -676,29 +667,6 @@ export default function TicketDetail({
     return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i]
   }
 
-  const handleApplyTriage = async () => {
-    if (!id || !ticket?.triage_suggestions) return
-    const sugg = ticket.triage_suggestions
-    setApplyingTriage(true)
-    try {
-      const payload: Partial<TicketRecord> = {}
-      if (sugg.type) payload.type = sugg.type
-      if (sugg.category) payload.category = sugg.category
-      if (sugg.service) payload.service = sugg.service
-
-      await updateTicket(id, payload as any)
-      toast({
-        title: 'Sugestões de Triagem aplicadas com sucesso!',
-        description: `Tipo: ${sugg.type || '-'} | Categoria: ${sugg.category_name || sugg.service || '-'}`,
-      })
-      loadData()
-    } catch {
-      toast({ title: 'Erro ao aplicar sugestões de triagem', variant: 'destructive' })
-    } finally {
-      setApplyingTriage(false)
-    }
-  }
-
   const handleContractChange = async (newContractId: string) => {
     if (!id) return
     const actualId = newContractId === '_none' ? '' : newContractId
@@ -783,78 +751,6 @@ export default function TicketDetail({
                   </span>
                 )}
               </Link>
-            )}
-
-            {/* Banner de Sugestões de Triagem da IA */}
-            {ticket.triage_suggestions && (
-              <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 space-y-3 shadow-sm">
-                <div className="flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-2 text-foreground">
-                    <Sparkles className="h-4 w-4 text-primary animate-pulse" />
-                    <span className="font-semibold text-xs uppercase tracking-wider text-primary font-mono">
-                      Sugestões de Triagem Inteligente (IA)
-                    </span>
-                    {ticket.triage_suggestions.confidence && (
-                      <Badge
-                        variant="outline"
-                        className="bg-amber-500/20 text-amber-300 text-[10px] border-amber-500/40 font-mono"
-                      >
-                        Confiança: {Math.round(ticket.triage_suggestions.confidence * 100)}%
-                      </Badge>
-                    )}
-                  </div>
-                  <Button
-                    size="sm"
-                    onClick={handleApplyTriage}
-                    disabled={applyingTriage}
-                    className="h-7 text-xs bg-primary hover:bg-primary/90 text-primary-foreground shadow-xs font-semibold"
-                  >
-                    <CheckCheck className="mr-1 h-3.5 w-3.5" />
-                    {applyingTriage ? 'Aplicando...' : 'Aplicar Sugestão'}
-                  </Button>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
-                  {ticket.triage_suggestions.type && (
-                    <div className="bg-card/80 p-2.5 rounded-lg border border-border/70">
-                      <span className="text-muted-foreground block text-[10px] uppercase font-mono">
-                        Tipo Sugerido
-                      </span>
-                      <span className="font-semibold text-foreground">
-                        {ticket.triage_suggestions.type}
-                      </span>
-                    </div>
-                  )}
-                  {(ticket.triage_suggestions.category_name ||
-                    ticket.triage_suggestions.category) && (
-                    <div className="bg-card/80 p-2.5 rounded-lg border border-border/70">
-                      <span className="text-muted-foreground block text-[10px] uppercase font-mono">
-                        Atividade Sugerida
-                      </span>
-                      <span className="font-semibold text-foreground">
-                        {ticket.triage_suggestions.category_name ||
-                          ticket.triage_suggestions.category}
-                      </span>
-                    </div>
-                  )}
-                  {ticket.triage_suggestions.service && (
-                    <div className="bg-card/80 p-2.5 rounded-lg border border-border/70">
-                      <span className="text-muted-foreground block text-[10px] uppercase font-mono">
-                        Serviço / Atividade
-                      </span>
-                      <span className="font-semibold text-foreground">
-                        {ticket.triage_suggestions.service}
-                      </span>
-                    </div>
-                  )}
-                </div>
-
-                {ticket.triage_suggestions.reason && (
-                  <p className="text-[11px] text-muted-foreground italic">
-                    💡 {ticket.triage_suggestions.reason}
-                  </p>
-                )}
-              </div>
             )}
 
             {/* Artigos Sugeridos da Base de Conhecimento vinculados por Tokens / Atividade */}
