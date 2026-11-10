@@ -132,12 +132,70 @@ export function OperatorCompanyTab({ canConfigure, canEdit }: OperatorCompanyTab
     setWeek((prev) => ({ ...prev, [day]: { ...prev[day], ...patch } }))
   }
 
-  const addHoliday = () => setHolidays((prev) => [...prev, { date: '', name: '' }])
+  const [newHolidayDate, setNewHolidayDate] = useState('')
+  const [newHolidayName, setNewHolidayName] = useState('')
+  // Recorrente (DD/MM) ou completa (AAAA-MM-DD) — formato aceito por bhBuildHolidays (hook A1)
+  const newHolidayIsRecurring = /^\d{1,2}\/\d{1,2}$/.test(newHolidayDate.trim())
 
-  const updateHoliday = (index: number, patch: Partial<Holiday>) =>
-    setHolidays((prev) => prev.map((h, i) => (i === index ? { ...h, ...patch } : h)))
+  /** Chave de unicidade: recorrente normalizada "*-MM-DD", completa "YYYY-MM-DD". */
+  const holidayKey = (date: string): string => {
+    const value = date.trim()
+    const full = value.match(/^(\d{4})-(\d{2})-(\d{2})/)
+    if (full) return full[0]
+    const md = value.match(/^(\d{1,2})\/(\d{1,2})$/)
+    if (md) return `*-${md[2].padStart(2, '0')}-${md[1].padStart(2, '0')}`
+    return value.toLowerCase()
+  }
 
-  const removeHoliday = (index: number) => setHolidays((prev) => prev.filter((_, i) => i !== index))
+  const sortedHolidays = [...holidays].sort((a, b) => {
+    // Completas primeiro (mais antigas primeiro), depois recorrentes por dia/mês
+    const aFull = /^\d{4}-/.test(a.date || '')
+    const bFull = /^\d{4}-/.test(b.date || '')
+    if (aFull && bFull) return a.date.localeCompare(b.date)
+    if (aFull !== bFull) return aFull ? -1 : 1
+    const aMd = a.date.match(/^(\d{1,2})\/(\d{1,2})$/)
+    const bMd = b.date.match(/^(\d{1,2})\/(\d{1,2})$/)
+    if (aMd && bMd) {
+      const am = Number(aMd[2]) * 100 + Number(aMd[1])
+      const bm = Number(bMd[2]) * 100 + Number(bMd[1])
+      return am - bm
+    }
+    return (a.date || '').localeCompare(b.date || '')
+  })
+
+  const addHoliday = () => {
+    const date = newHolidayDate.trim()
+    if (!date) {
+      toast({
+        title: 'Data obrigatória',
+        description: 'Informe a data do feriado (AAAA-MM-DD ou DD/MM para recorrente).',
+        variant: 'destructive',
+      })
+      return
+    }
+    if (!newHolidayIsRecurring && !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+      toast({
+        title: 'Data inválida',
+        description: 'Use AAAA-MM-DD (data completa) ou DD/MM (feriado recorrente, todo ano).',
+        variant: 'destructive',
+      })
+      return
+    }
+    const key = holidayKey(date)
+    if (holidays.some((h) => holidayKey(h.date) === key)) {
+      toast({
+        title: 'Feriado duplicado',
+        description: 'Já existe um feriado cadastrado nessa data.',
+        variant: 'destructive',
+      })
+      return
+    }
+    setHolidays((prev) => [...prev, { date, name: newHolidayName.trim() }])
+    setNewHolidayDate('')
+    setNewHolidayName('')
+  }
+
+  const removeHoliday = (date: string) => setHolidays((prev) => prev.filter((h) => h.date !== date))
 
   if (loading) {
     return (
@@ -354,44 +412,84 @@ export function OperatorCompanyTab({ canConfigure, canEdit }: OperatorCompanyTab
             completa (AAAA-MM-DD) ou recorrente (DD/MM, repete todo ano).
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-3">
-          {holidays.map((holiday, index) => (
-            <div key={index} className="flex items-center gap-2">
+        <CardContent className="space-y-4">
+          {/* Formulário de inclusão */}
+          <div className="flex flex-col gap-2 md:flex-row md:items-end">
+            <div className="space-y-1">
+              <Label htmlFor="holiday-date">Data *</Label>
               <Input
-                type="date"
-                value={holiday.date && /^\d{4}-/.test(holiday.date) ? holiday.date : ''}
-                onChange={(ev) => updateHoliday(index, { date: ev.target.value })}
+                id="holiday-date"
+                value={newHolidayDate}
+                onChange={(ev) => setNewHolidayDate(ev.target.value)}
                 disabled={isReadOnly}
                 className="w-44"
-                placeholder="AAAA-MM-DD"
+                placeholder="2026-12-25 ou 25/12"
               />
-              <Input
-                type="text"
-                value={/^\d{4}-/.test(holiday.date || '') ? '' : holiday.date}
-                onChange={(ev) => updateHoliday(index, { date: ev.target.value })}
-                disabled={isReadOnly}
-                className="w-28"
-                placeholder="25/12"
-              />
-              <Input
-                value={holiday.name}
-                onChange={(ev) => updateHoliday(index, { name: ev.target.value })}
-                disabled={isReadOnly}
-                placeholder="Descrição do feriado"
-              />
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => removeHoliday(index)}
-                disabled={isReadOnly}
-              >
-                <X className="h-4 w-4" />
-              </Button>
             </div>
-          ))}
-          <Button variant="outline" onClick={addHoliday} disabled={isReadOnly}>
-            <Plus className="mr-2 h-4 w-4" /> Adicionar feriado
-          </Button>
+            <div className="space-y-1 md:flex-1">
+              <Label htmlFor="holiday-name">Descrição</Label>
+              <Input
+                id="holiday-name"
+                value={newHolidayName}
+                onChange={(ev) => setNewHolidayName(ev.target.value)}
+                disabled={isReadOnly}
+                placeholder="Ex.: Natal"
+                onKeyDown={(ev) => {
+                  if (ev.key === 'Enter') {
+                    ev.preventDefault()
+                    addHoliday()
+                  }
+                }}
+              />
+            </div>
+            <Button onClick={addHoliday} disabled={isReadOnly}>
+              <Plus className="mr-2 h-4 w-4" /> Adicionar
+            </Button>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Use data completa (AAAA-MM-DD) para um feriado específico ou DD/MM para feriado
+            recorrente (repete todo ano). Exemplo: 25/12 repete todos os anos.
+          </p>
+
+          {/* Lista de feriados cadastrados */}
+          {sortedHolidays.length === 0 ? (
+            <p className="rounded-lg border border-dashed p-4 text-center text-sm text-muted-foreground">
+              Nenhum feriado cadastrado. Adicione as datas em que a empresa não atende.
+            </p>
+          ) : (
+            <ul className="space-y-2">
+              {sortedHolidays.map((holiday) => {
+                const recurring = !/^\d{4}-/.test(holiday.date || '')
+                return (
+                  <li
+                    key={holiday.date}
+                    className="flex items-center justify-between gap-2 rounded-lg border p-3"
+                  >
+                    <div className="flex min-w-0 items-center gap-3">
+                      <div className="flex w-32 shrink-0 flex-col">
+                        <span className="text-sm font-medium">{holiday.date}</span>
+                        {recurring && (
+                          <span className="text-xs text-muted-foreground">Repete todo ano</span>
+                        )}
+                      </div>
+                      <span className="truncate text-sm text-muted-foreground">
+                        {holiday.name || '—'}
+                      </span>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => removeHoliday(holiday.date)}
+                      disabled={isReadOnly}
+                      className="shrink-0 text-destructive hover:text-destructive"
+                    >
+                      <X className="mr-1 h-4 w-4" /> Remover
+                    </Button>
+                  </li>
+                )
+              })}
+            </ul>
+          )}
         </CardContent>
       </Card>
 
