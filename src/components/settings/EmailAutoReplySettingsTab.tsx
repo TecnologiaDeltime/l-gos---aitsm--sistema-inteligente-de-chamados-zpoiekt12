@@ -356,7 +356,7 @@ export function EmailAutoReplySettingsTab({ isGestor }: EmailAutoReplySettingsTa
           open={editorOpen}
           onOpenChange={setEditorOpen}
           setting={centralAlert}
-          onSave={handleSaveCentralAlert}
+          onSaved={handleSaveCentralAlert}
         />
       )}
 

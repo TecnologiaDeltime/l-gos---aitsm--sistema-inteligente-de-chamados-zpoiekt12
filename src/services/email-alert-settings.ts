@@ -472,3 +472,10 @@ export async function fetchEmailSentLogs(limit = 50): Promise<EmailSentLog[]> {
     return []
   }
 }
+
+export const emailAlertSettingsService = {
+  getAll: fetchEmailAlertSettings,
+  update: updateEmailAlertSetting,
+  updateToggle: updateEmailAlertToggle,
+  getLogs: fetchEmailSentLogs,
+}
