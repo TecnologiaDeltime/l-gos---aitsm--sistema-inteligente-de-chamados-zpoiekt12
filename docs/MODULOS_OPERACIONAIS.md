@@ -438,3 +438,37 @@ O módulo de **Projetos** consolida o planejamento, execução e acompanhamento 
   - `projects_create`: permissão para cadastrar e editar parâmetros de projetos.
   - `projects_manage`: gestão operacional de tarefas, planejamento de sprints, geração de chamados e lançamento de horas.
 - Documentação detalhada em `docs/PROJETOS.md`.
+
+---
+
+## 13. Central de Alertas por E-mail e Templates Dinâmicos (`/settings?tab=email_alerts`)
+
+A **Central de Alertas por E-mail** padroniza e governa todas as comunicações transacionais emitidas pelo sistema **Lógos AITSM**, com suporte a editor de templates, variáveis dinâmicas clicáveis e motor de despacho com anti-duplicidade estrita.
+
+### 13.1 Catálogo de Alertas e Estados Padrão
+
+O sistema gerencia 9 tipos de notificações institucionais na coleção `email_alert_settings` (migrações 0146, 0147, 0148 e 0149):
+
+1. **Aviso de Chamado Aberto (`ticket_created`)**: Ativado por padrão (`enabled=true`, migração 0148). Envia notificação ao solicitante com número de protocolo, assunto, dados do chamado e botão para acompanhamento no portal.
+2. **Chamado Fechado / Resolvido (`ticket_resolved`)**: Ativado por padrão (`enabled=true`, migração 0149) com template corporativo pré-configurado (`is_customized=true`, layout `corporate`, assunto `Chamado #{{chamado_numero}} resolvido - {{titulo}}`).
+3. **Modificação de Status do Chamado (`ticket_status_changed`)**: Notificação ao solicitante sobre transições de status.
+4. **Chamado Atribuído / Delegado (`ticket_delegated`)**: Notificação direta ao técnico ou equipe responsável.
+5. **Alertas de SLA para Operadores (`sla_response_alert`)**: Alerta de iminência de estouro de prazo de resposta/resolução.
+6. **Solicitação de Aprovação de Mudança (`change_approval_request`)**: Notificação a membros do comitê de mudanças e gestores.
+7. **Prazo Expirado de Mudança (`change_voting_deadline`)**: Aviso de expiração de janela de votação de RDM.
+8. **Avisos de Prazo de Projetos (`project_deadline`)**: Alerta de marcos e entregas de tarefas/projetos.
+9. **Solicitação de Aprovação no Portal (`portal_approval_request`)**: Solicitação aos pontos focais e aprovadores do cliente.
+
+Os alertas que não possuem ativação institucional mandatória iniciam desligados (`enabled=false`), podendo ser ativados individualmente por administradores na interface de configurações.
+
+### 13.2 Editor de Templates e Variáveis Dinâmicas
+
+- **Layouts Institucionais**: Três opções visuais padronizadas com a marca oficial **Lógos AITSM** — `Modern` (cartão com cabeçalho colorido e ícones), `Corporate` (fundo corporativo elegante, bordas sutis e tipografia clássica) e `Minimal` (comunicação enxuta e direta).
+- **Variáveis Dinâmicas**: Biblioteca de tags no padrão `{{variavel}}` (ex.: `{{chamado_numero}}`, `{{titulo}}`, `{{cliente}}`, `{{solucao}}`, `{{operador}}`, `{{link}}`, `{{prazo_sla}}`). A substituição é resiliente e variáveis sem valor são preenchidas de forma segura com traço legível.
+- **Visualização em Tempo Real e Restauração**: Pré-visualizador simultâneo com renderização fiel em HTML e opção de restauração instantânea aos valores de fábrica (`default_subject_template` e `default_body_template`).
+
+### 13.3 Motor de Despacho e Proteção Anti-Duplicidade
+
+- **Despacho Centralizado**: O backend unifica o envio via `sendSystemAlertEmail` (`pocketbase/hooks/email_alert_central.js`), utilizando o serviço Skip Mailer institucional.
+- **Anti-Duplicidade Estrita**: Todo envio com identificador de referência é checado e registrado em `email_sent_logs` pela chave unívoca `(alert_key, reference_id, recipient)`. Disparos concorrentes ou repetidos para o mesmo evento e destinatário são silenciosamente suprimidos.
+- **Fallback Resiliente de Templates**: Os hooks operacionais (como `ticket_resolved_client_email.js` e `ticket_created_client_email.js`, consolidados em v0.0.390) consultam dinamicamente a configuração da Central via `getEmailAlertConfig(...)` e invocam `buildEmailHtmlFromConfig(...)`, garantindo que personalizações feitas no editor sejam rigorosamente respeitadas tanto no fluxo principal quanto em eventuais rotas de contingência.
