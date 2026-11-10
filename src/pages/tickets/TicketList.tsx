@@ -83,7 +83,15 @@ const TICKET_PRIORITIES = ['Crítica', 'Alta', 'Média', 'Baixa'] as const
 const CLOSED_STATUSES = ['Encerrado', 'Cancelado']
 
 /** Chaves de ordenação disponíveis na tabela. */
-type SortKey = 'number' | 'created' | 'updated' | 'priority' | 'status' | 'stale' | null
+type SortKey =
+  | 'number'
+  | 'created'
+  | 'updated'
+  | 'priority'
+  | 'status'
+  | 'stale'
+  | 'slaSolutionDeadline'
+  | null
 
 /**
  * Calcula quantos segundos se passaram desde a última atividade do chamado.
@@ -349,6 +357,16 @@ export default function TicketList() {
         case 'updated':
           cmp = (new Date(a.updated).getTime() || 0) - (new Date(b.updated).getTime() || 0)
           break
+        case 'slaSolutionDeadline': {
+          // Chamados sem prazo de solução vão para o fim, em qualquer direção.
+          const da = a.sla_solution_deadline ? new Date(a.sla_solution_deadline).getTime() : null
+          const db_ = b.sla_solution_deadline ? new Date(b.sla_solution_deadline).getTime() : null
+          if (da == null && db_ == null) cmp = 0
+          else if (da == null) cmp = 1
+          else if (db_ == null) cmp = -1
+          else cmp = da - db_
+          break
+        }
       }
       return cmp * dir
     })
@@ -899,6 +917,14 @@ export default function TicketList() {
                   />
                   <th className="px-4 py-3">Responsável</th>
                   <th className="px-4 py-3">SLA Resp.</th>
+                  <SortableTh
+                    sortKey="slaSolutionDeadline"
+                    label="Venc. SLA Sol."
+                    activeKey={sortKey}
+                    dir={sortDir}
+                    onToggle={toggleSort}
+                    title="Data e hora de vencimento do SLA de Solução"
+                  />
                   <th className="px-4 py-3">SLA Sol.</th>
                   <SortableTh
                     sortKey="stale"
@@ -913,7 +939,7 @@ export default function TicketList() {
               <tbody className="divide-y">
                 {sorted.length === 0 ? (
                   <tr>
-                    <td colSpan={10} className="p-8 text-center text-slate-500">
+                    <td colSpan={11} className="p-8 text-center text-slate-500">
                       Nenhum chamado encontrado com os filtros selecionados.
                     </td>
                   </tr>
@@ -1014,6 +1040,13 @@ export default function TicketList() {
                           deadline={t.sla_response_deadline}
                           completedAt={t.sla_response_at}
                         />
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap font-mono text-xs text-slate-800 dark:text-slate-200">
+                        {t.sla_solution_deadline ? (
+                          formatDateTime(t.sla_solution_deadline)
+                        ) : (
+                          <span className="text-muted-foreground">—</span>
+                        )}
                       </td>
                       <td className="px-4 py-3">
                         <SlaStatusBadge
