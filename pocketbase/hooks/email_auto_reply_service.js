@@ -986,6 +986,15 @@
           'err',
           errorMsg,
         )
+      console.error(
+        'email_auto_reply: FALHA ao enviar resposta automática | alert_key=ticket_created' +
+          ' | destinatário=' +
+          recipient +
+          ' | chamado #' +
+          (params.ticketNumber || '') +
+          ' | motivo: ' +
+          errorMsg,
+      )
     }
 
     // Registra envio na Central de Alertas (email_sent_logs) para anti-duplicidade estrita

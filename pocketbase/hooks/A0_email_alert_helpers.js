@@ -67,6 +67,12 @@
           'error',
           err.message,
         )
+      console.error(
+        '[Central de Alertas] getEmailAlertConfig: falha ao carregar configuração do alerta | alert_key=' +
+          alertKey +
+          ' | motivo: ' +
+          (err && err.message ? err.message : String(err)),
+      )
       return null
     }
   }
@@ -121,6 +127,14 @@
           'error',
           err.message,
         )
+      console.error(
+        '[Central de Alertas] recordEmailSentLog: falha ao registrar email_sent_logs | alert_key=' +
+          alertKey +
+          ' | destinatário=' +
+          String(recipient || '') +
+          ' | motivo: ' +
+          (err && err.message ? err.message : String(err)),
+      )
     }
   }
 
@@ -354,12 +368,22 @@
     }
 
     if (recipients.length === 0) {
+      console.error(
+        '[Central de Alertas] sendSystemAlertEmail: envio ABORTADO — nenhum destinatário válido | alert_key=' +
+          String(alertKey || ''),
+      )
       return { sent: false, reason: 'recipient_missing' }
     }
 
     // 1. Switch da Central de Alertas: alerta desligado = não envia
     var cfg = globalThis.getEmailAlertConfig(alertKey)
     if (!cfg) {
+      console.error(
+        '[Central de Alertas] sendSystemAlertEmail: envio ABORTADO — configuração do alerta não encontrada (getEmailAlertConfig retornou nulo) | alert_key=' +
+          String(alertKey || '') +
+          ' | destinatários=' +
+          recipients.join(', '),
+      )
       return { sent: false, reason: 'alert_config_missing', alert_key: alertKey }
     }
     if (!cfg.enabled) {
@@ -372,6 +396,12 @@
           'recipients_count',
           recipients.length,
         )
+      console.error(
+        '[Central de Alertas] sendSystemAlertEmail: envio ABORTADO — alerta DESLIGADO nas configurações | alert_key=' +
+          String(alertKey || '') +
+          ' | destinatários=' +
+          recipients.join(', '),
+      )
       return { sent: false, reason: 'alert_disabled_by_config', alert_key: alertKey }
     }
 
@@ -386,6 +416,23 @@
 
     if (!cfg.body_template && cfg.default_body_template) {
       cfg.body_template = cfg.default_body_template
+    }
+
+    if (typeof globalThis.sendSystemEmail !== 'function') {
+      console.error(
+        '[Central de Alertas] sendSystemAlertEmail: envio ABORTADO — sendSystemEmail indisponível (mailer_service.js não carregado?) | alert_key=' +
+          String(alertKey || '') +
+          ' | destinatários=' +
+          recipients.join(', '),
+      )
+      $app
+        .logger()
+        .error(
+          'sendSystemAlertEmail: sendSystemEmail indisponível — envio abortado',
+          'alert_key',
+          alertKey,
+        )
+      return { sent: false, reason: 'sendSystemEmail_unavailable', alert_key: alertKey }
     }
 
     var htmlContent = globalThis.buildEmailHtmlFromConfig(cfg, data)
@@ -443,6 +490,14 @@
             recipient,
           )
         sentCount++
+        console.log(
+          '[Central de Alertas] sendSystemAlertEmail: enviado com sucesso | alert_key=' +
+            alertKey +
+            ' | destinatário=' +
+            recipient +
+            ' | assunto=' +
+            subject,
+        )
       } catch (err) {
         $app
           .logger()
@@ -453,6 +508,14 @@
             'error',
             err.message,
           )
+        console.error(
+          '[Central de Alertas] sendSystemAlertEmail: FALHA no envio | alert_key=' +
+            String(alertKey || '') +
+            ' | destinatário=' +
+            recipient +
+            ' | motivo: ' +
+            (err && err.message ? err.message : String(err)),
+        )
         errors.push({ recipient: recipient, error: err.message })
       }
     }
@@ -482,4 +545,7 @@
       }
     }
   }
+
+  // Marcador global de diagnóstico (Central carregada)
+  globalThis.emailAlertCentralLoaded = true
 })()

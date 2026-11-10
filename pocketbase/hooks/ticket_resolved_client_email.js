@@ -58,13 +58,15 @@ onRecordAfterUpdateSuccess((e) => {
     }
 
     if (settingsRec && settingsRec.getBool('notify_ticket_resolved') === false) {
-      $app
-        .logger()
-        .info(
-          'ticket_resolved_client_email: notificação de resolução desativada nas configurações (chamado #' +
-            ticket.getString('number') +
-            ')',
-        )
+      var suppressedMsg =
+        'ticket_resolved_client_email: notificação de resolução desativada nas configurações (chamado #' +
+        ticket.getString('number') +
+        ')'
+      $app.logger().info(suppressedMsg)
+      console.warn(
+        '[Central de Alertas] ticket_resolved: envio SUPRIMIDO por client_notification_settings | ' +
+          suppressedMsg,
+      )
       return e.next()
     }
   } catch (_) {}
@@ -105,13 +107,14 @@ onRecordAfterUpdateSuccess((e) => {
     }
 
     if (!recipientEmail && extraRecipients.length === 0) {
-      $app
-        .logger()
-        .info(
-          'ticket_resolved_client_email: chamado #' +
-            ticket.getString('number') +
-            ' sem e-mail do cliente informado; notificação por e-mail ignorada.',
-        )
+      var noEmailMsg =
+        'ticket_resolved_client_email: chamado #' +
+        ticket.getString('number') +
+        ' sem e-mail do cliente informado; notificação por e-mail ignorada.'
+      $app.logger().info(noEmailMsg)
+      console.warn(
+        '[Central de Alertas] ticket_resolved: envio SUPRIMIDO — sem destinatário | ' + noEmailMsg,
+      )
       return e.next()
     }
 
@@ -245,21 +248,24 @@ onRecordAfterUpdateSuccess((e) => {
     }
 
     if (allDestinations.length === 0) {
-      $app
-        .logger()
-        .info(
-          'ticket_resolved_client_email: chamado #' +
-            ticketNumber +
-            ' sem destinatários após consolidação.',
-        )
+      var noDestMsg =
+        'ticket_resolved_client_email: chamado #' +
+        ticketNumber +
+        ' sem destinatários após consolidação.'
+      $app.logger().info(noDestMsg)
+      console.warn(
+        '[Central de Alertas] ticket_resolved: envio SUPRIMIDO — sem destinatário | ' + noDestMsg,
+      )
       return e.next()
     }
 
     if (typeof globalThis.sendSystemAlertEmail !== 'function') {
+      var centralMissingMsg =
+        'ticket_resolved_client_email: Central de Alertas indisponível (sendSystemAlertEmail ausente) — e-mail de resolução NÃO enviado, sem fallback de texto simples. Helpers esperados em A0_email_alert_helpers.js.'
       $app
         .logger()
         .error(
-          'ticket_resolved_client_email: Central de Alertas indisponível (sendSystemAlertEmail ausente) — e-mail de resolução NÃO enviado, sem fallback de texto simples. Helpers esperados em A0_email_alert_helpers.js.',
+          centralMissingMsg,
           'chamado',
           ticketNumber,
           'ticket_id',
@@ -267,6 +273,14 @@ onRecordAfterUpdateSuccess((e) => {
           'recipients',
           allDestinations.join(', '),
         )
+      console.error(
+        '[Central de Alertas] ticket_resolved: FALHA — ' +
+          centralMissingMsg +
+          ' | chamado #' +
+          ticketNumber +
+          ' | destinatários=' +
+          allDestinations.join(', '),
+      )
       return e.next()
     }
 
@@ -307,10 +321,12 @@ onRecordAfterUpdateSuccess((e) => {
               ticketNumber,
           )
       } else {
+        var nonPositiveMsg =
+          'ticket_resolved_client_email: Central de Alertas retornou status não-positivo — e-mail de resolução NÃO enviado (sem fallback manual).'
         $app
           .logger()
           .error(
-            'ticket_resolved_client_email: Central de Alertas retornou status não-positivo — e-mail de resolução NÃO enviado (sem fallback manual).',
+            nonPositiveMsg,
             'reason',
             resolvedAlertResult ? resolvedAlertResult.reason : 'resultado_indefinido',
             'chamado',
@@ -318,12 +334,24 @@ onRecordAfterUpdateSuccess((e) => {
             'recipients',
             allDestinations.join(', '),
           )
+        console.error(
+          '[Central de Alertas] ticket_resolved: FALHA — ' +
+            nonPositiveMsg +
+            ' | motivo=' +
+            (resolvedAlertResult ? resolvedAlertResult.reason : 'resultado_indefinido') +
+            ' | chamado #' +
+            ticketNumber +
+            ' | destinatários=' +
+            allDestinations.join(', '),
+        )
       }
     } catch (centralErr) {
+      var unexpectedMsg =
+        'ticket_resolved_client_email: erro inesperado ao invocar sendSystemAlertEmail — e-mail de resolução NÃO enviado (sem fallback manual).'
       $app
         .logger()
         .error(
-          'ticket_resolved_client_email: erro inesperado ao invocar sendSystemAlertEmail — e-mail de resolução NÃO enviado (sem fallback manual).',
+          unexpectedMsg,
           'chamado',
           ticketNumber,
           'ticket_id',
@@ -331,15 +359,24 @@ onRecordAfterUpdateSuccess((e) => {
           'error',
           centralErr.message,
         )
+      console.error(
+        '[Central de Alertas] ticket_resolved: FALHA — ' +
+          unexpectedMsg +
+          ' | chamado #' +
+          ticketNumber +
+          ' | motivo: ' +
+          (centralErr && centralErr.message ? centralErr.message : String(centralErr)),
+      )
     }
   } catch (err) {
-    $app
-      .logger()
-      .error(
-        'ticket_resolved_client_email: falha ao processar e-mail de resolução',
-        'error',
-        err.message,
-      )
+    var outerErrMsg = 'ticket_resolved_client_email: falha ao processar e-mail de resolução'
+    $app.logger().error(outerErrMsg, 'error', err.message)
+    console.error(
+      '[Central de Alertas] ticket_resolved: FALHA — ' +
+        outerErrMsg +
+        ' | motivo: ' +
+        (err && err.message ? err.message : String(err)),
+    )
   }
 
   return e.next()

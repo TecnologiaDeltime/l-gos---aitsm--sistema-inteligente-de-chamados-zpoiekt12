@@ -64,6 +64,10 @@ onRecordAfterCreateSuccess((e) => {
               ticketNumber +
               ')',
           )
+        console.warn(
+          '[Central de Alertas] ticket_created: envio SUPRIMIDO por client_notification_settings | chamado #' +
+            ticketNumber,
+        )
         return e.next()
       }
     } catch (_) {}
@@ -215,12 +219,14 @@ onRecordAfterCreateSuccess((e) => {
 
     // Se nenhum destinatário com e-mail foi encontrado, registra explicitamente no log
     if (recipientsList.length === 0) {
+      var noRecipientMsg =
+        'ticket_created_client_email: chamado #' +
+        ticketNumber +
+        ' criado, mas nenhum e-mail de solicitante ou colaborador foi localizado; notificação não enviada.'
       $app
         .logger()
         .warn(
-          'ticket_created_client_email: chamado #' +
-            ticketNumber +
-            ' criado, mas nenhum e-mail de solicitante ou colaborador foi localizado; notificação não enviada.',
+          noRecipientMsg,
           'ticket_id',
           ticket.id,
           'company_id',
@@ -228,6 +234,12 @@ onRecordAfterCreateSuccess((e) => {
           'requester_name',
           primaryName,
         )
+      console.warn(
+        '[Central de Alertas] ticket_created: envio SUPRIMIDO — nenhum destinatário encontrado | ' +
+          noRecipientMsg +
+          ' | requester_name=' +
+          primaryName,
+      )
       return e.next()
     }
 
@@ -298,10 +310,12 @@ onRecordAfterCreateSuccess((e) => {
     //    se a Central não estiver disponível, o e-mail NÃO é enviado (sem fallback
     //    de texto simples sem marca) e o erro é registrado com contexto completo.
     if (typeof globalThis.sendSystemAlertEmail !== 'function') {
+      var centralMissingMsg =
+        'ticket_created_client_email: Central de Alertas indisponível (sendSystemAlertEmail ausente) — e-mail de abertura NÃO enviado, sem fallback de texto simples. Helpers esperados em A0_email_alert_helpers.js.'
       $app
         .logger()
         .error(
-          'ticket_created_client_email: Central de Alertas indisponível (sendSystemAlertEmail ausente) — e-mail de abertura NÃO enviado, sem fallback de texto simples. Helpers esperados em A0_email_alert_helpers.js.',
+          centralMissingMsg,
           'chamado',
           ticketNumber,
           'ticket_id',
@@ -309,6 +323,14 @@ onRecordAfterCreateSuccess((e) => {
           'recipients',
           recipientsList.join(', '),
         )
+      console.error(
+        '[Central de Alertas] ticket_created: FALHA — ' +
+          centralMissingMsg +
+          ' | chamado #' +
+          ticketNumber +
+          ' | destinatários=' +
+          recipientsList.join(', '),
+      )
       return e.next()
     }
 
@@ -352,10 +374,12 @@ onRecordAfterCreateSuccess((e) => {
           )
         return e.next()
       } else {
+        var nonPositiveMsg =
+          'ticket_created_client_email: Central de Alertas retornou status não-positivo — e-mail de abertura NÃO enviado (sem fallback manual).'
         $app
           .logger()
           .error(
-            'ticket_created_client_email: Central de Alertas retornou status não-positivo — e-mail de abertura NÃO enviado (sem fallback manual).',
+            nonPositiveMsg,
             'reason',
             alertResult ? alertResult.reason : 'resultado_indefinido',
             'chamado',
@@ -363,12 +387,24 @@ onRecordAfterCreateSuccess((e) => {
             'recipients',
             recipientsList.join(', '),
           )
+        console.error(
+          '[Central de Alertas] ticket_created: FALHA — ' +
+            nonPositiveMsg +
+            ' | motivo=' +
+            (alertResult ? alertResult.reason : 'resultado_indefinido') +
+            ' | chamado #' +
+            ticketNumber +
+            ' | destinatários=' +
+            recipientsList.join(', '),
+        )
       }
     } catch (centralErr) {
+      var unexpectedMsg =
+        'ticket_created_client_email: erro inesperado ao invocar sendSystemAlertEmail — e-mail de abertura NÃO enviado (sem fallback manual).'
       $app
         .logger()
         .error(
-          'ticket_created_client_email: erro inesperado ao invocar sendSystemAlertEmail — e-mail de abertura NÃO enviado (sem fallback manual).',
+          unexpectedMsg,
           'chamado',
           ticketNumber,
           'ticket_id',
@@ -376,15 +412,26 @@ onRecordAfterCreateSuccess((e) => {
           'error',
           centralErr.message,
         )
+      console.error(
+        '[Central de Alertas] ticket_created: FALHA — ' +
+          unexpectedMsg +
+          ' | chamado #' +
+          ticketNumber +
+          ' | motivo: ' +
+          (centralErr && centralErr.message ? centralErr.message : String(centralErr)),
+      )
     }
   } catch (err) {
-    $app
-      .logger()
-      .error(
-        'ticket_created_client_email: falha ao processar e-mail de abertura',
-        'error',
-        err.message,
-      )
+    var outerErrMsg = 'ticket_created_client_email: falha ao processar e-mail de abertura'
+    $app.logger().error(outerErrMsg, 'error', err.message)
+    console.error(
+      '[Central de Alertas] ticket_created: FALHA — ' +
+        outerErrMsg +
+        ' | chamado #' +
+        ticketNumber +
+        ' | motivo: ' +
+        (err && err.message ? err.message : String(err)),
+    )
   }
 
   return e.next()
