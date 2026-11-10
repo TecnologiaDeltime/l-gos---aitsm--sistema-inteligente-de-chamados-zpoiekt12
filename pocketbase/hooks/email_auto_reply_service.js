@@ -895,40 +895,45 @@
         finalBodyText = replaceVariables(cfg.receipt_body, tplData)
       }
     } else {
-      // Fallback seguro usando buildEmailHtmlFromConfig de fábrica
-      var fallbackCfg = {
-        alert_key: 'ticket_created',
-        name: 'Aviso de Chamado Aberto',
-        template_layout: 'corporate',
-        primary_color: '#D97706',
-        header_title: 'Lógos AITSM',
-        header_subtitle: 'Atendimento & Central de Serviços',
-        subject_template: 'Chamado #{{chamado_numero}} registrado com sucesso - {{titulo}}',
-        body_template:
-          '<p>Olá <strong>{{cliente}}</strong>,</p><p>Confirmamos o registro do seu chamado em nossa central. Ele já se encontra na fila de atendimento da equipe técnica.</p><div style="background-color: #f8fafc; border-left: 4px solid #D97706; padding: 12px 16px; margin: 16px 0; border-radius: 4px;"><p style="margin: 0 0 6px 0;"><strong>Número:</strong> #{{chamado_numero}}</p><p style="margin: 0 0 6px 0;"><strong>Assunto:</strong> {{titulo}}</p><p style="margin: 0;"><strong>Empresa:</strong> {{empresa}}</p></div><p>Você pode acompanhar o andamento pelo Portal do Cliente Lógos AITSM.</p>',
-        footer_text: 'Central de Serviços de TI — Lógos AITSM',
-        show_button: true,
-        button_label: 'Acompanhar no Portal',
-        button_url_template: '{{link}}',
+      // Central de Alertas indisponível (helpers em A0_email_alert_helpers.js não
+      // carregados) — NÃO enviar e-mail de texto simples sem marca. Apenas
+      // registra o erro com contexto completo e aborta o disparo.
+      var centralErr =
+        'Central de Alertas indisponível (getEmailAlertConfig/buildEmailHtmlFromConfig ausentes) — auto-reply NÃO enviado, sem fallback de texto simples. Helpers esperados em A0_email_alert_helpers.js.'
+      $app
+        .logger()
+        .error(
+          'email_auto_reply: ' + centralErr,
+          'ticket_number',
+          params.ticketNumber || '',
+          'ticket_id',
+          params.ticketId || '',
+          'dest',
+          recipient,
+        )
+      console.error(
+        'email_auto_reply: ' +
+          centralErr +
+          ' | chamado #' +
+          (params.ticketNumber || '') +
+          ' | destinatário: ' +
+          recipient,
+      )
+      recordAutoReplyAudit({
+        success: false,
+        recipient: recipient,
+        ticketNumber: params.ticketNumber,
+        subject: '',
+        replyType: replyType,
+        error: centralErr,
+      })
+      return {
+        status: 'failed',
+        reply_type: replyType,
+        recipient: recipient,
+        subject: '',
+        error: centralErr,
       }
-      if (typeof globalThis.buildEmailHtmlFromConfig === 'function') {
-        finalHtml = globalThis.buildEmailHtmlFromConfig(fallbackCfg, tplData)
-        finalSubject =
-          typeof globalThis.interpolateEmailTemplate === 'function'
-            ? globalThis.interpolateEmailTemplate(fallbackCfg.subject_template, tplData)
-            : replaceVariables(fallbackCfg.subject_template, tplData)
-      } else {
-        finalSubject =
-          'Chamado #' + tplData.chamado_numero + ' registrado com sucesso - ' + tplData.titulo
-        finalHtml =
-          '<div><p>Olá <strong>' +
-          escapeHtml(tplData.cliente) +
-          '</strong>,</p><p>Seu chamado #' +
-          escapeHtml(tplData.chamado_numero) +
-          ' foi registrado com sucesso.</p></div>'
-      }
-      finalBodyText =
-        'Chamado #' + tplData.chamado_numero + ' registrado com sucesso: ' + tplData.titulo
     }
 
     var mailerConfig = resolveSystemMailerConfig()

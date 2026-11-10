@@ -201,17 +201,14 @@ onRecordAfterUpdateSuccess((e) => {
       } catch (_) {}
     }
 
-    // Escape seguro de strings
-    var esc =
-      typeof globalThis.itsmEscapeHtml === 'function'
-        ? globalThis.itsmEscapeHtml
-        : function (s) {
-            return String(s || '')
-              .replace(/&/g, '&amp;')
-              .replace(/</g, '&lt;')
-              .replace(/>/g, '&gt;')
-              .replace(/"/g, '&quot;')
-          }
+    // URL pública do chamado no portal do cliente
+    var baseUrl = (function () {
+      try {
+        var host = $os.getenv('PUBLIC_URL') || $os.getenv('APP_URL') || ''
+        if (host) return host.replace(/\/+$/, '')
+      } catch (_) {}
+      return ''
+    })()
 
     // Monta dados para template
     var resolvedTemplateData = {
@@ -228,205 +225,16 @@ onRecordAfterUpdateSuccess((e) => {
       empresa: companyName,
       prioridade: priority,
       tipo: type,
-      link:
-        portalBaseUrl || frontendUrl
-          ? (portalBaseUrl || frontendUrl) +
-            '/portal?tab=tickets&openTicketId=' +
-            encodeURIComponent(ticket.id)
-          : '',
+      link: baseUrl
+        ? baseUrl + '/portal?tab=tickets&openTicketId=' + encodeURIComponent(ticket.id)
+        : '',
     }
 
-    // Se a Central de Alertas estiver disponível, usamos o dispatcher com verificação de switch individual
-    var centralFailureReason = ''
-    if (typeof globalThis.sendSystemAlertEmail === 'function' && recipientEmail) {
-      try {
-        var resolvedAlertResult = globalThis.sendSystemAlertEmail({
-          alert_key: 'ticket_resolved',
-          reference_id: ticket.id + '_resolved',
-          recipient: recipientEmail,
-          subject: 'Chamado #' + ticketNumber + ' concluído: ' + ticketTitle,
-          data: resolvedTemplateData,
-        })
-
-        if (resolvedAlertResult && resolvedAlertResult.sent) {
-          $app
-            .logger()
-            .info(
-              'ticket_resolved_client_email: notificação enviada via Central de Alertas para ' +
-                recipientEmail +
-                ' (chamado #' +
-                ticketNumber +
-                ')',
-            )
-          return e.next()
-        } else if (
-          resolvedAlertResult &&
-          resolvedAlertResult.reason === 'alert_disabled_by_config'
-        ) {
-          $app
-            .logger()
-            .info(
-              'ticket_resolved_client_email: envio suprimido pois o alerta ticket_resolved está DESLIGADO nas configurações.',
-            )
-          return e.next()
-        } else if (resolvedAlertResult && resolvedAlertResult.reason === 'already_sent') {
-          $app
-            .logger()
-            .info(
-              'ticket_resolved_client_email: envio suprimido pois notificação de resolução já foi enviada anteriormente (anti-duplicidade).',
-            )
-          return e.next()
-        } else {
-          centralFailureReason = resolvedAlertResult ? resolvedAlertResult.reason : 'desconhecido'
-          $app
-            .logger()
-            .warn(
-              'ticket_resolved_client_email: Central de Alertas retornou status não-positivo, acionando fallback de envio.',
-              'reason',
-              centralFailureReason,
-            )
-        }
-      } catch (centralErr) {
-        centralFailureReason = 'exception: ' + centralErr.message
-        $app
-          .logger()
-          .warn(
-            'ticket_resolved_client_email: erro ao invocar sendSystemAlertEmail, acionando fallback.',
-            'error',
-            centralErr.message,
-          )
-      }
-    }
-
-    // Fallback seguro: lê a configuração do template da Central para NUNCA ignorar personalização
-    var cfg =
-      typeof globalThis.getEmailAlertConfig === 'function'
-        ? globalThis.getEmailAlertConfig('ticket_resolved')
-        : null
-
-    var subject = ''
-    var htmlBody = ''
-    var textBody = ''
-
-    if (cfg) {
-      if (cfg.enabled === false) {
-        $app
-          .logger()
-          .info(
-            'ticket_resolved_client_email: fallback interrompido pois alerta ticket_resolved está desligado nas configurações.',
-            'chamado',
-            ticketNumber,
-          )
-        return e.next()
-      }
-
-      var rawSubject =
-        cfg.subject_template ||
-        cfg.default_subject_template ||
-        'Chamado #' + ticketNumber + ' concluído: ' + ticketTitle
-
-      if (typeof globalThis.interpolateEmailTemplate === 'function') {
-        subject = globalThis.interpolateEmailTemplate(rawSubject, resolvedTemplateData)
-      } else {
-        subject = rawSubject
-      }
-
-      if (typeof globalThis.buildEmailHtmlFromConfig === 'function') {
-        htmlBody = globalThis.buildEmailHtmlFromConfig(cfg, resolvedTemplateData)
-      }
-
-      var rawBody = cfg.body_template || cfg.default_body_template || ''
-      if (typeof globalThis.interpolateEmailTemplate === 'function') {
-        var interpolatedBody = globalThis.interpolateEmailTemplate(rawBody, resolvedTemplateData)
-        textBody = interpolatedBody
-          .replace(/<[^>]+>/g, ' ')
-          .replace(/\s+/g, ' ')
-          .trim()
-      } else {
-        textBody = rawBody
-          .replace(/<[^>]+>/g, ' ')
-          .replace(/\s+/g, ' ')
-          .trim()
-      }
-
-      $app
-        .logger()
-        .info(
-          'ticket_resolved_client_email: fallback utilizando template configurado na Central de Alertas.',
-          'alert_key',
-          'ticket_resolved',
-          'template_layout',
-          cfg.template_layout || 'modern',
-          'subject',
-          subject,
-          'central_failure_reason',
-          centralFailureReason || 'none',
-        )
-    }
-
-    if (!htmlBody) {
-      var factoryResolvedCfg = {
-        alert_key: 'ticket_resolved',
-        name: 'Chamado resolvido',
-        template_layout: 'corporate',
-        primary_color: '#16a34a',
-        header_title: 'Lógos AITSM',
-        header_subtitle: 'Atendimento & Central de Serviços',
-        subject_template: 'Chamado #{{chamado_numero}} concluído com sucesso - {{titulo}}',
-        body_template:
-          '<p>Olá <strong>{{cliente}}</strong>,</p><p>Temos uma ótima notícia! O seu chamado foi concluído pela nossa equipe técnica.</p><div style="background-color: #f0fdf4; border-left: 4px solid #16a34a; padding: 12px 16px; margin: 16px 0; border-radius: 4px;"><p style="margin: 0 0 6px 0;"><strong>Número:</strong> #{{chamado_numero}}</p><p style="margin: 0 0 6px 0;"><strong>Assunto:</strong> {{titulo}}</p><p style="margin: 0 0 6px 0;"><strong>Status:</strong> ' +
-          esc(newStatus) +
-          '</p><p style="margin: 0;"><strong>Solução:</strong> ' +
-          esc(cleanSolution) +
-          '</p></div><p>Caso tenha alguma dúvida, você pode reabrir a solicitação pelo Portal do Cliente.</p>',
-        footer_text: 'Central de Serviços de TI — Lógos AITSM',
-        show_button: true,
-        button_label: 'Ver Chamado no Portal',
-        button_url_template: '{{link}}',
-      }
-
-      if (typeof globalThis.interpolateEmailTemplate === 'function') {
-        subject = globalThis.interpolateEmailTemplate(
-          factoryResolvedCfg.subject_template,
-          resolvedTemplateData,
-        )
-      } else {
-        subject = 'Chamado #' + ticketNumber + ' concluído com sucesso - ' + ticketTitle
-      }
-
-      if (typeof globalThis.buildEmailHtmlFromConfig === 'function') {
-        htmlBody = globalThis.buildEmailHtmlFromConfig(factoryResolvedCfg, resolvedTemplateData)
-      } else {
-        htmlBody =
-          '<div><p>Olá <strong>' +
-          esc(requesterName) +
-          '</strong>,</p><p>Seu chamado #' +
-          ticketNumber +
-          ' foi concluído com sucesso.</p></div>'
-      }
-
-      var textBody =
-        'Olá ' +
-        requesterName +
-        ',\n\n' +
-        'Seu chamado #' +
-        ticketNumber +
-        ' foi concluído com sucesso pela nossa equipe de suporte.\n\n' +
-        'Número do Chamado: #' +
-        ticketNumber +
-        '\n' +
-        'Status: ' +
-        newStatus +
-        '\n' +
-        'Problema informado: ' +
-        ticketTitle +
-        '\n' +
-        'Solução Aplicada:\n' +
-        cleanSolution +
-        '\n\n' +
-        '-- Lógos AITSM'
-    }
-
+    // Envio EXCLUSIVO pela Central de Alertas por E-mail (sendSystemAlertEmail).
+    // Assunto e HTML vêm SEMPRE do template configurado no editor da Central
+    // (email_alert_settings). Nenhum HTML/assunto é montado manualmente aqui:
+    // se a Central não estiver disponível, o e-mail NÃO é enviado (sem fallback
+    // de texto simples sem marca) e o erro é registrado com contexto completo.
     // Lista consolidada de destinatários (solicitante + contatos/focais extras se configurados)
     var allDestinations = []
     if (recipientEmail) allDestinations.push(recipientEmail)
@@ -436,53 +244,94 @@ onRecordAfterUpdateSuccess((e) => {
       }
     }
 
-    for (var d = 0; d < allDestinations.length; d++) {
-      var dest = allDestinations[d]
-      try {
-        if (typeof globalThis.itsmSendWithAudit === 'function') {
-          globalThis.itsmSendWithAudit({
-            testType: 'resolucao_chamado',
-            to: dest,
-            subject: subject,
-            html: htmlBody,
-            text: textBody,
-            meta: {
-              ticket_id: ticket.id,
-              ticket_number: ticketNumber,
-              requester_name: requesterName,
-              resolved_at: resRaw,
-              solution: cleanSolution,
-              operator_name: operatorName,
-            },
-          })
-        } else if (typeof globalThis.sendSystemEmail === 'function') {
-          globalThis.sendSystemEmail({
-            to: dest,
-            subject: subject,
-            html: htmlBody,
-            text: textBody,
-          })
-        }
-      } catch (sendErr) {
-        $app
-          .logger()
-          .warn(
-            'ticket_resolved_client_email: falha ao enviar para ' + dest,
-            'err',
-            sendErr.message,
-          )
-      }
+    if (allDestinations.length === 0) {
+      $app
+        .logger()
+        .info(
+          'ticket_resolved_client_email: chamado #' +
+            ticketNumber +
+            ' sem destinatários após consolidação.',
+        )
+      return e.next()
     }
 
-    $app
-      .logger()
-      .info(
-        'ticket_resolved_client_email: notificação enviada para ' +
-          allDestinations.join(', ') +
-          ' (chamado #' +
-          ticketNumber +
-          ')',
-      )
+    if (typeof globalThis.sendSystemAlertEmail !== 'function') {
+      $app
+        .logger()
+        .error(
+          'ticket_resolved_client_email: Central de Alertas indisponível (sendSystemAlertEmail ausente) — e-mail de resolução NÃO enviado, sem fallback de texto simples. Helpers esperados em A0_email_alert_helpers.js.',
+          'chamado',
+          ticketNumber,
+          'ticket_id',
+          ticket.id,
+          'recipients',
+          allDestinations.join(', '),
+        )
+      return e.next()
+    }
+
+    try {
+      var resolvedAlertResult = globalThis.sendSystemAlertEmail({
+        alert_key: 'ticket_resolved',
+        reference_id: ticket.id + '_resolved',
+        recipients: allDestinations,
+        subject: 'Chamado #' + ticketNumber + ' concluído: ' + ticketTitle,
+        data: resolvedTemplateData,
+      })
+
+      if (resolvedAlertResult && resolvedAlertResult.sent) {
+        $app
+          .logger()
+          .info(
+            'ticket_resolved_client_email: notificação enviada via Central de Alertas para ' +
+              resolvedAlertResult.sent_count +
+              ' destinatário(s) (chamado #' +
+              ticketNumber +
+              ')',
+            'recipients',
+            allDestinations.join(', '),
+          )
+      } else if (resolvedAlertResult && resolvedAlertResult.reason === 'alert_disabled_by_config') {
+        $app
+          .logger()
+          .info(
+            'ticket_resolved_client_email: envio suprimido pois o alerta ticket_resolved está DESLIGADO nas configurações.',
+            'chamado',
+            ticketNumber,
+          )
+      } else if (resolvedAlertResult && resolvedAlertResult.reason === 'already_sent') {
+        $app
+          .logger()
+          .info(
+            'ticket_resolved_client_email: envio suprimido pois notificação de resolução já foi enviada anteriormente (anti-duplicidade), chamado #' +
+              ticketNumber,
+          )
+      } else {
+        $app
+          .logger()
+          .error(
+            'ticket_resolved_client_email: Central de Alertas retornou status não-positivo — e-mail de resolução NÃO enviado (sem fallback manual).',
+            'reason',
+            resolvedAlertResult ? resolvedAlertResult.reason : 'resultado_indefinido',
+            'chamado',
+            ticketNumber,
+            'recipients',
+            allDestinations.join(', '),
+          )
+      }
+    } catch (centralErr) {
+      $app
+        .logger()
+        .error(
+          'ticket_resolved_client_email: erro inesperado ao invocar sendSystemAlertEmail — e-mail de resolução NÃO enviado (sem fallback manual).',
+          'chamado',
+          ticketNumber,
+          'ticket_id',
+          ticket.id,
+          'error',
+          centralErr.message,
+        )
+    }
   } catch (err) {
     $app
       .logger()

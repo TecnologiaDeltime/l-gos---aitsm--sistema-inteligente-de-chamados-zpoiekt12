@@ -904,7 +904,7 @@ const FEATURE_CATEGORIES: FeatureCategory[] = [
         id: 'inf-email-alerts-central',
         title: 'Central de Alertas por E-mail e Templates Dinâmicos (/settings?tab=email_alerts)',
         description:
-          'Módulo institucional centralizado com 9 tipos de alertas por e-mail (Aviso de SLA para operadores, chamado aberto pelo portal, mudança de status do chamado, conclusão, delegação, solicitação/expiração de comitê de mudanças, tarefas de projetos e aprovações do portal). Motor de despacho unificado (pocketbase/hooks/email_alert_central.js) via Skip Cloud Mailer com proteção anti-duplicidade em email_sent_logs por (alert_key, reference_id, recipient). Templates dinâmicos (migração 0147) com personalização livre de assunto e corpo por tipo de alerta, biblioteca de variáveis dinâmicas clicáveis (ex.: {{chamado_numero}}, {{titulo}}, {{cliente}}, {{prazo_sla}}, {{responsavel}} etc.) com interpolação resiliente e substituição segura por traço em variáveis inexistentes, fallback garantido para templates de fábrica, pré-visualização em tempo real com dados de exemplo e botão para restauração de fábrica. Governança por permissões granulares settings_email_alerts e settings_email_alert_templates.',
+          'Módulo institucional centralizado com 9 tipos de alertas por e-mail (Aviso de SLA para operadores, chamado aberto pelo portal, mudança de status do chamado, conclusão, delegação, solicitação/expiração de comitê de mudanças, tarefas de projetos e aprovações do portal). Motor de despacho unificado (pocketbase/hooks/A0_email_alert_helpers.js) via Skip Cloud Mailer com proteção anti-duplicidade em email_sent_logs por (alert_key, reference_id, recipient). Templates dinâmicos (migração 0147) com personalização livre de assunto e corpo por tipo de alerta, biblioteca de variáveis dinâmicas clicáveis (ex.: {{chamado_numero}}, {{titulo}}, {{cliente}}, {{prazo_sla}}, {{responsavel}} etc.) com interpolação resiliente e substituição segura por traço em variáveis inexistentes, fallback garantido para templates de fábrica, pré-visualização em tempo real com dados de exemplo e botão para restauração de fábrica. Governança por permissões granulares settings_email_alerts e settings_email_alert_templates.',
         tag: 'Alertas & E-mails',
       },
       {
@@ -919,6 +919,13 @@ const FEATURE_CATEGORIES: FeatureCategory[] = [
         title: 'Unificação Total de E-mails Transacionais na Central de Alertas',
         description:
           'Extirpação definitiva de templates legados hardcoded em todo o sistema. O serviço de auto-respostas (pocketbase/hooks/email_auto_reply_service.js) e os hooks de abertura e resolução de chamados foram 100% unificados através dos helpers da Central (getEmailAlertConfig e buildEmailHtmlFromConfig). Qualquer customização feita no editor visual (como o layout Corporate e assunto personalizado para "Chamado aberto") é automaticamente respeitada em todos os canais de entrada com proteção anti-duplicidade em email_sent_logs e atalho direto de edição na aba de Respostas Automáticas.',
+        tag: 'Alertas & E-mails',
+      },
+      {
+        id: 'inf-email-alert-load-order-fix',
+        title: 'Correção de Precedência de Carregamento da Central de Alertas (v0.0.396)',
+        description:
+          'Os helpers oficiais da Central (getEmailAlertConfig, buildEmailHtmlFromConfig, interpolateEmailTemplate, sendSystemAlertEmail, hasEmailAlreadyBeenSent e recordEmailSentLog) vivem em pocketbase/hooks/A0_email_alert_helpers.js, carregado primeiro por ordem alfabética (o PocketBase/Skip Cloud carrega hooks em ordem alfabética e exige slug iniciado por letra — o arquivo antigo email_alert_central.js carregava depois dos hooks de chamado, causa raiz do e-mail de abertura chegar sem template). Todos os hooks de e-mail (ticket_created_client_email.js, ticket_resolved_client_email.js e email_auto_reply_service.js) agora usam exclusivamente a Central: nenhum hook monta HTML ou assunto manualmente, e se a Central não estiver disponível o e-mail NÃO é enviado, com erro registrado nos logs com contexto completo (chamado e destinatário), nunca entregando texto simples sem marca ao cliente. Anti-duplicidade por (alert_key, reference_id, recipient) e interruptores da Central preservados.',
         tag: 'Alertas & E-mails',
       },
     ],

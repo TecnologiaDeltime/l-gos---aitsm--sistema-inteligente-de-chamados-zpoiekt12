@@ -16,9 +16,11 @@
 //    - colaboradores/contatos da empresa do chamado marcados como ponto focal ou vinculados
 // 3. Respeita o interruptor da Central de Alertas por E-mail (chave 'ticket_created').
 //    Se desligado na Central, registra no log o motivo exato.
-// 4. Se a Central de Alertas falhar ou não estiver disponível, executa fallback seguro
-//    via sendSystemEmail / itsmSendWithAudit / $app.newMailClient.
-// 5. Anti-duplicidade estrita por (alert_key, ticket_id, recipient).
+// 4. Envio EXCLUSIVO pela Central de Alertas (sendSystemAlertEmail, helpers em
+//    A0_email_alert_helpers.js). NÃO existe fallback manual: se a Central não
+//    estiver disponível, o e-mail NÃO é enviado e o erro é registrado no log —
+//    nunca sai e-mail de texto simples sem marca (correção v0.0.396+).
+// 5. Anti-duplicidade estrita por (alert_key, ticket_id, recipient) — mantida na Central.
 // 6. Registro completo de logs explicativos para auditoria clara.
 
 onRecordAfterCreateSuccess((e) => {
@@ -290,256 +292,89 @@ onRecordAfterCreateSuccess((e) => {
       link: ticketLink,
     }
 
-    // 5. Tenta enviar pela Central de Alertas por E-mail (sendSystemAlertEmail)
-    // Respeita o switch de alerta (alerta 'ticket_created' ativo por padrão na migração 0148)
-    var centralSuccess = false
-    var centralFailureReason = ''
-    if (typeof globalThis.sendSystemAlertEmail === 'function') {
-      try {
-        var alertResult = globalThis.sendSystemAlertEmail({
-          alert_key: 'ticket_created',
-          reference_id: ticket.id,
-          recipients: recipientsList,
-          subject: 'Chamado #' + ticketNumber + ' aberto com sucesso: ' + ticketTitle,
-          data: templateData,
-        })
-
-        if (alertResult && alertResult.sent) {
-          $app
-            .logger()
-            .info(
-              'ticket_created_client_email: notificação enviada via Central de Alertas para ' +
-                alertResult.sent_count +
-                ' destinatário(s) (chamado #' +
-                ticketNumber +
-                ')',
-              'recipients',
-              recipientsList.join(', '),
-            )
-          return e.next()
-        } else if (alertResult && alertResult.reason === 'alert_disabled_by_config') {
-          $app
-            .logger()
-            .info(
-              'ticket_created_client_email: envio suprimido pois o alerta ticket_created está DESLIGADO na Central de Alertas por E-mail.',
-              'chamado',
-              ticketNumber,
-            )
-          return e.next()
-        } else if (alertResult && alertResult.reason === 'already_sent') {
-          $app
-            .logger()
-            .info(
-              'ticket_created_client_email: notificação de abertura já enviada anteriormente (anti-duplicidade) para chamado #' +
-                ticketNumber,
-            )
-          return e.next()
-        } else {
-          centralFailureReason = alertResult ? alertResult.reason : 'resultado_indefinido'
-          $app
-            .logger()
-            .warn(
-              'ticket_created_client_email: Central de Alertas retornou status não-positivo, acionando fallback de envio.',
-              'reason',
-              centralFailureReason,
-            )
-        }
-      } catch (centralErr) {
-        centralFailureReason = 'exception: ' + centralErr.message
-        $app
-          .logger()
-          .warn(
-            'ticket_created_client_email: erro inesperado ao invocar sendSystemAlertEmail, acionando fallback.',
-            'error',
-            centralErr.message,
-          )
-      }
-    } else {
-      centralFailureReason = 'sendSystemAlertEmail_not_a_function'
+    // 5. Envio EXCLUSIVO pela Central de Alertas por E-mail (sendSystemAlertEmail).
+    //    Assunto e HTML vêm SEMPRE do template configurado no editor da Central
+    //    (email_alert_settings). Nenhum HTML/assunto é montado manualmente aqui:
+    //    se a Central não estiver disponível, o e-mail NÃO é enviado (sem fallback
+    //    de texto simples sem marca) e o erro é registrado com contexto completo.
+    if (typeof globalThis.sendSystemAlertEmail !== 'function') {
       $app
         .logger()
-        .warn(
-          'ticket_created_client_email: globalThis.sendSystemAlertEmail indisponível, acionando fallback.',
+        .error(
+          'ticket_created_client_email: Central de Alertas indisponível (sendSystemAlertEmail ausente) — e-mail de abertura NÃO enviado, sem fallback de texto simples. Helpers esperados em A0_email_alert_helpers.js.',
+          'chamado',
+          ticketNumber,
+          'ticket_id',
+          ticket.id,
+          'recipients',
+          recipientsList.join(', '),
         )
+      return e.next()
     }
 
-    // 6. Fallback seguro: lê a configuração do template da Central para NUNCA ignorar personalização
-    var cfg =
-      typeof globalThis.getEmailAlertConfig === 'function'
-        ? globalThis.getEmailAlertConfig('ticket_created')
-        : null
+    try {
+      var alertResult = globalThis.sendSystemAlertEmail({
+        alert_key: 'ticket_created',
+        reference_id: ticket.id,
+        recipients: recipientsList,
+        subject: 'Chamado #' + ticketNumber + ' registrado com sucesso - ' + ticketTitle,
+        data: templateData,
+      })
 
-    var subject = ''
-    var htmlBody = ''
-    var textBody = ''
-
-    if (cfg) {
-      // Se o alerta estiver explicitamente desligado na central de alertas, respeita e não envia
-      if (cfg.enabled === false) {
+      if (alertResult && alertResult.sent) {
         $app
           .logger()
           .info(
-            'ticket_created_client_email: fallback interrompido pois alerta ticket_created está desligado nas configurações.',
+            'ticket_created_client_email: notificação enviada via Central de Alertas para ' +
+              alertResult.sent_count +
+              ' destinatário(s) (chamado #' +
+              ticketNumber +
+              ')',
+            'recipients',
+            recipientsList.join(', '),
+          )
+        return e.next()
+      } else if (alertResult && alertResult.reason === 'alert_disabled_by_config') {
+        $app
+          .logger()
+          .info(
+            'ticket_created_client_email: envio suprimido pois o alerta ticket_created está DESLIGADO na Central de Alertas por E-mail.',
             'chamado',
             ticketNumber,
           )
         return e.next()
-      }
-
-      var rawSubject =
-        cfg.subject_template ||
-        cfg.default_subject_template ||
-        'Chamado #' + ticketNumber + ' aberto com sucesso: ' + ticketTitle
-
-      if (typeof globalThis.interpolateEmailTemplate === 'function') {
-        subject = globalThis.interpolateEmailTemplate(rawSubject, templateData)
+      } else if (alertResult && alertResult.reason === 'already_sent') {
+        $app
+          .logger()
+          .info(
+            'ticket_created_client_email: notificação de abertura já enviada anteriormente (anti-duplicidade) para chamado #' +
+              ticketNumber,
+          )
+        return e.next()
       } else {
-        subject = rawSubject
+        $app
+          .logger()
+          .error(
+            'ticket_created_client_email: Central de Alertas retornou status não-positivo — e-mail de abertura NÃO enviado (sem fallback manual).',
+            'reason',
+            alertResult ? alertResult.reason : 'resultado_indefinido',
+            'chamado',
+            ticketNumber,
+            'recipients',
+            recipientsList.join(', '),
+          )
       }
-
-      if (typeof globalThis.buildEmailHtmlFromConfig === 'function') {
-        htmlBody = globalThis.buildEmailHtmlFromConfig(cfg, templateData)
-      }
-
-      var rawBody = cfg.body_template || cfg.default_body_template || ''
-      if (typeof globalThis.interpolateEmailTemplate === 'function') {
-        var interpolatedBody = globalThis.interpolateEmailTemplate(rawBody, templateData)
-        textBody = interpolatedBody
-          .replace(/<[^>]+>/g, ' ')
-          .replace(/\s+/g, ' ')
-          .trim()
-      } else {
-        textBody = rawBody
-          .replace(/<[^>]+>/g, ' ')
-          .replace(/\s+/g, ' ')
-          .trim()
-      }
-
+    } catch (centralErr) {
       $app
         .logger()
-        .info(
-          'ticket_created_client_email: fallback utilizando template configurado na Central de Alertas.',
-          'alert_key',
-          'ticket_created',
-          'template_layout',
-          cfg.template_layout || 'modern',
-          'subject',
-          subject,
-          'central_failure_reason',
-          centralFailureReason || 'none',
-        )
-    }
-
-    // Se cfg for nulo ou falhou montar htmlBody, usa configuração padrão da Central processada por buildEmailHtmlFromConfig
-    if (!htmlBody) {
-      var factoryCfg = {
-        alert_key: 'ticket_created',
-        name: 'Chamado aberto',
-        template_layout: 'corporate',
-        primary_color: '#D97706',
-        header_title: 'Lógos AITSM',
-        header_subtitle: 'Atendimento & Central de Serviços',
-        subject_template: 'Chamado #{{chamado_numero}} registrado com sucesso - {{titulo}}',
-        body_template:
-          '<p>Olá <strong>{{cliente}}</strong>,</p><p>Confirmamos o registro do seu chamado em nossa central. Ele já se encontra na fila de atendimento da equipe técnica.</p><div style="background-color: #f8fafc; border-left: 4px solid #D97706; padding: 12px 16px; margin: 16px 0; border-radius: 4px;"><p style="margin: 0 0 6px 0;"><strong>Número:</strong> #{{chamado_numero}}</p><p style="margin: 0 0 6px 0;"><strong>Assunto:</strong> {{titulo}}</p><p style="margin: 0;"><strong>Empresa:</strong> {{empresa}}</p></div><p>Você pode acompanhar o andamento pelo Portal do Cliente Lógos AITSM.</p>',
-        footer_text: 'Central de Serviços de TI — Lógos AITSM',
-        show_button: true,
-        button_label: 'Acompanhar Chamado',
-        button_url_template: '{{link}}',
-      }
-
-      if (typeof globalThis.interpolateEmailTemplate === 'function') {
-        subject = globalThis.interpolateEmailTemplate(factoryCfg.subject_template, templateData)
-      } else {
-        subject = 'Chamado #' + ticketNumber + ' registrado com sucesso - ' + ticketTitle
-      }
-
-      if (typeof globalThis.buildEmailHtmlFromConfig === 'function') {
-        htmlBody = globalThis.buildEmailHtmlFromConfig(factoryCfg, templateData)
-      } else {
-        htmlBody =
-          '<div><p>Olá <strong>' +
-          primaryName +
-          '</strong>,</p><p>Seu chamado #' +
-          ticketNumber +
-          ' foi registrado com sucesso.</p></div>'
-      }
-
-      textBody =
-        'Olá ' +
-        primaryName +
-        ',\n\n' +
-        'Seu chamado foi registrado com sucesso no sistema Lógos AITSM e já está na fila de atendimento.\n\n' +
-        'Número: #' +
-        ticketNumber +
-        '\n' +
-        'Assunto: ' +
-        ticketTitle +
-        '\n' +
-        'Data: ' +
-        dateFormatted +
-        '\n\n' +
-        '-- Lógos AITSM'
-    }
-
-    for (var fIdx = 0; fIdx < recipientsList.length; fIdx++) {
-      var rEmail = recipientsList[fIdx]
-
-      // Anti-duplicidade no fallback
-      if (
-        typeof globalThis.hasEmailAlreadyBeenSent === 'function' &&
-        globalThis.hasEmailAlreadyBeenSent('ticket_created', ticket.id, rEmail)
-      ) {
-        continue
-      }
-
-      if (typeof globalThis.itsmSendWithAudit === 'function') {
-        globalThis.itsmSendWithAudit({
-          testType: 'abertura_chamado',
-          to: rEmail,
-          subject: subject,
-          html: htmlBody,
-          text: textBody,
-          meta: {
-            ticket_id: ticket.id,
-            ticket_number: ticketNumber,
-            requester_name: primaryName,
-            created_at: createdRaw,
-          },
-        })
-      } else if (typeof globalThis.sendSystemEmail === 'function') {
-        globalThis.sendSystemEmail({
-          to: rEmail,
-          subject: subject,
-          html: htmlBody,
-          text: textBody,
-        })
-      } else {
-        var defaultEmail = 'noreply@logositsm.com.br'
-        var client = $app.newMailClient()
-        var msg = new MailerMessage()
-        msg.from = { address: defaultEmail, name: 'Lógos AITSM' }
-        msg.to = [{ address: rEmail }]
-        msg.subject = subject
-        msg.html = htmlBody
-        msg.text = textBody
-        client.send(msg)
-      }
-
-      if (typeof globalThis.recordEmailSentLog === 'function') {
-        globalThis.recordEmailSentLog('ticket_created', ticket.id, rEmail, subject, {
-          fallback: true,
-        })
-      }
-
-      $app
-        .logger()
-        .info(
-          'ticket_created_client_email: notificação enviada (fallback) para ' +
-            rEmail +
-            ' (chamado #' +
-            ticketNumber +
-            ')',
+        .error(
+          'ticket_created_client_email: erro inesperado ao invocar sendSystemAlertEmail — e-mail de abertura NÃO enviado (sem fallback manual).',
+          'chamado',
+          ticketNumber,
+          'ticket_id',
+          ticket.id,
+          'error',
+          centralErr.message,
         )
     }
   } catch (err) {

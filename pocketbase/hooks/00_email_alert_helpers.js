@@ -1,10 +1,27 @@
-// Helper central de templates, anti-duplicidade e envio de e-mails via Skip Mailer
-// Sistema Lógos AITSM
+// Helpers da Central de Alertas por E-mail — Lógos AITSM
+// PocketBase JSVM (Goja) — carregado PRIMEIRO (prefixo 00_ garante precedência
+// alfabética de carregamento dos hooks), para que getEmailAlertConfig,
+// buildEmailHtmlFromConfig, sendSystemAlertEmail, hasEmailAlreadyBeenSent e
+// recordEmailSentLog estejam definidos ANTES de qualquer hook de e-mail disparar.
+//
+// Este módulo NÃO registra hooks/eventos — apenas expõe helpers em globalThis.
+// Toda montagem de HTML/assunto de e-mail de notificação passa EXCLUSIVAMENTE
+// por aqui (Central de Alertas); hooks nunca montam HTML próprio.
+//
+// Regra de envio (Skip Mailer): usa globalThis.sendSystemEmail (mailer_service.js),
+// que resolve a caixa SMTP dedicada (email_config) com fallback automático.
 
 ;(function () {
   /**
+   * Formata data no formato datetime exigido pelo PocketBase ('YYYY-MM-DD HH:MM:SS.sssZ').
+   */
+  function formatPbDate(d) {
+    var dt = d instanceof Date ? d : new Date()
+    return dt.toISOString().replace('T', ' ')
+  }
+
+  /**
    * Verifica se um alerta específico está ativo no catálogo de configurações.
-   * Por padrão de projeto, TODOS são desligados (enabled === false).
    */
   globalThis.isEmailAlertEnabled = function (alertKey) {
     if (!alertKey) return false
@@ -20,7 +37,7 @@
   }
 
   /**
-   * Obtém as configurações e template de um alerta específico.
+   * Obtém as configurações e template de um alerta específico (email_alert_settings).
    */
   globalThis.getEmailAlertConfig = function (alertKey) {
     if (!alertKey) return null
@@ -41,22 +58,34 @@
         template_layout: rec.getString('template_layout') || 'modern',
         primary_color: rec.getString('primary_color') || '#D97706',
         subject_template: rec.getString('subject_template') || '',
-        header_title: rec.getString('header_title') || 'Lógos AITSM',
+        header_title: rec.getString('header_title') || '',
         header_subtitle: rec.getString('header_subtitle') || '',
         body_template: rec.getString('body_template') || '',
         footer_text: rec.getString('footer_text') || '',
         show_button: rec.getBool('show_button'),
         button_label: rec.getString('button_label') || 'Acessar',
         button_url_template: rec.getString('button_url_template') || '',
+        is_customized: rec.getBool('is_customized'),
+        default_subject_template: rec.getString('default_subject_template') || '',
+        default_body_template: rec.getString('default_body_template') || '',
       }
-    } catch (_) {
+    } catch (err) {
+      $app
+        .logger()
+        .error(
+          'email_alert_helpers: falha ao carregar configuração do alerta',
+          'alert_key',
+          alertKey,
+          'error',
+          err.message,
+        )
       return null
     }
   }
 
   /**
-   * Verifica se já houve envio para (alert_key, reference_id, recipient).
-   * Retorna true se já foi enviado (anti-duplicidade estrita).
+   * Anti-duplicidade estrita por (alert_key, reference_id, recipient).
+   * Retorna true se já houve envio registrado para a combinação.
    */
   globalThis.hasEmailAlreadyBeenSent = function (alertKey, referenceId, recipient) {
     if (!alertKey || !referenceId || !recipient) return false
@@ -79,15 +108,7 @@
   }
 
   /**
-   * Formata data no formato datetime exigido pelo PocketBase: 'YYYY-MM-DD HH:MM:SS.sssZ'
-   */
-  function formatPbDate(d) {
-    var dt = d instanceof Date ? d : new Date()
-    return dt.toISOString().replace('T', ' ')
-  }
-
-  /**
-   * Registra no log de anti-duplicidade que o e-mail foi disparado.
+   * Registra no log de anti-duplicidade (email_sent_logs) que o e-mail foi disparado.
    */
   globalThis.recordEmailSentLog = function (alertKey, referenceId, recipient, subject, meta) {
     if (!alertKey || !referenceId || !recipient) return
@@ -98,27 +119,28 @@
       log.set('alert_key', alertKey)
       log.set('reference_id', referenceId)
       log.set('recipient', cleanRecipient)
-      try {
-        if (typeof DateTime !== 'undefined') {
-          log.set('sent_at', new DateTime())
-        } else {
-          log.set('sent_at', formatPbDate(new Date()))
-        }
-      } catch (_) {
-        log.set('sent_at', formatPbDate(new Date()))
-      }
+      log.set('sent_at', new DateTime())
       log.set('subject', subject || '')
       if (meta) log.set('meta', meta)
       $app.save(log)
     } catch (err) {
-      $app.logger().warn('recordEmailSentLog failed', 'error', err.message)
+      $app
+        .logger()
+        .warn(
+          'email_alert_helpers: falha ao registrar email_sent_logs',
+          'alert_key',
+          alertKey,
+          'error',
+          err.message,
+        )
     }
   }
 
   /**
-   * Substitui placeholders no formato {{chave}} pelos valores fornecidos.
+   * Substitui placeholders {{chave}} pelos valores fornecidos.
    * Variáveis ausentes são removidas com segurança para nunca quebrar o envio.
-   * Suporta aliases padronizados comuns do Lógos AITSM.
+   * Suporta aliases padronizados comuns do Lógos AITSM (numero/chamado_numero,
+   * cliente/solicitante, operador/responsavel, prazo/prazo_sla, etc).
    */
   function interpolateTemplate(template, data) {
     if (!template) return ''
@@ -126,12 +148,10 @@
     if (data && typeof data === 'object') {
       var inKeys = Object.keys(data)
       for (var j = 0; j < inKeys.length; j++) {
-        var key = inKeys[j]
-        normalizedData[key] = data[key]
+        normalizedData[inKeys[j]] = data[inKeys[j]]
       }
     }
 
-    // Aliases bidirecionais comuns para tolerância a formatos
     if (normalizedData.chamado_numero && !normalizedData.numero) {
       normalizedData.numero = normalizedData.chamado_numero
     }
@@ -178,7 +198,7 @@
       result = result.replace(regex, val)
     }
 
-    // Limpar quaisquer placeholders {{restantes}} que não puderam ser preenchidos para não quebrar a legibilidade
+    // Placeholders restantes são removidos para não degradar a legibilidade
     result = result.replace(/\{\{\s*[a-zA-Z0-9_\-.]+\s*\}\}/g, '')
 
     return result
@@ -186,7 +206,7 @@
   globalThis.interpolateEmailTemplate = interpolateTemplate
 
   /**
-   * Constrói o HTML completo do e-mail de acordo com o layout e a marca oficial Lógos AITSM.
+   * Constrói o HTML completo do e-mail de acordo com o layout configurado na Central.
    * Layouts: 'modern' | 'corporate' | 'minimal'
    */
   globalThis.buildEmailHtmlFromConfig = function (cfg, data) {
@@ -283,7 +303,7 @@
       )
     }
 
-    // Padrão 'modern' (Amber Alert / Grafite da identidade visual do Lógos AITSM)
+    // Padrão 'modern' (identidade Amber Alert / Grafite do Lógos AITSM)
     return (
       '<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>' +
       '<body style="margin: 0; padding: 24px; font-family: -apple-system, BlinkMacSystemFont, \'Segoe UI\', Roboto, Arial, sans-serif; background-color: #f1f5f9; color: #0f172a;">' +
@@ -299,7 +319,7 @@
           headerSubtitle +
           '</p>'
         : '') +
-      '</td></tr>' +
+     '</td></tr>' +
       '<tr><td style="padding: 32px; line-height: 1.65; font-size: 15px; color: #334155;">' +
       bodyContent +
       buttonHtml +
@@ -312,16 +332,18 @@
   }
 
   /**
-   * Dispara um e-mail respeitando o switch da central de alertas por e-mail,
-   * gerando o layout customizado com a marca Lógos AITSM e gravando anti-duplicidade.
-   * Suporta recipient único (string) ou múltiplos destinatários (array de strings / recipients: [...]).
+   * Dispara um e-mail respeitando o switch da Central de Alertas por E-mail,
+   * gerando o layout configurado no editor (marca Lógos AITSM) e gravando
+   * anti-duplicidade por (alert_key, reference_id, recipient).
+   * Suporta recipient único (string) ou múltiplos destinatários (recipients: [...]).
+   *
+   * Retorno: { sent, reason?, sent_count?, skipped_duplicates?, errors? }
    */
   globalThis.sendSystemAlertEmail = function (opts) {
-    if (!opts) return { sent: false, reason: 'opts missing' }
+    if (!opts) return { sent: false, reason: 'opts_missing' }
     var alertKey = opts.alert_key
     var referenceId = opts.reference_id || ''
 
-    // Normaliza destinatários: aceita opts.recipients (array) ou opts.recipient (string ou array)
     var rawRecipients = []
     if (Array.isArray(opts.recipients)) {
       rawRecipients = opts.recipients
@@ -331,7 +353,6 @@
       rawRecipients = [opts.recipient]
     }
 
-    // Deduplica e sanitiza e-mails
     var recipients = []
     var seenRecipients = {}
     for (var rIdx = 0; rIdx < rawRecipients.length; rIdx++) {
@@ -345,12 +366,15 @@
     }
 
     if (recipients.length === 0) {
-      return { sent: false, reason: 'recipient missing' }
+      return { sent: false, reason: 'recipient_missing' }
     }
 
-    // 1. Verificar se o alerta está ligado na Central de Configurações
+    // 1. Switch da Central de Alertas: alerta desligado = não envia
     var cfg = globalThis.getEmailAlertConfig(alertKey)
-    if (!cfg || !cfg.enabled) {
+    if (!cfg) {
+      return { sent: false, reason: 'alert_config_missing', alert_key: alertKey }
+    }
+    if (!cfg.enabled) {
       $app
         .logger()
         .info(
@@ -363,16 +387,12 @@
       return { sent: false, reason: 'alert_disabled_by_config', alert_key: alertKey }
     }
 
-    // 2. Montar assunto e corpo HTML via template dinâmico (com fallback para template padrão)
+    // 2. Assunto e corpo vindos EXCLUSIVAMENTE do template da Central (editor).
     var data = opts.data || {}
     var rawSubject =
-      cfg.subject_template ||
-      cfg.default_subject_template ||
-      opts.subject ||
-      'Notificação Lógos AITSM'
+      cfg.subject_template || cfg.default_subject_template || opts.subject || 'Notificação Lógos AITSM'
     var subject = interpolateTemplate(rawSubject, data)
 
-    // Se o body_template estiver vazio, utiliza o default_body_template de fábrica
     if (!cfg.body_template && cfg.default_body_template) {
       cfg.body_template = cfg.default_body_template
     }
@@ -381,9 +401,6 @@
     var rawBody = cfg.body_template || cfg.default_body_template || ''
     var textFallback =
       opts.fallbackText || interpolateTemplate(rawBody, data).replace(/<[^>]+>/g, ' ')
-
-    var brandName = cfg.header_title || globalThis.SYSTEM_BRAND_NAME || 'Lógos AITSM'
-    var defaultEmail = globalThis.SYSTEM_DEFAULT_SENDER_EMAIL || 'noreply@logositsm.com.br'
 
     var sentCount = 0
     var skippedDuplicates = 0
@@ -409,26 +426,15 @@
         continue
       }
 
-      // 4. Envio via Skip Mailer centralizado (sendSystemEmail / $app.newMailClient)
+      // 4. Envio via mailer do sistema (Skip Mailer / caixa dedicada / fallback SMTP)
       try {
-        var message = globalThis.createSystemMailMessage
-          ? globalThis.createSystemMailMessage()
-          : new MailerMessage()
+        globalThis.sendSystemEmail({
+          to: recipient,
+          subject: subject,
+          html: htmlContent,
+          text: textFallback,
+        })
 
-        message.from = { address: defaultEmail, name: brandName }
-        message.to = [{ address: recipient }]
-        message.subject = subject
-        message.html = htmlContent
-        message.text = textFallback
-
-        if (globalThis.sendSystemMailMessage) {
-          globalThis.sendSystemMailMessage(message)
-        } else {
-          var client = $app.newMailClient()
-          client.send(message)
-        }
-
-        // 5. Registrar no log de envios para evitar qualquer duplicação
         if (referenceId) {
           globalThis.recordEmailSentLog(alertKey, referenceId, recipient, subject, {
             template_layout: cfg.template_layout,
@@ -439,7 +445,7 @@
         $app
           .logger()
           .info(
-            'sendSystemAlertEmail: enviado com sucesso via Skip Mailer',
+            'sendSystemAlertEmail: enviado com sucesso',
             'alert_key',
             alertKey,
             'recipient',
