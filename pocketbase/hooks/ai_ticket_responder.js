@@ -234,8 +234,10 @@ routerAdd('POST', '/backend/v1/ai/ticket-draft', (e) => {
 
     try {
       const agent = $ai.agent('ticket-responder-agent')
+      const userId =
+        (authRecord && authRecord.id) || ticket.getString('assigned_to') || ticket.id || 'system'
       if (agent && typeof agent.chat === 'function') {
-        const agentResponse = agent.chat({ message: promptText })
+        const agentResponse = agent.chat({ user_id: userId, message: promptText })
         replyText =
           typeof agentResponse === 'string'
             ? agentResponse
@@ -260,8 +262,9 @@ routerAdd('POST', '/backend/v1/ai/ticket-draft', (e) => {
         agentInvoked = Boolean(replyText && replyText.trim().length > 0)
       }
     } catch (agentErr) {
-      console.warn(
-        '[AI_TICKET] Falha na chamada de agent.chat/send, acionando fallback $ai.chat:',
+      // Degrada silenciosamente com log informativo e aciona o fallback $ai.chat
+      console.log(
+        '[AI_TICKET] Agente ticket-responder-agent indisponível ou em fallback ($ai.chat será usado):',
         agentErr.message || agentErr,
       )
     }
@@ -745,8 +748,10 @@ onRecordAfterCreateSuccess((e) => {
 
     try {
       const agent = $ai.agent('ticket-responder-agent')
+      const userId =
+        ticket.getString('requester_email') || ticket.getString('company') || ticket.id || 'system'
       if (agent && typeof agent.chat === 'function') {
-        const agentResponse = agent.chat({ message: promptText })
+        const agentResponse = agent.chat({ user_id: userId, message: promptText })
         replyText =
           typeof agentResponse === 'string'
             ? agentResponse
@@ -771,8 +776,9 @@ onRecordAfterCreateSuccess((e) => {
         agentInvoked = Boolean(replyText && replyText.trim().length > 0)
       }
     } catch (agentErr) {
-      console.warn(
-        '[AI_TICKET] Falha na chamada de agent.chat/send em onRecordAfterCreateSuccess, acionando fallback $ai.chat:',
+      // Degrada silenciosamente com log informativo e aciona o fallback $ai.chat
+      console.log(
+        '[AI_TICKET] Agente ticket-responder-agent indisponível em onRecordAfterCreateSuccess ($ai.chat será usado):',
         agentErr.message || agentErr,
       )
     }

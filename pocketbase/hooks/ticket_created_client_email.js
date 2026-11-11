@@ -317,7 +317,27 @@ onRecordAfterCreateSuccess((e) => {
     //    (email_alert_settings). Nenhum HTML/assunto é montado manualmente aqui:
     //    se a Central não estiver disponível, o e-mail NÃO é enviado (sem fallback
     //    de texto simples sem marca) e o erro é registrado com contexto completo.
-    if (typeof globalThis.sendSystemAlertEmail !== 'function') {
+    //
+    //    Resolução defensiva em tempo de execução:
+    //    Verifica globalThis, global e escopo léxico/raiz antes de desistir.
+    var sendAlertFn = null
+    try {
+      if (
+        typeof globalThis !== 'undefined' &&
+        typeof globalThis.sendSystemAlertEmail === 'function'
+      ) {
+        sendAlertFn = globalThis.sendSystemAlertEmail
+      } else if (typeof sendSystemAlertEmail === 'function') {
+        sendAlertFn = sendSystemAlertEmail
+      } else if (
+        typeof global !== 'undefined' &&
+        typeof global.sendSystemAlertEmail === 'function'
+      ) {
+        sendAlertFn = global.sendSystemAlertEmail
+      }
+    } catch (_) {}
+
+    if (typeof sendAlertFn !== 'function') {
       var centralMissingMsg =
         'ticket_created_client_email: Central de Alertas indisponível (sendSystemAlertEmail ausente) — e-mail de abertura NÃO enviado, sem fallback de texto simples. Helpers esperados em A0_email_alert_helpers.js.'
       $app
@@ -343,7 +363,7 @@ onRecordAfterCreateSuccess((e) => {
     }
 
     try {
-      var alertResult = globalThis.sendSystemAlertEmail({
+      var alertResult = sendAlertFn({
         alert_key: 'ticket_created',
         reference_id: ticket.id,
         recipients: recipientsList,

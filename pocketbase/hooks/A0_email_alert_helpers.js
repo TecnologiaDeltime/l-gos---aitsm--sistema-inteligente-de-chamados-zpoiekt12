@@ -33,6 +33,53 @@
     } catch (_) {}
   }
 
+  // ==========================================================================
+  // Publicação IMEDIATA no topo da IIFE (antes de qualquer lógica)
+  // Graças ao function hoisting do JS, todas as declarações internas abaixo
+  // já estão vinculadas a estas referências.
+  // ==========================================================================
+  function _publishAll() {
+    try {
+      _g.isEmailAlertEnabled = isEmailAlertEnabled
+      _g.getEmailAlertConfig = getEmailAlertConfig
+      _g.hasEmailAlreadyBeenSent = hasEmailAlreadyBeenSent
+      _g.recordEmailSentLog = recordEmailSentLog
+      _g.interpolateEmailTemplate = interpolateTemplate
+      _g.buildEmailHtmlFromConfig = buildEmailHtmlFromConfig
+      _g.sendSystemAlertEmail = sendSystemAlertEmail
+      _g.resolveTicketClientRecipients = resolveTicketClientRecipients
+      _g.getTicketBaseUrl = getTicketBaseUrl
+      _g.formatTicketDate = formatTicketDate
+      _g.notifyTicketCreatedEmails = notifyTicketCreatedEmails
+      _g.notifyTicketResolvedEmails = notifyTicketResolvedEmails
+      _g.emailAlertCentralLoaded = true
+
+      if (typeof globalThis !== 'undefined' && globalThis !== _g) {
+        globalThis.isEmailAlertEnabled = isEmailAlertEnabled
+        globalThis.getEmailAlertConfig = getEmailAlertConfig
+        globalThis.hasEmailAlreadyBeenSent = hasEmailAlreadyBeenSent
+        globalThis.recordEmailSentLog = recordEmailSentLog
+        globalThis.interpolateEmailTemplate = interpolateTemplate
+        globalThis.buildEmailHtmlFromConfig = buildEmailHtmlFromConfig
+        globalThis.sendSystemAlertEmail = sendSystemAlertEmail
+        globalThis.resolveTicketClientRecipients = resolveTicketClientRecipients
+        globalThis.getTicketBaseUrl = getTicketBaseUrl
+        globalThis.formatTicketDate = formatTicketDate
+        globalThis.notifyTicketCreatedEmails = notifyTicketCreatedEmails
+        globalThis.notifyTicketResolvedEmails = notifyTicketResolvedEmails
+        globalThis.emailAlertCentralLoaded = true
+      }
+    } catch (pubErr) {
+      console.error(
+        '[A0 helpers] ERRO ao publicar helpers no escopo global: ' +
+          (pubErr && pubErr.message ? pubErr.message : String(pubErr)),
+      )
+    }
+  }
+
+  // Publica imediatamente no início da IIFE
+  _publishAll()
+
   /**
    * Verifica se o alerta está ligado na Central (email_alert_settings.enabled).
    */
@@ -909,46 +956,8 @@
     }
   }
 
-  // ==========================================================================
-  // Publicação segura no escopo global (Goja / PocketBase JSVM)
-  // Publica em _g e, se diferente, também em globalThis
-  // ==========================================================================
-  try {
-    _g.isEmailAlertEnabled = isEmailAlertEnabled
-    _g.getEmailAlertConfig = getEmailAlertConfig
-    _g.hasEmailAlreadyBeenSent = hasEmailAlreadyBeenSent
-    _g.recordEmailSentLog = recordEmailSentLog
-    _g.interpolateEmailTemplate = interpolateTemplate
-    _g.buildEmailHtmlFromConfig = buildEmailHtmlFromConfig
-    _g.sendSystemAlertEmail = sendSystemAlertEmail
-    _g.resolveTicketClientRecipients = resolveTicketClientRecipients
-    _g.getTicketBaseUrl = getTicketBaseUrl
-    _g.formatTicketDate = formatTicketDate
-    _g.notifyTicketCreatedEmails = notifyTicketCreatedEmails
-    _g.notifyTicketResolvedEmails = notifyTicketResolvedEmails
-    _g.emailAlertCentralLoaded = true
-
-    if (typeof globalThis !== 'undefined' && globalThis !== _g) {
-      globalThis.isEmailAlertEnabled = isEmailAlertEnabled
-      globalThis.getEmailAlertConfig = getEmailAlertConfig
-      globalThis.hasEmailAlreadyBeenSent = hasEmailAlreadyBeenSent
-      globalThis.recordEmailSentLog = recordEmailSentLog
-      globalThis.interpolateEmailTemplate = interpolateTemplate
-      globalThis.buildEmailHtmlFromConfig = buildEmailHtmlFromConfig
-      globalThis.sendSystemAlertEmail = sendSystemAlertEmail
-      globalThis.resolveTicketClientRecipients = resolveTicketClientRecipients
-      globalThis.getTicketBaseUrl = getTicketBaseUrl
-      globalThis.formatTicketDate = formatTicketDate
-      globalThis.notifyTicketCreatedEmails = notifyTicketCreatedEmails
-      globalThis.notifyTicketResolvedEmails = notifyTicketResolvedEmails
-      globalThis.emailAlertCentralLoaded = true
-    }
-  } catch (pubErr) {
-    console.error(
-      '[A0 helpers] ERRO ao publicar helpers no escopo global: ' +
-        (pubErr && pubErr.message ? pubErr.message : String(pubErr)),
-    )
-  }
+  // Re-publica ao final como confirmação de integridade
+  _publishAll()
 
   // Log de confirmação de carregamento concluído
   try {

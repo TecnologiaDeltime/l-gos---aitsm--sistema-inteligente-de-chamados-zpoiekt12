@@ -267,7 +267,24 @@ onRecordAfterUpdateSuccess((e) => {
       return e.next()
     }
 
-    if (typeof globalThis.sendSystemAlertEmail !== 'function') {
+    var sendAlertFn = null
+    try {
+      if (
+        typeof globalThis !== 'undefined' &&
+        typeof globalThis.sendSystemAlertEmail === 'function'
+      ) {
+        sendAlertFn = globalThis.sendSystemAlertEmail
+      } else if (typeof sendSystemAlertEmail === 'function') {
+        sendAlertFn = sendSystemAlertEmail
+      } else if (
+        typeof global !== 'undefined' &&
+        typeof global.sendSystemAlertEmail === 'function'
+      ) {
+        sendAlertFn = global.sendSystemAlertEmail
+      }
+    } catch (_) {}
+
+    if (typeof sendAlertFn !== 'function') {
       var centralMissingMsg =
         'ticket_resolved_client_email: Central de Alertas indisponível (sendSystemAlertEmail ausente) — e-mail de resolução NÃO enviado, sem fallback de texto simples. Helpers esperados em A0_email_alert_helpers.js.'
       $app
@@ -293,7 +310,7 @@ onRecordAfterUpdateSuccess((e) => {
     }
 
     try {
-      var resolvedAlertResult = globalThis.sendSystemAlertEmail({
+      var resolvedAlertResult = sendAlertFn({
         alert_key: 'ticket_resolved',
         reference_id: ticket.id + '_resolved',
         recipients: allDestinations,
