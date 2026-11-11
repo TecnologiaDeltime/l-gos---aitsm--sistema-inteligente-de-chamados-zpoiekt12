@@ -1,20 +1,12 @@
 /// <reference path="../pb_data/types.d.ts" />
 
 // ============================================================================
-// Helpers da Central de Alertas por E-mail (Skip Cloud / PocketBase JSVM)
+// Helpers da Central de Alertas por E-mail (Lógos AITSM / Skip Cloud puro)
 // ----------------------------------------------------------------------------
-// IMPORTANTE: este arquivo carrega PRIMEIRO entre os hooks (prefixo "A0_" é
-// o menor slug alfabético permitido pela plataforma, que exige slug iniciado
-// por letra). Assim, getEmailAlertConfig / buildEmailHtmlFromConfig /
-// sendSystemAlertEmail já estão definidos ANTES de qualquer hook de disparo
-// (ticket_created, ticket_resolved, auto-reply etc.) executar.
-//
-// Robustez de carregamento (v0.0.401):
-// - Todo o código é isolado em IIFE para evitar "Hook scoping error"
-// - Funções declaradas no escopo interno (hoisting) e publicadas em globalThis
-// - NENHUMA chamada de IO / banco / parse de settings executada no nível de topo
-// - Resolução defensiva de globalThis para compatibilidade com o pool Goja
-// - Log explícito ao final do carregamento comprovando disponibilidade
+// TRANSPORTE EXCLUSIVO: Skip Cloud Transacional ($app.newMailClient)
+// Remetente canônico: Lógos AITSM <noreply@mail.goskip.dev>
+// Todo envio utiliza os templates e layouts da Central (coleção email_alert_settings).
+// Zero SMTP externo, zero Nodemailer, zero $http para terceiros.
 // ============================================================================
 
 ;(function () {
@@ -33,11 +25,9 @@
     } catch (_) {}
   }
 
-  // ==========================================================================
-  // Publicação IMEDIATA no topo da IIFE (antes de qualquer lógica)
-  // Graças ao function hoisting do JS, todas as declarações internas abaixo
-  // já estão vinculadas a estas referências.
-  // ==========================================================================
+  var SKIP_CLOUD_SENDER_EMAIL = 'noreply@mail.goskip.dev'
+  var SKIP_CLOUD_SENDER_NAME = 'Lógos AITSM'
+
   function _publishAll() {
     try {
       _g.isEmailAlertEnabled = isEmailAlertEnabled
@@ -52,6 +42,7 @@
       _g.formatTicketDate = formatTicketDate
       _g.notifyTicketCreatedEmails = notifyTicketCreatedEmails
       _g.notifyTicketResolvedEmails = notifyTicketResolvedEmails
+      _g.sendSkipCloudMail = sendSkipCloudMail
       _g.emailAlertCentralLoaded = true
 
       if (typeof globalThis !== 'undefined' && globalThis !== _g) {
@@ -67,6 +58,7 @@
         globalThis.formatTicketDate = formatTicketDate
         globalThis.notifyTicketCreatedEmails = notifyTicketCreatedEmails
         globalThis.notifyTicketResolvedEmails = notifyTicketResolvedEmails
+        globalThis.sendSkipCloudMail = sendSkipCloudMail
         globalThis.emailAlertCentralLoaded = true
       }
     } catch (pubErr) {
@@ -77,12 +69,9 @@
     }
   }
 
-  // Publica imediatamente no início da IIFE
+  // Publica imediatamente
   _publishAll()
 
-  /**
-   * Verifica se o alerta está ligado na Central (email_alert_settings.enabled).
-   */
   function isEmailAlertEnabled(alertKey) {
     if (!alertKey) return false
     try {
@@ -96,9 +85,6 @@
     }
   }
 
-  /**
-   * Obtém as configurações e template de um alerta específico (email_alert_settings).
-   */
   function getEmailAlertConfig(alertKey) {
     if (!alertKey) return null
     try {
@@ -130,96 +116,79 @@
         default_body_template: rec.getString('default_body_template') || '',
       }
     } catch (err) {
-      try {
-        $app
-          .logger()
-          .error(
-            'email_alert_helpers: falha ao carregar configuração do alerta',
-            'alert_key',
-            alertKey,
-            'error',
-            err.message,
-          )
-      } catch (_) {}
       console.error(
-        '[Central de Alertas] getEmailAlertConfig: falha ao carregar configuração do alerta | alert_key=' +
-          alertKey +
-          ' | motivo: ' +
+        '[A0 helpers] getEmailAlertConfig: falha ao ler email_alert_settings | ' +
           (err && err.message ? err.message : String(err)),
       )
       return null
     }
   }
 
-  /**
-   * Anti-duplicidade estrita por (alert_key, reference_id, recipient).
-   * Retorna true se já houve envio registrado para a combinação.
-   */
   function hasEmailAlreadyBeenSent(alertKey, referenceId, recipient) {
     if (!alertKey || !referenceId || !recipient) return false
     try {
-      var cleanRecipient = String(recipient).trim().toLowerCase()
-      var rec = $app.findFirstRecordByFilter(
-        'email_sent_logs',
-        'alert_key = "' +
-          alertKey +
-          '" && reference_id = "' +
-          referenceId +
-          '" && recipient = "' +
-          cleanRecipient +
-          '"',
+      var cleanAlertKey = String(alertKey).trim().replace(/"/g, '\\"')
+      var cleanRefId = String(referenceId).trim().replace(/"/g, '\\"')
+      var cleanRecipient = String(recipient).trim().toLowerCase().replace(/"/g, '\\"')
+
+      var rec = null
+      try {
+        rec = $app.findFirstRecordByFilter(
+          'email_sent_logs',
+          'alert_key = "' +
+            cleanAlertKey +
+            '" && reference_id = "' +
+            cleanRefId +
+            '" && recipient = "' +
+            cleanRecipient +
+            '"',
+        )
+      } catch (_) {
+        return false
+      }
+
+      if (rec) {
+        console.log(
+          '[A0 helpers] already_sent — envio pulado | alert_key=' +
+            cleanAlertKey +
+            ' | ref=' +
+            cleanRefId +
+            ' | recipient=' +
+            cleanRecipient,
+        )
+        return true
+      }
+      return false
+    } catch (err) {
+      var msg = err && err.message ? err.message : String(err)
+      console.warn(
+        '[A0 helpers] falha na verificação de duplicidade (' + msg + ') — prosseguindo com envio',
       )
-      return Boolean(rec)
-    } catch (_) {
       return false
     }
   }
 
-  /**
-   * Registra no log de anti-duplicidade (email_sent_logs) que o e-mail foi disparado.
-   */
   function recordEmailSentLog(alertKey, referenceId, recipient, subject, meta) {
     if (!alertKey || !referenceId || !recipient) return
     try {
       var col = $app.findCollectionByNameOrId('email_sent_logs')
       var cleanRecipient = String(recipient).trim().toLowerCase()
       var log = new Record(col)
-      log.set('alert_key', alertKey)
-      log.set('reference_id', referenceId)
+      log.set('alert_key', String(alertKey).trim())
+      log.set('reference_id', String(referenceId).trim())
       log.set('recipient', cleanRecipient)
-      log.set('sent_at', new DateTime())
+      log.set('sent_at', new Date().toISOString().replace('T', ' '))
       log.set('subject', subject || '')
       if (meta) log.set('meta', meta)
       $app.save(log)
     } catch (err) {
-      try {
-        $app
-          .logger()
-          .warn(
-            'email_alert_helpers: falha ao registrar email_sent_logs',
-            'alert_key',
-            alertKey,
-            'error',
-            err.message,
-          )
-      } catch (_) {}
-      console.error(
-        '[Central de Alertas] recordEmailSentLog: falha ao registrar email_sent_logs | alert_key=' +
-          alertKey +
-          ' | destinatário=' +
-          String(recipient || '') +
-          ' | motivo: ' +
+      console.warn(
+        '[A0 helpers] recordEmailSentLog: falha ao salvar log | ' +
           (err && err.message ? err.message : String(err)),
       )
     }
   }
 
-  /**
-   * Substitui placeholders {{chave}} pelos valores fornecidos.
-   * Variáveis ausentes são removidas com segurança para nunca quebrar o envio.
-   * Suporta aliases padronizados comuns do Lógos AITSM (numero/chamado_numero,
-   * cliente/solicitante, operador/responsavel, prazo/prazo_sla, etc).
-   */
   function interpolateTemplate(template, data) {
     if (!template) return ''
     var normalizedData = {}
@@ -276,16 +245,10 @@
       result = result.replace(regex, val)
     }
 
-    // Placeholders restantes são removidos para não degradar a legibilidade
     result = result.replace(/\{\{\s*[a-zA-Z0-9_\-.]+\s*\}\}/g, '')
-
     return result
   }
 
-  /**
-   * Constrói o HTML completo do e-mail de acordo com o layout configurado na Central.
-   * Layouts: 'modern' | 'corporate' | 'minimal'
-   */
   function buildEmailHtmlFromConfig(cfg, data) {
     var primaryColor = (cfg && cfg.primary_color) || '#D97706'
     var layout = (cfg && cfg.template_layout) || 'modern'
@@ -359,36 +322,31 @@
         headerTitle +
         '</span>' +
         (headerSubtitle
-          ? '<p style="margin: 6px 0 0 0; font-size: 13px; color: #94a3b8; font-weight: 400;">' +
+          ? '<p style="margin: 6px 0 0 0; font-size: 13px; color: #e2e8f0; font-weight: 400;">' +
             headerSubtitle +
             '</p>'
           : '') +
         '</td></tr>' +
-        '<tr><td style="padding: 36px; line-height: 1.65; font-size: 15px; color: #1e293b;">' +
+        '<tr><td style="padding: 36px; line-height: 1.7; font-size: 15px; color: #1e293b;">' +
         bodyContent +
         buttonHtml +
         '</td></tr>' +
-        '<tr><td style="padding: 24px 36px; background-color: #0f172a; color: #94a3b8; font-size: 12px; text-align: center; border-top: 1px solid #1e293b;">' +
-        '<strong style="color: #cbd5e1;">' +
-        headerTitle +
-        '</strong> — Sistema de Gestão de Serviços de TI<br>' +
-        '<span style="color: #64748b;">' +
+        '<tr><td style="padding: 22px 36px; background-color: #f1f5f9; border-top: 1px solid #e2e8f0; font-size: 12px; color: #64748b; text-align: center; line-height: 1.5;">' +
         footerText +
-        '</span>' +
         '</td></tr>' +
         '</table></body></html>'
       )
     }
 
-    // Padrão 'modern' (identidade Amber Alert / Grafite do Lógos AITSM)
+    // Default 'modern'
     return (
       '<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>' +
       '<body style="margin: 0; padding: 24px; font-family: -apple-system, BlinkMacSystemFont, \'Segoe UI\', Roboto, Arial, sans-serif; background-color: #f1f5f9; color: #0f172a;">' +
-      '<table role="presentation" width="100%" border="0" cellspacing="0" cellpadding="0" style="max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 14px rgba(0,0,0,0.06); border: 1px solid #e2e8f0;">' +
-      '<tr><td style="padding: 28px 32px; background: linear-gradient(135deg, #17181C 0%, #22252a 100%); border-bottom: 3px solid ' +
+      '<table role="presentation" width="100%" border="0" cellspacing="0" cellpadding="0" style="max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);">' +
+      '<tr><td style="padding: 28px 32px; background: linear-gradient(135deg, #17181C 0%, #262930 100%); border-bottom: 3px solid ' +
       primaryColor +
       '; text-align: left;">' +
-      '<span style="font-size: 22px; font-weight: 800; color: #FCD34D; letter-spacing: -0.3px;">' +
+      '<span style="font-size: 20px; font-weight: 800; color: #FCD34D; letter-spacing: -0.5px;">' +
       headerTitle +
       '</span>' +
       (headerSubtitle
@@ -409,13 +367,53 @@
   }
 
   /**
-   * Dispara um e-mail respeitando o switch da Central de Alertas por E-mail,
-   * gerando o layout configurado no editor (marca Lógos AITSM) e gravando
-   * anti-duplicidade por (alert_key, reference_id, recipient).
-   * Suporta recipient único (string) ou múltiplos destinatários (recipients: [...]).
-   *
-   * Retorno: { sent, reason?, sent_count?, skipped_duplicates?, errors? }
+   * Dispara um e-mail EXCLUSIVAMENTE via serviço transacional nativo do Skip Cloud.
+   * Não altera $app.settings().smtp, não usa SMTP externo.
    */
+  function sendSkipCloudMail(opts) {
+    if (!opts) throw new Error('sendSkipCloudMail: options obrigatórias')
+    var toAddress = ''
+    if (typeof opts.to === 'string') {
+      toAddress = opts.to.trim()
+    } else if (opts.to && typeof opts.to === 'object') {
+      toAddress = (opts.to.address || opts.to.email || '').trim()
+    }
+    if (!toAddress) throw new Error('sendSkipCloudMail: destinatário (to) inválido')
+
+    var senderAddress = SKIP_CLOUD_SENDER_EMAIL
+    var senderName = SKIP_CLOUD_SENDER_NAME
+
+    try {
+      var s = $app.settings
+      if (typeof s === 'function') s = s()
+      if (s && s.meta && s.meta.senderAddress) {
+        senderAddress = s.meta.senderAddress
+      }
+      if (s && s.meta && s.meta.senderName) {
+        senderName = s.meta.senderName
+      }
+    } catch (_) {}
+
+    var message = new MailerMessage({
+      from: {
+        address: senderAddress,
+        name: senderName,
+      },
+      to: [{ address: toAddress }],
+      subject: opts.subject || 'Notificação Lógos AITSM',
+      html: opts.html || '',
+      text: opts.text || '',
+    })
+
+    if (opts.replyTo && message.headers) {
+      message.headers['Reply-To'] = opts.replyTo
+    }
+
+    var client = $app.newMailClient()
+    client.send(message)
+    return { success: true, to: toAddress, transport: 'skip_cloud' }
+  }
+
   function sendSystemAlertEmail(opts) {
     if (!opts) return { sent: false, reason: 'opts_missing' }
     var alertKey = opts.alert_key
@@ -450,30 +448,19 @@
       return { sent: false, reason: 'recipient_missing' }
     }
 
-    // 1. Switch da Central de Alertas: alerta desligado = não envia
     var cfg = getEmailAlertConfig(alertKey)
     if (!cfg) {
       console.error(
-        '[Central de Alertas] sendSystemAlertEmail: envio ABORTADO — configuração do alerta não encontrada (getEmailAlertConfig retornou nulo) | alert_key=' +
+        '[Central de Alertas] sendSystemAlertEmail: envio ABORTADO — configuração do alerta não encontrada | alert_key=' +
           String(alertKey || '') +
           ' | destinatários=' +
           recipients.join(', '),
       )
       return { sent: false, reason: 'alert_config_missing', alert_key: alertKey }
     }
+
     if (!cfg.enabled) {
-      try {
-        $app
-          .logger()
-          .info(
-            'sendSystemAlertEmail: alerta desligado nas configurações',
-            'alert_key',
-            alertKey,
-            'recipients_count',
-            recipients.length,
-          )
-      } catch (_) {}
-      console.error(
+      console.log(
         '[Central de Alertas] sendSystemAlertEmail: envio ABORTADO — alerta DESLIGADO nas configurações | alert_key=' +
           String(alertKey || '') +
           ' | destinatários=' +
@@ -482,7 +469,6 @@
       return { sent: false, reason: 'alert_disabled_by_config', alert_key: alertKey }
     }
 
-    // 2. Assunto e corpo vindos EXCLUSIVAMENTE do template da Central (editor).
     var data = opts.data || {}
     var rawSubject =
       cfg.subject_template ||
@@ -493,30 +479,6 @@
 
     if (!cfg.body_template && cfg.default_body_template) {
       cfg.body_template = cfg.default_body_template
-    }
-
-    var sendEmailFn =
-      typeof globalThis !== 'undefined' && typeof globalThis.sendSystemEmail === 'function'
-        ? globalThis.sendSystemEmail
-        : _g.sendSystemEmail
-
-    if (typeof sendEmailFn !== 'function') {
-      console.error(
-        '[Central de Alertas] sendSystemAlertEmail: envio ABORTADO — sendSystemEmail indisponível (mailer_service.js não carregado?) | alert_key=' +
-          String(alertKey || '') +
-          ' | destinatários=' +
-          recipients.join(', '),
-      )
-      try {
-        $app
-          .logger()
-          .error(
-            'sendSystemAlertEmail: sendSystemEmail indisponível — envio abortado',
-            'alert_key',
-            alertKey,
-          )
-      } catch (_) {}
-      return { sent: false, reason: 'sendSystemEmail_unavailable', alert_key: alertKey }
     }
 
     var htmlContent = buildEmailHtmlFromConfig(cfg, data)
@@ -531,28 +493,13 @@
     for (var i = 0; i < recipients.length; i++) {
       var recipient = recipients[i]
 
-      // 3. Anti-duplicidade estrita por (alertKey, referenceId, recipient)
       if (referenceId && hasEmailAlreadyBeenSent(alertKey, referenceId, recipient)) {
-        try {
-          $app
-            .logger()
-            .info(
-              'sendSystemAlertEmail: e-mail já enviado anteriormente (anti-duplicidade)',
-              'alert_key',
-              alertKey,
-              'ref',
-              referenceId,
-              'to',
-              recipient,
-            )
-        } catch (_) {}
         skippedDuplicates++
         continue
       }
 
-      // 4. Envio via mailer do sistema (Skip Mailer / caixa dedicada / fallback SMTP)
       try {
-        sendEmailFn({
+        sendSkipCloudMail({
           to: recipient,
           subject: subject,
           html: htmlContent,
@@ -563,23 +510,13 @@
           recordEmailSentLog(alertKey, referenceId, recipient, subject, {
             template_layout: cfg.template_layout,
             primary_color: cfg.primary_color,
+            transport: 'skip_cloud',
           })
         }
 
-        try {
-          $app
-            .logger()
-            .info(
-              'sendSystemAlertEmail: enviado com sucesso',
-              'alert_key',
-              alertKey,
-              'recipient',
-              recipient,
-            )
-        } catch (_) {}
         sentCount++
         console.log(
-          '[Central de Alertas] sendSystemAlertEmail: enviado com sucesso | alert_key=' +
+          '[Central de Alertas] sendSystemAlertEmail: enviado via Skip Cloud | alert_key=' +
             alertKey +
             ' | destinatário=' +
             recipient +
@@ -587,66 +524,47 @@
             subject,
         )
       } catch (err) {
-        try {
-          $app
-            .logger()
-            .error(
-              'sendSystemAlertEmail: falha no envio para ' + recipient,
-              'alert_key',
-              alertKey,
-              'error',
-              err.message,
-            )
-        } catch (_) {}
+        var errDesc = err && err.message ? err.message : String(err)
+        errors.push({ recipient: recipient, error: errDesc })
         console.error(
-          '[Central de Alertas] sendSystemAlertEmail: FALHA no envio | alert_key=' +
+          '[Central de Alertas] sendSystemAlertEmail: FALHA no envio Skip Cloud | alert_key=' +
             String(alertKey || '') +
             ' | destinatário=' +
             recipient +
             ' | motivo: ' +
-            (err && err.message ? err.message : String(err)),
+            errDesc,
         )
-        errors.push({ recipient: recipient, error: err.message })
       }
     }
 
     if (sentCount > 0) {
       return {
         sent: true,
-        alert_key: alertKey,
         sent_count: sentCount,
         skipped_duplicates: skippedDuplicates,
-        errors: errors.length > 0 ? errors : undefined,
-      }
-    } else if (skippedDuplicates > 0) {
-      return {
-        sent: false,
-        reason: 'already_sent',
-        alert_key: alertKey,
-        reference_id: referenceId,
-        skipped_duplicates: skippedDuplicates,
-      }
-    } else {
-      return {
-        sent: false,
-        reason: 'send_failed',
-        alert_key: alertKey,
         errors: errors,
       }
     }
+
+    if (skippedDuplicates > 0 && errors.length === 0) {
+      return {
+        sent: false,
+        reason: 'already_sent',
+        skipped_duplicates: skippedDuplicates,
+      }
+    }
+
+    return {
+      sent: false,
+      reason: errors.length > 0 ? 'send_failed' : 'no_recipients_processed',
+      errors: errors,
+    }
   }
 
-  // ==========================================================================
-  // Funções REUTILIZÁVEIS de disparo (chamadas pelo hook de evento E por
-  // caminhos explícitos que podem não emitir onRecordAfterCreate/UpdateSuccess,
-  // ex.: rotas customizadas do portal e resolução em massa).
-  // Anti-duplicidade garantida por (alert_key, reference_id, recipient).
-  // ==========================================================================
-
-  function resolveTicketClientRecipients(ticket, auth) {
-    var companyId = ticket.getString('company')
-    var primaryEmail = (ticket.getString('requester_email') || '').trim()
-    var primaryName = (ticket.getString('requester_name') || '').trim()
+  function resolveTicketClientRecipients(curTicket, auth) {
+    var companyId = curTicket.getString('company')
+    var primaryEmail = (curTicket.getString('requester_email') || '').trim()
+    var primaryName = (curTicket.getString('requester_name') || '').trim()
 
     if (!primaryEmail && auth && typeof auth.getString === 'function') {
       primaryEmail = (auth.getString('email') || '').trim()
@@ -695,10 +613,10 @@
     if (primaryEmail) add(primaryEmail)
 
     try {
-      var parts = ticket.get('participants')
+      var parts = curTicket.get('participants')
       if (Array.isArray(parts)) {
-        for (var i = 0; i < parts.length; i++) {
-          var p = parts[i]
+        for (var pIdx = 0; pIdx < parts.length; pIdx++) {
+          var p = parts[pIdx]
           if (typeof p === 'string') {
             if (p.indexOf('@') > 0) {
               add(p)
@@ -742,46 +660,12 @@
     )
   }
 
-  /**
-   * Envia o e-mail de ABERTURA do chamado (alert_key 'ticket_created') pela
-   * Central de Alertas. Pode ser chamado pelo hook de criação OU por rotas
-   * customizadas — dedup evita envio duplo.
-   */
   function notifyTicketCreatedEmails(ticket, auth) {
     if (!ticket) return { sent: false, reason: 'no_ticket' }
     var ticketNumber = ticket.getString('number') || ticket.id
     console.log('[Central de Alertas] notifyTicketCreatedEmails | chamado #' + ticketNumber)
 
     try {
-      // Supressão herdada de client_notification_settings (comportamento preservado)
-      var companyId = ticket.getString('company')
-      try {
-        var clientSettingsRec = null
-        if (companyId) {
-          try {
-            clientSettingsRec = $app.findFirstRecordByFilter(
-              'client_notification_settings',
-              'company = "' + companyId + '"',
-            )
-          } catch (_) {}
-        }
-        if (!clientSettingsRec) {
-          try {
-            clientSettingsRec = $app.findFirstRecordByFilter(
-              'client_notification_settings',
-              'scope = "global"',
-            )
-          } catch (_) {}
-        }
-        if (clientSettingsRec && clientSettingsRec.getBool('notify_ticket_created') === false) {
-          console.warn(
-            '[Central de Alertas] ticket_created: envio SUPRIMIDO por client_notification_settings | chamado #' +
-              ticketNumber,
-          )
-          return { sent: false, reason: 'suppressed_by_client_settings' }
-        }
-      } catch (_) {}
-
       var resolved = resolveTicketClientRecipients(ticket, auth)
       var recipientsList = resolved.recipients
 
@@ -833,21 +717,6 @@
         data: templateData,
       })
 
-      if (result && result.sent) {
-        console.log(
-          '[Central de Alertas] ticket_created: enviado com sucesso | chamado #' +
-            ticketNumber +
-            ' | destinatários=' +
-            recipientsList.join(', '),
-        )
-      } else if (result && result.reason && result.reason !== 'already_sent') {
-        console.error(
-          '[Central de Alertas] ticket_created: envio não realizado | motivo=' +
-            result.reason +
-            ' | chamado #' +
-            ticketNumber,
-        )
-      }
       return result
     } catch (err) {
       console.error(
@@ -860,12 +729,6 @@
     }
   }
 
-  /**
-   * Envia o e-mail de RESOLUÇÃO do chamado (alert_key 'ticket_resolved') pela
-   * Central de Alertas. Pode ser chamado pelo hook de update OU por rotas
-   * customizadas (resolução em massa etc.) — dedup evita envio duplo.
-   * opts.oldStatus: status anterior (para não duplicar Resolvido→Encerrado).
-   */
   function notifyTicketResolvedEmails(record, auth, opts) {
     if (!record) return { sent: false, reason: 'no_ticket' }
     var resolvedOpts = opts || {}
@@ -873,7 +736,6 @@
     console.log('[Central de Alertas] notifyTicketResolvedEmails | chamado #' + ticketNumber)
 
     try {
-      // Mesma regra do hook: Resolvido→Encerrado não duplica notificação ao cliente
       if (
         resolvedOpts.oldStatus === 'Resolvido' &&
         (resolvedOpts.newStatus || '') === 'Encerrado'
@@ -929,21 +791,6 @@
         data: templateData,
       })
 
-      if (result && result.sent) {
-        console.log(
-          '[Central de Alertas] ticket_resolved: enviado com sucesso | chamado #' +
-            ticketNumber +
-            ' | destinatários=' +
-            recipientsList.join(', '),
-        )
-      } else if (result && result.reason && result.reason !== 'already_sent') {
-        console.error(
-          '[Central de Alertas] ticket_resolved: envio não realizado | motivo=' +
-            result.reason +
-            ' | chamado #' +
-            ticketNumber,
-        )
-      }
       return result
     } catch (err) {
       console.error(
@@ -956,12 +803,34 @@
     }
   }
 
-  // Re-publica ao final como confirmação de integridade
+  // Re-publica ao final
   _publishAll()
 
-  // Log de confirmação de carregamento concluído
+  // Rota de diagnóstico para testar disparo via Skip Cloud diretamente
   try {
-    var checkType = typeof _g.sendSystemAlertEmail
-    console.log('[A0 helpers] carregado — sendSystemAlertEmail: ' + checkType)
+    routerAdd('POST', '/backend/v1/emails/test-skip-cloud-alert', function (c) {
+      var body = {}
+      try {
+        body = c.requestInfo().body || {}
+      } catch (_) {}
+      var alertKey = body.alert_key || 'ticket_created'
+      var testTo = body.to || 'teste@goskip.dev'
+
+      var res = sendSystemAlertEmail({
+        alert_key: alertKey,
+        recipients: [testTo],
+        reference_id: 'test-' + Date.now(),
+        data: {
+          chamado_numero: 'TESTE-001',
+          titulo: 'Teste de Envio Transacional Skip Cloud',
+          descricao: 'Este e-mail confirma o funcionamento do transporte Skip Cloud puro.',
+          cliente: 'Administrador',
+          data_abertura: formatTicketDate(new Date()),
+        },
+      })
+      return c.json(200, { success: true, result: res })
+    })
   } catch (_) {}
+
+  console.log('[A0 helpers] transporte Skip Cloud OK')
 })()

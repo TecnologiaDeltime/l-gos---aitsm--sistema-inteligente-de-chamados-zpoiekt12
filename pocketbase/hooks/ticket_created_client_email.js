@@ -7,8 +7,9 @@
 // utilizando o template configurado na Central de Alertas (alert_key = 'ticket_created').
 //
 // Módulo 100% autocontido (resiliente ao escopo isolado do Goja JSVM no PocketBase).
-// Funções de configuração, interpolação de template, anti-duplicidade e envio
-// SMTP dedicadas são definidas internamente no callback onRecordAfterCreateSuccess.
+// TRANSPORTE EXCLUSIVO: Skip Cloud Transacional ($app.newMailClient).
+// Remetente canônico: Lógos AITSM <noreply@mail.goskip.dev>.
+// Zero SMTP externo, zero caminhos silenciosos.
 // Sempre invoca e.next() para manter a cadeia de hooks e entregas em tempo real.
 // ============================================================================
 
@@ -23,47 +24,13 @@ onRecordAfterCreateSuccess(function (e) {
     )
 
     // ==========================================================================
-    // HELPERS AUTOCONTIDOS LOCAIS (escopo exclusivo deste hook)
+    // HELPERS AUTOCONTIDOS LOCAIS (transporte Skip Cloud nativo)
     // ==========================================================================
 
-    // 1. Descriptografia AES-256 local para credenciais de email_config
-    function localSafeDecryptSecret(val) {
-      if (!val || typeof val !== 'string') return ''
-      val = val.trim()
-      var PREFIX = 'enc:v1:'
-      if (val.indexOf(PREFIX) !== 0) return val
-      if (typeof globalThis !== 'undefined' && typeof globalThis.itsmDecrypt === 'function') {
-        try {
-          var decGlobal = globalThis.itsmDecrypt(val)
-          if (decGlobal && decGlobal.indexOf(PREFIX) !== 0) return decGlobal
-        } catch (_) {}
-      }
-      try {
-        var k = ''
-        if (typeof $os !== 'undefined' && typeof $os.getenv === 'function') {
-          k = $os.getenv('ITSM_ENCRYPTION_KEY') || ''
-        }
-        if (!k && typeof $secrets !== 'undefined' && typeof $secrets.get === 'function') {
-          k = $secrets.get('ITSM_ENCRYPTION_KEY') || ''
-        }
-        if (!k) {
-          k = 'itsm_default_fallback_aes256_key_super_safe_2026'
-        }
-        var derivedKey = ''
-        try {
-          derivedKey = $security.sha256(k).substring(0, 32)
-        } catch (_) {
-          derivedKey = (k + '01234567890123456789012345678901').substring(0, 32)
-        }
-        var payload = val.substring(PREFIX.length)
-        var dec = $security.decrypt(payload, derivedKey)
-        return dec || ''
-      } catch (_) {
-        return ''
-      }
-    }
+    var SKIP_CLOUD_SENDER_EMAIL = 'noreply@mail.goskip.dev'
+    var SKIP_CLOUD_SENDER_NAME = 'Lógos AITSM'
 
-    // 2. Consulta configuração do alerta (email_alert_settings)
+    // 1. Consulta configuração do alerta na Central (email_alert_settings)
     function localGetEmailAlertConfig(alertKey) {
       if (!alertKey) return null
       try {
@@ -103,40 +70,27 @@ onRecordAfterCreateSuccess(function (e) {
       }
     }
 
-    // 3. Anti-duplicidade em email_sent_logs
+    // 2. Anti-duplicidade em email_sent_logs
     function localHasEmailAlreadyBeenSent(alertKey, referenceId, recipient) {
       if (!alertKey || !referenceId || !recipient) return false
       try {
         var cleanAlertKey = String(alertKey).trim().replace(/"/g, '\\"')
         var cleanRefId = String(referenceId).trim().replace(/"/g, '\\"')
         var cleanRecipient = String(recipient).trim().toLowerCase().replace(/"/g, '\\"')
-        var filterExpr =
-          'alert_key = "' +
-          cleanAlertKey +
-          '" && reference_id = "' +
-          cleanRefId +
-          '" && recipient = "' +
-          cleanRecipient +
-          '"'
 
         var rec = null
         try {
-          rec = $app.findFirstRecordByFilter('email_sent_logs', filterExpr)
-        } catch (findErr) {
-          // findFirstRecordByFilter lança exceção quando não encontra registro (sql: no rows in result set)
-          var errStr = findErr && findErr.message ? findErr.message : String(findErr)
-          if (
-            errStr.indexOf('no rows') >= 0 ||
-            errStr.indexOf('sql: no rows') >= 0 ||
-            errStr.indexOf('not found') >= 0
-          ) {
-            return false
-          }
-          console.warn(
-            '[Central de Alertas] ticket_created: falha na verificação de duplicidade (' +
-              errStr +
-              ') — prosseguindo com envio',
+          rec = $app.findFirstRecordByFilter(
+            'email_sent_logs',
+            'alert_key = "' +
+              cleanAlertKey +
+              '" && reference_id = "' +
+              cleanRefId +
+              '" && recipient = "' +
+              cleanRecipient +
+              '"',
           )
+        } catch (_) {
           return false
         }
 
@@ -163,7 +117,7 @@ onRecordAfterCreateSuccess(function (e) {
       }
     }
 
-    // 4. Registro de auditoria/anti-duplicidade em email_sent_logs
+    // 3. Registro em email_sent_logs
     function localRecordEmailSentLog(alertKey, referenceId, recipient, subject, meta) {
       if (!alertKey || !referenceId || !recipient) return
       try {
@@ -179,13 +133,13 @@ onRecordAfterCreateSuccess(function (e) {
         $app.save(log)
       } catch (err) {
         console.warn(
-          '[Central de Alertas] ticket_created localRecordEmailSentLog: falha ao salvar log | ' +
+          '[Central de Alertas] ticket_created: falha ao salvar log em email_sent_logs | ' +
             (err && err.message ? err.message : String(err)),
         )
       }
     }
 
-    // 5. Interpolação de variáveis {{chave}}
+    // 4. Interpolação de variáveis
     function localInterpolateTemplate(template, data) {
       if (!template) return ''
       var normalizedData = {}
@@ -214,6 +168,12 @@ onRecordAfterCreateSuccess(function (e) {
       if (normalizedData.operador && !normalizedData.responsavel) {
         normalizedData.responsavel = normalizedData.operador
       }
+      if (normalizedData.prazo_sla && !normalizedData.prazo) {
+        normalizedData.prazo = normalizedData.prazo_sla
+      }
+      if (normalizedData.prazo && !normalizedData.prazo_sla) {
+        normalizedData.prazo_sla = normalizedData.prazo
+      }
       if (normalizedData.data_abertura && !normalizedData.data_hora) {
         normalizedData.data_hora = normalizedData.data_abertura
       }
@@ -230,12 +190,11 @@ onRecordAfterCreateSuccess(function (e) {
         result = result.replace(regex, val)
       }
 
-      // Limpa placeholders não preenchidos
       result = result.replace(/\{\{\s*[a-zA-Z0-9_\-.]+\s*\}\}/g, '')
       return result
     }
 
-    // 6. Construtor de HTML com layout corporativo/moderno/minimalista
+    // 5. Montagem do HTML segundo layout da Central
     function localBuildEmailHtmlFromConfig(cfg, data) {
       var primaryColor = (cfg && cfg.primary_color) || '#D97706'
       var layout = (cfg && cfg.template_layout) || 'modern'
@@ -309,36 +268,31 @@ onRecordAfterCreateSuccess(function (e) {
           headerTitle +
           '</span>' +
           (headerSubtitle
-            ? '<p style="margin: 6px 0 0 0; font-size: 13px; color: #94a3b8; font-weight: 400;">' +
+            ? '<p style="margin: 6px 0 0 0; font-size: 13px; color: #e2e8f0; font-weight: 400;">' +
               headerSubtitle +
               '</p>'
             : '') +
           '</td></tr>' +
-          '<tr><td style="padding: 36px; line-height: 1.65; font-size: 15px; color: #1e293b;">' +
+          '<tr><td style="padding: 36px; line-height: 1.7; font-size: 15px; color: #1e293b;">' +
           bodyContent +
           buttonHtml +
           '</td></tr>' +
-          '<tr><td style="padding: 24px 36px; background-color: #0f172a; color: #94a3b8; font-size: 12px; text-align: center; border-top: 1px solid #1e293b;">' +
-          '<strong style="color: #cbd5e1;">' +
-          headerTitle +
-          '</strong> — Sistema de Gestão de Serviços de TI<br>' +
-          '<span style="color: #64748b;">' +
+          '<tr><td style="padding: 22px 36px; background-color: #f1f5f9; border-top: 1px solid #e2e8f0; font-size: 12px; color: #64748b; text-align: center; line-height: 1.5;">' +
           footerText +
-          '</span>' +
           '</td></tr>' +
           '</table></body></html>'
         )
       }
 
-      // Modern (padrão Lógos AITSM)
+      // Default 'modern'
       return (
         '<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>' +
         '<body style="margin: 0; padding: 24px; font-family: -apple-system, BlinkMacSystemFont, \'Segoe UI\', Roboto, Arial, sans-serif; background-color: #f1f5f9; color: #0f172a;">' +
-        '<table role="presentation" width="100%" border="0" cellspacing="0" cellpadding="0" style="max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 14px rgba(0,0,0,0.06); border: 1px solid #e2e8f0;">' +
-        '<tr><td style="padding: 28px 32px; background: linear-gradient(135deg, #17181C 0%, #22252a 100%); border-bottom: 3px solid ' +
+        '<table role="presentation" width="100%" border="0" cellspacing="0" cellpadding="0" style="max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);">' +
+        '<tr><td style="padding: 28px 32px; background: linear-gradient(135deg, #17181C 0%, #262930 100%); border-bottom: 3px solid ' +
         primaryColor +
         '; text-align: left;">' +
-        '<span style="font-size: 22px; font-weight: 800; color: #FCD34D; letter-spacing: -0.3px;">' +
+        '<span style="font-size: 20px; font-weight: 800; color: #FCD34D; letter-spacing: -0.5px;">' +
         headerTitle +
         '</span>' +
         (headerSubtitle
@@ -358,256 +312,7 @@ onRecordAfterCreateSuccess(function (e) {
       )
     }
 
-    // 7. Resolução de configuração de transporte SMTP (email_config dedicado ou fallback)
-    function localResolveMailerConfig() {
-      var dedicated = {
-        isDedicated: false,
-        host: '',
-        port: 587,
-        encryption: 'STARTTLS',
-        user: '',
-        password: '',
-        senderName: 'Atendimento HelpDesk',
-        replyTo: '',
-        senderEmail: '',
-      }
-
-      try {
-        var configs = $app.findRecordsByFilter('email_config', '', '-created', 1, 0)
-        if (configs.length > 0) {
-          var cfg = configs[0]
-          var sHost = (cfg.getString('smtp_host') || '').trim()
-          var sUser = (cfg.getString('smtp_user') || cfg.getString('imap_user') || '').trim()
-          var rawSPass = (
-            cfg.getString('smtp_password') ||
-            cfg.getString('imap_password') ||
-            ''
-          ).trim()
-          var sPass = localSafeDecryptSecret(rawSPass)
-          if (typeof sPass === 'string') sPass = sPass.trim()
-          if (sPass === '__DECRYPT_FAILED__' || sPass.indexOf('enc:v1:') === 0) sPass = ''
-          var sPort = cfg.getInt('smtp_port') || 587
-          var sEnc = (cfg.getString('smtp_encryption') || 'STARTTLS').trim()
-          var sName = (cfg.getString('smtp_sender_name') || 'Atendimento HelpDesk').trim()
-          var sReply = (cfg.getString('smtp_reply_to') || sUser).trim()
-
-          if (sHost && sUser && sPass) {
-            dedicated.isDedicated = true
-            dedicated.host = sHost
-            dedicated.port = sPort
-            dedicated.encryption = sEnc
-            dedicated.user = sUser
-            dedicated.password = sPass
-            dedicated.senderName = sName
-            dedicated.replyTo = sReply
-            dedicated.senderEmail = sUser
-            return dedicated
-          }
-        }
-      } catch (_) {}
-
-      var fallback = {
-        isDedicated: false,
-        host: '',
-        port: 587,
-        encryption: 'STARTTLS',
-        user: '',
-        password: '',
-        senderName: 'Lógos AITSM',
-        replyTo: '',
-        senderEmail: 'noreply@logositsm.com.br',
-      }
-
-      try {
-        var s = $app.settings
-        if (typeof s === 'function') s = s()
-        if (s && s.smtp && s.smtp.enabled && s.smtp.host) {
-          fallback.host = s.smtp.host
-          fallback.port = s.smtp.port || 587
-          fallback.user = s.smtp.username || ''
-          fallback.senderEmail = s.smtp.username || 'noreply@logositsm.com.br'
-        }
-        if (s && s.meta && s.meta.senderAddress) {
-          fallback.senderEmail = s.meta.senderAddress
-        }
-        if (s && s.meta && s.meta.senderName) {
-          fallback.senderName = s.meta.senderName
-        }
-      } catch (_) {}
-
-      return fallback
-    }
-
-    // 8. Criação de objeto MailerMessage do PocketBase
-    function localCreateMailMessage(initObj) {
-      if (typeof MailerMessage !== 'undefined') {
-        try {
-          return initObj ? new MailerMessage(initObj) : new MailerMessage()
-        } catch (_) {}
-      }
-      if (typeof MailMessage !== 'undefined') {
-        try {
-          return initObj ? new MailMessage(initObj) : new MailMessage()
-        } catch (_) {}
-      }
-      var g = typeof globalThis !== 'undefined' ? globalThis : {}
-      if (typeof g.MailerMessage !== 'undefined') {
-        try {
-          return initObj ? new g.MailerMessage(initObj) : new g.MailerMessage()
-        } catch (_) {}
-      }
-      if (typeof g.MailMessage !== 'undefined') {
-        try {
-          return initObj ? new g.MailMessage(initObj) : new g.MailMessage()
-        } catch (_) {}
-      }
-      return initObj || {}
-    }
-
-    // 9. Envio local direto via $app.newMailClient() com fallback e aplicação de SMTP
-    function localSendMailMessage(opts) {
-      if (!opts) throw new Error('Parâmetros de e-mail ausentes.')
-      var mailerConfig = localResolveMailerConfig()
-      var message = localCreateMailMessage()
-
-      var senderEmail = mailerConfig.senderEmail || 'noreply@logositsm.com.br'
-      var senderName = mailerConfig.senderName || 'Atendimento HelpDesk'
-
-      if (opts.from && typeof opts.from === 'object') {
-        senderEmail = opts.from.address || senderEmail
-        senderName = opts.from.name || senderName
-      } else if (typeof opts.from === 'string' && opts.from.trim()) {
-        senderEmail = opts.from.trim()
-      }
-
-      if (mailerConfig.isDedicated && mailerConfig.user) {
-        senderEmail = mailerConfig.user
-        senderName = mailerConfig.senderName || senderName
-      }
-
-      message.from = { address: senderEmail, name: senderName }
-
-      if (Array.isArray(opts.to)) {
-        message.to = opts.to.map(function (dest) {
-          if (typeof dest === 'string') return { address: dest.trim() }
-          return dest
-        })
-      } else if (typeof opts.to === 'string') {
-        message.to = [{ address: opts.to.trim() }]
-      }
-
-      message.subject = opts.subject || ''
-      if (opts.text) message.text = opts.text
-      if (opts.html) message.html = opts.html
-
-      var replyTo = opts.replyTo || mailerConfig.replyTo
-      if (replyTo && message.headers) {
-        message.headers['Reply-To'] = replyTo
-      }
-
-      // Configuração temporária de SMTP se caixa dedicada estiver disponível
-      var originalSmtp = null
-      var needsRestore = false
-
-      if (
-        mailerConfig.isDedicated &&
-        mailerConfig.host &&
-        mailerConfig.user &&
-        mailerConfig.password
-      ) {
-        try {
-          var s = $app.settings
-          if (typeof s === 'function') s = s()
-          if (s && s.smtp) {
-            originalSmtp = {
-              enabled: s.smtp.enabled,
-              host: s.smtp.host,
-              port: s.smtp.port,
-              username: s.smtp.username,
-              password: s.smtp.password,
-              tls: s.smtp.tls,
-              authMethod: s.smtp.authMethod,
-            }
-
-            var resolvedPassword = localSafeDecryptSecret(mailerConfig.password)
-            if (
-              resolvedPassword === '__DECRYPT_FAILED__' ||
-              resolvedPassword.indexOf('enc:v1:') === 0
-            ) {
-              resolvedPassword = mailerConfig.password
-            }
-
-            s.smtp.enabled = true
-            s.smtp.host = mailerConfig.host
-            s.smtp.port = mailerConfig.port
-            s.smtp.username = mailerConfig.user
-            s.smtp.password = resolvedPassword
-            s.smtp.tls = mailerConfig.encryption === 'SSL/TLS' || mailerConfig.port === 465
-            needsRestore = true
-          }
-        } catch (applyErr) {
-          console.warn(
-            '[Central de Alertas] ticket_created: aviso ao aplicar smtp em runtime: ' +
-              (applyErr && applyErr.message ? applyErr.message : String(applyErr)),
-          )
-        }
-      }
-
-      var restoreSettings = function () {
-        if (needsRestore && originalSmtp) {
-          try {
-            var sRestore = $app.settings
-            if (typeof sRestore === 'function') sRestore = sRestore()
-            if (sRestore && sRestore.smtp) {
-              sRestore.smtp.enabled = originalSmtp.enabled
-              sRestore.smtp.host = originalSmtp.host
-              sRestore.smtp.port = originalSmtp.port
-              sRestore.smtp.username = originalSmtp.username
-              sRestore.smtp.password = originalSmtp.password
-              sRestore.smtp.tls = originalSmtp.tls
-              sRestore.smtp.authMethod = originalSmtp.authMethod
-            }
-          } catch (_) {}
-        }
-      }
-
-      try {
-        var client = $app.newMailClient()
-        client.send(message)
-        return {
-          success: true,
-          smtp_used: mailerConfig.isDedicated ? 'dedicated_mailbox' : 'logos_fallback',
-        }
-      } catch (primaryErr) {
-        restoreSettings()
-        needsRestore = false
-
-        if (mailerConfig.isDedicated) {
-          try {
-            var fallbackClient = $app.newMailClient()
-            fallbackClient.send(message)
-            return {
-              success: true,
-              smtp_used: 'logos_fallback',
-              fallback_reason: primaryErr.message,
-            }
-          } catch (fallbackErr) {
-            throw new Error(
-              'Falha no envio pela caixa dedicada (' +
-                primaryErr.message +
-                ') e no fallback padrão (' +
-                fallbackErr.message +
-                ')',
-            )
-          }
-        }
-        throw primaryErr
-      } finally {
-        restoreSettings()
-      }
-    }
-
-    // 10. Função principal autocontida de envio de alerta
+    // 6. Envio autocontido via Skip Cloud puro
     function localSendSystemAlertEmail(opts) {
       if (!opts) return { sent: false, reason: 'opts_missing' }
       var alertKey = opts.alert_key
@@ -636,7 +341,7 @@ onRecordAfterCreateSuccess(function (e) {
 
       if (recipients.length === 0) {
         console.error(
-          '[Central de Alertas] ticket_created: envio ABORTADO — nenhum destinatário válido | alert_key=' +
+          '[Central de Alertas] ticket_created localSendSystemAlertEmail: envio ABORTADO — nenhum destinatário válido | alert_key=' +
             String(alertKey || ''),
         )
         return { sent: false, reason: 'recipient_missing' }
@@ -645,7 +350,7 @@ onRecordAfterCreateSuccess(function (e) {
       var cfg = localGetEmailAlertConfig(alertKey)
       if (!cfg) {
         console.error(
-          '[Central de Alertas] ticket_created: envio ABORTADO — configuração do alerta não encontrada | alert_key=' +
+          '[Central de Alertas] ticket_created localSendSystemAlertEmail: envio ABORTADO — configuração do alerta não encontrada | alert_key=' +
             String(alertKey || '') +
             ' | destinatários=' +
             recipients.join(', '),
@@ -655,7 +360,7 @@ onRecordAfterCreateSuccess(function (e) {
 
       if (!cfg.enabled) {
         console.log(
-          '[Central de Alertas] ticket_created: envio ABORTADO — alerta DESLIGADO nas configurações | alert_key=' +
+          '[Central de Alertas] ticket_created localSendSystemAlertEmail: envio ABORTADO — alerta DESLIGADO nas configurações | alert_key=' +
             String(alertKey || '') +
             ' | destinatários=' +
             recipients.join(', '),
@@ -680,6 +385,15 @@ onRecordAfterCreateSuccess(function (e) {
       var textFallback =
         opts.fallbackText || localInterpolateTemplate(rawBody, data).replace(/<[^>]+>/g, ' ')
 
+      var senderAddress = SKIP_CLOUD_SENDER_EMAIL
+      var senderName = SKIP_CLOUD_SENDER_NAME
+      try {
+        var s = $app.settings
+        if (typeof s === 'function') s = s()
+        if (s && s.meta && s.meta.senderAddress) senderAddress = s.meta.senderAddress
+        if (s && s.meta && s.meta.senderName) senderName = s.meta.senderName
+      } catch (_) {}
+
       var sentCount = 0
       var skippedDuplicates = 0
       var errors = []
@@ -687,43 +401,37 @@ onRecordAfterCreateSuccess(function (e) {
       for (var i = 0; i < recipients.length; i++) {
         var recipient = recipients[i]
 
-        var isDuplicate = false
-        try {
-          isDuplicate = referenceId
-            ? localHasEmailAlreadyBeenSent(alertKey, referenceId, recipient)
-            : false
-        } catch (dupCheckErr) {
-          console.warn(
-            '[Central de Alertas] ticket_created: falha na verificação de duplicidade (' +
-              (dupCheckErr && dupCheckErr.message ? dupCheckErr.message : String(dupCheckErr)) +
-              ') — prosseguindo com envio',
-          )
-          isDuplicate = false
-        }
-
-        if (isDuplicate) {
+        if (referenceId && localHasEmailAlreadyBeenSent(alertKey, referenceId, recipient)) {
           skippedDuplicates++
           continue
         }
 
         try {
-          localSendMailMessage({
-            to: recipient,
+          var message = new MailerMessage({
+            from: {
+              address: senderAddress,
+              name: senderName,
+            },
+            to: [{ address: recipient }],
             subject: subject,
             html: htmlContent,
             text: textFallback,
           })
 
+          var client = $app.newMailClient()
+          client.send(message)
+
           if (referenceId) {
             localRecordEmailSentLog(alertKey, referenceId, recipient, subject, {
               template_layout: cfg.template_layout,
               primary_color: cfg.primary_color,
+              transport: 'skip_cloud',
             })
           }
 
           sentCount++
           console.log(
-            '[Central de Alertas] ticket_created: enviado com sucesso | alert_key=' +
+            '[Central de Alertas] ticket_created: enviado com sucesso via Skip Cloud | alert_key=' +
               alertKey +
               ' | destinatário=' +
               recipient +
@@ -731,48 +439,44 @@ onRecordAfterCreateSuccess(function (e) {
               subject,
           )
         } catch (err) {
+          var errDesc = err && err.message ? err.message : String(err)
+          errors.push({ recipient: recipient, error: errDesc })
           console.error(
-            '[Central de Alertas] ticket_created: FALHA no envio | alert_key=' +
+            '[Central de Alertas] ticket_created: FALHA no envio Skip Cloud | alert_key=' +
               String(alertKey || '') +
               ' | destinatário=' +
               recipient +
               ' | motivo: ' +
-              (err && err.message ? err.message : String(err)),
+              errDesc,
           )
-          errors.push({
-            recipient: recipient,
-            error: err && err.message ? err.message : String(err),
-          })
         }
       }
 
       if (sentCount > 0) {
         return {
           sent: true,
-          alert_key: alertKey,
           sent_count: sentCount,
           skipped_duplicates: skippedDuplicates,
-          errors: errors.length > 0 ? errors : undefined,
-        }
-      } else if (skippedDuplicates > 0) {
-        return {
-          sent: false,
-          reason: 'already_sent',
-          alert_key: alertKey,
-          reference_id: referenceId,
-          skipped_duplicates: skippedDuplicates,
-        }
-      } else {
-        return {
-          sent: false,
-          reason: 'send_failed',
-          alert_key: alertKey,
           errors: errors,
         }
       }
+
+      if (skippedDuplicates > 0 && errors.length === 0) {
+        return {
+          sent: false,
+          reason: 'already_sent',
+          skipped_duplicates: skippedDuplicates,
+        }
+      }
+
+      return {
+        sent: false,
+        reason: errors.length > 0 ? 'send_failed' : 'no_recipients_processed',
+        errors: errors,
+      }
     }
 
-    // 11. Resolução de destinatários e formatação de datas
+    // 7. Resolução de destinatários
     function localResolveTicketClientRecipients(curTicket, auth) {
       var companyId = curTicket.getString('company')
       var primaryEmail = (curTicket.getString('requester_email') || '').trim()
@@ -875,7 +579,7 @@ onRecordAfterCreateSuccess(function (e) {
     // ==========================================================================
     // EXECUÇÃO DO DISPARO
     // ==========================================================================
-    console.log('[Central de Alertas] ticket_created: helpers locais OK')
+    console.log('[Central de Alertas] ticket_created: helpers locais OK (transporte Skip Cloud)')
 
     // Supressão herdada de client_notification_settings
     var companyId = ticket.getString('company')
