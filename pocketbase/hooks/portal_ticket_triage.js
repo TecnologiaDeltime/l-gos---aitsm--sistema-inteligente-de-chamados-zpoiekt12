@@ -605,7 +605,7 @@ routerAdd(
       confidence: chosenConfidence,
       reason: finalReason,
       applied: applied.applied,
-      source: 'portal',
+      source: 'IA',
       matchMethod: matchMethod,
     })
 

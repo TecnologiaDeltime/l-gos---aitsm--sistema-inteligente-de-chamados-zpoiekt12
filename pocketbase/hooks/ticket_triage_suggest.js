@@ -132,8 +132,16 @@ onRecordAfterCreateSuccess((e) => {
 
     if (triageSuggestion) {
       var ticketRecord = $app.findRecordById('tickets', ticket.id)
-      ticketRecord.set('triage_suggestions', triageSuggestion)
-      $app.save(ticketRecord)
+      // Se outro hook (ticket_on_create) já categorizou e definiu triage_suggestions, não sobrescrever
+      var currentSuggestions = ticketRecord.get('triage_suggestions')
+      if (
+        !currentSuggestions ||
+        typeof currentSuggestions !== 'object' ||
+        Object.keys(currentSuggestions).length === 0
+      ) {
+        ticketRecord.set('triage_suggestions', triageSuggestion)
+        $app.save(ticketRecord)
+      }
     }
   } catch (err) {
     $app.logger().error('ticket_triage_suggest: error', 'error', err.message)

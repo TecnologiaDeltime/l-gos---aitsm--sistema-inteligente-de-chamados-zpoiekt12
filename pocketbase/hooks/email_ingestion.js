@@ -584,6 +584,56 @@ routerAdd('POST', '/backend/v1/emails/ingest', (e) => {
 
       if (triageSuggestion) {
         ticket.set('triage_suggestions', triageSuggestion)
+
+        // Se encontrou categoria válida e o chamado ainda não foi categorizado, aplica com SLA
+        if (triageSuggestion.category && !ticket.getString('category')) {
+          try {
+            var catRec = $app.findRecordById('tkt_categories', triageSuggestion.category)
+            if (catRec) {
+              var parentCat = catRec.getString('parent')
+              if (parentCat) {
+                ticket.set('category', parentCat)
+                ticket.set('subcategory', catRec.id)
+                var sImp = catRec.getString('impact')
+                var sUrg = catRec.getString('urgency')
+                var sPri = catRec.getString('priority')
+                if (sImp) ticket.set('impact', sImp)
+                if (sUrg) ticket.set('urgency', sUrg)
+                if (sPri) ticket.set('priority', sPri)
+              } else {
+                ticket.set('category', catRec.id)
+              }
+
+              // Calcular SLA pelo catálogo
+              var respMin = catRec.getInt('sla_response_minutes') || 30
+              var solMin = catRec.getInt('sla_solution_minutes') || 240
+              var offset =
+                typeof globalThis.TZ_OFFSET_SAO_PAULO_MIN !== 'undefined'
+                  ? globalThis.TZ_OFFSET_SAO_PAULO_MIN
+                  : -180
+              var respDl = null
+              var solDl = null
+              try {
+                if (typeof globalThis.bhComputeDeadline === 'function') {
+                  var nowMs = Date.now()
+                  respDl = globalThis.bhComputeDeadline(nowMs, respMin, offset)
+                  solDl = globalThis.bhComputeDeadline(nowMs, solMin, offset)
+                }
+              } catch (_) {}
+              if (!respDl) respDl = new Date(Date.now() + respMin * 60000).toISOString()
+              if (!solDl) solDl = new Date(Date.now() + solMin * 60000).toISOString()
+
+              ticket.set('sla_response_deadline', respDl)
+              ticket.set('sla_solution_deadline', solDl)
+              ticket.set('sla_source', 'Atividade: ' + (catRec.getString('name') || 'Catálogo'))
+            }
+          } catch (slaErr) {
+            $app
+              .logger()
+              .error('email_ingestion: failed to apply category/SLA', 'error', slaErr.message)
+          }
+        }
+
         $app.save(ticket)
       }
     } catch (err) {
