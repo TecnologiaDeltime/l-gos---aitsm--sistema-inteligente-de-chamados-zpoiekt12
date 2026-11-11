@@ -534,27 +534,103 @@ onRecordAfterCreateSuccess((e) => {
       }
     }
 
-    // Validar e resolver categorias e subcategorias
+    // Validar e resolver categorias e subcategorias (por ID ou por nome)
     var validCategory = null
     var validSubcategory = null
 
-    if (chosenCategoryId && categoryById[chosenCategoryId]) {
-      var candidate = categoryById[chosenCategoryId]
-      if (candidate.getString('parent')) {
-        validSubcategory = candidate
-        var pId = candidate.getString('parent')
-        if (categoryById[pId]) validCategory = categoryById[pId]
-      } else {
-        validCategory = candidate
+    var findCategoryByIdOrName = function (idOrName) {
+      if (!idOrName) return null
+      var term = String(idOrName).trim().toLowerCase()
+      if (categoryById[idOrName]) return categoryById[idOrName]
+      for (var i = 0; i < allCategories.length; i++) {
+        var c = allCategories[i]
+        if (c.id === idOrName) return c
+        var cName = (c.getString('name') || '').trim().toLowerCase()
+        if (cName === term) return c
+      }
+      for (var j = 0; j < allCategories.length; j++) {
+        var cat = allCategories[j]
+        var catName = (cat.getString('name') || '').trim().toLowerCase()
+        if (term.length >= 3 && (catName.indexOf(term) !== -1 || term.indexOf(catName) !== -1)) {
+          return cat
+        }
+      }
+      return null
+    }
+
+    if (chosenCategoryId) {
+      var candidate = findCategoryByIdOrName(chosenCategoryId)
+      if (candidate) {
+        if (candidate.getString('parent')) {
+          validSubcategory = candidate
+          var pId = candidate.getString('parent')
+          if (categoryById[pId]) validCategory = categoryById[pId]
+        } else {
+          validCategory = candidate
+        }
       }
     }
 
-    if (chosenSubcategoryId && categoryById[chosenSubcategoryId]) {
-      var candidateSub = categoryById[chosenSubcategoryId]
-      validSubcategory = candidateSub
-      var parId = candidateSub.getString('parent')
-      if (parId && !validCategory && categoryById[parId]) {
-        validCategory = categoryById[parId]
+    if (chosenSubcategoryId) {
+      var candidateSub = findCategoryByIdOrName(chosenSubcategoryId)
+      if (candidateSub) {
+        validSubcategory = candidateSub
+        var parId = candidateSub.getString('parent')
+        if (parId && !validCategory && categoryById[parId]) {
+          validCategory = categoryById[parId]
+        }
+      }
+    }
+
+    // Se mesmo após IA + heurística ainda não tiver categoria, fallback para melhor correspondência no catálogo
+    if (!validCategory && allCategories.length > 0) {
+      var fallbackMatch = heuristicMatch(title + ' ' + description, allCategories)
+      if (fallbackMatch && fallbackMatch.categoryId && categoryById[fallbackMatch.categoryId]) {
+        validCategory = categoryById[fallbackMatch.categoryId]
+        if (fallbackMatch.subcategoryId && categoryById[fallbackMatch.subcategoryId]) {
+          validSubcategory = categoryById[fallbackMatch.subcategoryId]
+        }
+        chosenConfidence = Math.max(chosenConfidence, fallbackMatch.confidence || 0.4)
+        chosenReason =
+          chosenReason || fallbackMatch.reason || 'Classificado por aproximação no catálogo.'
+        matchMethod = 'heuristic_fallback'
+      } else {
+        var rootCats = allCategories.filter(function (c) {
+          return !c.getString('parent')
+        })
+        if (rootCats.length > 0) {
+          validCategory = rootCats[0]
+          chosenConfidence = Math.max(chosenConfidence, 0.3)
+          chosenReason = chosenReason || 'Classificado na atividade padrão do catálogo.'
+          matchMethod = 'catalog_default'
+        }
+      }
+    }
+
+    // Se temos subcategoria mas sem categoria principal resolvida, herda do parent
+    if (validSubcategory && !validCategory && validSubcategory.getString('parent')) {
+      var parRefId = validSubcategory.getString('parent')
+      if (categoryById[parRefId]) validCategory = categoryById[parRefId]
+    }
+
+    // Se temos categoria principal mas sem subcategoria, e ela possui subatividades, tenta achar a melhor subatividade
+    if (validCategory && !validSubcategory) {
+      var subList = subcategoryMap[validCategory.id] || []
+      if (subList.length > 0) {
+        var textToMatch = (title + ' ' + description).toLowerCase()
+        var bestSub = null
+        for (var sI = 0; sI < subList.length; sI++) {
+          var sName = (subList[sI].getString('name') || '').toLowerCase()
+          if (sName && textToMatch.indexOf(sName) !== -1) {
+            bestSub = subList[sI]
+            break
+          }
+        }
+        if (bestSub) {
+          validSubcategory = bestSub
+        } else {
+          validSubcategory = subList[0]
+        }
       }
     }
 
@@ -569,12 +645,13 @@ onRecordAfterCreateSuccess((e) => {
       targetQueueId = defaultQueueId
     }
 
-    var shouldApply = Boolean(validCategory && chosenConfidence >= minConfidence)
-    var finalReason =
-      chosenReason ||
-      (shouldApply
-        ? 'Classificado automaticamente por IA.'
-        : 'Confiança insuficiente para classificação automática.')
+    // Autonomia total: sempre aplicar categoria e subcategoria identificadas
+    var shouldApply = Boolean(validCategory)
+    var finalReason = chosenReason || 'Classificado automaticamente pela IA no catálogo.'
+    if (chosenConfidence < minConfidence) {
+      finalReason +=
+        ' (Classificado com baixa confiança: ' + Math.round(chosenConfidence * 100) + '%)'
+    }
 
     var finalCategoryName = validCategory ? validCategory.getString('name') : ''
     var finalSubcategoryName = validSubcategory ? validSubcategory.getString('name') : ''
@@ -639,11 +716,11 @@ onRecordAfterCreateSuccess((e) => {
       var freshTicket = e.app.findRecordById('tickets', ticketId)
       var changed = false
 
-      if (shouldApply && validCategory) {
+      if (validCategory) {
         freshTicket.set('category', validCategory.id)
         changed = true
       }
-      if (shouldApply && validSubcategory) {
+      if (validSubcategory) {
         freshTicket.set('subcategory', validSubcategory.id)
         changed = true
 
@@ -660,7 +737,7 @@ onRecordAfterCreateSuccess((e) => {
         changed = true
       }
 
-      if (shouldApply && (validCategory || validSubcategory)) {
+      if (validCategory || validSubcategory) {
         var slaResult = applyCatalogSla(
           e.app,
           validCategory ? validCategory.id : '',

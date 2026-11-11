@@ -425,28 +425,105 @@ routerAdd(
     }
 
     // 10. Validar e resolver categorias e subcategorias encontradas
+    // Suporte tanto por ID exato quanto por correspondência de nome
     let validCategory = null
     let validSubcategory = null
 
-    if (chosenCategoryId && categoryById[chosenCategoryId]) {
-      const candidate = categoryById[chosenCategoryId]
-      if (candidate.getString('parent')) {
-        validSubcategory = candidate
-        const parentId = candidate.getString('parent')
-        if (categoryById[parentId]) {
-          validCategory = categoryById[parentId]
+    const findCategoryByIdOrName = function (idOrName) {
+      if (!idOrName) return null
+      const term = String(idOrName).trim().toLowerCase()
+      if (categoryById[idOrName]) return categoryById[idOrName]
+      for (let i = 0; i < allCategories.length; i++) {
+        const c = allCategories[i]
+        if (c.id === idOrName) return c
+        const cName = (c.getString('name') || '').trim().toLowerCase()
+        if (cName === term) return c
+      }
+      // busca parcial
+      for (let i = 0; i < allCategories.length; i++) {
+        const c = allCategories[i]
+        const cName = (c.getString('name') || '').trim().toLowerCase()
+        if (term.length >= 3 && (cName.indexOf(term) !== -1 || term.indexOf(cName) !== -1)) {
+          return c
         }
-      } else {
-        validCategory = candidate
+      }
+      return null
+    }
+
+    if (chosenCategoryId) {
+      const candidate = findCategoryByIdOrName(chosenCategoryId)
+      if (candidate) {
+        if (candidate.getString('parent')) {
+          validSubcategory = candidate
+          const parentId = candidate.getString('parent')
+          if (categoryById[parentId]) {
+            validCategory = categoryById[parentId]
+          }
+        } else {
+          validCategory = candidate
+        }
       }
     }
 
-    if (chosenSubcategoryId && categoryById[chosenSubcategoryId]) {
-      const candidateSub = categoryById[chosenSubcategoryId]
-      validSubcategory = candidateSub
-      const pId = candidateSub.getString('parent')
-      if (pId && !validCategory && categoryById[pId]) {
-        validCategory = categoryById[pId]
+    if (chosenSubcategoryId) {
+      const candidateSub = findCategoryByIdOrName(chosenSubcategoryId)
+      if (candidateSub) {
+        validSubcategory = candidateSub
+        const pId = candidateSub.getString('parent')
+        if (pId && !validCategory && categoryById[pId]) {
+          validCategory = categoryById[pId]
+        }
+      }
+    }
+
+    // Se mesmo após IA + heurística ainda não tiver categoria, seleciona a melhor correspondência no catálogo
+    if (!validCategory && allCategories.length > 0) {
+      const fallbackMatch = heuristicMatch(title + ' ' + description, allCategories)
+      if (fallbackMatch && fallbackMatch.categoryId && categoryById[fallbackMatch.categoryId]) {
+        validCategory = categoryById[fallbackMatch.categoryId]
+        if (fallbackMatch.subcategoryId && categoryById[fallbackMatch.subcategoryId]) {
+          validSubcategory = categoryById[fallbackMatch.subcategoryId]
+        }
+        chosenConfidence = Math.max(chosenConfidence, fallbackMatch.confidence || 0.4)
+        chosenReason =
+          chosenReason || fallbackMatch.reason || 'Classificado por aproximação no catálogo.'
+        matchMethod = 'heuristic_fallback'
+      } else {
+        // Fallback garantido: primeira categoria ativa
+        const rootCats = allCategories.filter((c) => !c.getString('parent'))
+        if (rootCats.length > 0) {
+          validCategory = rootCats[0]
+          chosenConfidence = Math.max(chosenConfidence, 0.3)
+          chosenReason = chosenReason || 'Classificado na atividade padrão do catálogo.'
+          matchMethod = 'catalog_default'
+        }
+      }
+    }
+
+    // Se temos subcategoria mas sem categoria principal resolvida, herda do parent da subcategoria
+    if (validSubcategory && !validCategory && validSubcategory.getString('parent')) {
+      const pId = validSubcategory.getString('parent')
+      if (categoryById[pId]) validCategory = categoryById[pId]
+    }
+
+    // Se temos categoria principal mas sem subcategoria, e ela possui subatividades, tenta achar a melhor subatividade
+    if (validCategory && !validSubcategory) {
+      const subList = subcategoryMap[validCategory.id] || []
+      if (subList.length > 0) {
+        const textToMatch = (title + ' ' + description).toLowerCase()
+        let bestSub = null
+        for (let sI = 0; sI < subList.length; sI++) {
+          const sName = (subList[sI].getString('name') || '').toLowerCase()
+          if (sName && textToMatch.indexOf(sName) !== -1) {
+            bestSub = subList[sI]
+            break
+          }
+        }
+        if (bestSub) {
+          validSubcategory = bestSub
+        } else {
+          validSubcategory = subList[0] // atribui primeira subatividade para não ficar vazio
+        }
       }
     }
 
@@ -457,29 +534,17 @@ routerAdd(
     } else if (validCategory && validCategory.getString('queue')) {
       targetQueueId = validCategory.getString('queue')
     }
-
-    // 12. Avaliar se aplica ou cai em fallback
-    let shouldApply = false
-    let finalReason = chosenReason || ''
-
-    if (validCategory && chosenConfidence >= minConfidence) {
-      shouldApply = true
-      if (!targetQueueId) {
-        targetQueueId = defaultQueueId
-      }
-    } else {
+    if (!targetQueueId) {
       targetQueueId = defaultQueueId
-      if (!validCategory) {
-        finalReason = chosenReason || 'Atividade não identificada com precisão no catálogo.'
-      } else {
-        finalReason =
-          'Confiança (' +
-          chosenConfidence.toFixed(2) +
-          ') abaixo do mínimo exigido (' +
-          minConfidence +
-          '). ' +
-          (chosenReason ? 'Motivo IA: ' + chosenReason : '')
-      }
+    }
+
+    // 12. Regra de autonomia total da IA:
+    // Sempre aplicar quando houver qualquer atividade identificada (NUNCA deixar vazio)
+    const shouldApply = Boolean(validCategory)
+    let finalReason = chosenReason || 'Classificado automaticamente pela IA no catálogo.'
+    if (chosenConfidence < minConfidence) {
+      finalReason +=
+        ' (Classificado com baixa confiança: ' + Math.round(chosenConfidence * 100) + '%)'
     }
 
     const finalCategoryName = validCategory ? validCategory.getString('name') : ''
@@ -538,11 +603,11 @@ routerAdd(
 
     try {
       let changed = false
-      if (shouldApply && validCategory) {
+      if (validCategory) {
         ticket.set('category', validCategory.id)
         changed = true
       }
-      if (shouldApply && validSubcategory) {
+      if (validSubcategory) {
         ticket.set('subcategory', validSubcategory.id)
         changed = true
       }
@@ -551,7 +616,7 @@ routerAdd(
         changed = true
       }
 
-      if (shouldApply && (validCategory || validSubcategory)) {
+      if (validCategory || validSubcategory) {
         const sla = applyCatalogSla(
           $app,
           ticket,
@@ -574,6 +639,23 @@ routerAdd(
         )
         changed = true
       }
+
+      // Preencher SEMPRE triage_suggestions para o card Triagem por IA funcionar
+      const triageSuggestionObj = {
+        type: ticket.getString('type') || 'Incidente',
+        category: validCategory ? validCategory.id : '',
+        category_name: finalCategoryName,
+        subcategory: validSubcategory ? validSubcategory.id : '',
+        subcategory_name: finalSubcategoryName,
+        queue: targetQueueId,
+        queue_name: finalQueueName,
+        confidence: chosenConfidence,
+        reason: finalReason,
+        source: matchMethod,
+        applied: shouldApply,
+      }
+      ticket.set('triage_suggestions', triageSuggestionObj)
+      changed = true
 
       if (changed) {
         $app.save(ticket)
