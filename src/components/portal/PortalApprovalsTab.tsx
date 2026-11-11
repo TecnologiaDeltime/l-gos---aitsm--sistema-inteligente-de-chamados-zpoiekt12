@@ -64,6 +64,18 @@ export default function PortalApprovalsTab({
 
   const handleConfirmDecision = async (e: React.FormEvent) => {
     e.preventDefault()
+    // Motivo obrigatório tanto na aprovação quanto na reprovação.
+    if (!decisionComment.trim()) {
+      toast({
+        title: 'Motivo obrigatório',
+        description:
+          decisionType === 'approved'
+            ? 'Informe o motivo/parecer para autorizar a aprovação do chamado.'
+            : 'Informe o motivo da reprovação do chamado.',
+        variant: 'destructive',
+      })
+      return
+    }
     if (!selectedApproval || !selectedApproval.token) {
       toast({
         title: 'Token de aprovação inválido',
@@ -89,7 +101,7 @@ export default function PortalApprovalsTab({
         description:
           decisionType === 'approved'
             ? 'O chamado foi liberado para atendimento pela equipe de suporte.'
-            : 'O chamado foi cancelado e os participantes notificados.',
+            : 'O chamado foi encerrado com a reprovação registrada no histórico.',
       })
 
       setDecisionModalOpen(false)
@@ -396,23 +408,22 @@ export default function PortalApprovalsTab({
               <p>
                 {decisionType === 'approved'
                   ? 'Ao aprovar, sua instância será marcada como Aprovada. Se houver fluxo duplo com equipe interna, o chamado aguardará a aprovação de ambas as partes antes de ser liberado como "Novo".'
-                  : 'Ao reprovar, o chamado será cancelado definitivamente e o motivo da recusa será gravado no histórico.'}
+                  : 'Ao reprovar, o chamado será encerrado definitivamente e o motivo da recusa será gravado no histórico.'}
               </p>
             </div>
 
             <div className="space-y-1.5">
               <label className="text-xs font-semibold text-foreground">
-                Parecer / Observações do Ponto Focal{' '}
-                {decisionType === 'rejected' && <span className="text-rose-500">*</span>}
+                Parecer / Observações do Ponto Focal <span className="text-rose-500">*</span>
               </label>
               <Textarea
                 rows={3}
-                required={decisionType === 'rejected'}
+                required
                 value={decisionComment}
                 onChange={(e) => setDecisionComment(e.target.value)}
                 placeholder={
                   decisionType === 'approved'
-                    ? 'Opcional: Deixe uma observação para a equipe de atendimento...'
+                    ? 'Obrigatório: registre o motivo/parecer da aprovação...'
                     : 'Obrigatório: Justifique o motivo da reprovação...'
                 }
                 className="text-xs resize-none"

@@ -76,6 +76,7 @@ routerAdd('POST', '/backend/v1/approvals/{token}/decide', (e) => {
       // Se todas as aprovações pendentes foram atendidas, libera o chamado para "Novo" (entra na fila de atendimento)
       if (remainingPending.length === 0) {
         ticket.set('status', 'Novo')
+        ticket.set('approval_hold', false)
         $app.save(ticket)
 
         // Histórico de liberação completa
@@ -134,10 +135,11 @@ routerAdd('POST', '/backend/v1/approvals/{token}/decide', (e) => {
         }
       } catch (_) {}
 
-      ticket.set('status', 'Cancelado')
+      ticket.set('status', 'Encerrado')
+      ticket.set('approval_hold', false)
       $app.save(ticket)
 
-      // Registra no histórico do ticket com motivo detalhado
+      // Registra no histórico do ticket com motivo detalhado (reprovação encerra o chamado)
       var historyColRej = $app.findCollectionByNameOrId('ticket_history')
       var histRej = new Record(historyColRej)
       histRej.set('ticket', ticketId)
@@ -148,11 +150,11 @@ routerAdd('POST', '/backend/v1/approvals/{token}/decide', (e) => {
           roleLabel +
           ' | Motivo: ' +
           (rejectionReason || comment || 'Não especificado') +
-          '. Chamado cancelado.',
+          '. Chamado encerrado.',
       )
       histRej.set('field', 'status')
       histRej.set('old_value', oldTicketStatus)
-      histRej.set('new_value', 'Cancelado')
+      histRej.set('new_value', 'Encerrado')
       $app.save(histRej)
     }
 
@@ -349,11 +351,12 @@ routerAdd('GET', '/backend/v1/approvals/act', (e) => {
         if (remain.length === 0) {
           newTicketStatus = 'Novo'
           ticket.set('status', 'Novo')
+          ticket.set('approval_hold', false)
           $app.save(ticket)
         }
       } else {
-        // Reprovado -> cancela o chamado e outras aprovações
-        newTicketStatus = 'Cancelado'
+        // Reprovado -> encerra o chamado e rejeita as outras aprovações pendentes
+        newTicketStatus = 'Encerrado'
         try {
           var othersRej = $app.findRecordsByFilter(
             'approvals',
@@ -370,7 +373,8 @@ routerAdd('GET', '/backend/v1/approvals/act', (e) => {
           }
         } catch (_) {}
 
-        ticket.set('status', 'Cancelado')
+        ticket.set('status', 'Encerrado')
+        ticket.set('approval_hold', false)
         $app.save(ticket)
       }
     }
@@ -387,7 +391,10 @@ routerAdd('GET', '/backend/v1/approvals/act', (e) => {
           ? 'Aprovação autorizada via e-mail por ' +
               roleText +
               (newTicketStatus === 'Novo' ? ' — Liberado para fila de atendimento' : '')
-          : 'Aprovação recusada via e-mail por ' + roleText + ' — Chamado cancelado.',
+          : 'Aprovação recusada via e-mail por ' +
+              roleText +
+              (queryReason ? ' | Motivo: ' + queryReason : '') +
+              ' — Chamado encerrado.',
       )
       hist.set('field', 'status')
       hist.set('old_value', oldTicketStatus)
@@ -417,7 +424,7 @@ routerAdd('GET', '/backend/v1/approvals/act', (e) => {
       ? newTicketStatus === 'Novo'
         ? 'Todas as aprovações foram concedidas! O chamado foi liberado para atendimento com status "Novo".'
         : 'Sua aprovação foi registrada com sucesso! O chamado continuará aguardando a outra etapa de aprovação para ser liberado.'
-      : 'Você reprovou a solicitação. O chamado foi cancelado com o status "' +
+      : 'Você reprovou a solicitação. O chamado foi encerrado com o status "' +
         newTicketStatus +
         '" e o solicitante foi notificado.'
 

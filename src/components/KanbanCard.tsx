@@ -56,8 +56,17 @@ export function KanbanCard({
             </Badge>
           )}
         </div>
+
         <PriorityBadge priority={ticket.priority} />
       </div>
+      {ticket.approval_hold && (
+        <Badge
+          variant="outline"
+          className="bg-orange-100 text-orange-800 border-orange-300 dark:bg-orange-950/60 dark:text-orange-300 dark:border-orange-800 text-[9px] px-1.5 py-0 h-4 font-semibold whitespace-nowrap mb-1"
+        >
+          ⏳ Aguardando Aprovação
+        </Badge>
+      )}
       <p className="text-sm font-medium text-slate-800 line-clamp-2 mb-2 dark:text-slate-200">
         {ticket.title}
       </p>

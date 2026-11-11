@@ -665,12 +665,21 @@ export default function TicketList() {
                             >
                               {t.number}
                             </span>
+
                             {t.is_internal && (
                               <Badge
                                 variant="outline"
                                 className="bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-950/60 dark:text-amber-300 dark:border-amber-800 text-[10px] px-1.5 py-0 h-4 font-semibold"
                               >
                                 Interno
+                              </Badge>
+                            )}
+                            {t.approval_hold && (
+                              <Badge
+                                variant="outline"
+                                className="bg-orange-100 text-orange-800 border-orange-300 dark:bg-orange-950/60 dark:text-orange-300 dark:border-orange-800 text-[10px] px-1.5 py-0 h-4 font-semibold whitespace-nowrap"
+                              >
+                                ⏳ Aguardando Aprovação
                               </Badge>
                             )}
                             {t.parent_ticket_id && (
@@ -721,10 +730,16 @@ export default function TicketList() {
                                 : 'Interno'
                               : t.expand?.company?.trade_name || 'Geral'}
                           </span>
+
                           <span className="text-muted-foreground/70">
                             {formatTicketAge(t.created, now)}
                           </span>
                         </div>
+                        {t.approval_hold && (
+                          <span className="inline-flex items-center gap-1 self-start rounded-full border border-orange-300 bg-orange-50 px-1.5 py-0 text-[9px] font-bold uppercase text-orange-700 dark:bg-orange-950/40 dark:border-orange-800 dark:text-orange-300">
+                            ⏳ Aguardando Aprovação
+                          </span>
+                        )}
                       </div>
                     )
                   })

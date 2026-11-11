@@ -50,6 +50,8 @@ export interface TicketRecord {
   email_html?: string
   is_internal?: boolean
   internal_sector?: string
+  /** Fluxo de aprovação: chamado travado aguardando decisão do aprovador. */
+  approval_hold?: boolean
   created: string
   updated: string
   /** Pesquisa de satisfação do cliente (nota 1 a 5, comentário e data de resposta). */

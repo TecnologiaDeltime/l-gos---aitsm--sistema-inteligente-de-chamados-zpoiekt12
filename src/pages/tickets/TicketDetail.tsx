@@ -552,8 +552,18 @@ export default function TicketDetail({
   }
 
   // Ações de Play e Pausar SLA (Pause) no canto direito minimalista acima de Solicitante
+
   const handlePlayOperatorCycle = async () => {
     if (!id) return
+    if (ticket?.approval_hold || ticket?.status === 'Aguardando Aprovação') {
+      toast({
+        title: 'Ação bloqueada',
+        description:
+          'Aguardando aprovação do cliente — o atendimento só pode iniciar após a aprovação.',
+        variant: 'destructive',
+      })
+      return
+    }
     setCycleActionLoading(true)
     try {
       const res = await startOperatorWorkCycle(id)
@@ -584,6 +594,15 @@ export default function TicketDetail({
 
   const handleStopOperatorCycle = async () => {
     if (!id) return
+    if (ticket?.approval_hold || ticket?.status === 'Aguardando Aprovação') {
+      toast({
+        title: 'Ação bloqueada',
+        description:
+          'Aguardando aprovação do cliente — o ciclo de trabalho não pode ser manipulado.',
+        variant: 'destructive',
+      })
+      return
+    }
     setCycleActionLoading(true)
     try {
       await stopOperatorWorkCycle(id)
@@ -833,6 +852,14 @@ export default function TicketDetail({
                 )}
                 <PriorityBadge priority={ticket.priority} />
                 <StatusBadge status={ticket.status} />
+                {ticket.approval_hold && (
+                  <Badge
+                    variant="outline"
+                    className="bg-orange-100 text-orange-800 border-orange-300 dark:bg-orange-950/60 dark:text-orange-300 dark:border-orange-800 text-xs px-2.5 py-0.5 font-semibold whitespace-nowrap"
+                  >
+                    ⏳ Aguardando Aprovação
+                  </Badge>
+                )}
               </div>
             </div>
 
@@ -929,6 +956,12 @@ export default function TicketDetail({
                   size="sm"
                   className="bg-emerald-600 hover:bg-emerald-700"
                   onClick={handleResolveClick}
+                  disabled={!!ticket.approval_hold || ticket.status === 'Aguardando Aprovação'}
+                  title={
+                    ticket.approval_hold || ticket.status === 'Aguardando Aprovação'
+                      ? 'Aguardando aprovação do cliente'
+                      : undefined
+                  }
                 >
                   <CheckCircle2 className="mr-1.5 h-4 w-4" /> Resolver
                 </Button>
@@ -1594,18 +1627,25 @@ export default function TicketDetail({
               {/* Botões Play (Verde) e Pause (Amarelo) minimalistas no canto direito */}
               <div className="flex items-center gap-1 shrink-0">
                 {/* Botão Play (Verde) - Iniciar atendimento / ciclo de trabalho */}
+
                 <button
                   type="button"
                   onClick={handlePlayOperatorCycle}
                   disabled={
                     cycleActionLoading ||
                     isCycleActive ||
+                    !!ticket.approval_hold ||
+                    ticket.status === 'Aguardando Aprovação' ||
                     ticket.status === 'Resolvido' ||
                     ticket.status === 'Encerrado' ||
                     ticket.status === 'Cancelado'
                   }
                   title={
-                    isCycleActive ? 'Ciclo de atendimento em andamento' : 'Play atendimento (▶)'
+                    ticket.approval_hold || ticket.status === 'Aguardando Aprovação'
+                      ? 'Aguardando aprovação do cliente'
+                      : isCycleActive
+                        ? 'Ciclo de atendimento em andamento'
+                        : 'Play atendimento (▶)'
                   }
                   className={`h-7 px-2.5 rounded-md inline-flex items-center gap-1 text-xs font-semibold transition-all shadow-xs ${
                     isCycleActive
@@ -1633,11 +1673,19 @@ export default function TicketDetail({
                   }}
                   disabled={
                     cycleActionLoading ||
+                    !!ticket.approval_hold ||
+                    ticket.status === 'Aguardando Aprovação' ||
                     ticket.status === 'Resolvido' ||
                     ticket.status === 'Encerrado' ||
                     ticket.status === 'Cancelado'
                   }
-                  title={ticket.sla_paused ? 'SLA Pausado — clique para retomar' : 'Pausar SLA (⏸)'}
+                  title={
+                    ticket.approval_hold || ticket.status === 'Aguardando Aprovação'
+                      ? 'Aguardando aprovação do cliente'
+                      : ticket.sla_paused
+                        ? 'SLA Pausado — clique para retomar'
+                        : 'Pausar SLA (⏸)'
+                  }
                   className={`h-7 px-2.5 rounded-md inline-flex items-center gap-1 text-xs font-semibold transition-all shadow-xs ${
                     ticket.sla_paused
                       ? 'bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/40'
