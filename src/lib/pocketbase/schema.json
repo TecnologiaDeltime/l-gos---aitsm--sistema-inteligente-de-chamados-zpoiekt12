@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-11T05:17:58.941Z",
+  "generatedAt": "2026-11-11T05:47:53.744Z",
   "collections": [
     {
       "name": "users",
@@ -6469,11 +6469,40 @@
           "type": "bool",
           "required": false,
           "system": false
+        },
+        {
+          "name": "company",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "companies"
+        },
+        {
+          "name": "approver_type",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["focal_point", "internal_user"]
+        },
+        {
+          "name": "approver_focal_point",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "client_contacts"
+        },
+        {
+          "name": "approver_user",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "users"
         }
       ],
       "indexes": [
         "CREATE INDEX idx_approval_configs_activity ON approval_configs (activity)",
-        "CREATE INDEX idx_approval_configs_clients ON approval_configs (clients)"
+        "CREATE INDEX idx_approval_configs_clients ON approval_configs (clients)",
+        "CREATE INDEX `idx_approval_configs_company` ON `approval_configs` (company)"
       ]
     },
     {

@@ -132,9 +132,9 @@ const BASE_SYSTEM_MODULES: GranularModuleDefinition[] = [
       },
       {
         key: 'tickets_approval_flow',
-        label: 'Fluxo de Aprovação de Chamados',
+        label: 'Regras de Aprovação por Atividade',
         description:
-          'Configuração de regras de aprovação por tipo de chamado, prioridade alta e aprovadores duplos (cliente e interno)',
+          'Configuração de regras de aprovação por empresa e atividade do catálogo, com aprovador ponto focal do cliente ou interno TI',
         path: '/tickets/approvals',
       },
       {

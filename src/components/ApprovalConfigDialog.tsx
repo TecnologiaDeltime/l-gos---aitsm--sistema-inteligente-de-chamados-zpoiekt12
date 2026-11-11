@@ -8,11 +8,11 @@ import {
   DialogDescription,
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Switch } from '@/components/ui/switch'
 import { Badge } from '@/components/ui/badge'
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import {
   Select,
   SelectContent,
@@ -23,6 +23,7 @@ import {
 import {
   ApprovalConfigRecord,
   ApprovalMode,
+  ApproverType,
   createApprovalConfig,
   updateApprovalConfig,
 } from '@/services/approval-configs'
@@ -31,22 +32,14 @@ import { getCompanies, CompanyRecord } from '@/services/companies'
 import { getAllClientContacts, ClientContactRecord } from '@/services/client-contacts'
 import { getOperators } from '@/services/operators'
 import { useToast } from '@/hooks/use-toast'
-import {
-  Plus,
-  Trash2,
-  ArrowDown,
-  Users,
-  ShieldCheck,
-  Clock,
-  Building2,
-  ListTree,
-} from 'lucide-react'
+import { ShieldCheck, Building2, ListTree, UserCheck, Clock, AlertTriangle } from 'lucide-react'
 
 interface ApprovalConfigDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   onSaved: () => void
   editingConfig?: ApprovalConfigRecord | null
+  defaultCompanyId?: string
 }
 
 export function ApprovalConfigDialog({
@@ -54,6 +47,7 @@ export function ApprovalConfigDialog({
   onOpenChange,
   onSaved,
   editingConfig,
+  defaultCompanyId,
 }: ApprovalConfigDialogProps) {
   const { toast } = useToast()
   const [categories, setCategories] = useState<CategoryRecord[]>([])
@@ -61,21 +55,25 @@ export function ApprovalConfigDialog({
   const [contacts, setContacts] = useState<ClientContactRecord[]>([])
   const [internalOperators, setInternalOperators] = useState<any[]>([])
 
+  // 1. Empresa selecionada no topo
+  const [selectedCompanyId, setSelectedCompanyId] = useState<string>('')
+
+  // 2. Atividade do catálogo
   const [activityId, setActivityId] = useState<string>('')
-  const [selectedClients, setSelectedClients] = useState<string[]>([])
+
+  // 3. Tipo de aprovador: 'focal_point' ou 'internal_user'
+  const [approverType, setApproverType] = useState<ApproverType>('focal_point')
+  const [approverFocalPointId, setApproverFocalPointId] = useState<string>('')
+  const [approverUserId, setApproverUserId] = useState<string>('')
+
+  // Configurações complementares
   const [mode, setMode] = useState<ApprovalMode>('Individual')
   const [escalationTimeoutMinutes, setEscalationTimeoutMinutes] = useState<number>(60)
-  const [focalPoints, setFocalPoints] = useState<string[]>([])
-  const [internalApprovers, setInternalApprovers] = useState<string[]>([])
-  const [requestTypes, setRequestTypes] = useState<string[]>([])
-  const [requireHighPriority, setRequireHighPriority] = useState<boolean>(true)
-  const [requireClientApproval, setRequireClientApproval] = useState<boolean>(true)
-  const [requireInternalApproval, setRequireInternalApproval] = useState<boolean>(false)
   const [description, setDescription] = useState<string>('')
   const [active, setActive] = useState<boolean>(true)
   const [saving, setSaving] = useState<boolean>(false)
 
-  // Carrega opções do formulário
+  // Carrega opções de empresas, atividades, contatos e operadores
   useEffect(() => {
     if (!open) return
     Promise.all([
@@ -88,7 +86,6 @@ export function ApprovalConfigDialog({
         setCategories(cats || [])
         setCompanies(comps || [])
         setContacts(conts || [])
-        // Filtra operadores com perfis Gestão, Administrador ou Helpdesk (tecnico/operador)
         const eligible = (ops || []).filter((u: any) =>
           ['admin', 'gestor', 'tecnico', 'operador'].includes(u.role),
         )
@@ -97,111 +94,132 @@ export function ApprovalConfigDialog({
       .catch(() => {})
   }, [open])
 
-  // Preenche dados ao editar
+  // Preenche dados ao abrir/editar
   useEffect(() => {
+    if (!open) return
+
     if (editingConfig) {
+      const compId =
+        editingConfig.company ||
+        (Array.isArray(editingConfig.clients) && editingConfig.clients.length > 0
+          ? editingConfig.clients[0]
+          : '') ||
+        defaultCompanyId ||
+        ''
+      setSelectedCompanyId(compId)
       setActivityId(editingConfig.activity || '')
-      setSelectedClients(editingConfig.clients || [])
+
+      const initialType: ApproverType =
+        editingConfig.approver_type ||
+        (editingConfig.approver_focal_point ||
+        (Array.isArray(editingConfig.focal_points) && editingConfig.focal_points.length > 0)
+          ? 'focal_point'
+          : 'internal_user')
+      setApproverType(initialType)
+
+      setApproverFocalPointId(
+        editingConfig.approver_focal_point ||
+          (Array.isArray(editingConfig.focal_points) && editingConfig.focal_points.length > 0
+            ? editingConfig.focal_points[0]
+            : ''),
+      )
+
+      setApproverUserId(
+        editingConfig.approver_user ||
+          (Array.isArray(editingConfig.internal_approvers) &&
+          editingConfig.internal_approvers.length > 0
+            ? editingConfig.internal_approvers[0]
+            : ''),
+      )
+
       setMode(editingConfig.mode || 'Individual')
       setEscalationTimeoutMinutes(editingConfig.escalation_timeout_minutes || 60)
-      setFocalPoints(editingConfig.focal_points || [])
-      setInternalApprovers(editingConfig.internal_approvers || [])
-      setRequestTypes(Array.isArray(editingConfig.request_types) ? editingConfig.request_types : [])
-      setRequireHighPriority(editingConfig.require_high_priority !== false)
-      setRequireClientApproval(editingConfig.require_client_approval !== false)
-      setRequireInternalApproval(editingConfig.require_internal_approval === true)
       setDescription(editingConfig.description || '')
       setActive(editingConfig.active !== false)
     } else {
+      setSelectedCompanyId(defaultCompanyId || '')
       setActivityId('')
-      setSelectedClients([])
+      setApproverType('focal_point')
+      setApproverFocalPointId('')
+      setApproverUserId('')
       setMode('Individual')
       setEscalationTimeoutMinutes(60)
-      setFocalPoints([])
-      setInternalApprovers([])
-      setRequestTypes(['Incidente', 'Requisição de Serviço'])
-      setRequireHighPriority(true)
-      setRequireClientApproval(true)
-      setRequireInternalApproval(false)
       setDescription('')
       setActive(true)
     }
-  }, [editingConfig, open])
+  }, [editingConfig, open, defaultCompanyId])
 
-  // Lista de atividades (subcategorias e categorias)
+  // Árvore de atividades do catálogo
   const activityOptions = useMemo(() => {
     const parentMap: Record<string, string> = {}
     categories.forEach((c) => {
       parentMap[c.id] = c.name
     })
 
-    return categories.map((c) => ({
-      id: c.id,
-      name: c.parent ? `${parentMap[c.parent] || 'Categoria'} → ${c.name}` : c.name,
-      isSub: !!c.parent,
-    }))
+    return categories
+      .map((c) => ({
+        id: c.id,
+        name: c.parent ? `${parentMap[c.parent] || 'Atividade Principal'} → ${c.name}` : c.name,
+        isSub: !!c.parent,
+      }))
+      .sort((a, b) => a.name.localeCompare(b.name))
   }, [categories])
 
-  // Contatos de pontos focais filtrados pelas empresas selecionadas (se houver seleção de empresas)
-  const eligibleFocalPoints = useMemo(() => {
-    return contacts.filter((c) => {
-      if (selectedClients.length > 0 && !selectedClients.includes(c.client)) {
-        return false
+  // Pontos focais filtrados EXCLUSIVAMENTE pela empresa selecionada no topo
+  const companyFocalPoints = useMemo(() => {
+    if (!selectedCompanyId) return []
+    return contacts.filter((c) => c.client === selectedCompanyId)
+  }, [contacts, selectedCompanyId])
+
+  // Nome da empresa selecionada para exibição contextual
+  const selectedCompanyName = useMemo(() => {
+    const comp = companies.find((c) => c.id === selectedCompanyId)
+    return comp ? comp.trade_name || comp.legal_name || comp.code || 'Empresa' : ''
+  }, [companies, selectedCompanyId])
+
+  // Se trocar a empresa e o ponto focal selecionado não pertencer a ela, reseta o ponto focal
+  useEffect(() => {
+    if (selectedCompanyId && approverFocalPointId) {
+      const exists = companyFocalPoints.some((c) => c.id === approverFocalPointId)
+      if (!exists) {
+        setApproverFocalPointId('')
       }
-      return true
-    })
-  }, [contacts, selectedClients])
-
-  const handleAddFocalPoint = (contactId: string) => {
-    if (!contactId || focalPoints.includes(contactId)) return
-    setFocalPoints([...focalPoints, contactId])
-  }
-
-  const handleRemoveFocalPoint = (contactId: string) => {
-    setFocalPoints(focalPoints.filter((id) => id !== contactId))
-  }
-
-  const handleAddInternalApprover = (userId: string) => {
-    if (!userId || internalApprovers.includes(userId)) return
-    setInternalApprovers([...internalApprovers, userId])
-  }
-
-  const handleRemoveInternalApprover = (userId: string) => {
-    setInternalApprovers(internalApprovers.filter((id) => id !== userId))
-  }
-
-  const handleToggleClient = (companyId: string) => {
-    if (selectedClients.includes(companyId)) {
-      setSelectedClients(selectedClients.filter((id) => id !== companyId))
-    } else {
-      setSelectedClients([...selectedClients, companyId])
     }
-  }
-
-  const availableRequestTypes = ['Incidente', 'Requisição de Serviço', 'Dúvida', 'Visita Técnica']
-
-  const handleToggleRequestType = (type: string) => {
-    if (requestTypes.includes(type)) {
-      setRequestTypes(requestTypes.filter((t) => t !== type))
-    } else {
-      setRequestTypes([...requestTypes, type])
-    }
-  }
+  }, [selectedCompanyId, companyFocalPoints, approverFocalPointId])
 
   const handleSave = async () => {
-    if (!activityId) {
+    if (!selectedCompanyId) {
       toast({
-        title: 'Selecione a atividade',
-        description: 'A regra de aprovação deve ser vinculada a uma atividade.',
+        title: 'Selecione a empresa',
+        description: 'Primeiramente selecione a empresa a qual a regra de aprovação se aplica.',
         variant: 'destructive',
       })
       return
     }
 
-    if (focalPoints.length === 0 && internalApprovers.length === 0) {
+    if (!activityId) {
       toast({
-        title: 'Adicione pelo menos um aprovador',
-        description: 'Defina ao menos um ponto focal do cliente ou aprovador interno.',
+        title: 'Selecione a atividade',
+        description: 'Escolha a atividade do catálogo sujeita a aprovação.',
+        variant: 'destructive',
+      })
+      return
+    }
+
+    if (approverType === 'focal_point' && !approverFocalPointId) {
+      toast({
+        title: 'Selecione o ponto focal',
+        description:
+          'Selecione qual ponto focal cadastrado no cliente será responsável por aprovar a atividade.',
+        variant: 'destructive',
+      })
+      return
+    }
+
+    if (approverType === 'internal_user' && !approverUserId) {
+      toast({
+        title: 'Selecione o aprovador interno',
+        description: 'Selecione um usuário interno responsável por aprovar esta atividade.',
         variant: 'destructive',
       })
       return
@@ -209,27 +227,34 @@ export function ApprovalConfigDialog({
 
     setSaving(true)
     try {
+      const focalPointsArray =
+        approverType === 'focal_point' && approverFocalPointId ? [approverFocalPointId] : []
+      const internalApproversArray =
+        approverType === 'internal_user' && approverUserId ? [approverUserId] : []
+
       const payload: Partial<ApprovalConfigRecord> = {
+        company: selectedCompanyId,
+        clients: [selectedCompanyId],
         activity: activityId,
-        clients: selectedClients,
+        approver_type: approverType,
+        approver_focal_point: approverType === 'focal_point' ? approverFocalPointId : null,
+        approver_user: approverType === 'internal_user' ? approverUserId : null,
+        focal_points: focalPointsArray,
+        internal_approvers: internalApproversArray,
+        require_client_approval: approverType === 'focal_point',
+        require_internal_approval: approverType === 'internal_user',
         mode,
         escalation_timeout_minutes: Number(escalationTimeoutMinutes) || 60,
-        focal_points: focalPoints,
-        internal_approvers: internalApprovers,
-        request_types: requestTypes,
-        require_high_priority: requireHighPriority,
-        require_client_approval: requireClientApproval,
-        require_internal_approval: requireInternalApproval,
         description,
         active,
       }
 
       if (editingConfig) {
         await updateApprovalConfig(editingConfig.id, payload)
-        toast({ title: 'Regra de aprovação atualizada com sucesso!' })
+        toast({ title: 'Regra de aprovação da atividade atualizada com sucesso!' })
       } else {
         await createApprovalConfig(payload)
-        toast({ title: 'Regra de aprovação criada com sucesso!' })
+        toast({ title: 'Regra de aprovação cadastrada com sucesso!' })
       }
 
       onSaved()
@@ -247,28 +272,57 @@ export function ApprovalConfigDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-2xl max-h-[92vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <ShieldCheck className="h-5 w-5 text-primary" />
-            {editingConfig ? 'Editar Regra de Aprovação' : 'Nova Regra de Aprovação'}
+          <DialogTitle className="flex items-center gap-2 text-base sm:text-lg">
+            <ShieldCheck className="h-5 w-5 text-amber-600" />
+            {editingConfig ? 'Editar Aprovador da Atividade' : 'Definir Aprovador por Atividade'}
           </DialogTitle>
-          <DialogDescription>
-            Configure para cada atividade o aprovador responsável, o modo de decisão e aprovadores
-            internos de contingência.
+          <DialogDescription className="text-xs">
+            Selecione a empresa no topo, a atividade do catálogo e quem será o aprovador responsável
+            (ponto focal cadastrado no cliente ou aprovador interno de contingência).
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-5 py-2">
-          {/* Atividade da Regra */}
+          {/* 1. SELEÇÃO DA EMPRESA NO TOPO (Item 1 do pedido) */}
+          <div className="p-3.5 rounded-lg border border-amber-200/80 bg-amber-50/50 dark:bg-amber-950/20 space-y-2">
+            <Label className="text-xs font-bold text-amber-950 dark:text-amber-200 flex items-center gap-1.5">
+              <Building2 className="h-4 w-4 text-amber-700 dark:text-amber-400" />
+              1. Selecionar Empresa / Cliente *
+            </Label>
+            <p className="text-[11px] text-amber-900/80 dark:text-amber-300/80 leading-relaxed">
+              Primeiramente selecione a empresa. Todo o restante desta regra e os pontos focais
+              disponíveis serão relativos a ela.
+            </p>
+            <Select value={selectedCompanyId} onValueChange={setSelectedCompanyId}>
+              <SelectTrigger className="bg-white dark:bg-slate-900 font-medium">
+                <SelectValue placeholder="Selecione a empresa cliente..." />
+              </SelectTrigger>
+              <SelectContent className="max-h-64">
+                {companies.map((comp) => (
+                  <SelectItem key={comp.id} value={comp.id}>
+                    {comp.trade_name || comp.legal_name || comp.code}
+                    {comp.document ? ` (${comp.document})` : ''}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* 2. ATIVIDADE DO CATÁLOGO (Item 2 do pedido) */}
           <div className="space-y-1.5">
             <Label className="text-xs font-semibold flex items-center gap-1.5">
               <ListTree className="h-4 w-4 text-slate-500" />
-              Atividade Apontada no Chamado *
+              2. Atividade do Catálogo de Serviços *
             </Label>
+            <p className="text-[11px] text-slate-500">
+              A unidade de aprovação é a atividade selecionada na abertura do chamado (subcategoria
+              ou atividade principal).
+            </p>
             <Select value={activityId} onValueChange={setActivityId}>
-              <SelectTrigger>
-                <SelectValue placeholder="Selecione a atividade (Ex: Computador com lentidão)" />
+              <SelectTrigger className="bg-white dark:bg-slate-900">
+                <SelectValue placeholder="Selecione a atividade do catálogo..." />
               </SelectTrigger>
               <SelectContent className="max-h-60">
                 {activityOptions.map((act) => (
@@ -278,352 +332,186 @@ export function ApprovalConfigDialog({
                 ))}
               </SelectContent>
             </Select>
-            <p className="text-[11px] text-slate-500">
-              Quando um chamado for aberto apontando esta atividade/subcategoria, a aprovação será
-              solicitada automaticamente.
-            </p>
           </div>
 
-          {/* Gatilho: Tipo de Solicitação + Prioridade Alta */}
-          <div className="space-y-3 rounded-lg border p-3.5 bg-blue-50/40 dark:bg-slate-800/40">
+          {/* 3. QUEM APROVA A ATIVIDADE (Item 3 do pedido: Ponto Focal ou Aprovador Interno) */}
+          <div className="space-y-3 rounded-lg border p-3.5 bg-slate-50/70 dark:bg-slate-800/40">
             <div>
-              <Label className="text-xs font-semibold text-slate-800 dark:text-slate-200">
-                Gatilho do Fluxo de Aprovação (Regra de Disparo)
+              <Label className="text-xs font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
+                <UserCheck className="h-4 w-4 text-blue-600" />
+                3. Responsável por Aprovar Esta Atividade
               </Label>
               <p className="text-[11px] text-slate-500 mt-0.5">
-                A aprovação é exigida apenas quando o tipo de solicitação coincidir com os tipos
-                selecionados E a prioridade for alta (Alta ou Crítica).
+                Escolha quem dos pontos focais cadastrados será responsável por aprovar a atividade,
+                ou indique um aprovador interno caso não seja possível um ponto focal.
               </p>
+            </div>
+
+            <RadioGroup
+              value={approverType}
+              onValueChange={(v) => setApproverType(v as ApproverType)}
+              className="grid sm:grid-cols-2 gap-2.5 pt-1"
+            >
+              <div
+                className={`flex items-start space-x-2.5 p-3 rounded-md border cursor-pointer transition-colors ${
+                  approverType === 'focal_point'
+                    ? 'border-blue-500 bg-blue-50/50 dark:bg-blue-950/30'
+                    : 'bg-white dark:bg-slate-900 hover:bg-slate-50'
+                }`}
+                onClick={() => setApproverType('focal_point')}
+              >
+                <RadioGroupItem value="focal_point" id="type-focal-point" className="mt-0.5" />
+                <div className="space-y-0.5">
+                  <Label
+                    htmlFor="type-focal-point"
+                    className="text-xs font-semibold cursor-pointer text-slate-900 dark:text-slate-100"
+                  >
+                    Ponto Focal do Cliente
+                  </Label>
+                  <p className="text-[11px] text-slate-500">
+                    Contatos cadastrados no cliente selecionado
+                  </p>
+                </div>
+              </div>
+
+              <div
+                className={`flex items-start space-x-2.5 p-3 rounded-md border cursor-pointer transition-colors ${
+                  approverType === 'internal_user'
+                    ? 'border-blue-500 bg-blue-50/50 dark:bg-blue-950/30'
+                    : 'bg-white dark:bg-slate-900 hover:bg-slate-50'
+                }`}
+                onClick={() => setApproverType('internal_user')}
+              >
+                <RadioGroupItem value="internal_user" id="type-internal-user" className="mt-0.5" />
+                <div className="space-y-0.5">
+                  <Label
+                    htmlFor="type-internal-user"
+                    className="text-xs font-semibold cursor-pointer text-slate-900 dark:text-slate-100"
+                  >
+                    Aprovador Interno TI
+                  </Label>
+                  <p className="text-[11px] text-slate-500">
+                    Usuário interno da equipe (gestor/operador)
+                  </p>
+                </div>
+              </div>
+            </RadioGroup>
+
+            {/* SELEÇÃO DO PONTO FOCAL */}
+            {approverType === 'focal_point' && (
+              <div className="space-y-2 pt-2">
+                <Label className="text-xs font-semibold text-slate-800 dark:text-slate-200">
+                  Ponto Focal Responsável ({selectedCompanyName || 'Empresa não selecionada'}) *
+                </Label>
+
+                {!selectedCompanyId ? (
+                  <div className="p-2.5 rounded border border-amber-200 bg-amber-50 text-amber-800 text-xs flex items-center gap-2">
+                    <AlertTriangle className="h-4 w-4 shrink-0" />
+                    Selecione primeiro a empresa no topo para listar seus pontos focais.
+                  </div>
+                ) : companyFocalPoints.length === 0 ? (
+                  <div className="p-3 rounded border border-amber-200 bg-amber-50 text-amber-900 text-xs space-y-1">
+                    <p className="font-semibold flex items-center gap-1.5">
+                      <AlertTriangle className="h-4 w-4 text-amber-700 shrink-0" />
+                      Nenhum ponto focal cadastrado para {selectedCompanyName}.
+                    </p>
+                    <p className="text-[11px] text-amber-800 leading-relaxed">
+                      Você pode cadastrar contatos no cliente ou escolher a opção{' '}
+                      <strong>"Aprovador Interno TI"</strong> acima como responsável por esta
+                      atividade.
+                    </p>
+                  </div>
+                ) : (
+                  <Select value={approverFocalPointId} onValueChange={setApproverFocalPointId}>
+                    <SelectTrigger className="bg-white dark:bg-slate-900 font-medium">
+                      <SelectValue placeholder="Selecione quem aprova esta atividade..." />
+                    </SelectTrigger>
+                    <SelectContent className="max-h-56">
+                      {companyFocalPoints.map((contact) => (
+                        <SelectItem key={contact.id} value={contact.id}>
+                          {contact.full_name} ({contact.email || 'sem e-mail'})
+                          {contact.is_focal_point ? ' [Ponto Focal]' : ''}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              </div>
+            )}
+
+            {/* SELEÇÃO DO APROVADOR INTERNO */}
+            {approverType === 'internal_user' && (
+              <div className="space-y-2 pt-2">
+                <Label className="text-xs font-semibold text-slate-800 dark:text-slate-200">
+                  Aprovador Interno Responsável (Usuário TI) *
+                </Label>
+                <Select value={approverUserId} onValueChange={setApproverUserId}>
+                  <SelectTrigger className="bg-white dark:bg-slate-900 font-medium">
+                    <SelectValue placeholder="Selecione o usuário interno que aprova..." />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-56">
+                    {internalOperators.map((op) => (
+                      <SelectItem key={op.id} value={op.id}>
+                        {op.name} ({op.email}) — Perfil:{' '}
+                        {op.role === 'admin'
+                          ? 'Administrador'
+                          : op.role === 'gestor'
+                            ? 'Gestão'
+                            : 'Operador'}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+          </div>
+
+          {/* Configurações Adicionais: Tempo e Observações */}
+          <div className="grid sm:grid-cols-2 gap-3 pt-1">
+            <div className="space-y-1.5">
+              <Label className="text-xs font-semibold flex items-center gap-1.5">
+                <Clock className="h-3.5 w-3.5 text-slate-500" />
+                Prazo Limite para Decisão (Minutos)
+              </Label>
+              <Select
+                value={String(escalationTimeoutMinutes)}
+                onValueChange={(v) => setEscalationTimeoutMinutes(Number(v))}
+              >
+                <SelectTrigger className="bg-white dark:bg-slate-900 text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="30">30 minutos</SelectItem>
+                  <SelectItem value="60">1 hora (60 min)</SelectItem>
+                  <SelectItem value="120">2 horas (120 min)</SelectItem>
+                  <SelectItem value="240">4 horas (240 min)</SelectItem>
+                  <SelectItem value="480">8 horas (480 min)</SelectItem>
+                  <SelectItem value="1440">24 horas (1 dia)</SelectItem>
+                  <SelectItem value="2880">48 horas (2 dias)</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="space-y-1.5">
-              <Label className="text-[11px] font-semibold text-slate-600 dark:text-slate-300">
-                Tipos de Solicitação que exigem aprovação:
-              </Label>
-              <div className="flex flex-wrap gap-2 pt-1">
-                {availableRequestTypes.map((t) => {
-                  const isChecked = requestTypes.includes(t)
-                  return (
-                    <Badge
-                      key={t}
-                      variant={isChecked ? 'default' : 'outline'}
-                      className={`cursor-pointer text-xs py-1 px-2.5 transition-colors ${
-                        isChecked
-                          ? 'bg-blue-600 text-white hover:bg-blue-700'
-                          : 'bg-white text-slate-700 hover:bg-slate-100 border-slate-300'
-                      }`}
-                      onClick={() => handleToggleRequestType(t)}
-                    >
-                      {isChecked ? '✓ ' : '+ '}
-                      {t}
-                    </Badge>
-                  )
-                })}
-              </div>
-              <p className="text-[10px] text-slate-500">
-                Se nenhum for selecionado, a aprovação se aplicará a todos os tipos de chamado.
-              </p>
-            </div>
-
-            <div className="flex items-center justify-between pt-2 border-t border-slate-200 dark:border-slate-700">
-              <div className="space-y-0.5 pr-2">
-                <Label
-                  htmlFor="require-high-priority"
-                  className="text-xs font-semibold cursor-pointer"
-                >
-                  Exigir prioridade alta (Alta ou Crítica)
-                </Label>
-                <p className="text-[11px] text-slate-500">
-                  Quando ativo, chamados com prioridade Baixa ou Média são liberados sem reter em
-                  aprovação.
-                </p>
-              </div>
-              <Switch
-                id="require-high-priority"
-                checked={requireHighPriority}
-                onCheckedChange={setRequireHighPriority}
+              <Label className="text-xs font-semibold">Observação / Justificativa</Label>
+              <Textarea
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="Ex: Política da empresa para esta atividade..."
+                rows={1}
+                className="text-xs min-h-[38px] bg-white dark:bg-slate-900"
               />
             </div>
           </div>
 
-          {/* Instâncias de Aprovação Obrigatórias: Cliente e/ou Interno */}
-          <div className="space-y-3 rounded-lg border p-3.5 bg-slate-50/50 dark:bg-slate-800/30">
-            <Label className="text-xs font-semibold text-slate-800 dark:text-slate-200">
-              Instâncias de Aprovação Necessárias (Fluxo Duplo)
-            </Label>
-            <div className="grid sm:grid-cols-2 gap-3">
-              <div className="flex items-start justify-between p-2.5 rounded border bg-white dark:bg-slate-900">
-                <div className="space-y-0.5 pr-2">
-                  <Label htmlFor="req-client" className="text-xs font-medium cursor-pointer">
-                    Aprovação do Cliente (Ponto Focal)
-                  </Label>
-                  <p className="text-[10px] text-slate-500">
-                    Exige validação do ponto focal do cliente
-                  </p>
-                </div>
-                <Switch
-                  id="req-client"
-                  checked={requireClientApproval}
-                  onCheckedChange={setRequireClientApproval}
-                />
-              </div>
-
-              <div className="flex items-start justify-between p-2.5 rounded border bg-white dark:bg-slate-900">
-                <div className="space-y-0.5 pr-2">
-                  <Label htmlFor="req-internal" className="text-xs font-medium cursor-pointer">
-                    Aprovação Interna (Operador / Gestor)
-                  </Label>
-                  <p className="text-[10px] text-slate-500">
-                    Exige autorização da equipe interna de TI
-                  </p>
-                </div>
-                <Switch
-                  id="req-internal"
-                  checked={requireInternalApproval}
-                  onCheckedChange={setRequireInternalApproval}
-                />
-              </div>
-            </div>
-            {requireClientApproval && requireInternalApproval && (
-              <p className="text-[11px] text-amber-700 bg-amber-50 dark:bg-amber-950/30 p-2 rounded border border-amber-200 text-center font-medium">
-                Fluxo Duplo Ativo: o chamado ficará em "Aguardando Aprovação" até que AMBOS (cliente
-                e equipe interna) aprovem. Se qualquer um reprovar, o chamado é cancelado.
-              </p>
-            )}
-          </div>
-
-          {/* Modo de Aprovação */}
-          <div className="space-y-1.5">
-            <Label className="text-xs font-semibold">Modo de Avaliação dos Aprovadores *</Label>
-            <Select value={mode} onValueChange={(v: ApprovalMode) => setMode(v)}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="Individual">Individual (um aprovador decide sozinho)</SelectItem>
-                <SelectItem value="Sequencial">
-                  Sequencial (1º principal; 2º e 3º entram como contingência se o 1º não aprovar em
-                  tempo)
-                </SelectItem>
-                <SelectItem value="Paralela">
-                  Paralela (todos recebem juntos; o primeiro que aprovar encerra)
-                </SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Prazo de Contingência (quando Sequencial) */}
-          {mode === 'Sequencial' && (
-            <div className="p-3 rounded-lg border border-amber-200 bg-amber-50/60 space-y-2">
-              <div className="flex items-center gap-2">
-                <Clock className="h-4 w-4 text-amber-700" />
-                <Label className="text-xs font-bold text-amber-900">
-                  Prazo de Espera antes do Escalonamento (Minutos)
-                </Label>
-              </div>
-              <div className="flex items-center gap-3">
-                <Input
-                  type="number"
-                  min={5}
-                  step={5}
-                  value={escalationTimeoutMinutes}
-                  onChange={(e) => setEscalationTimeoutMinutes(Number(e.target.value))}
-                  className="w-32 bg-white"
-                />
-                <span className="text-xs text-amber-800">
-                  {escalationTimeoutMinutes >= 60
-                    ? `Equivale a ${(escalationTimeoutMinutes / 60).toFixed(1)} hora(s)`
-                    : `${escalationTimeoutMinutes} minutos`}
-                </span>
-              </div>
-              <p className="text-[11px] text-amber-700 leading-relaxed">
-                Se o 1º aprovador estiver ausente ou não responder dentro deste prazo, o chamado
-                escala automaticamente para o 2º aprovador e depois para o 3º, evitando bloqueios no
-                atendimento.
-              </p>
-            </div>
-          )}
-
-          {/* Pontos Focais do Cliente */}
-          <div className="space-y-2 rounded-lg border p-3.5 bg-slate-50/50">
-            <div className="flex items-center justify-between">
-              <Label className="text-xs font-semibold flex items-center gap-1.5">
-                <Users className="h-4 w-4 text-primary" />
-                Pontos Focais do Cliente (Aprovadores Externos)
-              </Label>
-              <span className="text-[11px] text-slate-500">
-                {mode === 'Sequencial' ? 'Ordem da sequência' : 'Destinatários'}
-              </span>
-            </div>
-
-            <Select value="" onValueChange={handleAddFocalPoint}>
-              <SelectTrigger className="bg-white">
-                <SelectValue placeholder="+ Adicionar ponto focal como aprovador..." />
-              </SelectTrigger>
-              <SelectContent className="max-h-56">
-                {eligibleFocalPoints.map((contact) => (
-                  <SelectItem key={contact.id} value={contact.id}>
-                    {contact.full_name} ({contact.email || 'sem e-mail'})
-                    {contact.is_focal_point ? ' [Ponto Focal]' : ''}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            {focalPoints.length > 0 ? (
-              <div className="space-y-1.5 mt-2">
-                {focalPoints.map((id, index) => {
-                  const cont = contacts.find((c) => c.id === id)
-                  return (
-                    <div
-                      key={id}
-                      className="flex items-center justify-between p-2 rounded bg-white border text-xs"
-                    >
-                      <div className="flex items-center gap-2">
-                        {mode === 'Sequencial' && (
-                          <Badge variant="outline" className="text-[10px] font-bold">
-                            {index + 1}º
-                          </Badge>
-                        )}
-                        <span className="font-semibold text-slate-800">
-                          {cont?.full_name || id}
-                        </span>
-                        <span className="text-slate-400">({cont?.email || 'sem e-mail'})</span>
-                      </div>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="h-6 w-6 p-0 text-red-500 hover:text-red-700"
-                        onClick={() => handleRemoveFocalPoint(id)}
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </Button>
-                    </div>
-                  )
-                })}
-              </div>
-            ) : (
-              <p className="text-xs text-slate-400 italic">Nenhum ponto focal adicionado ainda.</p>
-            )}
-          </div>
-
-          {/* Aprovadores Internos Configuráveis */}
-          <div className="space-y-2 rounded-lg border p-3.5 bg-slate-50/50">
-            <div className="flex items-center justify-between">
-              <Label className="text-xs font-semibold flex items-center gap-1.5">
-                <ShieldCheck className="h-4 w-4 text-green-600" />
-                Aprovadores Internos (Gestão, Administrador ou Helpdesk / Operador)
-              </Label>
-              <span className="text-[11px] text-slate-500">
-                {mode === 'Sequencial' ? 'Contingência 2º/3º ou regra' : 'Aprovadores do time'}
-              </span>
-            </div>
-
-            <Select value="" onValueChange={handleAddInternalApprover}>
-              <SelectTrigger className="bg-white">
-                <SelectValue placeholder="+ Adicionar operador interno como aprovador..." />
-              </SelectTrigger>
-              <SelectContent className="max-h-56">
-                {internalOperators.map((op) => (
-                  <SelectItem key={op.id} value={op.id}>
-                    {op.name} ({op.email}) — Perfil:{' '}
-                    {op.role === 'admin'
-                      ? 'Administrador'
-                      : op.role === 'gestor'
-                        ? 'Gestão'
-                        : 'Operador'}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            {internalApprovers.length > 0 ? (
-              <div className="space-y-1.5 mt-2">
-                {internalApprovers.map((id, index) => {
-                  const op = internalOperators.find((u) => u.id === id)
-                  const seqPos = focalPoints.length + index + 1
-                  return (
-                    <div
-                      key={id}
-                      className="flex items-center justify-between p-2 rounded bg-white border text-xs"
-                    >
-                      <div className="flex items-center gap-2">
-                        {mode === 'Sequencial' && (
-                          <Badge
-                            variant="outline"
-                            className="text-[10px] font-bold bg-amber-50 text-amber-800"
-                          >
-                            {seqPos}º (Interno)
-                          </Badge>
-                        )}
-                        <span className="font-semibold text-slate-800">{op?.name || id}</span>
-                        <span className="text-slate-400">({op?.email})</span>
-                        <Badge variant="secondary" className="text-[9px] uppercase">
-                          {op?.role || 'interno'}
-                        </Badge>
-                      </div>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="h-6 w-6 p-0 text-red-500 hover:text-red-700"
-                        onClick={() => handleRemoveInternalApprover(id)}
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </Button>
-                    </div>
-                  )
-                })}
-              </div>
-            ) : (
-              <p className="text-xs text-slate-400 italic">Nenhum aprovador interno selecionado.</p>
-            )}
-          </div>
-
-          {/* Clientes / Empresas Específicas */}
-          <div className="space-y-2">
-            <Label className="text-xs font-semibold flex items-center gap-1.5">
-              <Building2 className="h-4 w-4 text-slate-500" />
-              Empresas / Clientes Aplicáveis (opcional)
-            </Label>
-            <p className="text-[11px] text-slate-500">
-              Selecione clientes específicos ou deixe em branco para aplicar a todos os clientes que
-              utilizarem esta atividade.
-            </p>
-            <div className="flex flex-wrap gap-1.5 max-h-36 overflow-y-auto p-2 border rounded-md bg-white">
-              {companies.map((c) => {
-                const checked = selectedClients.includes(c.id)
-                return (
-                  <Badge
-                    key={c.id}
-                    variant={checked ? 'default' : 'outline'}
-                    className={`cursor-pointer transition-colors ${checked ? 'bg-primary text-primary-foreground' : 'hover:bg-slate-100'}`}
-                    onClick={() => handleToggleClient(c.id)}
-                  >
-                    {c.trade_name || c.legal_name || c.code}
-                  </Badge>
-                )
-              })}
-            </div>
-          </div>
-
-          {/* Descrição / Observações */}
-          <div className="space-y-1.5">
-            <Label className="text-xs font-semibold">Observações Internas (opcional)</Label>
-            <Textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Ex: Política aprovada pela diretoria para liberação de acessos críticos..."
-              rows={2}
-              className="text-xs"
-            />
-          </div>
-
           {/* Ativo */}
-          <div className="flex items-center justify-between p-3 rounded-lg border bg-slate-50">
+          <div className="flex items-center justify-between p-3 rounded-lg border bg-slate-50 dark:bg-slate-800/40">
             <div>
-              <p className="text-xs font-bold text-slate-800">Regra Ativa</p>
+              <p className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                Regra da Atividade Ativa
+              </p>
               <p className="text-[11px] text-slate-500">
-                Se desativada, novos chamados desta atividade não passarão por aprovação.
+                Se desativada, novos chamados desta atividade não solicitarão aprovação.
               </p>
             </div>
             <Switch checked={active} onCheckedChange={setActive} />
@@ -639,7 +527,7 @@ export function ApprovalConfigDialog({
             disabled={saving}
             className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold"
           >
-            {saving ? 'Salvando...' : editingConfig ? 'Atualizar Regra' : 'Criar Regra'}
+            {saving ? 'Salvando...' : editingConfig ? 'Atualizar Regra' : 'Salvar Regra'}
           </Button>
         </DialogFooter>
       </DialogContent>

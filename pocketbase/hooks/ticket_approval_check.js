@@ -1,23 +1,28 @@
 // pocketbase/hooks/ticket_approval_check.js
 // Lógos AITSM - Verificação e Criação Automática do Fluxo de Aprovação de Chamados
-// Regra do Usuário:
-// 1. Aprovação exigida quando TIPO DE SOLICITAÇÃO configurado E PRIORIDADE ALTA coincidirem (as DUAS juntas).
-// 2. Aprovação DUPLA: Cliente no Portal E Aprovador Interno (ou conforme regras da configuração).
-// 3. Status inicial do chamado vira "Aguardando Aprovação". Chamado NÃO entra na fila de atendimento antes das aprovações.
+// Regra do Usuário (v0.0.413+):
+// 1. A regra de aprovação começa pela EMPRESA (selecionada no topo).
+// 2. A unidade de aprovação passa a ser a ATIVIDADE do catálogo (tkt_categories: subatividade ou atividade principal).
+// 3. Para cada atividade do catálogo da empresa, escolhe-se o APROVADOR:
+//    - Ponto focal cadastrado naquele cliente (client_contacts com is_focal_point=true do cliente);
+//    - Ou aprovador interno (users do sistema) quando não for possível ponto focal.
+// 4. Se houver regra ativa para a empresa e para a atividade do chamado (com approver_focal_point ou approver_user configurado),
+//    o chamado entra em "Aguardando Aprovação" e a solicitação é criada diretamente para o aprovador configurado.
+// 5. Suporta compatibilidade regressiva com regras legadas baseadas em request_types/require_high_priority.
 
 onRecordAfterCreateSuccess((e) => {
   var ticket = e.record
   var companyId = ticket.getString('company')
   if (!companyId) return e.next()
 
-  var ticketType = ticket.getString('type') || ''
-  var ticketPriority = ticket.getString('priority') || ''
   var categoryId = ticket.getString('category')
   var subcategoryId = ticket.getString('subcategory')
+  var ticketType = ticket.getString('type') || ''
+  var ticketPriority = ticket.getString('priority') || ''
 
   var configs = []
   try {
-    configs = $app.findRecordsByFilter('approval_configs', 'active = true', '-created', 100, 0)
+    configs = $app.findRecordsByFilter('approval_configs', 'active = true', '-created', 200, 0)
   } catch (err) {
     return e.next()
   }
@@ -25,24 +30,48 @@ onRecordAfterCreateSuccess((e) => {
   if (!configs || configs.length === 0) return e.next()
 
   // Procura a regra correspondente
+  // Prioridade 1: Regra específica da Empresa + Atividade (subcategoria ou categoria)
   var matchingConfig = null
+
   for (var i = 0; i < configs.length; i++) {
     var cfg = configs[i]
+    var cfgCompany = cfg.getString('company')
+    var cfgClients = cfg.getStringSlice ? cfg.getStringSlice('clients') : []
+    var isCompanyMatch = false
 
-    // 1. Filtro por clientes (se especificado na regra)
-    var clients = cfg.getStringSlice ? cfg.getStringSlice('clients') : []
-    if (clients && clients.length > 0) {
-      var clientMatched = false
-      for (var c = 0; c < clients.length; c++) {
-        if (clients[c] === companyId) {
-          clientMatched = true
+    if (cfgCompany) {
+      if (cfgCompany === companyId) isCompanyMatch = true
+    } else if (cfgClients && cfgClients.length > 0) {
+      for (var c = 0; c < cfgClients.length; c++) {
+        if (cfgClients[c] === companyId) {
+          isCompanyMatch = true
           break
         }
       }
-      if (!clientMatched) continue
+    } else {
+      // Regra sem empresa específica (global)
+      isCompanyMatch = true
     }
 
-    // 2. Condição de Tipo de Solicitação (request_types)
+    if (!isCompanyMatch) continue
+
+    var activityId = cfg.getString('activity')
+
+    // Se a regra tem atividade vinculada, testa se coincide com a subcategoria ou categoria do chamado
+    if (activityId) {
+      if (subcategoryId && activityId === subcategoryId) {
+        matchingConfig = cfg
+        break
+      }
+      if (categoryId && activityId === categoryId) {
+        matchingConfig = cfg
+        break
+      }
+      // Se tinha atividade mas não coincidiu, não aplica essa regra
+      continue
+    }
+
+    // Regras legadas sem atividade: avalia request_types e prioridade alta
     var reqTypes = []
     try {
       var rawTypes = cfg.get('request_types')
@@ -69,29 +98,16 @@ onRecordAfterCreateSuccess((e) => {
       if (!typeMatched) continue
     }
 
-    // 3. Condição de Prioridade Alta (require_high_priority)
-    // Se a regra exigir prioridade alta, o chamado precisa ser "Alta" ou "Crítica"
     var requireHigh = cfg.getBool('require_high_priority')
     if (requireHigh) {
       var isHighPriority = ticketPriority === 'Alta' || ticketPriority === 'Crítica'
-      if (!isHighPriority) {
-        continue // Não bateu as duas condições juntas
-      }
+      if (!isHighPriority) continue
     }
 
-    // 4. Se a regra tiver atividade vinculada (legado / específico)
-    var activityId = cfg.getString('activity')
-    if (activityId) {
-      if (activityId === subcategoryId || activityId === categoryId) {
-        matchingConfig = cfg
-        break
-      }
-      continue
+    // Só seleciona como fallback legado se nenhuma regra por atividade foi encontrada
+    if (!matchingConfig) {
+      matchingConfig = cfg
     }
-
-    // Se passou em todos os filtros, encontramos a regra correspondente
-    matchingConfig = cfg
-    break
   }
 
   if (!matchingConfig) return e.next()
@@ -121,6 +137,11 @@ onRecordAfterCreateSuccess((e) => {
   try {
     var mode = matchingConfig.getString('mode') || 'Individual'
     var timeoutMinutes = matchingConfig.getInt('escalation_timeout_minutes') || 60
+
+    var approverType = matchingConfig.getString('approver_type') || ''
+    var approverFocalPointId = matchingConfig.getString('approver_focal_point') || ''
+    var approverUserId = matchingConfig.getString('approver_user') || ''
+
     var focalPointIds = matchingConfig.getStringSlice
       ? matchingConfig.getStringSlice('focal_points')
       : []
@@ -128,69 +149,32 @@ onRecordAfterCreateSuccess((e) => {
       ? matchingConfig.getStringSlice('internal_approvers')
       : []
 
-    var requireClientApproval = matchingConfig.getBool('require_client_approval')
-    var requireInternalApproval = matchingConfig.getBool('require_internal_approval')
+    var targetList = []
 
-    // Se nenhum dos dois foi explicitamente marcado, o comportamento padrão é aprovação dupla se houver pontos focais E internos
-    if (!requireClientApproval && !requireInternalApproval) {
-      requireClientApproval = true
-      requireInternalApproval = true
-    }
-
-    // Coleta contatos clientes (pontos focais)
-    var clientCandidates = []
-    for (var fp = 0; fp < focalPointIds.length; fp++) {
+    // 1. Se configurado no novo modelo direto por atividade
+    if (approverType === 'focal_point' && approverFocalPointId) {
       try {
-        var contactRec = $app.findRecordById('client_contacts', focalPointIds[fp])
-        var cEmail = contactRec.getString('email')
-        if (cEmail) {
-          clientCandidates.push({
+        var fpRec = $app.findRecordById('client_contacts', approverFocalPointId)
+        var fpEmail = fpRec.getString('email')
+        if (fpEmail) {
+          targetList.push({
             type: 'contact',
-            id: contactRec.id,
-            name: contactRec.getString('full_name') || 'Ponto Focal do Cliente',
-            email: cEmail,
+            id: fpRec.id,
+            name: fpRec.getString('full_name') || 'Ponto Focal do Cliente',
+            email: fpEmail,
             role: 'client',
           })
         }
       } catch (_) {}
-    }
-
-    // Se precisar de aprovação do cliente e nenhum ponto focal foi listado na regra, busca pontos focais da empresa
-    if (requireClientApproval && clientCandidates.length === 0) {
+    } else if (approverType === 'internal_user' && approverUserId) {
       try {
-        var companyFps = $app.findRecordsByFilter(
-          'client_contacts',
-          'client = "' + companyId + '" && is_focal_point = true',
-          '-created',
-          5,
-          0,
-        )
-        for (var cfp = 0; cfp < companyFps.length; cfp++) {
-          var cEmail2 = companyFps[cfp].getString('email')
-          if (cEmail2) {
-            clientCandidates.push({
-              type: 'contact',
-              id: companyFps[cfp].id,
-              name: companyFps[cfp].getString('full_name') || 'Ponto Focal',
-              email: cEmail2,
-              role: 'client',
-            })
-          }
-        }
-      } catch (_) {}
-    }
-
-    // Coleta aprovadores internos
-    var internalCandidates = []
-    for (var ia = 0; ia < internalApproverIds.length; ia++) {
-      try {
-        var userRec = $app.findRecordById('users', internalApproverIds[ia])
-        var uEmail = userRec.getString('email')
+        var uRec = $app.findRecordById('users', approverUserId)
+        var uEmail = uRec.getString('email')
         if (uEmail) {
-          internalCandidates.push({
+          targetList.push({
             type: 'user',
-            id: userRec.id,
-            name: userRec.getString('name') || 'Aprovador Interno',
+            id: uRec.id,
+            name: uRec.getString('name') || 'Aprovador Interno TI',
             email: uEmail,
             role: 'internal',
           })
@@ -198,145 +182,178 @@ onRecordAfterCreateSuccess((e) => {
       } catch (_) {}
     }
 
-    // Fallback para aprovadores internos: gestores/admins se precisar e não houver cadastrado
-    if (requireInternalApproval && internalCandidates.length === 0) {
-      try {
-        var fallbackUsers = $app.findRecordsByFilter(
-          'users',
-          'role = "admin" || role = "gestor"',
-          '',
-          10,
-          0,
-        )
-        for (var fu = 0; fu < fallbackUsers.length; fu++) {
-          var fbEmail = fallbackUsers[fu].getString('email')
-          if (fbEmail) {
+    // 2. Se não encontrou no novo formato direto, tenta pelos arrays de focal_points / internal_approvers
+    if (targetList.length === 0) {
+      var requireClientApproval = matchingConfig.getBool('require_client_approval')
+      var requireInternalApproval = matchingConfig.getBool('require_internal_approval')
+
+      if (!requireClientApproval && !requireInternalApproval) {
+        if (focalPointIds.length > 0) requireClientApproval = true
+        if (internalApproverIds.length > 0) requireInternalApproval = true
+      }
+
+      // Candidatos pontos focais
+      var clientCandidates = []
+      for (var fp = 0; fp < focalPointIds.length; fp++) {
+        try {
+          var contactRec = $app.findRecordById('client_contacts', focalPointIds[fp])
+          var cEmail = contactRec.getString('email')
+          if (cEmail) {
+            clientCandidates.push({
+              type: 'contact',
+              id: contactRec.id,
+              name: contactRec.getString('full_name') || 'Ponto Focal do Cliente',
+              email: cEmail,
+              role: 'client',
+            })
+          }
+        } catch (_) {}
+      }
+
+      // Fallback para pontos focais da empresa
+      if (requireClientApproval && clientCandidates.length === 0) {
+        try {
+          var companyFps = $app.findRecordsByFilter(
+            'client_contacts',
+            'client = "' + companyId + '" && is_focal_point = true',
+            '-created',
+            5,
+            0,
+          )
+          for (var cfp = 0; cfp < companyFps.length; cfp++) {
+            var cEmail2 = companyFps[cfp].getString('email')
+            if (cEmail2) {
+              clientCandidates.push({
+                type: 'contact',
+                id: companyFps[cfp].id,
+                name: companyFps[cfp].getString('full_name') || 'Ponto Focal',
+                email: cEmail2,
+                role: 'client',
+              })
+            }
+          }
+        } catch (_) {}
+      }
+
+      // Candidatos internos
+      var internalCandidates = []
+      for (var ia = 0; ia < internalApproverIds.length; ia++) {
+        try {
+          var userRec = $app.findRecordById('users', internalApproverIds[ia])
+          var uiEmail = userRec.getString('email')
+          if (uiEmail) {
             internalCandidates.push({
               type: 'user',
-              id: fallbackUsers[fu].id,
-              name: fallbackUsers[fu].getString('name') || 'Gestor Responsável',
-              email: fbEmail,
+              id: userRec.id,
+              name: userRec.getString('name') || 'Aprovador Interno',
+              email: uiEmail,
               role: 'internal',
             })
           }
-        }
-      } catch (_) {}
-    }
+        } catch (_) {}
+      }
 
-    // Lista final de aprovações a serem geradas
-    // No fluxo de aprovação dupla: gera aprovação de cliente (se exigida) E aprovação interna (se exigida)
-    var targetList = []
+      // Fallback interno
+      if (requireInternalApproval && internalCandidates.length === 0) {
+        try {
+          var fallbackUsers = $app.findRecordsByFilter(
+            'users',
+            'role = "admin" || role = "gestor"',
+            '',
+            10,
+            0,
+          )
+          for (var fu = 0; fu < fallbackUsers.length; fu++) {
+            var fbEmail = fallbackUsers[fu].getString('email')
+            if (fbEmail) {
+              internalCandidates.push({
+                type: 'user',
+                id: fallbackUsers[fu].id,
+                name: fallbackUsers[fu].getString('name') || 'Gestor Responsável',
+                email: fbEmail,
+                role: 'internal',
+              })
+            }
+          }
+        } catch (_) {}
+      }
 
-    if (requireClientApproval && clientCandidates.length > 0) {
-      if (mode === 'Paralela') {
-        for (var cc = 0; cc < clientCandidates.length; cc++) {
-          targetList.push(clientCandidates[cc])
+      if (requireClientApproval && clientCandidates.length > 0) {
+        if (mode === 'Paralela') {
+          for (var cc = 0; cc < clientCandidates.length; cc++) {
+            targetList.push(clientCandidates[cc])
+          }
+        } else {
+          targetList.push(clientCandidates[0])
         }
-      } else {
-        // Individual ou Sequencial: primeiro ponto focal
-        targetList.push(clientCandidates[0])
+      }
+
+      if (requireInternalApproval && internalCandidates.length > 0) {
+        if (mode === 'Paralela') {
+          for (var ic = 0; ic < internalCandidates.length; ic++) {
+            targetList.push(internalCandidates[ic])
+          }
+        } else {
+          targetList.push(internalCandidates[0])
+        }
       }
     }
 
-    if (requireInternalApproval && internalCandidates.length > 0) {
-      if (mode === 'Paralela') {
-        for (var ic = 0; ic < internalCandidates.length; ic++) {
-          targetList.push(internalCandidates[ic])
-        }
-      } else {
-        // Individual ou Sequencial: primeiro aprovador interno
-        targetList.push(internalCandidates[0])
-      }
-    }
-
-    // Se por acaso nem cliente nem interno puderam ser resolvidos, tenta fallback geral
     if (targetList.length === 0) {
-      if (clientCandidates.length > 0) targetList.push(clientCandidates[0])
-      else if (internalCandidates.length > 0) targetList.push(internalCandidates[0])
+      $app
+        .logger()
+        .warn(
+          'ticket_approval_check: nenhum aprovador encontrado para a regra',
+          'config',
+          matchingConfig.id,
+        )
+      return e.next()
     }
 
-    if (targetList.length === 0) return e.next()
+    // 1. Atualiza o status do ticket para "Aguardando Aprovação"
+    var oldStatus = ticket.getString('status')
+    ticket.set('status', 'Aguardando Aprovação')
+    $app.save(ticket)
 
-    // 1. Atualiza status do chamado para 'Aguardando Aprovação'
-    var ticketRecord = $app.findRecordById('tickets', ticket.id)
-    var oldStatus = ticketRecord.getString('status')
-    ticketRecord.set('status', 'Aguardando Aprovação')
-    $app.save(ticketRecord)
-
-    // 2. Registra histórico no ticket
-    var historyCol = $app.findCollectionByNameOrId('ticket_history')
-    var hist = new Record(historyCol)
-    hist.set('ticket', ticket.id)
-    hist.set('user', requesterId)
-    hist.set(
-      'action',
-      'Fluxo de aprovação iniciado (Tipo: ' +
-        ticketType +
-        ' | Prioridade: ' +
-        ticketPriority +
-        ' | Modo: ' +
-        mode +
-        ')',
-    )
-    hist.set('field', 'status')
-    hist.set('old_value', oldStatus)
-    hist.set('new_value', 'Aguardando Aprovação')
-    $app.save(hist)
-
-    var approvalsCol = $app.findCollectionByNameOrId('approvals')
-    var backendBase = (
-      $os.getenv('PB_INSTANCE_URL') ||
-      $os.getenv('SITE_URL') ||
-      'https://sistema-itsm-de-chamados-b1534.shrd03.internal.goskip.dev'
-    ).replace(/\/$/, '')
-
+    // Registra alteração de status no histórico do ticket
     var ticketNumber = ticket.getString('number') || ticket.id
-    var ticketTitle = ticket.getString('title') || 'Sem título'
-    var ticketDescription = ticket.getString('description') || 'Sem descrição fornecida'
-
-    var compName = ''
     try {
-      var compRec = $app.findRecordById('companies', companyId)
-      compName = compRec.getString('trade_name') || compRec.getString('legal_name') || ''
+      var histCol = $app.findCollectionByNameOrId('ticket_history')
+      var hist = new Record(histCol)
+      hist.set('ticket', ticket.id)
+      hist.set('user', requesterId)
+      hist.set(
+        'action',
+        'Chamado colocado em Aguardando Aprovação (Regra da Atividade: ' +
+          (matchingConfig.getString('description') || 'Aprovação por Atividade do Catálogo') +
+          ')',
+      )
+      hist.set('field', 'status')
+      hist.set('old_value', oldStatus)
+      hist.set('new_value', 'Aguardando Aprovação')
+      $app.save(hist)
     } catch (_) {}
 
-    var reqName = 'Solicitante'
-    try {
-      var reqRec = $app.findRecordById('users', requesterId)
-      reqName = reqRec.getString('name') || reqRec.getString('email') || reqName
-    } catch (_) {}
-
+    // 2. Cria os registros na collection 'approvals'
+    var approvalsCol = $app.findCollectionByNameOrId('approvals')
     var now = new Date()
 
-    // Cria os registros de aprovação
     for (var idx = 0; idx < targetList.length; idx++) {
-      var cand = targetList[idx]
+      var candidate = targetList[idx]
       var appRec = new Record(approvalsCol)
       appRec.set('ticket', ticket.id)
       appRec.set('requester', requesterId)
-      if (cand.type === 'user') {
-        appRec.set('approver', cand.id)
-      } else {
-        appRec.set('target_contact', cand.id)
-      }
-      appRec.set('target_email', cand.email)
-      appRec.set('type', cand.role === 'client' ? 'Aprovação de Cliente' : 'Aprovação Interna TI')
-      appRec.set('approval_role', cand.role || 'general')
-      appRec.set(
-        'justification',
-        'Aprovação exigida para chamado com Tipo "' +
-          ticketType +
-          '" e Prioridade "' +
-          ticketPriority +
-          '" (' +
-          (cand.role === 'client' ? 'Ponto Focal do Cliente' : 'Aprovador Interno TI') +
-          ')',
-      )
       appRec.set('status', 'Pendente')
-      appRec.set('mode', mode)
-      appRec.set('stage', idx + 1)
       appRec.set('approval_config', matchingConfig.id)
-      if (mode === 'Sequencial') {
+      appRec.set('approval_role', candidate.role || 'general')
+
+      if (candidate.type === 'user') {
+        appRec.set('approver', candidate.id)
+      } else {
+        appRec.set('contact', candidate.id)
+      }
+
+      if (timeoutMinutes > 0) {
         var escalationDeadline = new Date(
           now.getTime() + timeoutMinutes * 60000 * (idx + 1),
         ).toISOString()
@@ -364,7 +381,11 @@ onRecordAfterCreateSuccess((e) => {
         notif.set(
           'title',
           'Nova aprovação pendente (' +
-            (requireClientApproval && requireInternalApproval ? 'Dupla' : mode) +
+            (targetList.length > 1
+              ? 'Múltipla'
+              : targetList[0].role === 'client'
+                ? 'Ponto Focal'
+                : 'Interno') +
             ')',
         )
         notif.set('message', 'Chamado #' + ticketNumber + ' aguarda aprovação para entrar na fila')
