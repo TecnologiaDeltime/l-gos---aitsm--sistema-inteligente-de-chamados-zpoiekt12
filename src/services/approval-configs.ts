@@ -28,8 +28,31 @@ export interface ApprovalConfigRecord {
   expand?: any
 }
 
-export const APPROVAL_CONFIG_EXPAND =
-  'company,activity,focal_points_all,internal_approvers_all,approver_focal_point,approver_user'
+export const APPROVAL_CONFIG_EXPAND = 'company,activity,approver_focal_point,approver_user'
+
+// Normaliza a lista de aprovadores: usa as listas multi-valoradas (*_all, mig 0163)
+// quando existirem; caso contrário, cai nos campos legados (focal_points /
+// internal_approvers) e, por fim, no aprovador único (approver_focal_point /
+// approver_user) — mantendo compatibilidade com regras antigas.
+export const getFocalPointsAll = (cfg: ApprovalConfigRecord | null | undefined): string[] => {
+  if (!cfg) return []
+  const all = Array.isArray(cfg.focal_points_all) ? cfg.focal_points_all.filter(Boolean) : []
+  if (all.length > 0) return all
+  const legacy = Array.isArray(cfg.focal_points) ? cfg.focal_points.filter(Boolean) : []
+  if (legacy.length > 0) return legacy
+  return cfg.approver_focal_point ? [cfg.approver_focal_point] : []
+}
+
+export const getInternalApproversAll = (cfg: ApprovalConfigRecord | null | undefined): string[] => {
+  if (!cfg) return []
+  const all = Array.isArray(cfg.internal_approvers_all)
+    ? cfg.internal_approvers_all.filter(Boolean)
+    : []
+  if (all.length > 0) return all
+  const legacy = Array.isArray(cfg.internal_approvers) ? cfg.internal_approvers.filter(Boolean) : []
+  if (legacy.length > 0) return legacy
+  return cfg.approver_user ? [cfg.approver_user] : []
+}
 
 export const getApprovalConfigs = (filter?: string): Promise<ApprovalConfigRecord[]> =>
   pb.collection('approval_configs').getFullList<ApprovalConfigRecord>({

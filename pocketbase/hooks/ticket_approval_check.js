@@ -402,35 +402,48 @@
       }
 
       var targetList = []
+      var seenApproverIds = {}
 
-      if (approverType === 'focal_point' && approverFocalPointId) {
-        try {
-          var fpRec = $app.findRecordById('client_contacts', approverFocalPointId)
-          var fpEmail = fpRec.getString('email')
-          if (fpEmail) {
-            targetList.push({
-              type: 'contact',
-              id: fpRec.id,
-              name: fpRec.getString('full_name') || 'Ponto Focal do Cliente',
-              email: fpEmail,
-              role: 'client',
-            })
-          }
-        } catch (_) {}
-      } else if (approverType === 'internal_user' && approverUserId) {
-        try {
-          var uRec = $app.findRecordById('users', approverUserId)
-          var uEmail = uRec.getString('email')
-          if (uEmail) {
-            targetList.push({
-              type: 'user',
-              id: uRec.id,
-              name: uRec.getString('name') || 'Aprovador Interno TI',
-              email: uEmail,
-              role: 'internal',
-            })
-          }
-        } catch (_) {}
+      function pushApprover(type, id, name, email, role) {
+        if (!id || seenApproverIds[type + ':' + id]) return
+        seenApproverIds[type + ':' + id] = true
+        targetList.push({ type: type, id: id, name: name, email: email, role: role })
+      }
+
+      // MÚLTIPLOS APROVADORES (mig 0163, regra "basta um"): TODOS os aprovadores
+      // das listas *_all recebem pendência; o primeiro a decidir resolve.
+      if (approverType === 'focal_point') {
+        for (var fa = 0; fa < focalPointIdsAll.length; fa++) {
+          try {
+            var fpRec = $app.findRecordById('client_contacts', focalPointIdsAll[fa])
+            var fpEmail = fpRec.getString('email')
+            if (fpEmail) {
+              pushApprover(
+                'contact',
+                fpRec.id,
+                fpRec.getString('full_name') || 'Ponto Focal do Cliente',
+                fpEmail,
+                'client',
+              )
+            }
+          } catch (_) {}
+        }
+      } else if (approverType === 'internal_user') {
+        for (var ua = 0; ua < internalApproverIdsAll.length; ua++) {
+          try {
+            var uRec = $app.findRecordById('users', internalApproverIdsAll[ua])
+            var uEmail = uRec.getString('email')
+            if (uEmail) {
+              pushApprover(
+                'user',
+                uRec.id,
+                uRec.getString('name') || 'Aprovador Interno TI',
+                uEmail,
+                'internal',
+              )
+            }
+          } catch (_) {}
+        }
       }
 
       if (targetList.length === 0) {
