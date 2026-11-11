@@ -365,12 +365,41 @@
       var approverFocalPointId = matchingConfig.getString('approver_focal_point') || ''
       var approverUserId = matchingConfig.getString('approver_user') || ''
 
+      // MÚLTIPLOS APROVADORES (mig 0163): novas listas multivaloradas.
+      // Regra de decisão: BASTA UM — todos recebem a pendência e o primeiro a
+      // decidir resolve o chamado.
+      var focalPointIdsAll = matchingConfig.getStringSlice
+        ? matchingConfig.getStringSlice('focal_points_all')
+        : []
+      var internalApproverIdsAll = matchingConfig.getStringSlice
+        ? matchingConfig.getStringSlice('internal_approvers_all')
+        : []
+
       var focalPointIds = matchingConfig.getStringSlice
         ? matchingConfig.getStringSlice('focal_points')
         : []
       var internalApproverIds = matchingConfig.getStringSlice
         ? matchingConfig.getStringSlice('internal_approvers')
         : []
+
+      // Compatibilidade: campos legados (focal_points/internal_approvers) entram
+      // também, para regras criadas antes da migração 0163.
+      if (focalPointIdsAll.length === 0 && focalPointIds.length > 0) {
+        focalPointIdsAll = focalPointIds
+      }
+      if (internalApproverIdsAll.length === 0 && internalApproverIds.length > 0) {
+        internalApproverIdsAll = internalApproverIds
+      }
+      if (approverType === 'focal_point' && approverFocalPointId) {
+        if (focalPointIdsAll.indexOf(approverFocalPointId) < 0) {
+          focalPointIdsAll = [approverFocalPointId].concat(focalPointIdsAll)
+        }
+      }
+      if (approverType === 'internal_user' && approverUserId) {
+        if (internalApproverIdsAll.indexOf(approverUserId) < 0) {
+          internalApproverIdsAll = [approverUserId].concat(internalApproverIdsAll)
+        }
+      }
 
       var targetList = []
 

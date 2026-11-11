@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-11T16:51:29.786Z",
+  "generatedAt": "2026-11-11T17:39:20.941Z",
   "collections": [
     {
       "name": "users",
@@ -6499,6 +6499,20 @@
         },
         {
           "name": "approver_user",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "focal_points_all",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "client_contacts"
+        },
+        {
+          "name": "internal_approvers_all",
           "type": "relation",
           "required": false,
           "system": false,
