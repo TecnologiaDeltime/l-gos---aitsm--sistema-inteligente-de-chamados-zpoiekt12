@@ -15,10 +15,13 @@ import {
   Save,
   Check,
   X,
+  Layers,
+  SlidersHorizontal,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
@@ -109,6 +112,12 @@ export default function TicketApprovalsPage() {
 
   // Edição em lote/linha na matriz de atividades
   const [rowStates, setRowStates] = useState<Record<string, RowState>>({})
+
+  // APROVAÇÃO EM MASSA: atividades marcadas com checkbox + aprovador do lote
+  const [selectedActivityIds, setSelectedActivityIds] = useState<string[]>([])
+  const [bulkApproverValue, setBulkApproverValue] = useState('') // "fp:<id>" | "user:<id>"
+  const [bulkApplying, setBulkApplying] = useState(false)
+  const [bulkConfirmOpen, setBulkConfirmOpen] = useState(false)
 
   // Modal de edição avançada/individual
   const [dialogOpen, setDialogOpen] = useState(false)
@@ -266,6 +275,34 @@ export default function TicketApprovalsPage() {
     setRowStates(initialRows)
   }, [selectedCompanyId, companyConfigs, catalogActivities])
 
+  // Ao trocar de empresa, limpa a seleção em massa e o aprovador do lote
+  useEffect(() => {
+    setSelectedActivityIds([])
+    setBulkApproverValue('')
+  }, [selectedCompanyId])
+
+  // ===== APROVAÇÃO EM MASSA =====
+
+  // Marca/desmarca uma atividade na seleção do lote
+  const toggleActivitySelection = (activityId: string) => {
+    setSelectedActivityIds((prev) =>
+      prev.includes(activityId) ? prev.filter((id) => id !== activityId) : [...prev, activityId],
+    )
+  }
+
+  // Seleciona todas as atividades (respeitando o filtro de busca atual)
+  const toggleSelectAllActivities = () => {
+    const visibleIds = filteredActivities.map((a) => a.id)
+    const allVisibleSelected =
+      visibleIds.length > 0 && visibleIds.every((id) => selectedActivityIds.includes(id))
+
+    if (allVisibleSelected) {
+      setSelectedActivityIds((prev) => prev.filter((id) => !visibleIds.includes(id)))
+    } else {
+      setSelectedActivityIds((prev) => Array.from(new Set([...prev, ...visibleIds])))
+    }
+  }
+
   // Handler de alteração rápida do aprovador na linha da tabela
   const handleRowApproverChange = (activityId: string, value: string) => {
     // value format: "none" | "fp:<id>" | "user:<id>"
@@ -373,6 +410,82 @@ export default function TicketApprovalsPage() {
         ...prev,
         [activityId]: { ...prev[activityId], saving: false },
       }))
+    }
+  }
+
+  // ===== AÇÃO DE LOTE: APLICAR APROVADOR A TODAS AS ATIVIDADES SELECIONADAS =====
+  const handleApplyBulkApprover = async () => {
+    if (!bulkApproverValue || selectedActivityIds.length === 0 || !selectedCompanyId) return
+
+    setBulkApplying(true)
+    const companyConfigList = configs.filter((c) => {
+      if (c.company && c.company === selectedCompanyId) return true
+      if (Array.isArray(c.clients) && c.clients.includes(selectedCompanyId)) return true
+      return false
+    })
+
+    let successCount = 0
+    let failCount = 0
+
+    for (const activityId of selectedActivityIds) {
+      const existing = companyConfigList.find((cfg) => cfg.activity === activityId)
+
+      const payload: Partial<ApprovalConfigRecord> = {
+        company: selectedCompanyId,
+        clients: [selectedCompanyId],
+        activity: activityId,
+        approver_type: bulkApproverValue.startsWith('fp:') ? 'focal_point' : 'internal_user',
+        approver_focal_point: bulkApproverValue.startsWith('fp:')
+          ? bulkApproverValue.replace('fp:', '')
+          : null,
+        approver_user: bulkApproverValue.startsWith('user:')
+          ? bulkApproverValue.replace('user:', '')
+          : null,
+        focal_points: bulkApproverValue.startsWith('fp:')
+          ? [bulkApproverValue.replace('fp:', '')]
+          : [],
+        internal_approvers: bulkApproverValue.startsWith('user:')
+          ? [bulkApproverValue.replace('user:', '')]
+          : [],
+        require_client_approval: bulkApproverValue.startsWith('fp:'),
+        require_internal_approval: bulkApproverValue.startsWith('user:'),
+        active: true,
+        mode: 'Individual',
+        escalation_timeout_minutes: 60,
+      }
+
+      try {
+        if (existing) {
+          await updateApprovalConfig(existing.id, payload)
+        } else {
+          await createApprovalConfig(payload)
+        }
+        successCount++
+      } catch (err: any) {
+        console.error(`Erro ao salvar aprovação da atividade ${activityId}:`, err)
+        failCount++
+      }
+    }
+
+    setBulkApplying(false)
+    setBulkConfirmOpen(false)
+
+    if (successCount > 0) {
+      toast({
+        title: 'Aprovador aplicado em massa!',
+        description: `${successCount} atividade(s) atualizada(s)${
+          failCount > 0 ? `, ${failCount} falha(s)` : ''
+        }.`,
+      })
+      loadData()
+      setSelectedActivityIds([])
+      setBulkApproverValue('')
+    } else {
+      toast({
+        title: 'Erro ao aplicar em massa',
+        description: 'Nenhuma atividade foi atualizada. Verifique a conexão e tente novamente.',
+        variant: 'destructive',
+      })
     }
   }
 
@@ -593,6 +706,109 @@ export default function TicketApprovalsPage() {
 
         {/* ABA 1: MATRIZ DE ATIVIDADES X APROVADOR (Ponto Focal ou Interno) */}
         <TabsContent value="matrix" className="space-y-4 m-0">
+          {/* BARRA DE AÇÃO EM MASSA (aparece quando há atividades marcadas) */}
+          {canManage && selectedActivityIds.length > 0 && (
+            <Card className="border-purple-300 dark:border-purple-800 bg-gradient-to-r from-purple-50/70 to-indigo-50/40 dark:from-purple-950/30 dark:to-slate-900 shadow-sm">
+              <CardContent className="p-4">
+                <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-3">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <Layers className="h-4 w-4 text-purple-700 dark:text-purple-400" />
+                      <span className="text-sm font-bold text-purple-900 dark:text-purple-200">
+                        Aprovação em Massa — {selectedActivityIds.length} atividade(s)
+                        selecionada(s)
+                      </span>
+                    </div>
+                    <p className="text-xs text-purple-800/80 dark:text-purple-300/80">
+                      Escolha o aprovador que valerá para todas as atividades marcadas e clique em
+                      &quot;Aplicar a selecionadas&quot;. A regra existente de cada atividade será
+                      atualizada (ou criada, se ainda não houver).
+                    </p>
+                  </div>
+
+                  <div className="flex flex-col sm:flex-row items-stretch sm:items-end gap-2 w-full lg:w-auto">
+                    <div className="w-full sm:w-72">
+                      <Label className="text-[11px] font-semibold text-purple-900 dark:text-purple-200 mb-1 block">
+                        Aprovador do Lote
+                      </Label>
+                      <Select value={bulkApproverValue} onValueChange={setBulkApproverValue}>
+                        <SelectTrigger className="bg-white dark:bg-slate-900 border-purple-300 dark:border-purple-800 text-xs h-9">
+                          <SelectValue placeholder="Escolha quem aprovará o lote..." />
+                        </SelectTrigger>
+                        <SelectContent className="max-h-64 text-xs">
+                          {companyFocalPoints.length > 0 && (
+                            <div className="px-2 py-1.5 text-[10px] font-bold text-purple-800 bg-purple-50 dark:bg-purple-950/40 uppercase tracking-wider">
+                              Pontos Focais ({selectedCompany?.trade_name || 'Cliente'})
+                            </div>
+                          )}
+                          {companyFocalPoints.map((fp) => (
+                            <SelectItem key={fp.id} value={`fp:${fp.id}`}>
+                              {fp.full_name} ({fp.email || 'sem e-mail'})
+                              {fp.is_focal_point ? ' [Ponto Focal]' : ''}
+                            </SelectItem>
+                          ))}
+
+                          <div className="px-2 py-1.5 text-[10px] font-bold text-blue-800 bg-blue-50 dark:bg-blue-950/40 uppercase tracking-wider mt-1">
+                            Aprovador Interno TI (Contingência)
+                          </div>
+                          {internalOperators.map((op) => (
+                            <SelectItem key={op.id} value={`user:${op.id}`}>
+                              {op.name} ({op.email}) —{' '}
+                              {op.role === 'admin'
+                                ? 'Admin'
+                                : op.role === 'gestor'
+                                  ? 'Gestão'
+                                  : 'Operador'}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <Button
+                        size="sm"
+                        disabled={!bulkApproverValue || bulkApplying}
+                        onClick={() => setBulkConfirmOpen(true)}
+                        className="bg-purple-600 hover:bg-purple-700 text-white font-semibold text-xs h-9"
+                      >
+                        <Check className="h-3.5 w-3.5 mr-1.5" />
+                        {bulkApplying ? 'Aplicando...' : 'Aplicar a selecionadas'}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={bulkApplying}
+                        onClick={() => {
+                          setEditingConfig(null)
+                          setDialogOpen(true)
+                        }}
+                        className="text-xs h-9 border-purple-300 text-purple-800 hover:bg-purple-100 dark:border-purple-800 dark:text-purple-300"
+                        title="Abrir formulário avançado com as atividades selecionadas"
+                      >
+                        <SlidersHorizontal className="h-3.5 w-3.5 mr-1" />
+                        Avançado
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        disabled={bulkApplying}
+                        onClick={() => {
+                          setSelectedActivityIds([])
+                          setBulkApproverValue('')
+                        }}
+                        className="text-xs h-9 text-slate-500 hover:text-slate-800"
+                      >
+                        <X className="h-3.5 w-3.5 mr-1" />
+                        Limpar seleção
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           <Card className="bg-white dark:bg-slate-900 overflow-hidden shadow-sm">
             <CardHeader className="p-4 pb-3 border-b bg-slate-50/50 dark:bg-slate-800/40">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
@@ -618,6 +834,17 @@ export default function TicketApprovalsPage() {
               <Table>
                 <TableHeader>
                   <TableRow className="bg-slate-50 dark:bg-slate-800/60 text-xs">
+                    <TableHead className="w-[50px]">
+                      <Checkbox
+                        checked={
+                          filteredActivities.length > 0 &&
+                          filteredActivities.every((a) => selectedActivityIds.includes(a.id))
+                        }
+                        onCheckedChange={toggleSelectAllActivities}
+                        disabled={!canManage || filteredActivities.length === 0}
+                        aria-label="Selecionar todas as atividades"
+                      />
+                    </TableHead>
                     <TableHead className="w-[320px]">Atividade / Subatividade</TableHead>
                     <TableHead className="w-[140px]">Tipo de Aprovador</TableHead>
                     <TableHead className="min-w-[280px]">
@@ -630,7 +857,7 @@ export default function TicketApprovalsPage() {
                 <TableBody>
                   {filteredActivities.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={5} className="text-center py-10 text-slate-400 text-xs">
+                      <TableCell colSpan={6} className="text-center py-10 text-slate-400 text-xs">
                         Nenhuma atividade encontrada com o termo pesquisado.
                       </TableCell>
                     </TableRow>
@@ -668,6 +895,16 @@ export default function TicketApprovalsPage() {
                             row.isDirty ? 'bg-amber-50/40 dark:bg-amber-950/20' : ''
                           }`}
                         >
+                          {/* Coluna 0: Checkbox de seleção para aprovação em massa */}
+                          <TableCell className="w-[50px]">
+                            <Checkbox
+                              checked={selectedActivityIds.includes(act.id)}
+                              onCheckedChange={() => toggleActivitySelection(act.id)}
+                              disabled={!canManage}
+                              aria-label={`Selecionar atividade ${act.fullName}`}
+                            />
+                          </TableCell>
+
                           {/* Coluna 1: Atividade */}
                           <TableCell className="font-medium">
                             <div className="text-slate-900 dark:text-slate-100 font-semibold">
@@ -1048,13 +1285,114 @@ export default function TicketApprovalsPage() {
         </TabsContent>
       </Tabs>
 
+      {/* MODAL DE CONFIRMAÇÃO DE APLICAÇÃO EM MASSA */}
+      <Dialog open={bulkConfirmOpen} onOpenChange={setBulkConfirmOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Layers className="h-5 w-5 text-purple-600" />
+              Confirmar Aplicação em Massa
+            </DialogTitle>
+            <DialogDescription className="text-xs">
+              Você está prestes a atualizar as regras de aprovação para{' '}
+              <strong className="text-slate-800 dark:text-slate-100">
+                {selectedActivityIds.length} atividade(s)
+              </strong>{' '}
+              da empresa{' '}
+              <strong className="text-slate-800 dark:text-slate-100">
+                {selectedCompany?.trade_name || 'selecionada'}
+              </strong>
+              .
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-3 py-2 text-xs">
+            <div className="p-3 rounded-md bg-purple-50 dark:bg-purple-950/30 border border-purple-200 dark:border-purple-800 space-y-1">
+              <div className="font-semibold text-purple-900 dark:text-purple-200">
+                Aprovador a ser definido:
+              </div>
+              <div className="text-purple-800 dark:text-purple-300">
+                {(() => {
+                  if (bulkApproverValue.startsWith('fp:')) {
+                    const fpId = bulkApproverValue.replace('fp:', '')
+                    const fp = companyFocalPoints.find((c) => c.id === fpId)
+                    return fp
+                      ? `Ponto Focal: ${fp.full_name} (${fp.email || 'sem e-mail'})`
+                      : 'Ponto Focal Selecionado'
+                  }
+                  if (bulkApproverValue.startsWith('user:')) {
+                    const uId = bulkApproverValue.replace('user:', '')
+                    const u = internalOperators.find((op) => op.id === uId)
+                    return u
+                      ? `Aprovador Interno TI: ${u.name} (${u.email})`
+                      : 'Aprovador Interno Selecionado'
+                  }
+                  return 'Nenhum'
+                })()}
+              </div>
+            </div>
+
+            <div className="max-h-36 overflow-y-auto space-y-1 pr-1 border rounded p-2 bg-slate-50 dark:bg-slate-900">
+              <div className="text-[11px] font-semibold text-slate-500 mb-1">
+                Atividades que receberão esta regra:
+              </div>
+              {selectedActivityIds.map((actId) => {
+                const act = catalogActivities.find((a) => a.id === actId)
+                return (
+                  <div
+                    key={actId}
+                    className="text-[11px] text-slate-700 dark:text-slate-300 truncate"
+                  >
+                    • {act?.fullName || actId}
+                  </div>
+                )
+              })}
+            </div>
+
+            <p className="text-[11px] text-slate-500">
+              Esta ação gravará diretamente cada configuração na base de regras e atualizará a
+              matriz automaticamente.
+            </p>
+          </div>
+
+          <DialogFooter className="gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setBulkConfirmOpen(false)}
+              disabled={bulkApplying}
+            >
+              Cancelar
+            </Button>
+            <Button
+              size="sm"
+              onClick={handleApplyBulkApprover}
+              disabled={bulkApplying}
+              className="bg-purple-600 hover:bg-purple-700 text-white font-semibold"
+            >
+              {bulkApplying ? 'Aplicando Regras...' : 'Confirmar e Aplicar'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* MODAL DE CONFIGURAÇÃO DE REGRA */}
       <ApprovalConfigDialog
         open={dialogOpen}
-        onOpenChange={setDialogOpen}
-        onSaved={loadData}
+        onOpenChange={(open) => {
+          setDialogOpen(open)
+          if (!open && selectedActivityIds.length > 0 && !editingConfig) {
+            // mantém ou limpa conforme fechamento
+          }
+        }}
+        onSaved={() => {
+          loadData()
+          setSelectedActivityIds([])
+          setBulkApproverValue('')
+        }}
         editingConfig={editingConfig}
         defaultCompanyId={selectedCompanyId}
+        initialActivityIds={editingConfig ? undefined : selectedActivityIds}
       />
 
       {/* MODAL DE DECISÃO DE APROVAÇÃO (APROVAR / RECUSAR) */}

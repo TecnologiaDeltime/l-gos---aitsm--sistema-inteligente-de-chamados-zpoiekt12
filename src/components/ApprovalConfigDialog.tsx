@@ -25,8 +25,10 @@ import {
   ApprovalMode,
   ApproverType,
   createApprovalConfig,
+  getApprovalConfigs,
   updateApprovalConfig,
 } from '@/services/approval-configs'
+import { Layers } from 'lucide-react'
 import { getCategories, CategoryRecord } from '@/services/categories'
 import { getCompanies, CompanyRecord } from '@/services/companies'
 import { getAllClientContacts, ClientContactRecord } from '@/services/client-contacts'
@@ -40,6 +42,7 @@ interface ApprovalConfigDialogProps {
   onSaved: () => void
   editingConfig?: ApprovalConfigRecord | null
   defaultCompanyId?: string
+  initialActivityIds?: string[]
 }
 
 export function ApprovalConfigDialog({
@@ -48,6 +51,7 @@ export function ApprovalConfigDialog({
   onSaved,
   editingConfig,
   defaultCompanyId,
+  initialActivityIds,
 }: ApprovalConfigDialogProps) {
   const { toast } = useToast()
   const [categories, setCategories] = useState<CategoryRecord[]>([])
@@ -58,8 +62,9 @@ export function ApprovalConfigDialog({
   // 1. Empresa selecionada no topo
   const [selectedCompanyId, setSelectedCompanyId] = useState<string>('')
 
-  // 2. Atividade do catálogo
+  // 2. Atividade do catálogo (individual ou em massa)
   const [activityId, setActivityId] = useState<string>('')
+  const [selectedBulkActivities, setSelectedBulkActivities] = useState<string[]>([])
 
   // 3. Tipo de aprovador: 'focal_point' ou 'internal_user'
   const [approverType, setApproverType] = useState<ApproverType>('focal_point')
@@ -139,6 +144,9 @@ export function ApprovalConfigDialog({
     } else {
       setSelectedCompanyId(defaultCompanyId || '')
       setActivityId('')
+      setSelectedBulkActivities(
+        initialActivityIds && initialActivityIds.length > 0 ? initialActivityIds : [],
+      )
       setApproverType('focal_point')
       setApproverFocalPointId('')
       setApproverUserId('')
@@ -147,7 +155,7 @@ export function ApprovalConfigDialog({
       setDescription('')
       setActive(true)
     }
-  }, [editingConfig, open, defaultCompanyId])
+  }, [editingConfig, open, defaultCompanyId, initialActivityIds])
 
   // Árvore de atividades do catálogo
   const activityOptions = useMemo(() => {
@@ -197,7 +205,10 @@ export function ApprovalConfigDialog({
       return
     }
 
-    if (!activityId) {
+    const targetActivityIds =
+      selectedBulkActivities.length > 0 ? selectedBulkActivities : activityId ? [activityId] : []
+
+    if (targetActivityIds.length === 0) {
       toast({
         title: 'Selecione a atividade',
         description: 'Escolha a atividade do catálogo sujeita a aprovação.',
@@ -232,29 +243,67 @@ export function ApprovalConfigDialog({
       const internalApproversArray =
         approverType === 'internal_user' && approverUserId ? [approverUserId] : []
 
-      const payload: Partial<ApprovalConfigRecord> = {
-        company: selectedCompanyId,
-        clients: [selectedCompanyId],
-        activity: activityId,
-        approver_type: approverType,
-        approver_focal_point: approverType === 'focal_point' ? approverFocalPointId : null,
-        approver_user: approverType === 'internal_user' ? approverUserId : null,
-        focal_points: focalPointsArray,
-        internal_approvers: internalApproversArray,
-        require_client_approval: approverType === 'focal_point',
-        require_internal_approval: approverType === 'internal_user',
-        mode,
-        escalation_timeout_minutes: Number(escalationTimeoutMinutes) || 60,
-        description,
-        active,
-      }
-
       if (editingConfig) {
+        const payload: Partial<ApprovalConfigRecord> = {
+          company: selectedCompanyId,
+          clients: [selectedCompanyId],
+          activity: targetActivityIds[0],
+          approver_type: approverType,
+          approver_focal_point: approverType === 'focal_point' ? approverFocalPointId : null,
+          approver_user: approverType === 'internal_user' ? approverUserId : null,
+          focal_points: focalPointsArray,
+          internal_approvers: internalApproversArray,
+          require_client_approval: approverType === 'focal_point',
+          require_internal_approval: approverType === 'internal_user',
+          mode,
+          escalation_timeout_minutes: Number(escalationTimeoutMinutes) || 60,
+          description,
+          active,
+        }
         await updateApprovalConfig(editingConfig.id, payload)
         toast({ title: 'Regra de aprovação da atividade atualizada com sucesso!' })
       } else {
-        await createApprovalConfig(payload)
-        toast({ title: 'Regra de aprovação cadastrada com sucesso!' })
+        // Se for em lote ou única
+        const existingConfigs = await getApprovalConfigs(
+          `company = "${selectedCompanyId}" || clients ~ "${selectedCompanyId}"`,
+        )
+
+        let successCount = 0
+        for (const actId of targetActivityIds) {
+          const existing = existingConfigs.find((cfg) => cfg.activity === actId)
+          const payload: Partial<ApprovalConfigRecord> = {
+            company: selectedCompanyId,
+            clients: [selectedCompanyId],
+            activity: actId,
+            approver_type: approverType,
+            approver_focal_point: approverType === 'focal_point' ? approverFocalPointId : null,
+            approver_user: approverType === 'internal_user' ? approverUserId : null,
+            focal_points: focalPointsArray,
+            internal_approvers: internalApproversArray,
+            require_client_approval: approverType === 'focal_point',
+            require_internal_approval: approverType === 'internal_user',
+            mode,
+            escalation_timeout_minutes: Number(escalationTimeoutMinutes) || 60,
+            description,
+            active,
+          }
+
+          if (existing) {
+            await updateApprovalConfig(existing.id, payload)
+          } else {
+            await createApprovalConfig(payload)
+          }
+          successCount++
+        }
+
+        if (targetActivityIds.length > 1) {
+          toast({
+            title: 'Regras em lote salvas com sucesso!',
+            description: `${successCount} atividade(s) configurada(s) com esta regra.`,
+          })
+        } else {
+          toast({ title: 'Regra de aprovação cadastrada com sucesso!' })
+        }
       }
 
       onSaved()
@@ -310,28 +359,70 @@ export function ApprovalConfigDialog({
             </Select>
           </div>
 
-          {/* 2. ATIVIDADE DO CATÁLOGO (Item 2 do pedido) */}
+          {/* 2. ATIVIDADE DO CATÁLOGO (Item 2 do pedido - suporta única ou múltiplas) */}
           <div className="space-y-1.5">
-            <Label className="text-xs font-semibold flex items-center gap-1.5">
-              <ListTree className="h-4 w-4 text-slate-500" />
-              2. Atividade do Catálogo de Serviços *
-            </Label>
-            <p className="text-[11px] text-slate-500">
-              A unidade de aprovação é a atividade selecionada na abertura do chamado (subcategoria
-              ou atividade principal).
-            </p>
-            <Select value={activityId} onValueChange={setActivityId}>
-              <SelectTrigger className="bg-white dark:bg-slate-900">
-                <SelectValue placeholder="Selecione a atividade do catálogo..." />
-              </SelectTrigger>
-              <SelectContent className="max-h-60">
-                {activityOptions.map((act) => (
-                  <SelectItem key={act.id} value={act.id}>
-                    {act.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <div className="flex items-center justify-between">
+              <Label className="text-xs font-semibold flex items-center gap-1.5">
+                <ListTree className="h-4 w-4 text-slate-500" />
+                2. Atividade do Catálogo de Serviços *
+              </Label>
+              {selectedBulkActivities.length > 0 && !editingConfig && (
+                <Badge variant="secondary" className="bg-purple-100 text-purple-800 text-[11px]">
+                  <Layers className="h-3 w-3 mr-1" />
+                  {selectedBulkActivities.length} em lote
+                </Badge>
+              )}
+            </div>
+
+            {selectedBulkActivities.length > 0 && !editingConfig ? (
+              <div className="p-2.5 rounded border border-purple-200 bg-purple-50/60 dark:bg-purple-950/20 space-y-2">
+                <div className="text-[11px] text-purple-900 dark:text-purple-300 font-medium">
+                  Configurando {selectedBulkActivities.length} atividade(s) selecionada(s) na
+                  matriz:
+                </div>
+                <div className="max-h-28 overflow-y-auto space-y-1 pr-1 bg-white dark:bg-slate-900 rounded p-1.5 border">
+                  {selectedBulkActivities.map((actId) => {
+                    const opt = activityOptions.find((o) => o.id === actId)
+                    return (
+                      <div
+                        key={actId}
+                        className="text-[11px] text-slate-700 dark:text-slate-300 truncate"
+                      >
+                        • {opt?.name || actId}
+                      </div>
+                    )
+                  })}
+                </div>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  className="text-[11px] h-6 px-2 text-purple-700 hover:text-purple-900"
+                  onClick={() => setSelectedBulkActivities([])}
+                >
+                  Alterar para seleção única
+                </Button>
+              </div>
+            ) : (
+              <>
+                <p className="text-[11px] text-slate-500">
+                  A unidade de aprovação é a atividade selecionada na abertura do chamado
+                  (subcategoria ou atividade principal).
+                </p>
+                <Select value={activityId} onValueChange={setActivityId}>
+                  <SelectTrigger className="bg-white dark:bg-slate-900">
+                    <SelectValue placeholder="Selecione a atividade do catálogo..." />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-60">
+                    {activityOptions.map((act) => (
+                      <SelectItem key={act.id} value={act.id}>
+                        {act.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </>
+            )}
           </div>
 
           {/* 3. QUEM APROVA A ATIVIDADE (Item 3 do pedido: Ponto Focal ou Aprovador Interno) */}
