@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-11T05:00:20.329Z",
+  "generatedAt": "2026-11-11T05:17:58.941Z",
   "collections": [
     {
       "name": "users",
@@ -12970,10 +12970,26 @@
           "type": "json",
           "required": false,
           "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onUpdate"]
         }
       ],
       "indexes": [
-        "CREATE INDEX idx_email_sent_lookup ON email_sent_logs (alert_key, reference_id, recipient)"
+        "CREATE INDEX idx_email_sent_lookup ON email_sent_logs (alert_key, reference_id, recipient)",
+        "CREATE INDEX `idx_email_sent_created` ON `email_sent_logs` (created)",
+        "CREATE INDEX `idx_email_sent_sent_at` ON `email_sent_logs` (sent_at)"
       ]
     },
     {
