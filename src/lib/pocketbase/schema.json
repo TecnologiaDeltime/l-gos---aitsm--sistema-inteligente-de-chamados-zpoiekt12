@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-11T19:40:32.277Z",
+  "generatedAt": "2026-11-11T19:45:45.119Z",
   "collections": [
     {
       "name": "users",
@@ -2837,13 +2837,6 @@
           "system": false
         },
         {
-          "name": "status",
-          "type": "select",
-          "required": false,
-          "system": false,
-          "selectValues": ["Pendente", "Aprovado", "Reprovado"]
-        },
-        {
           "name": "approved_at",
           "type": "date",
           "required": false,
@@ -2939,6 +2932,13 @@
           "type": "text",
           "required": false,
           "system": false
+        },
+        {
+          "name": "status",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["Pendente", "Aprovado", "Reprovado", "Cancelado"]
         }
       ],
       "indexes": [

@@ -40,11 +40,14 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { ApprovalConfigDialog } from '@/components/ApprovalConfigDialog'
+import { MultiSelect } from '@/components/MultiSelect'
 import {
   getApprovalConfigs,
   deleteApprovalConfig,
   updateApprovalConfig,
   createApprovalConfig,
+  getFocalPointsAll,
+  getInternalApproversAll,
   ApprovalConfigRecord,
 } from '@/services/approval-configs'
 import { getApprovals, ApprovalRecord, decideApproval } from '@/services/approvals'
@@ -72,11 +75,21 @@ interface RowState {
   configId?: string
   activityId: string
   approverType: 'focal_point' | 'internal_user' | 'none'
-  selectedId: string // contact id or user id
+  selectedFpIds: string[] // pontos focais selecionados (regra "basta um")
+  selectedInternalIds: string[] // aprovadores internos selecionados
   active: boolean
   isDirty?: boolean
   saving?: boolean
 }
+
+const emptyRow = (activityId: string): RowState => ({
+  activityId,
+  approverType: 'none',
+  selectedFpIds: [],
+  selectedInternalIds: [],
+  active: true,
+  isDirty: false,
+})
 
 export default function TicketApprovalsPage() {
   const { toast } = useToast()
@@ -113,9 +126,13 @@ export default function TicketApprovalsPage() {
   // Edição em lote/linha na matriz de atividades
   const [rowStates, setRowStates] = useState<Record<string, RowState>>({})
 
-  // APROVAÇÃO EM MASSA: atividades marcadas com checkbox + aprovador do lote
+  // APROVAÇÃO EM MASSA: atividades marcadas com checkbox + aprovadores do lote
   const [selectedActivityIds, setSelectedActivityIds] = useState<string[]>([])
-  const [bulkApproverValue, setBulkApproverValue] = useState('') // "fp:<id>" | "user:<id>"
+  const [bulkApproverType, setBulkApproverType] = useState<'focal_point' | 'internal_user'>(
+    'focal_point',
+  )
+  const [bulkFpIds, setBulkFpIds] = useState<string[]>([])
+  const [bulkInternalIds, setBulkInternalIds] = useState<string[]>([])
   const [bulkApplying, setBulkApplying] = useState(false)
   const [bulkConfirmOpen, setBulkConfirmOpen] = useState(false)
 
@@ -227,58 +244,37 @@ export default function TicketApprovalsPage() {
       const existing = companyConfigs.find((cfg) => cfg.activity === act.id)
 
       if (existing) {
+        // Normaliza via helpers: usa *_all, depois legados, depois aprovador único
+        const fpAll = getFocalPointsAll(existing)
+        const internalAll = getInternalApproversAll(existing)
         let approverType: 'focal_point' | 'internal_user' | 'none' = 'none'
-        let selectedId = ''
-
-        if (existing.approver_type === 'focal_point' && existing.approver_focal_point) {
-          approverType = 'focal_point'
-          selectedId = existing.approver_focal_point
-        } else if (existing.approver_type === 'internal_user' && existing.approver_user) {
-          approverType = 'internal_user'
-          selectedId = existing.approver_user
-        } else if (
-          Array.isArray(existing.focal_points) &&
-          existing.focal_points.length > 0 &&
-          existing.focal_points[0]
-        ) {
-          approverType = 'focal_point'
-          selectedId = existing.focal_points[0]
-        } else if (
-          Array.isArray(existing.internal_approvers) &&
-          existing.internal_approvers.length > 0 &&
-          existing.internal_approvers[0]
-        ) {
-          approverType = 'internal_user'
-          selectedId = existing.internal_approvers[0]
-        }
+        if (fpAll.length > 0) approverType = 'focal_point'
+        else if (internalAll.length > 0) approverType = 'internal_user'
 
         initialRows[act.id] = {
           configId: existing.id,
           activityId: act.id,
           approverType,
-          selectedId,
+          selectedFpIds: approverType === 'focal_point' ? fpAll : [],
+          selectedInternalIds: approverType === 'internal_user' ? internalAll : [],
           active: existing.active !== false,
           isDirty: false,
         }
       } else {
         // Nenhuma regra configurada ainda para esta atividade nesta empresa
-        initialRows[act.id] = {
-          activityId: act.id,
-          approverType: 'none',
-          selectedId: '',
-          active: true,
-          isDirty: false,
-        }
+        initialRows[act.id] = emptyRow(act.id)
       }
     })
 
     setRowStates(initialRows)
   }, [selectedCompanyId, companyConfigs, catalogActivities])
 
-  // Ao trocar de empresa, limpa a seleção em massa e o aprovador do lote
+  // Ao trocar de empresa, limpa a seleção em massa e os aprovadores do lote
   useEffect(() => {
     setSelectedActivityIds([])
-    setBulkApproverValue('')
+    setBulkApproverType('focal_point')
+    setBulkFpIds([])
+    setBulkInternalIds([])
   }, [selectedCompanyId])
 
   // ===== APROVAÇÃO EM MASSA =====
@@ -303,37 +299,24 @@ export default function TicketApprovalsPage() {
     }
   }
 
-  // Handler de alteração rápida do aprovador na linha da tabela
-  const handleRowApproverChange = (activityId: string, value: string) => {
-    // value format: "none" | "fp:<id>" | "user:<id>"
+  // Handler genérico de alteração da linha (marca dirty)
+  const setRowState = (activityId: string, patch: Partial<RowState>) => {
     setRowStates((prev) => {
-      const current = prev[activityId] || {
-        activityId,
-        approverType: 'none',
-        selectedId: '',
-        active: true,
-      }
+      const current = prev[activityId] || emptyRow(activityId)
+      return { ...prev, [activityId]: { ...current, ...patch, isDirty: true } }
+    })
+  }
 
-      let approverType: 'focal_point' | 'internal_user' | 'none' = 'none'
-      let selectedId = ''
-
-      if (value.startsWith('fp:')) {
-        approverType = 'focal_point'
-        selectedId = value.replace('fp:', '')
-      } else if (value.startsWith('user:')) {
-        approverType = 'internal_user'
-        selectedId = value.replace('user:', '')
-      }
-
-      return {
-        ...prev,
-        [activityId]: {
-          ...current,
-          approverType,
-          selectedId,
-          isDirty: true,
-        },
-      }
+  // Alteração do TIPO de aprovador na linha
+  const handleRowTypeChange = (activityId: string, value: string) => {
+    // value: 'none' | 'focal_point' | 'internal_user'
+    setRowState(activityId, {
+      approverType: value as RowState['approverType'],
+      ...(value === 'focal_point'
+        ? { selectedInternalIds: [] }
+        : value === 'internal_user'
+          ? { selectedFpIds: [] }
+          : { selectedFpIds: [], selectedInternalIds: [] }),
     })
   }
 
@@ -348,8 +331,11 @@ export default function TicketApprovalsPage() {
     }))
 
     try {
-      if (row.approverType === 'none' || !row.selectedId) {
-        // Se usuário desmarcou o aprovador e já existia regra, remove ou desativa
+      const fps = (row.selectedFpIds || []).filter(Boolean)
+      const internals = (row.selectedInternalIds || []).filter(Boolean)
+
+      if (row.approverType === 'none' || (fps.length === 0 && internals.length === 0)) {
+        // Se usuário desmarcou todos os aprovadores e já existia regra, remove
         if (row.configId) {
           await deleteApprovalConfig(row.configId)
           toast({ title: 'Aprovação desativada para esta atividade' })
@@ -367,17 +353,24 @@ export default function TicketApprovalsPage() {
         return
       }
 
+      // Regra "basta um": listas multi-valoradas com o primeiro aprovador
+      // espelhado nos campos legados (compatibilidade)
+      const approverType: 'focal_point' | 'internal_user' =
+        fps.length > 0 ? 'focal_point' : 'internal_user'
+
       const payload: Partial<ApprovalConfigRecord> = {
         company: selectedCompanyId,
         clients: [selectedCompanyId],
         activity: activityId,
-        approver_type: row.approverType,
-        approver_focal_point: row.approverType === 'focal_point' ? row.selectedId : null,
-        approver_user: row.approverType === 'internal_user' ? row.selectedId : null,
-        focal_points: row.approverType === 'focal_point' ? [row.selectedId] : [],
-        internal_approvers: row.approverType === 'internal_user' ? [row.selectedId] : [],
-        require_client_approval: row.approverType === 'focal_point',
-        require_internal_approval: row.approverType === 'internal_user',
+        approver_type: approverType,
+        focal_points_all: approverType === 'focal_point' ? fps : [],
+        internal_approvers_all: approverType === 'internal_user' ? internals : [],
+        approver_focal_point: approverType === 'focal_point' ? fps[0] : '',
+        approver_user: approverType === 'internal_user' ? internals[0] : '',
+        focal_points: approverType === 'focal_point' ? fps : [],
+        internal_approvers: approverType === 'internal_user' ? internals : [],
+        require_client_approval: approverType === 'focal_point',
+        require_internal_approval: approverType === 'internal_user',
         active: row.active,
         mode: 'Individual',
         escalation_timeout_minutes: 60,
@@ -413,9 +406,17 @@ export default function TicketApprovalsPage() {
     }
   }
 
-  // ===== AÇÃO DE LOTE: APLICAR APROVADOR A TODAS AS ATIVIDADES SELECIONADAS =====
+  // ===== AÇÃO DE LOTE: APLICAR APROVADORES A TODAS AS ATIVIDADES SELECIONADAS =====
   const handleApplyBulkApprover = async () => {
-    if (!bulkApproverValue || selectedActivityIds.length === 0 || !selectedCompanyId) return
+    const bulkFps = bulkApproverType === 'focal_point' ? bulkFpIds.filter(Boolean) : []
+    const bulkInternals =
+      bulkApproverType === 'internal_user' ? bulkInternalIds.filter(Boolean) : []
+    if (
+      (bulkFps.length === 0 && bulkInternals.length === 0) ||
+      selectedActivityIds.length === 0 ||
+      !selectedCompanyId
+    )
+      return
 
     setBulkApplying(true)
     const companyConfigList = configs.filter((c) => {
@@ -423,6 +424,9 @@ export default function TicketApprovalsPage() {
       if (Array.isArray(c.clients) && c.clients.includes(selectedCompanyId)) return true
       return false
     })
+
+    const bulkApproverTypeResolved: 'focal_point' | 'internal_user' =
+      bulkFps.length > 0 ? 'focal_point' : 'internal_user'
 
     let successCount = 0
     let failCount = 0
@@ -434,21 +438,15 @@ export default function TicketApprovalsPage() {
         company: selectedCompanyId,
         clients: [selectedCompanyId],
         activity: activityId,
-        approver_type: bulkApproverValue.startsWith('fp:') ? 'focal_point' : 'internal_user',
-        approver_focal_point: bulkApproverValue.startsWith('fp:')
-          ? bulkApproverValue.replace('fp:', '')
-          : null,
-        approver_user: bulkApproverValue.startsWith('user:')
-          ? bulkApproverValue.replace('user:', '')
-          : null,
-        focal_points: bulkApproverValue.startsWith('fp:')
-          ? [bulkApproverValue.replace('fp:', '')]
-          : [],
-        internal_approvers: bulkApproverValue.startsWith('user:')
-          ? [bulkApproverValue.replace('user:', '')]
-          : [],
-        require_client_approval: bulkApproverValue.startsWith('fp:'),
-        require_internal_approval: bulkApproverValue.startsWith('user:'),
+        approver_type: bulkApproverTypeResolved,
+        focal_points_all: bulkApproverTypeResolved === 'focal_point' ? bulkFps : [],
+        internal_approvers_all: bulkApproverTypeResolved === 'internal_user' ? bulkInternals : [],
+        approver_focal_point: bulkApproverTypeResolved === 'focal_point' ? bulkFps[0] : '',
+        approver_user: bulkApproverTypeResolved === 'internal_user' ? bulkInternals[0] : '',
+        focal_points: bulkApproverTypeResolved === 'focal_point' ? bulkFps : [],
+        internal_approvers: bulkApproverTypeResolved === 'internal_user' ? bulkInternals : [],
+        require_client_approval: bulkApproverTypeResolved === 'focal_point',
+        require_internal_approval: bulkApproverTypeResolved === 'internal_user',
         active: true,
         mode: 'Individual',
         escalation_timeout_minutes: 60,
@@ -479,7 +477,8 @@ export default function TicketApprovalsPage() {
       })
       loadData()
       setSelectedActivityIds([])
-      setBulkApproverValue('')
+      setBulkFpIds([])
+      setBulkInternalIds([])
     } else {
       toast({
         title: 'Erro ao aplicar em massa',
@@ -727,48 +726,55 @@ export default function TicketApprovalsPage() {
                   </div>
 
                   <div className="flex flex-col sm:flex-row items-stretch sm:items-end gap-2 w-full lg:w-auto">
-                    <div className="w-full sm:w-72">
+                    <div className="w-full sm:w-72 space-y-1">
                       <Label className="text-[11px] font-semibold text-purple-900 dark:text-purple-200 mb-1 block">
-                        Aprovador do Lote
+                        Aprovadores do Lote
                       </Label>
-                      <Select value={bulkApproverValue} onValueChange={setBulkApproverValue}>
+                      <Select
+                        value={bulkApproverType}
+                        onValueChange={(v) =>
+                          setBulkApproverType(v as 'focal_point' | 'internal_user')
+                        }
+                      >
                         <SelectTrigger className="bg-white dark:bg-slate-900 border-purple-300 dark:border-purple-800 text-xs h-9">
-                          <SelectValue placeholder="Escolha quem aprovará o lote..." />
+                          <SelectValue />
                         </SelectTrigger>
-                        <SelectContent className="max-h-64 text-xs">
-                          {companyFocalPoints.length > 0 && (
-                            <div className="px-2 py-1.5 text-[10px] font-bold text-purple-800 bg-purple-50 dark:bg-purple-950/40 uppercase tracking-wider">
-                              Pontos Focais ({selectedCompany?.trade_name || 'Cliente'})
-                            </div>
-                          )}
-                          {companyFocalPoints.map((fp) => (
-                            <SelectItem key={fp.id} value={`fp:${fp.id}`}>
-                              {fp.full_name} ({fp.email || 'sem e-mail'})
-                              {fp.is_focal_point ? ' [Ponto Focal]' : ''}
-                            </SelectItem>
-                          ))}
-
-                          <div className="px-2 py-1.5 text-[10px] font-bold text-blue-800 bg-blue-50 dark:bg-blue-950/40 uppercase tracking-wider mt-1">
-                            Aprovador Interno TI (Contingência)
-                          </div>
-                          {internalOperators.map((op) => (
-                            <SelectItem key={op.id} value={`user:${op.id}`}>
-                              {op.name} ({op.email}) —{' '}
-                              {op.role === 'admin'
-                                ? 'Admin'
-                                : op.role === 'gestor'
-                                  ? 'Gestão'
-                                  : 'Operador'}
-                            </SelectItem>
-                          ))}
+                        <SelectContent className="text-xs">
+                          <SelectItem value="focal_point">Ponto Focal (cliente)</SelectItem>
+                          <SelectItem value="internal_user">Aprovador Interno TI</SelectItem>
                         </SelectContent>
                       </Select>
+                      {bulkApproverType === 'focal_point' ? (
+                        <MultiSelect
+                          options={companyFocalPoints.map((fp) => ({
+                            value: fp.id,
+                            label: `${fp.full_name}${fp.is_focal_point ? ' [Ponto Focal]' : ''}`,
+                          }))}
+                          value={bulkFpIds}
+                          onChange={setBulkFpIds}
+                          placeholder="Selecionar ponto(s) focal(is)..."
+                        />
+                      ) : (
+                        <MultiSelect
+                          options={internalOperators.map((op) => ({
+                            value: op.id,
+                            label: `${op.name} (${op.email})`,
+                          }))}
+                          value={bulkInternalIds}
+                          onChange={setBulkInternalIds}
+                          placeholder="Selecionar aprovador(es) interno(s)..."
+                        />
+                      )}
                     </div>
 
                     <div className="flex items-center gap-2">
                       <Button
                         size="sm"
-                        disabled={!bulkApproverValue || bulkApplying}
+                        disabled={
+                          (bulkApproverType === 'focal_point'
+                            ? bulkFpIds.length === 0
+                            : bulkInternalIds.length === 0) || bulkApplying
+                        }
                         onClick={() => setBulkConfirmOpen(true)}
                         className="bg-purple-600 hover:bg-purple-700 text-white font-semibold text-xs h-9"
                       >
@@ -795,7 +801,9 @@ export default function TicketApprovalsPage() {
                         disabled={bulkApplying}
                         onClick={() => {
                           setSelectedActivityIds([])
-                          setBulkApproverValue('')
+                          setBulkApproverType('focal_point')
+                          setBulkFpIds([])
+                          setBulkInternalIds([])
                         }}
                         className="text-xs h-9 text-slate-500 hover:text-slate-800"
                       >
@@ -863,29 +871,16 @@ export default function TicketApprovalsPage() {
                     </TableRow>
                   ) : (
                     filteredActivities.map((act) => {
-                      const row = rowStates[act.id] || {
-                        activityId: act.id,
-                        approverType: 'none',
-                        selectedId: '',
-                        active: true,
-                      }
+                      const row = rowStates[act.id] || emptyRow(act.id)
 
-                      // Constrói o valor do Select
-                      let selectValue = 'none'
-                      if (row.approverType === 'focal_point' && row.selectedId) {
-                        selectValue = `fp:${row.selectedId}`
-                      } else if (row.approverType === 'internal_user' && row.selectedId) {
-                        selectValue = `user:${row.selectedId}`
-                      }
-
-                      // Objeto do aprovador selecionado para exibição
+                      // Primeiros selecionados (para exibição de contato)
                       const selectedFp =
                         row.approverType === 'focal_point'
-                          ? companyFocalPoints.find((c) => c.id === row.selectedId)
+                          ? companyFocalPoints.find((c) => c.id === row.selectedFpIds?.[0])
                           : null
                       const selectedOp =
                         row.approverType === 'internal_user'
-                          ? internalOperators.find((u) => u.id === row.selectedId)
+                          ? internalOperators.find((u) => u.id === row.selectedInternalIds?.[0])
                           : null
 
                       return (
@@ -917,7 +912,30 @@ export default function TicketApprovalsPage() {
 
                           {/* Coluna 2: Tipo de Aprovador */}
                           <TableCell>
-                            {row.approverType === 'focal_point' ? (
+                            {canManage ? (
+                              <Select
+                                value={row.approverType}
+                                onValueChange={(val) => handleRowTypeChange(act.id, val)}
+                                disabled={row.saving}
+                              >
+                                <SelectTrigger
+                                  className={`h-8 text-[11px] w-[130px] ${
+                                    row.approverType === 'focal_point'
+                                      ? 'bg-purple-50 text-purple-700 border-purple-200 font-semibold'
+                                      : row.approverType === 'internal_user'
+                                        ? 'bg-blue-50 text-blue-700 border-blue-200 font-semibold'
+                                        : 'bg-slate-50 text-slate-400 border-slate-200'
+                                  }`}
+                                >
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent className="text-xs">
+                                  <SelectItem value="none">Sem Aprovação</SelectItem>
+                                  <SelectItem value="focal_point">Ponto Focal</SelectItem>
+                                  <SelectItem value="internal_user">Interno TI</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            ) : row.approverType === 'focal_point' ? (
                               <Badge
                                 variant="outline"
                                 className="bg-purple-50 text-purple-700 border-purple-200 text-[10px] font-semibold"
@@ -941,61 +959,48 @@ export default function TicketApprovalsPage() {
                             )}
                           </TableCell>
 
-                          {/* Coluna 3: Seletor de Aprovador (Ponto Focal ou Usuário Interno) */}
+                          {/* Coluna 3: Aprovadores (multi-seleção — regra "basta um") */}
                           <TableCell>
-                            <Select
-                              value={selectValue}
-                              onValueChange={(val) => handleRowApproverChange(act.id, val)}
-                              disabled={!canManage || row.saving}
-                            >
-                              <SelectTrigger className="text-xs h-8 bg-white dark:bg-slate-900">
-                                <SelectValue placeholder="Selecione quem aprova..." />
-                              </SelectTrigger>
-                              <SelectContent className="max-h-64 text-xs">
-                                <SelectItem value="none" className="text-slate-500 italic">
-                                  — Sem aprovação obrigatória —
-                                </SelectItem>
+                            {row.approverType === 'none' ? (
+                              <span className="text-[11px] text-slate-400 italic">
+                                Sem aprovação obrigatória
+                              </span>
+                            ) : row.approverType === 'focal_point' ? (
+                              <MultiSelect
+                                options={companyFocalPoints.map((fp) => ({
+                                  value: fp.id,
+                                  label: `${fp.full_name}${fp.is_focal_point ? ' [Ponto Focal]' : ''}`,
+                                }))}
+                                value={row.selectedFpIds || []}
+                                onChange={(ids) => setRowState(act.id, { selectedFpIds: ids })}
+                                disabled={!canManage || row.saving}
+                                placeholder="Selecionar ponto(s) focal(is)..."
+                              />
+                            ) : (
+                              <MultiSelect
+                                options={internalOperators.map((op) => ({
+                                  value: op.id,
+                                  label: `${op.name} (${op.email})`,
+                                }))}
+                                value={row.selectedInternalIds || []}
+                                onChange={(ids) =>
+                                  setRowState(act.id, { selectedInternalIds: ids })
+                                }
+                                disabled={!canManage || row.saving}
+                                placeholder="Selecionar aprovador(es) interno(s)..."
+                              />
+                            )}
 
-                                {/* Grupo de Pontos Focais do Cliente */}
-                                {companyFocalPoints.length > 0 && (
-                                  <div className="px-2 py-1.5 text-[10px] font-bold text-purple-800 bg-purple-50 dark:bg-purple-950/40 uppercase tracking-wider">
-                                    Pontos Focais ({selectedCompany?.trade_name || 'Cliente'})
-                                  </div>
-                                )}
-                                {companyFocalPoints.map((fp) => (
-                                  <SelectItem key={fp.id} value={`fp:${fp.id}`}>
-                                    {fp.full_name} ({fp.email || 'sem e-mail'})
-                                    {fp.is_focal_point ? ' [Ponto Focal]' : ''}
-                                  </SelectItem>
-                                ))}
-
-                                {/* Grupo de Aprovadores Internos */}
-                                <div className="px-2 py-1.5 text-[10px] font-bold text-blue-800 bg-blue-50 dark:bg-blue-950/40 uppercase tracking-wider mt-1">
-                                  Aprovador Interno TI (Contingência)
-                                </div>
-                                {internalOperators.map((op) => (
-                                  <SelectItem key={op.id} value={`user:${op.id}`}>
-                                    {op.name} ({op.email}) —{' '}
-                                    {op.role === 'admin'
-                                      ? 'Admin'
-                                      : op.role === 'gestor'
-                                        ? 'Gestão'
-                                        : 'Operador'}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-
-                            {/* Detalhe do contato selecionado */}
+                            {/* Detalhe do primeiro contato selecionado */}
                             {selectedFp && (
                               <p className="text-[11px] text-purple-700 mt-1 truncate">
-                                E-mail: {selectedFp.email || 'Não informado'}
+                                1º: {selectedFp.email || 'Não informado'}
                                 {selectedFp.cell_phone ? ` | Cel: ${selectedFp.cell_phone}` : ''}
                               </p>
                             )}
                             {selectedOp && (
                               <p className="text-[11px] text-blue-700 mt-1 truncate">
-                                E-mail: {selectedOp.email} | Perfil: {selectedOp.role}
+                                1º: {selectedOp.email} | Perfil: {selectedOp.role}
                               </p>
                             )}
                           </TableCell>
@@ -1388,7 +1393,9 @@ export default function TicketApprovalsPage() {
         onSaved={() => {
           loadData()
           setSelectedActivityIds([])
-          setBulkApproverValue('')
+          setBulkApproverType('focal_point')
+          setBulkFpIds([])
+          setBulkInternalIds([])
         }}
         editingConfig={editingConfig}
         defaultCompanyId={selectedCompanyId}
