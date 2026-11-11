@@ -681,55 +681,66 @@
       }
 
       // Notificação in-app ao aprovador do portal (e gestores, para visibilidade)
-      try {
-        var notifCol = $app.findCollectionByNameOrId('notifications')
-        var notifiedIds = {}
-        function pushNotif(userId, title, message) {
-          if (!userId || notifiedIds[userId]) return
-          try {
-            var n = new Record(notifCol)
-            n.set('user', userId)
-            n.set('ticket', ticket.id)
-            n.set('title', title)
-            n.set('message', message)
-            n.set('type', 'Aprovação')
-            n.set('read', false)
-            $app.save(n)
-            notifiedIds[userId] = true
-          } catch (_) {}
-        }
+      // Condicional ao toggle in-app da Central de Alertas (alert_key
+      // 'ticket_approval_created_notify', migração 0162). Os e-mails do fluxo
+      // têm seus próprios toggles (ticket_approval_hold e
+      // ticket_approval_request_internal) consultados via getConfig.
+      var cfgInApp = getConfig('ticket_approval_created_notify')
+      if (cfgInApp && cfgInApp.enabled) {
+        try {
+          var notifCol = $app.findCollectionByNameOrId('notifications')
+          var notifiedIds = {}
+          function pushNotif(userId, title, message) {
+            if (!userId || notifiedIds[userId]) return
+            try {
+              var n = new Record(notifCol)
+              n.set('user', userId)
+              n.set('ticket', ticket.id)
+              n.set('title', title)
+              n.set('message', message)
+              n.set('type', 'Aprovação')
+              n.set('read', false)
+              $app.save(n)
+              notifiedIds[userId] = true
+            } catch (_) {}
+          }
 
-        for (var aN = 0; aN < targetList.length; aN++) {
-          if (targetList[aN].type === 'user' && targetList[aN].id) {
+          for (var aN = 0; aN < targetList.length; aN++) {
+            if (targetList[aN].type === 'user' && targetList[aN].id) {
+              pushNotif(
+                targetList[aN].id,
+                'Nova aprovação pendente no portal',
+                'Chamado #' + ticketNumber + ' aguarda sua aprovação para iniciar o atendimento',
+              )
+            }
+          }
+
+          var gestores = $app.findRecordsByFilter(
+            'users',
+            'role = "admin" || role = "gestor"',
+            '',
+            20,
+            0,
+          )
+          for (var j = 0; j < gestores.length; j++) {
             pushNotif(
-              targetList[aN].id,
-              'Nova aprovação pendente no portal',
-              'Chamado #' + ticketNumber + ' aguarda sua aprovação para iniciar o atendimento',
+              gestores[j].id,
+              'Nova aprovação pendente (' +
+                (targetList.length > 1
+                  ? 'Múltipla'
+                  : targetList[0].role === 'client'
+                    ? 'Ponto Focal'
+                    : 'Interno') +
+                ')',
+              'Chamado #' + ticketNumber + ' aguarda aprovação para entrar na fila',
             )
           }
-        }
-
-        var gestores = $app.findRecordsByFilter(
-          'users',
-          'role = "admin" || role = "gestor"',
-          '',
-          20,
-          0,
+        } catch (_) {}
+      } else {
+        console.log(
+          '[ticket_approval_check] notificação in-app suprimida (alerta in-app desligado na Central de Alertas)',
         )
-        for (var j = 0; j < gestores.length; j++) {
-          pushNotif(
-            gestores[j].id,
-            'Nova aprovação pendente (' +
-              (targetList.length > 1
-                ? 'Múltipla'
-                : targetList[0].role === 'client'
-                  ? 'Ponto Focal'
-                  : 'Interno') +
-              ')',
-            'Chamado #' + ticketNumber + ' aguarda aprovação para entrar na fila',
-          )
-        }
-      } catch (_) {}
+      }
     } catch (err) {
       $app.logger().error('ticket_approval_check: failed to create approval', 'error', err.message)
     }
