@@ -1,6 +1,8 @@
 // pocketbase/hooks/approval_decide.js
 // Lógos AITSM - Processamento de Decisões de Aprovação (Web + E-mail + Portal)
-// Suporte a aprovação dupla (cliente + interno) e recusa com motivo gravado no histórico do chamado.
+// Regra "BASTA UM" (múltiplos aprovadores): a PRIMEIRA aprovação libera o chamado;
+// a PRIMEIRA reprovação encerra. Demais pendências viram "Cancelado" (resolvida por outro aprovador).
+// Recusa com motivo gravado no histórico do chamado.
 
 routerAdd('POST', '/backend/v1/approvals/{token}/decide', (e) => {
   const token = e.request.pathValue('token')
@@ -52,67 +54,53 @@ routerAdd('POST', '/backend/v1/approvals/{token}/decide', (e) => {
           : 'Aprovador'
 
     if (isApproved) {
-      // Verifica se ainda existem outras aprovações pendentes para este ticket
-      var remainingPending = []
+      // Regra BASTA UM: a PRIMEIRA aprovação decide e libera o chamado imediatamente,
+      // independentemente de quantos aprovadores foram configurados.
+      ticket.set('status', 'Novo')
+      ticket.set('approval_hold', false)
+      $app.save(ticket)
+
+      // Fecha as demais pendências do mesmo chamado como "Cancelado"
+      // (resolvida por outro aprovador — sem efeito em cascata, pois o hook
+      // ignora registros que não estejam mais "Pendente").
+      var cancelledCount = 0
       try {
-        remainingPending = $app.findRecordsByFilter(
+        var otherPending = $app.findRecordsByFilter(
           'approvals',
           'ticket = "' + ticketId + '" && id != "' + approval.id + '" && status = "Pendente"',
           '',
           50,
           0,
         )
+        for (var op = 0; op < otherPending.length; op++) {
+          otherPending[op].set('status', 'Cancelado')
+          otherPending[op].set(
+            'approver_comment',
+            'Resolvida por outro aprovador — chamado liberado por ' + roleLabel,
+          )
+          otherPending[op].set('rejected_at', now)
+          $app.save(otherPending[op])
+          cancelledCount++
+        }
       } catch (_) {}
 
-      var configId = approval.getString('approval_config')
-      var configMode = 'Individual'
-      if (configId) {
-        try {
-          var cfgRec = $app.findRecordById('approval_configs', configId)
-          configMode = cfgRec.getString('mode') || 'Individual'
-        } catch (_) {}
-      }
-
-      // Se todas as aprovações pendentes foram atendidas, libera o chamado para "Novo" (entra na fila de atendimento)
-      if (remainingPending.length === 0) {
-        ticket.set('status', 'Novo')
-        ticket.set('approval_hold', false)
-        $app.save(ticket)
-
-        // Histórico de liberação completa
-        var historyCol = $app.findCollectionByNameOrId('ticket_history')
-        var hist = new Record(historyCol)
-        hist.set('ticket', ticketId)
-        hist.set('user', e.auth ? e.auth.id : approval.getString('requester'))
-        hist.set(
-          'action',
-          'Aprovação concluída (' +
-            roleLabel +
-            ') — Todas as aprovações exigidas foram autorizadas. Chamado liberado para atendimento.',
-        )
-        hist.set('field', 'status')
-        hist.set('old_value', oldTicketStatus)
-        hist.set('new_value', 'Novo')
-        $app.save(hist)
-      } else {
-        // Se ainda restam aprovações (ex.: aprovação dupla aguardando o outro lado)
-        // Mantém "Aguardando Aprovação" e registra o progresso no histórico
-        var historyCol2 = $app.findCollectionByNameOrId('ticket_history')
-        var hist2 = new Record(historyCol2)
-        hist2.set('ticket', ticketId)
-        hist2.set('user', e.auth ? e.auth.id : approval.getString('requester'))
-        hist2.set(
-          'action',
-          'Aprovação parcial autorizada por ' +
-            roleLabel +
-            (comment ? ': "' + comment + '"' : '') +
-            ' — Aguardando aprovação complementar para liberação do chamado.',
-        )
-        hist2.set('field', 'status')
-        hist2.set('old_value', oldTicketStatus)
-        hist2.set('new_value', 'Aguardando Aprovação')
-        $app.save(hist2)
-      }
+      // Histórico: a aprovação veio do aprovador que decidiu
+      var historyCol = $app.findCollectionByNameOrId('ticket_history')
+      var hist = new Record(historyCol)
+      hist.set('ticket', ticketId)
+      hist.set('user', e.auth ? e.auth.id : approval.getString('requester'))
+      hist.set(
+        'action',
+        'Aprovação autorizada por ' +
+          roleLabel +
+          (comment ? ': "' + comment + '"' : '') +
+          ' — Regra "basta um": primeiro aprovador libera o chamado. Chamado liberado para atendimento.' +
+          (cancelledCount > 0 ? ' Outras ' + cancelledCount + ' pendência(s) cancelada(s).' : ''),
+      )
+      hist.set('field', 'status')
+      hist.set('old_value', oldTicketStatus)
+      hist.set('new_value', 'Novo')
+      $app.save(hist)
     } else {
       // Reprovado -> cancela o chamado e outras aprovações pendentes deste ticket
       try {
@@ -308,12 +296,10 @@ routerAdd('GET', '/backend/v1/approvals/act', (e) => {
 
     var now = new Date().toISOString()
     var isApprove = action === 'approve'
+    var commentText = 'Decisão registrada diretamente via botão do e-mail institucional'
     var newApprovalStatus = isApprove ? 'Aprovado' : 'Reprovado'
     approval.set('status', newApprovalStatus)
-    approval.set(
-      'approver_comment',
-      'Decisão registrada diretamente via botão do e-mail institucional',
-    )
+    approval.set('approver_comment', commentText)
     if (!isApprove && queryReason) {
       approval.set('rejection_reason', queryReason)
     }
@@ -337,23 +323,30 @@ routerAdd('GET', '/backend/v1/approvals/act', (e) => {
 
     if (ticket) {
       if (isApprove) {
-        var remain = []
+        // Regra BASTA UM: a primeira aprovação libera o chamado imediatamente.
+        newTicketStatus = 'Novo'
+        ticket.set('status', 'Novo')
+        ticket.set('approval_hold', false)
+        $app.save(ticket)
+
+        // Fecha as demais pendências como "Cancelado" (resolvida por outro aprovador)
         try {
-          remain = $app.findRecordsByFilter(
+          var remain = $app.findRecordsByFilter(
             'approvals',
             'ticket = "' + ticketId + '" && id != "' + approval.id + '" && status = "Pendente"',
             '',
             50,
             0,
           )
+          for (var rp = 0; rp < remain.length; rp++) {
+            remain[rp].set('status', 'Cancelado')
+            remain[rp].set(
+              'approver_comment',
+              'Resolvida por outro aprovador — chamado liberado por ' + roleText,
+            )
+            $app.save(remain[rp])
+          }
         } catch (_) {}
-
-        if (remain.length === 0) {
-          newTicketStatus = 'Novo'
-          ticket.set('status', 'Novo')
-          ticket.set('approval_hold', false)
-          $app.save(ticket)
-        }
       } else {
         // Reprovado -> encerra o chamado e rejeita as outras aprovações pendentes
         newTicketStatus = 'Encerrado'
@@ -366,9 +359,9 @@ routerAdd('GET', '/backend/v1/approvals/act', (e) => {
             0,
           )
           for (var or2 = 0; or2 < othersRej.length; or2++) {
-            othersRej[or2].set('status', 'Reprovado')
-            othersRej[or2].set('approver_comment', 'Chamado reprovado por ' + roleText)
-            othersRej[or2].set('rejected_at', now)
+            othersRej[or2].set('status', 'Cancelado')
+            othersRej[or2].set('approver_comment', 'Cancelado devido à reprovação por ' + roleText)
+            if (queryReason) othersRej[or2].set('rejection_reason', queryReason)
             $app.save(othersRej[or2])
           }
         } catch (_) {}
@@ -390,7 +383,7 @@ routerAdd('GET', '/backend/v1/approvals/act', (e) => {
         isApprove
           ? 'Aprovação autorizada via e-mail por ' +
               roleText +
-              (newTicketStatus === 'Novo' ? ' — Liberado para fila de atendimento' : '')
+              ' — Regra "basta um": primeiro aprovador libera o chamado. Liberado para fila de atendimento.'
           : 'Aprovação recusada via e-mail por ' +
               roleText +
               (queryReason ? ' | Motivo: ' + queryReason : '') +
@@ -421,9 +414,7 @@ routerAdd('GET', '/backend/v1/approvals/act', (e) => {
       new Date().toLocaleString('pt-BR')
 
     var successMsg = isApprove
-      ? newTicketStatus === 'Novo'
-        ? 'Todas as aprovações foram concedidas! O chamado foi liberado para atendimento com status "Novo".'
-        : 'Sua aprovação foi registrada com sucesso! O chamado continuará aguardando a outra etapa de aprovação para ser liberado.'
+      ? 'Aprovação registrada com sucesso! O chamado foi liberado para atendimento com status "Novo" (regra "basta um": a primeira aprovação decide).'
       : 'Você reprovou a solicitação. O chamado foi encerrado com o status "' +
         newTicketStatus +
         '" e o solicitante foi notificado.'
