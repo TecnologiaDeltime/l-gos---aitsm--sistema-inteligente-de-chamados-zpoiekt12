@@ -1314,25 +1314,31 @@ export default function TicketApprovalsPage() {
           <div className="space-y-3 py-2 text-xs">
             <div className="p-3 rounded-md bg-purple-50 dark:bg-purple-950/30 border border-purple-200 dark:border-purple-800 space-y-1">
               <div className="font-semibold text-purple-900 dark:text-purple-200">
-                Aprovador a ser definido:
+                Aprovador(es) a serem definidos (regra &quot;basta um&quot;):
               </div>
-              <div className="text-purple-800 dark:text-purple-300">
+              <div className="text-purple-800 dark:text-purple-300 space-y-0.5">
                 {(() => {
-                  if (bulkApproverValue.startsWith('fp:')) {
-                    const fpId = bulkApproverValue.replace('fp:', '')
+                  const bulkFps =
+                    bulkApproverType === 'focal_point' ? bulkFpIds.filter(Boolean) : []
+                  const bulkInternals =
+                    bulkApproverType === 'internal_user' ? bulkInternalIds.filter(Boolean) : []
+
+                  const fpNames = bulkFps.map((fpId) => {
                     const fp = companyFocalPoints.find((c) => c.id === fpId)
                     return fp
                       ? `Ponto Focal: ${fp.full_name} (${fp.email || 'sem e-mail'})`
                       : 'Ponto Focal Selecionado'
-                  }
-                  if (bulkApproverValue.startsWith('user:')) {
-                    const uId = bulkApproverValue.replace('user:', '')
+                  })
+                  const internalNames = bulkInternals.map((uId) => {
                     const u = internalOperators.find((op) => op.id === uId)
                     return u
                       ? `Aprovador Interno TI: ${u.name} (${u.email})`
                       : 'Aprovador Interno Selecionado'
-                  }
-                  return 'Nenhum'
+                  })
+
+                  const names = [...fpNames, ...internalNames]
+                  if (names.length === 0) return 'Nenhum'
+                  return names.map((n, i) => <div key={i}>• {n}</div>)
                 })()}
               </div>
             </div>

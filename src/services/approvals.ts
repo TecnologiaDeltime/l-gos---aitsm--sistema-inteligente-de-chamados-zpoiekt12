@@ -73,7 +73,7 @@ export const APPROVAL_TYPES = [
   'Outros',
 ]
 
-export const APPROVAL_STATUSES = ['Pendente', 'Aprovado', 'Reprovado']
+export const APPROVAL_STATUSES = ['Pendente', 'Aprovado', 'Reprovado', 'Cancelado']
 
 export const getApprovals = (filter?: string) =>
   pb.collection('approvals').getFullList<ApprovalRecord>({

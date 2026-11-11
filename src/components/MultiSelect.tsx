@@ -15,11 +15,13 @@ export function MultiSelect({
   value,
   onChange,
   placeholder = 'Selecionar...',
+  disabled = false,
 }: {
   options: MultiSelectOption[]
   value: string[]
   onChange: (v: string[]) => void
   placeholder?: string
+  disabled?: boolean
 }) {
   const [open, setOpen] = useState(false)
 
@@ -34,7 +36,13 @@ export function MultiSelect({
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <Button variant="outline" role="combobox" className="w-full justify-between" type="button">
+        <Button
+          variant="outline"
+          role="combobox"
+          className="w-full justify-between"
+          type="button"
+          disabled={disabled}
+        >
           <div className="flex flex-wrap gap-1 flex-1 overflow-hidden">
             {value.length === 0 ? (
               <span className="text-slate-400 text-sm">{placeholder}</span>

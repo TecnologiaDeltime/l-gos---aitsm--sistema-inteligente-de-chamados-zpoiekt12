@@ -231,7 +231,9 @@ export default function PortalApprovalsTab({
                               ? 'bg-amber-500/20 text-amber-800 dark:text-amber-200 border-amber-500/40 font-bold'
                               : isApproved
                                 ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30 font-semibold'
-                                : 'bg-rose-500/15 text-rose-700 dark:text-rose-300 border-rose-500/30 font-semibold'
+                                : app.status === 'Cancelado'
+                                  ? 'bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/30 font-semibold'
+                                  : 'bg-rose-500/15 text-rose-700 dark:text-rose-300 border-rose-500/30 font-semibold'
                           }
                         >
                           {app.status}
@@ -333,7 +335,9 @@ export default function PortalApprovalsTab({
                       <span className="font-semibold text-foreground">
                         {app.status === 'Reprovado'
                           ? 'Motivo da recusa registrado:'
-                          : 'Parecer registrado:'}
+                          : app.status === 'Cancelado'
+                            ? 'Registro de cancelamento:'
+                            : 'Parecer registrado:'}
                       </span>
                       <p className="text-foreground font-medium">
                         {app.rejection_reason || app.approver_comment}
