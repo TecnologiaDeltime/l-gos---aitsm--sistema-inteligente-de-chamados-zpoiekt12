@@ -107,19 +107,58 @@ onRecordAfterCreateSuccess(function (e) {
     function localHasEmailAlreadyBeenSent(alertKey, referenceId, recipient) {
       if (!alertKey || !referenceId || !recipient) return false
       try {
-        var cleanRecipient = String(recipient).trim().toLowerCase()
-        var rec = $app.findFirstRecordByFilter(
-          'email_sent_logs',
+        var cleanAlertKey = String(alertKey).trim().replace(/"/g, '\\"')
+        var cleanRefId = String(referenceId).trim().replace(/"/g, '\\"')
+        var cleanRecipient = String(recipient).trim().toLowerCase().replace(/"/g, '\\"')
+        var filterExpr =
           'alert_key = "' +
-            alertKey +
-            '" && reference_id = "' +
-            referenceId +
-            '" && recipient = "' +
-            cleanRecipient +
-            '"',
+          cleanAlertKey +
+          '" && reference_id = "' +
+          cleanRefId +
+          '" && recipient = "' +
+          cleanRecipient +
+          '"'
+
+        var rec = null
+        try {
+          rec = $app.findFirstRecordByFilter('email_sent_logs', filterExpr)
+        } catch (findErr) {
+          // findFirstRecordByFilter lança exceção quando não encontra registro (sql: no rows in result set)
+          var errStr = findErr && findErr.message ? findErr.message : String(findErr)
+          if (
+            errStr.indexOf('no rows') >= 0 ||
+            errStr.indexOf('sql: no rows') >= 0 ||
+            errStr.indexOf('not found') >= 0
+          ) {
+            return false
+          }
+          console.warn(
+            '[Central de Alertas] ticket_created: falha na verificação de duplicidade (' +
+              errStr +
+              ') — prosseguindo com envio',
+          )
+          return false
+        }
+
+        if (rec) {
+          console.log(
+            '[Central de Alertas] ticket_created: already_sent — envio pulado | alert_key=' +
+              cleanAlertKey +
+              ' | ref=' +
+              cleanRefId +
+              ' | recipient=' +
+              cleanRecipient,
+          )
+          return true
+        }
+        return false
+      } catch (err) {
+        var msg = err && err.message ? err.message : String(err)
+        console.warn(
+          '[Central de Alertas] ticket_created: falha na verificação de duplicidade (' +
+            msg +
+            ') — prosseguindo com envio',
         )
-        return Boolean(rec)
-      } catch (_) {
         return false
       }
     }
@@ -131,10 +170,10 @@ onRecordAfterCreateSuccess(function (e) {
         var col = $app.findCollectionByNameOrId('email_sent_logs')
         var cleanRecipient = String(recipient).trim().toLowerCase()
         var log = new Record(col)
-        log.set('alert_key', alertKey)
-        log.set('reference_id', referenceId)
+        log.set('alert_key', String(alertKey).trim())
+        log.set('reference_id', String(referenceId).trim())
         log.set('recipient', cleanRecipient)
-        log.set('sent_at', new DateTime())
+        log.set('sent_at', new Date().toISOString().replace('T', ' '))
         log.set('subject', subject || '')
         if (meta) log.set('meta', meta)
         $app.save(log)
@@ -648,7 +687,21 @@ onRecordAfterCreateSuccess(function (e) {
       for (var i = 0; i < recipients.length; i++) {
         var recipient = recipients[i]
 
-        if (referenceId && localHasEmailAlreadyBeenSent(alertKey, referenceId, recipient)) {
+        var isDuplicate = false
+        try {
+          isDuplicate = referenceId
+            ? localHasEmailAlreadyBeenSent(alertKey, referenceId, recipient)
+            : false
+        } catch (dupCheckErr) {
+          console.warn(
+            '[Central de Alertas] ticket_created: falha na verificação de duplicidade (' +
+              (dupCheckErr && dupCheckErr.message ? dupCheckErr.message : String(dupCheckErr)) +
+              ') — prosseguindo com envio',
+          )
+          isDuplicate = false
+        }
+
+        if (isDuplicate) {
           skippedDuplicates++
           continue
         }
@@ -912,7 +965,12 @@ onRecordAfterCreateSuccess(function (e) {
           ' | destinatários=' +
           recipientsList.join(', '),
       )
-    } else if (result && result.reason && result.reason !== 'already_sent') {
+    } else if (result && result.reason === 'already_sent') {
+      console.log(
+        '[Central de Alertas] ticket_created: already_sent — envio pulado | chamado #' +
+          ticketNumber,
+      )
+    } else if (result && result.reason) {
       console.error(
         '[Central de Alertas] ticket_created: envio não realizado | motivo=' +
           result.reason +
