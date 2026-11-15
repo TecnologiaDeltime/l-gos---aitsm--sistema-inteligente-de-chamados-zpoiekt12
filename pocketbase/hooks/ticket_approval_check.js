@@ -225,9 +225,14 @@
     )
   }
 
-  // ===== Registro do hook =====
-
-  onRecordAfterCreateSuccess((e) => {
+  // ===== Lógica de verificação (extraída para reexecução pós-triagem IA) =====
+  // A triagem automática aplica categoria/subatividade DEPOIS da criação do
+  // chamado (onRecordAfterCreateSuccess assíncrono), então o hook de criação
+  // roda antes de existir subatividade e a regra por atividade não casa.
+  // A lógica fica em runApprovalCheckEvent e pode ser reinvocada via
+  // globalThis.ticketApprovalRunCheck (usado por ticket_on_create.js após a
+  // triagem persistir categoria/subatividade).
+  var runApprovalCheckEvent = function (e) {
     var ticket = e.record
     var companyId = ticket.getString('company')
     if (!companyId) return e.next()
@@ -284,15 +289,33 @@
       var activityId = cfg.getString('activity')
 
       if (activityId) {
-        if (subcategoryId && activityId === subcategoryId) {
-          matchingConfig = cfg
-          break
-        }
-        if (categoryId && activityId === categoryId) {
-          matchingConfig = cfg
-          break
-        }
-        continue
+        // A regra casa quando a atividade cadastrada é a categoria (pai) OU a
+        // subatividade do chamado (a matriz grava a SUBATIVIDADE em activity).
+        var activityMatched =
+          (subcategoryId && activityId === subcategoryId) ||
+          (categoryId && activityId === categoryId)
+        if (!activityMatched) continue
+
+        // request_types vazio = vale para qualquer tipo de solicitação;
+        // preenchido = o tipo do chamado precisa estar na lista.
+        var reqTypesAct = []
+        try {
+          var rawAct = cfg.get('request_types')
+          if (Array.isArray(rawAct)) {
+            reqTypesAct = rawAct
+          } else if (typeof rawAct === 'string' && rawAct.trim()) {
+            try {
+              var parsedAct = JSON.parse(rawAct)
+              if (Array.isArray(parsedAct)) reqTypesAct = parsedAct
+            } catch (_) {
+              reqTypesAct = [rawAct]
+            }
+          }
+        } catch (_) {}
+        if (reqTypesAct.length > 0 && reqTypesAct.indexOf(ticketType) < 0) continue
+
+        matchingConfig = cfg
+        break
       }
 
       // Regras legadas sem atividade
@@ -609,7 +632,11 @@
         if (candidate.type === 'user') {
           appRec.set('approver', candidate.id)
         } else {
-          appRec.set('contact', candidate.id)
+          // Campo real da collection approvals é target_contact (relation para
+          // client_contacts) — 'contact' não existe e a pendência ficava sem
+          // aprovador vinculada no Portal.
+          appRec.set('target_contact', candidate.id)
+          if (candidate.email) appRec.set('target_email', candidate.email)
         }
 
         if (timeoutMinutes > 0) {
@@ -788,5 +815,26 @@
     }
 
     return e.next()
+  }
+
+  onRecordAfterCreateSuccess((e) => {
+    try {
+      runApprovalCheckEvent(e)
+    } catch (errHook) {
+      $app.logger().error('ticket_approval_check: hook error', 'error', errHook.message)
+    }
+    return e.next()
   }, 'tickets')
+
+  // Publica para reexecução após a triagem automática aplicar categoria/
+  // subatividade (ticket_on_create.js). globalThis é visível entre hooks.
+  if (typeof globalThis !== 'undefined') {
+    globalThis.ticketApprovalRunCheck = function (app, ticket, auth) {
+      try {
+        runApprovalCheckEvent({ record: ticket, auth: auth || null, next: function () {} })
+      } catch (errRe) {
+        $app.logger().error('ticket_approval_check: recheck error', 'error', errRe.message)
+      }
+    }
+  }
 })()

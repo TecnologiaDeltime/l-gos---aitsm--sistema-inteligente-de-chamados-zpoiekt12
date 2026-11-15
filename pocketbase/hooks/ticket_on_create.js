@@ -788,6 +788,28 @@ onRecordAfterCreateSuccess((e) => {
       )
     }
 
+    // REAVALIAÇÃO DE APROVAÇÃO: o hook ticket_approval_check roda no after-create,
+    // quando o chamado ainda não tem categoria/subatividade (aplicadas aqui, de
+    // forma assíncrona). Com a atividade persistida, reexecuta o casamento da
+    // regra — regra com activity casa por subatividade OU categoria, e
+    // request_types vazio vale para qualquer tipo.
+    try {
+      if (typeof globalThis.ticketApprovalRunCheck === 'function') {
+        var recheckTicket = e.app.findRecordById('tickets', ticketId)
+        if (recheckTicket) {
+          // Idempotente: o ticket_approval_check não duplica pendência (procura
+          // aprovação Pendente existente antes de criar).
+          globalThis.ticketApprovalRunCheck(e.app, recheckTicket, e.auth)
+          console.log('[AI_AUTO_TRIAGE] Reavaliação de aprovação executada para ' + ticketNumber)
+        }
+      }
+    } catch (errApprovalRecheck) {
+      console.warn(
+        '[AI_AUTO_TRIAGE] Falha ao reavaliar regra de aprovação do chamado ' + ticketNumber + ':',
+        errApprovalRecheck,
+      )
+    }
+
     // Registrar no histórico de triagem (portal_triage_history) para auditoria e métricas
     try {
       var histCol = e.app.findCollectionByNameOrId('portal_triage_history')
