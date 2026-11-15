@@ -100,6 +100,7 @@ import { TicketAiReplyPanel } from '@/components/TicketAiReplyPanel'
 import { TicketTagsSection } from '@/components/TicketTagsSection'
 import { TicketCategoryCard } from '@/components/tickets/TicketCategoryCard'
 import { TicketTriageHistoryCard } from '@/components/tickets/TicketTriageHistoryCard'
+import TicketApprovalsHistoryCard from '@/components/tickets/TicketApprovalsHistoryCard'
 import { StatusBadge } from '@/components/StatusBadge'
 import { OriginalEmailCard } from '@/components/OriginalEmailCard'
 import { sanitizeEmailHtml } from '@/lib/sanitize-email-html'
@@ -1955,6 +1956,8 @@ export default function TicketDetail({
               )}
             </div>
           </div>
+          <TicketApprovalsHistoryCard ticketId={ticket.id} refreshKey={ticket.updated} />
+
           <TicketTagsSection
             ticketId={ticket.id}
             currentTagsString={ticket.tags || ''}
