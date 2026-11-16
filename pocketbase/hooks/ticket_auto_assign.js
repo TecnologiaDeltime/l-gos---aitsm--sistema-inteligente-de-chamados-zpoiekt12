@@ -6,6 +6,14 @@
 // 3. Fallback: usuários internos ativos cujo campo `team` seja igual ao nome da fila
 //    (corrige filas sem members cadastrados — ex.: "Suporte N2" x users.team)
 // 4. Fallback: qualquer operador interno ativo da fila com menor carga
+// ALOCAÇÃO DE OPERADORES (v0.0.436+): antes de escolher o candidato, cada membro da
+// fila é avaliado contra as alocações vigentes (coleção operator_allocations):
+//  - allocation_type 'permanente' (exclusiva): só é candidato a chamados do seu cliente exclusivo;
+//  - allocation_type 'periodo': só é candidato ao cliente alocado quando a recorrência
+//    (dias da semana / semanas do mês / meses) e a vigência (início/fim) cobrem a data atual;
+//  - sem alocação ativa: comporta-se como hoje.
+// Um operador alocado NUNCA recebe automaticamente chamado de outro cliente enquanto
+// a alocação estiver vigente.
 // NOTAS (bugs corrigidos):
 // - A coleção `queues` NÃO possui campo `manager`: ler queue.getString('manager')
 //   retornava vazio e, com members vazio, nenhum candidato era encontrado.
@@ -65,6 +73,12 @@ onRecordCreate((e) => {
         }
 
         if (members && members.length > 0) {
+          var ticketCompanyId = ''
+          try {
+            var tComp = e.record.get('company')
+            ticketCompanyId = tComp && tComp.id ? tComp.id : e.record.getString('company')
+          } catch (_) {}
+
           var availableMembers = []
           var otherMembers = []
 
@@ -89,15 +103,100 @@ onRecordCreate((e) => {
           var candidatePool = availableMembers.length > 0 ? availableMembers : otherMembers
           if (candidatePool.length === 0) candidatePool = members
 
+          // Filtro por alocação vigente: só remove candidatos com alocação ativa
+          // apontando para outro cliente. Operador sem alocação permanece elegível.
+          var filteredPool = []
+          for (var fp = 0; fp < candidatePool.length; fp++) {
+            var candId = candidatePool[fp]
+            var candEligible = true
+            try {
+              var nowD = new Date()
+              var dayIdx = nowD.getDay()
+              var dayOfMonth = nowD.getDate()
+              var monthIdx = nowD.getMonth() + 1
+              var weekOfMonth = Math.ceil(dayOfMonth / 7)
+              var allocs = $app.findRecordsByFilter(
+                'operator_allocations',
+                'active = true && operator = "' + candId + '"',
+                '-updated',
+                100,
+                0,
+              )
+              for (var a = 0; a < allocs.length; a++) {
+                var alloc = allocs[a]
+                var allocCompanyId = ''
+                try {
+                  var aComp = alloc.get('company')
+                  allocCompanyId = aComp && aComp.id ? aComp.id : alloc.getString('company')
+                } catch (_) {}
+                var typeStr = alloc.getString('allocation_type') || ''
+
+                // Vigência (início/fim) — obrigatória quando preenchida
+                var inRange = true
+                var sDate = alloc.getString('start_date')
+                var eDate = alloc.getString('end_date')
+                if (sDate) {
+                  var sd = new Date(sDate.replace(' ', 'T'))
+                  if (!isNaN(sd.getTime()) && nowD < sd) inRange = false
+                }
+                if (inRange && eDate) {
+                  var ed = new Date(eDate.replace(' ', 'T'))
+                  if (!isNaN(ed.getTime())) {
+                    ed.setHours(23, 59, 59, 999)
+                    if (nowD > ed) inRange = false
+                  }
+                }
+                if (!inRange) continue
+
+                if (typeStr === 'permanente') {
+                  if (allocCompanyId !== ticketCompanyId) {
+                    candEligible = false
+                    break
+                  }
+                } else if (typeStr === 'periodo') {
+                  var occ = true
+                  try {
+                    var rec = JSON.parse(alloc.getString('recurrence_json') || '{}')
+                    var days = rec.days_of_week || []
+                    if (days.length > 0 && days.indexOf(dayIdx) === -1) occ = false
+                    if (occ) {
+                      var weeks = rec.weeks_of_month || []
+                      if (weeks.length > 0 && weeks.indexOf(weekOfMonth) === -1) occ = false
+                    }
+                    if (occ) {
+                      var months = rec.months || []
+                      if (months.length > 0 && months.indexOf(monthIdx) === -1) occ = false
+                    }
+                  } catch (pErr) {
+                    occ = false
+                  }
+                  if (occ && allocCompanyId !== ticketCompanyId) {
+                    candEligible = false
+                    break
+                  }
+                }
+              }
+            } catch (allocErr) {
+              $app
+                .logger()
+                .warn('auto_assign: falha ao avaliar alocação', 'error', allocErr.message)
+            }
+            if (candEligible) filteredPool.push(candId)
+          }
+
+          if (filteredPool.length > 0) candidatePool = filteredPool
+          // Se filteredPool vazio: TODOS os candidatos da fila estão alocados a
+          // outros clientes — o chamado fica sem atribuição automática.
+
           var bestMemberId = ''
           var leastLoadCount = 999999
 
           for (var j = 0; j < candidatePool.length; j++) {
-            var candId = candidatePool[j]
+            var candId2 = candidatePool[j]
             var activeTickets = $app.findRecordsByFilter(
               'tickets',
               "assigned_to = '" +
-                candId +
+                candId2 +
                 "' && status != 'Encerrado' && status != 'Cancelado' && status != 'Resolvido'",
               '-created',
               1000,
@@ -106,14 +205,14 @@ onRecordCreate((e) => {
             var count = activeTickets.length
             if (count < leastLoadCount) {
               leastLoadCount = count
-              bestMemberId = candId
+              bestMemberId = candId2
             }
           }
 
           if (bestMemberId) {
             assignedUserId = bestMemberId
           } else {
-            assignedUserId = members[0] || ''
+            assignedUserId = candidatePool[0] || ''
           }
         }
       } catch (findErr) {
@@ -231,6 +330,12 @@ cronAdd('ticket_auto_assign_cron', '* * * * *', () => {
           }
 
           if (mList && mList.length > 0) {
+            var ticketCompId = ''
+            try {
+              var tkComp = tkt.get('company')
+              ticketCompId = tkComp && tkComp.id ? tkComp.id : tkt.getString('company')
+            } catch (_) {}
+
             var availList = []
             var othersList = []
             for (var m = 0; m < mList.length; m++) {
@@ -248,6 +353,89 @@ cronAdd('ticket_auto_assign_cron', '* * * * *', () => {
 
             var pool = availList.length > 0 ? availList : othersList
             if (pool.length === 0) pool = mList
+
+            // Filtro por alocação vigente (mesma regra da criação)
+            var filteredPool = []
+            for (var fp2 = 0; fp2 < pool.length; fp2++) {
+              var candId3 = pool[fp2]
+              var candOk = true
+              try {
+                var nowD2 = new Date()
+                var dayIdx2 = nowD2.getDay()
+                var dom2 = nowD2.getDate()
+                var monthIdx2 = nowD2.getMonth() + 1
+                var wom2 = Math.ceil(dom2 / 7)
+                var allocs2 = $app.findRecordsByFilter(
+                  'operator_allocations',
+                  'active = true && operator = "' + candId3 + '"',
+                  '-updated',
+                  100,
+                  0,
+                )
+                for (var a2 = 0; a2 < allocs2.length; a2++) {
+                  var al = allocs2[a2]
+                  var alCompId = ''
+                  try {
+                    var alComp = al.get('company')
+                    alCompId = alComp && alComp.id ? alComp.id : al.getString('company')
+                  } catch (_) {}
+                  var alType = al.getString('allocation_type') || ''
+
+                  var inR = true
+                  var sD = al.getString('start_date')
+                  var eD = al.getString('end_date')
+                  if (sD) {
+                    var sd2 = new Date(sD.replace(' ', 'T'))
+                    if (!isNaN(sd2.getTime()) && nowD2 < sd2) inR = false
+                  }
+                  if (inR && eD) {
+                    var ed2 = new Date(eD.replace(' ', 'T'))
+                    if (!isNaN(ed2.getTime())) {
+                      ed2.setHours(23, 59, 59, 999)
+                      if (nowD2 > ed2) inR = false
+                    }
+                  }
+                  if (!inR) continue
+
+                  if (alType === 'permanente') {
+                    if (alCompId !== ticketCompId) {
+                      candOk = false
+                      break
+                    }
+                  } else if (alType === 'periodo') {
+                    var occ2 = true
+                    try {
+                      var rc = JSON.parse(al.getString('recurrence_json') || '{}')
+                      var dys = rc.days_of_week || []
+                      if (dys.length > 0 && dys.indexOf(dayIdx2) === -1) occ2 = false
+                      if (occ2) {
+                        var wks = rc.weeks_of_month || []
+                        if (wks.length > 0 && wks.indexOf(wom2) === -1) occ2 = false
+                      }
+                      if (occ2) {
+                        var mts = rc.months || []
+                        if (mts.length > 0 && mts.indexOf(monthIdx2) === -1) occ2 = false
+                      }
+                    } catch (pErr2) {
+                      occ2 = false
+                    }
+                    if (occ2 && alCompId !== ticketCompId) {
+                      candOk = false
+                      break
+                    }
+                  }
+                }
+              } catch (allocErr2) {
+                $app
+                  .logger()
+                  .warn('auto_assign cron: falha ao avaliar alocação', 'error', allocErr2.message)
+              }
+              if (candOk) filteredPool.push(candId3)
+            }
+
+            if (filteredPool.length > 0) pool = filteredPool
+            // Se todos os candidatos estão alocados a outros clientes, não atribui.
+
             var bestId = ''
             var minCount = 999999
 
@@ -268,7 +456,7 @@ cronAdd('ticket_auto_assign_cron', '* * * * *', () => {
               }
             }
 
-            opId = bestId || mList[0] || ''
+            opId = bestId || pool[0] || ''
           }
         } catch (_) {}
 
@@ -330,11 +518,11 @@ routerAdd(
 
       for (var i = 0; i < unassigned.length; i++) {
         var t = unassigned[i]
-        var qId = t.getString('queue')
-        if (qId) {
+        var qId2 = t.getString('queue')
+        if (qId2) {
           var targetOp = ''
           try {
-            var queueRecord = $app.findRecordById('queues', qId)
+            var queueRecord = $app.findRecordById('queues', qId2)
             var mems = queueRecord.get('members') || []
 
             // Fallback por team quando a fila não tem members
@@ -356,6 +544,12 @@ routerAdd(
             }
 
             if (mems && mems.length > 0) {
+              var tCompId = ''
+              try {
+                var ttComp = t.get('company')
+                tCompId = ttComp && ttComp.id ? ttComp.id : t.getString('company')
+              } catch (_) {}
+
               var avails = []
               var others = []
               for (var mi = 0; mi < mems.length; mi++) {
@@ -373,6 +567,89 @@ routerAdd(
 
               var candidates = avails.length > 0 ? avails : others
               if (candidates.length === 0) candidates = mems
+
+              // Filtro por alocação vigente (mesma regra da criação)
+              var filtered = []
+              for (var fpi = 0; fpi < candidates.length; fpi++) {
+                var candId4 = candidates[fpi]
+                var candOk2 = true
+                try {
+                  var nowD3 = new Date()
+                  var dayIdx3 = nowD3.getDay()
+                  var dom3 = nowD3.getDate()
+                  var monthIdx3 = nowD3.getMonth() + 1
+                  var wom3 = Math.ceil(dom3 / 7)
+                  var allocs3 = $app.findRecordsByFilter(
+                    'operator_allocations',
+                    'active = true && operator = "' + candId4 + '"',
+                    '-updated',
+                    100,
+                    0,
+                  )
+                  for (var a3 = 0; a3 < allocs3.length; a3++) {
+                    var al3 = allocs3[a3]
+                    var al3CompId = ''
+                    try {
+                      var al3Comp = al3.get('company')
+                      al3CompId = al3Comp && al3Comp.id ? al3Comp.id : al3.getString('company')
+                    } catch (_) {}
+                    var al3Type = al3.getString('allocation_type') || ''
+
+                    var inR3 = true
+                    var sD3 = al3.getString('start_date')
+                    var eD3 = al3.getString('end_date')
+                    if (sD3) {
+                      var sd3 = new Date(sD3.replace(' ', 'T'))
+                      if (!isNaN(sd3.getTime()) && nowD3 < sd3) inR3 = false
+                    }
+                    if (inR3 && eD3) {
+                      var ed3 = new Date(eD3.replace(' ', 'T'))
+                      if (!isNaN(ed3.getTime())) {
+                        ed3.setHours(23, 59, 59, 999)
+                        if (nowD3 > ed3) inR3 = false
+                      }
+                    }
+                    if (!inR3) continue
+
+                    if (al3Type === 'permanente') {
+                      if (al3CompId !== tCompId) {
+                        candOk2 = false
+                        break
+                      }
+                    } else if (al3Type === 'periodo') {
+                      var occ3 = true
+                      try {
+                        var rc3 = JSON.parse(al3.getString('recurrence_json') || '{}')
+                        var dys3 = rc3.days_of_week || []
+                        if (dys3.length > 0 && dys3.indexOf(dayIdx3) === -1) occ3 = false
+                        if (occ3) {
+                          var wks3 = rc3.weeks_of_month || []
+                          if (wks3.length > 0 && wks3.indexOf(wom3) === -1) occ3 = false
+                        }
+                        if (occ3) {
+                          var mts3 = rc3.months || []
+                          if (mts3.length > 0 && mts3.indexOf(monthIdx3) === -1) occ3 = false
+                        }
+                      } catch (pErr3) {
+                        occ3 = false
+                      }
+                      if (occ3 && al3CompId !== tCompId) {
+                        candOk2 = false
+                        break
+                      }
+                    }
+                  }
+                } catch (allocErr3) {
+                  $app
+                    .logger()
+                    .warn('auto-assign run: falha ao avaliar alocação', 'error', allocErr3.message)
+                }
+                if (candOk2) filtered.push(candId4)
+              }
+
+              if (filtered.length > 0) candidates = filtered
+              // Se todos estão alocados a outros clientes, não atribui.
+
               var bestCandidate = ''
               var lowestLoad = 999999
 
@@ -393,7 +670,7 @@ routerAdd(
                 }
               }
 
-              targetOp = bestCandidate || mems[0] || ''
+              targetOp = bestCandidate || candidates[0] || ''
             }
           } catch (_) {}
 

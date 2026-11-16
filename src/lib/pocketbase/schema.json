@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-16T22:04:26.490Z",
+  "generatedAt": "2026-11-16T22:30:22.381Z",
   "collections": [
     {
       "name": "users",
@@ -13159,6 +13159,95 @@
         }
       ],
       "indexes": ["CREATE UNIQUE INDEX idx_company_settings_single ON company_settings (id)"]
+    },
+    {
+      "name": "operator_allocations",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != ''",
+        "view": "@request.auth.id != ''",
+        "create": "@request.auth.id != '' && (@request.auth.role = \"admin\" || @request.auth.role = \"gestor\")",
+        "update": "@request.auth.id != '' && (@request.auth.role = \"admin\" || @request.auth.role = \"gestor\")",
+        "delete": "@request.auth.id != '' && @request.auth.role = \"admin\""
+      },
+      "fields": [
+        {
+          "name": "operator",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "company",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "companies"
+        },
+        {
+          "name": "unit",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "company_units"
+        },
+        {
+          "name": "allocation_type",
+          "type": "select",
+          "required": true,
+          "system": false,
+          "selectValues": ["permanente", "periodo"]
+        },
+        {
+          "name": "recurrence_json",
+          "type": "json",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "start_date",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "end_date",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "active",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "notes",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": [
+        "CREATE INDEX idx_operator_allocations_operator ON operator_allocations (operator)",
+        "CREATE INDEX idx_operator_allocations_company ON operator_allocations (company)"
+      ]
     }
   ]
 }

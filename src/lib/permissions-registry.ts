@@ -758,6 +758,13 @@ const BASE_SYSTEM_MODULES: GranularModuleDefinition[] = [
         description: 'Matriz de permissões granulares por perfil',
         path: '/profiles',
       },
+      {
+        key: 'admin_operator_allocations',
+        label: 'Alocação de Operadores',
+        description:
+          'Alocação presencial de operadores em clientes (sede/filiais): exclusiva/permanente ou por período com recorrência de dias, semanas e meses',
+        path: '/admin/operador-allocation',
+      },
     ],
   },
   {
