@@ -11,6 +11,7 @@ import {
   XCircle,
   Clock,
   Building,
+  UserCheck,
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -70,6 +71,8 @@ export default function ApprovalsReportPage() {
   const [appliedEnd, setAppliedEnd] = useState(endDate)
   const [companyId, setCompanyId] = useState('all')
   const [appliedCompanyId, setAppliedCompanyId] = useState('all')
+  const [approverId, setApproverId] = useState('all')
+  const [appliedApproverId, setAppliedApproverId] = useState('all')
 
   const [companies, setCompanies] = useState<CompanyRecord[]>([])
   const [rows, setRows] = useState<ApprovalReportRow[]>([])
@@ -119,6 +122,7 @@ export default function ApprovalsReportPage() {
     setAppliedStart(startDate)
     setAppliedEnd(endDate)
     setAppliedCompanyId(companyId)
+    setAppliedApproverId(approverId)
   }
 
   const handleResetFilters = () => {
@@ -127,17 +131,37 @@ export default function ApprovalsReportPage() {
     setStartDate(sd)
     setEndDate(ed)
     setCompanyId('all')
+    setApproverId('all')
     setAppliedStart(sd)
     setAppliedEnd(ed)
     setAppliedCompanyId('all')
+    setAppliedApproverId('all')
     setSearch('')
   }
 
-  // Filtro local de busca rápida
+  // Opções de aprovadores: distinto das aprovações carregadas
+  // (internos via approver e pontos focais via target_contact)
+  const approverOptions = useMemo(() => {
+    const map = new Map<string, string>()
+    rows.forEach((r) => {
+      if (r.approverId && r.approverName && r.approverName !== '—') {
+        if (!map.has(r.approverId)) map.set(r.approverId, r.approverName)
+      }
+    })
+    return Array.from(map.entries())
+      .map(([id, name]) => ({ id, name }))
+      .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'))
+  }, [rows])
+
+  // Filtro local de busca rápida + filtro por aprovador aplicado
   const filteredRows = useMemo(() => {
-    if (!search.trim()) return rows
+    let result = rows
+    if (appliedApproverId && appliedApproverId !== 'all') {
+      result = result.filter((r) => r.approverId === appliedApproverId)
+    }
+    if (!search.trim()) return result
     const term = search.toLowerCase()
-    return rows.filter(
+    return result.filter(
       (r) =>
         r.ticketNumber.toLowerCase().includes(term) ||
         r.ticketTitle.toLowerCase().includes(term) ||
@@ -146,7 +170,7 @@ export default function ApprovalsReportPage() {
         r.approverName.toLowerCase().includes(term) ||
         r.reason.toLowerCase().includes(term),
     )
-  }, [rows, search])
+  }, [rows, search, appliedApproverId])
 
   const approvedCount = useMemo(
     () => filteredRows.filter((r) => r.status === 'Aprovado').length,
@@ -183,6 +207,12 @@ export default function ApprovalsReportPage() {
     }
     return `${fmt(appliedStart)} a ${fmt(appliedEnd)}`
   }, [appliedStart, appliedEnd])
+
+  // Nome do aprovador filtrado (descrição e exportações)
+  const selectedApproverName = useMemo(() => {
+    if (!appliedApproverId || appliedApproverId === 'all') return null
+    return approverOptions.find((a) => a.id === appliedApproverId)?.name || 'Aprovador selecionado'
+  }, [appliedApproverId, approverOptions])
 
   // Colunas para exportação XLSX e PDF
   const reportColumns: ExportColumn<ApprovalReportRow>[] = useMemo(
@@ -225,7 +255,7 @@ export default function ApprovalsReportPage() {
   )
 
   const exportSummary = {
-    label: `Período: ${periodLabel} | Total de Decisões:`,
+    label: `Período: ${periodLabel}${selectedApproverName ? ` | Aprovador: ${selectedApproverName}` : ''} | Total de Decisões:`,
     value: filteredRows.length,
   }
 
@@ -281,7 +311,7 @@ export default function ApprovalsReportPage() {
             </div>
             <p className="text-xs text-muted-foreground mt-1">
               Aprovações de chamados (pendentes, aprovadas e reprovadas) com data, motivo,
-              solicitante, aprovador e empresa — com filtro por período e empresa.
+              solicitante, aprovador e empresa — com filtro por período, empresa e aprovador.
             </p>
           </div>
         </div>
@@ -354,6 +384,24 @@ export default function ApprovalsReportPage() {
                   {companies.map((c) => (
                     <SelectItem key={c.id} value={c.id}>
                       {c.trade_name || c.legal_name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs flex items-center gap-1">
+                <UserCheck className="h-3 w-3" /> Aprovador
+              </Label>
+              <Select value={approverId} onValueChange={setApproverId}>
+                <SelectTrigger className="w-56 h-8 text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos os aprovadores</SelectItem>
+                  {approverOptions.map((a) => (
+                    <SelectItem key={a.id} value={a.id}>
+                      {a.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -451,6 +499,7 @@ export default function ApprovalsReportPage() {
             <CardDescription className="text-xs">
               {filteredRows.length} aprovação(ões) encontrada(s) • Período de {periodLabel} •{' '}
               {selectedClientName}
+              {selectedApproverName ? ` • Aprovador: ${selectedApproverName}` : ''}
             </CardDescription>
           </div>
 

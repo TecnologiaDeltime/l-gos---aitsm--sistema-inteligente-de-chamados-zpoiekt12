@@ -18,6 +18,7 @@ export interface ApprovalReportRow {
   reason: string
   requesterName: string
   approverName: string
+  approverId: string
   companyId: string
   companyName: string
 }
@@ -116,9 +117,13 @@ export async function getApprovalReportRows(params: {
           ? 'Aprovado'
           : 'Reprovado'
 
+      // Id do aprovador: interno (approver) ou ponto focal (target_contact)
+      const approverId = rec.approver || rec.target_contact || ''
+
       return {
         id: rec.id,
         decisionDate: fmtDateTime(rowDate),
+        approverId,
         ticketId: rec.ticket || '',
         ticketNumber,
         ticketTitle: t?.title || '—',
