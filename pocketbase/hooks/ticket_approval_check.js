@@ -778,10 +778,58 @@ onRecordAfterCreateSuccess(function (e) {
 
     var statusBefore = String(curTicket.getString('status') || '')
 
-    // ---- trava o chamado: approval_hold + status Aguardando Aprovação ----
+    // ---- nomes dos aprovadores (rastreabilidade no histórico) ----
+    var approverNames = []
+    for (var an = 0; an < createdApprovals.length; an++) {
+      var aName = ''
+      try {
+        var apId = createdApprovals[an].getString('approver')
+        if (apId) aName = (curApp.findRecordById('users', apId).getString('name') || '').trim()
+      } catch (_) {}
+      if (!aName) {
+        try {
+          var tcId = createdApprovals[an].getString('target_contact')
+          if (tcId)
+            aName = (curApp.findRecordById('client_contacts', tcId).getString('name') || '').trim()
+        } catch (_) {}
+      }
+      if (!aName) {
+        try {
+          aName = (createdApprovals[an].getString('target_email') || '').trim()
+        } catch (_) {}
+      }
+      if (aName && approverNames.indexOf(aName) < 0) approverNames.push(aName)
+    }
+    var approverLabel = approverNames.length > 0 ? approverNames.join(', ') : 'aprovador da regra'
+
+    // ---- trava o chamado: approval_hold + status Aguardando Aprovação + PAUSA DE SLA ----
+    var nowIsoHold = new Date().toISOString()
     try {
+      // SLA Resposta e SLA Solução param de contar: grava a pausa em sla_pauses
+      if (!curTicket.getBool('sla_paused')) {
+        try {
+          var pauseColHold = curApp.findCollectionByNameOrId('sla_pauses')
+          var pauseRecHold = new Record(pauseColHold)
+          pauseRecHold.set('ticket', curTicket.id)
+          pauseRecHold.set('reason', 'Aguardando Aprovação')
+          pauseRecHold.set(
+            'justification',
+            'Chamado aguardando aprovação (regra empresa + atividade).',
+          )
+          pauseRecHold.set('paused_by', requesterId)
+          pauseRecHold.set('paused_at', nowIsoHold)
+          curApp.save(pauseRecHold)
+        } catch (errPause) {
+          console.error(
+            '[APPROVAL_CHECK] falha ao gravar pausa de SLA: ' +
+              (errPause && errPause.message ? errPause.message : String(errPause)),
+          )
+        }
+      }
       curTicket.set('approval_hold', true)
       curTicket.set('status', 'Aguardando Aprovação')
+      curTicket.set('sla_paused', true)
+      curTicket.set('sla_status', 'Pausado')
       curApp.save(curTicket)
       console.log(
         '[APPROVAL_CHECK] chamado #' +
@@ -797,7 +845,7 @@ onRecordAfterCreateSuccess(function (e) {
       )
     }
 
-    // ---- histórico do chamado ----
+    // ---- histórico do chamado (cita os aprovadores — rastreabilidade) ----
     try {
       var historyCol = curApp.findCollectionByNameOrId('ticket_history')
       var hist = new Record(historyCol)
@@ -805,9 +853,11 @@ onRecordAfterCreateSuccess(function (e) {
       hist.set('user', requesterId)
       hist.set(
         'action',
-        'Chamado enviado para aprovação (regra empresa + atividade). ' +
+        'Chamado enviado para aprovação do aprovador ' +
+          approverLabel +
+          ' (regra empresa + atividade). ' +
           createdApprovals.length +
-          ' pendência(s) criada(s) — status "Aguardando Aprovação".',
+          ' pendência(s) criada(s) — status "Aguardando Aprovação". SLA (resposta e solução) pausado durante a espera.',
       )
       hist.set('field', 'status')
       hist.set('old_value', statusBefore || 'Atribuído')
@@ -1690,14 +1740,65 @@ onRecordAfterUpdateSuccess(function (e) {
 
     var statusBefore = String(curTicket.getString('status') || '')
 
+    // ---- nomes dos aprovadores (rastreabilidade no histórico) ----
+    var approverNames = []
+    for (var an2 = 0; an2 < createdApprovals.length; an2++) {
+      var aName2 = ''
+      try {
+        var apId2 = createdApprovals[an2].getString('approver')
+        if (apId2) aName2 = (curApp.findRecordById('users', apId2).getString('name') || '').trim()
+      } catch (_) {}
+      if (!aName2) {
+        try {
+          var tcId2 = createdApprovals[an2].getString('target_contact')
+          if (tcId2)
+            aName2 = (
+              curApp.findRecordById('client_contacts', tcId2).getString('name') || ''
+            ).trim()
+        } catch (_) {}
+      }
+      if (!aName2) {
+        try {
+          aName2 = (createdApprovals[an2].getString('target_email') || '').trim()
+        } catch (_) {}
+      }
+      if (aName2 && approverNames.indexOf(aName2) < 0) approverNames.push(aName2)
+    }
+    var approverLabel = approverNames.length > 0 ? approverNames.join(', ') : 'aprovador da regra'
+
+    // ---- trava o chamado: approval_hold + status Aguardando Aprovação + PAUSA DE SLA ----
+    var nowIsoHold = new Date().toISOString()
     try {
+      // SLA Resposta e SLA Solução param de contar: grava a pausa em sla_pauses
+      if (!curTicket.getBool('sla_paused')) {
+        try {
+          var pauseColHold = curApp.findCollectionByNameOrId('sla_pauses')
+          var pauseRecHold = new Record(pauseColHold)
+          pauseRecHold.set('ticket', curTicket.id)
+          pauseRecHold.set('reason', 'Aguardando Aprovação')
+          pauseRecHold.set(
+            'justification',
+            'Chamado aguardando aprovação (regra empresa + atividade).',
+          )
+          pauseRecHold.set('paused_by', requesterId)
+          pauseRecHold.set('paused_at', nowIsoHold)
+          curApp.save(pauseRecHold)
+        } catch (errPause) {
+          console.error(
+            '[APPROVAL_CHECK] falha ao gravar pausa de SLA: ' +
+              (errPause && errPause.message ? errPause.message : String(errPause)),
+          )
+        }
+      }
       curTicket.set('approval_hold', true)
       curTicket.set('status', 'Aguardando Aprovação')
+      curTicket.set('sla_paused', true)
+      curTicket.set('sla_status', 'Pausado')
       curApp.save(curTicket)
       console.log(
         '[APPROVAL_CHECK] chamado #' +
           ticketNumber +
-          ' travado: approval_hold=true, status=Aguardando Aprovação',
+          ' travado: approval_hold=true, status=Aguardando Aprovação, SLA pausado',
       )
     } catch (errHold) {
       console.error(
@@ -1708,6 +1809,7 @@ onRecordAfterUpdateSuccess(function (e) {
       )
     }
 
+    // ---- histórico do chamado (cita os aprovadores — rastreabilidade) ----
     try {
       var historyCol = curApp.findCollectionByNameOrId('ticket_history')
       var hist = new Record(historyCol)
@@ -1715,9 +1817,11 @@ onRecordAfterUpdateSuccess(function (e) {
       hist.set('user', requesterId)
       hist.set(
         'action',
-        'Chamado enviado para aprovação (regra empresa + atividade). ' +
+        'Chamado enviado para aprovação do aprovador ' +
+          approverLabel +
+          ' (regra empresa + atividade). ' +
           createdApprovals.length +
-          ' pendência(s) criada(s) — status "Aguardando Aprovação".',
+          ' pendência(s) criada(s) — status "Aguardando Aprovação". SLA (resposta e solução) pausado durante a espera.',
       )
       hist.set('field', 'status')
       hist.set('old_value', statusBefore || 'Atribuído')

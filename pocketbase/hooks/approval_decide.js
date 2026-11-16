@@ -1,9 +1,16 @@
 // pocketbase/hooks/approval_decide.js
 // Lógos AITSM - Processamento de Decisões de Aprovação (Web + E-mail + Portal)
 // Regra "BASTA UM" (múltiplos aprovadores): a PRIMEIRA aprovação libera o chamado;
-// a PRIMEIRA reprovação encerra. Demais pendências viram "Cancelado" (resolvida por outro aprovador).
-// Recusa com motivo gravado no histórico do chamado.
+// a PRIMEIRA reprovação encerra o chamado com status "Reprovado" (não "Resolvido").
+// Reprovação: retoma a contagem de SLA, grava log com o motivo e envia e-mail ao
+// solicitante (alerta ticket_approval_rejected_notify da Central de Alertas).
+//
+// PADRÃO GOJA OBRIGATÓRIO: nada de helpers top-level compartilhados — o envio de
+// e-mail é duplicado inline em cada rota (padrão ticket_created_client_email.js).
 
+// ============================================================================
+// ROTA 1 — POST /backend/v1/approvals/{token}/decide (interface web/portal)
+// ============================================================================
 routerAdd('POST', '/backend/v1/approvals/{token}/decide', (e) => {
   const token = e.request.pathValue('token')
   if (!token) return e.badRequestError('Token is required')
@@ -33,11 +40,32 @@ routerAdd('POST', '/backend/v1/approvals/{token}/decide', (e) => {
     }
     if (e.auth) {
       approval.set('approver', e.auth.id)
+    } else if (!approval.getString('approver')) {
+      // Aprovação pública (portal sem login): resolve o aprovador pelo token
+      try {
+        var contactOfTok = null
+        try {
+          contactOfTok = $app.findRecordById(
+            'client_contacts',
+            approval.getString('target_contact'),
+          )
+        } catch (_) {}
+        if (contactOfTok && contactOfTok.getString('user')) {
+          approval.set('approver', contactOfTok.getString('user'))
+        }
+        if (!approval.getString('approver')) {
+          var approverUser = null
+          try {
+            approverUser = $app.findRecordById('users', approval.getString('approver'))
+          } catch (_) {}
+          if (approverUser) approval.set('approver', approverUser.id)
+        }
+      } catch (_) {}
     }
     if (isApproved) {
       approval.set('approved_at', now)
     } else {
-      approval.set('rejected_at', now)
+      approval.set('rejected_at', fallbackNow(now))
     }
     $app.save(approval)
 
@@ -53,16 +81,83 @@ routerAdd('POST', '/backend/v1/approvals/{token}/decide', (e) => {
           ? 'Aprovador Interno TI'
           : 'Aprovador'
 
+    // Nome do aprovador (rastreabilidade no histórico)
+    var approverName = roleLabel
+    try {
+      var approverRec = null
+      try {
+        approverRec = $app.findRecordById('users', approval.getString('approver'))
+      } catch (_) {}
+      if (!approverRec) {
+        try {
+          approverRec = $app.findRecordById('client_contacts', approval.getString('target_contact'))
+        } catch (_) {}
+      }
+      if (approverRec) {
+        var nm = (approverRec.getString('name') || '').trim()
+        if (nm) approverName = nm
+      }
+    } catch (_) {}
+
     if (isApproved) {
       // Regra BASTA UM: a PRIMEIRA aprovação decide e libera o chamado imediatamente,
       // independentemente de quantos aprovadores foram configurados.
-      ticket.set('status', 'Novo')
+      var resumeMinutes = 0
+      var resumeTotal = ticket.getInt('sla_pause_total_minutes') || 0
+      if (ticket.getBool('sla_paused')) {
+        var nowResume = new Date()
+        var nowResumeIso = nowResume.toISOString()
+        var openPauses = []
+        try {
+          openPauses = $app.findRecordsByFilter(
+            'sla_pauses',
+            'ticket = "' + ticketId + '" && resumed_at = ""',
+            '-created',
+            1,
+            0,
+          )
+        } catch (_) {}
+        if (openPauses.length > 0) {
+          var pauseRec = openPauses[0]
+          var pausedAtStr = pauseRec.getString('paused_at')
+          if (pausedAtStr) {
+            var pausedAt = new Date(pausedAtStr)
+            var diffMs = nowResume.getTime() - pausedAt.getTime()
+            resumeMinutes = Math.max(1, Math.round(diffMs / 60000))
+          }
+          pauseRec.set('resumed_at', nowResumeIso)
+          pauseRec.set('resumed_by', e.auth ? e.auth.id : approval.getString('requester'))
+          pauseRec.set('duration_minutes', resumeMinutes)
+          $app.save(pauseRec)
+        }
+        resumeTotal = (ticket.getInt('sla_pause_total_minutes') || 0) + resumeMinutes
+        ticket.set('sla_pause_total_minutes', resumeTotal)
+        ticket.set('sla_paused', false)
+        var curDeadline = ticket.getString('sla_solution_deadline')
+        if (curDeadline && resumeMinutes > 0) {
+          var prevMs = new Date(curDeadline).getTime()
+          if (!isNaN(prevMs)) {
+            ticket.set(
+              'sla_solution_deadline',
+              new Date(prevMs + resumeMinutes * 60000).toISOString(),
+            )
+          }
+        }
+        var updDeadline = ticket.getString('sla_solution_deadline')
+        var nowMs2 = nowResume.getTime()
+        if (updDeadline && nowMs2 > new Date(updDeadline).getTime()) {
+          ticket.set('sla_status', 'Violado')
+        } else {
+          ticket.set('sla_status', 'Dentro do Prazo')
+        }
+        ticket.set('status', 'Em Atendimento')
+      } else {
+        ticket.set('status', 'Novo')
+      }
       ticket.set('approval_hold', false)
       $app.save(ticket)
 
       // Fecha as demais pendências do mesmo chamado como "Cancelado"
-      // (resolvida por outro aprovador — sem efeito em cascata, pois o hook
-      // ignora registros que não estejam mais "Pendente").
       var cancelledCount = 0
       try {
         var otherPending = $app.findRecordsByFilter(
@@ -92,17 +187,27 @@ routerAdd('POST', '/backend/v1/approvals/{token}/decide', (e) => {
       hist.set(
         'action',
         'Aprovação autorizada por ' +
+          approverName +
+          ' (' +
           roleLabel +
+          ')' +
           (comment ? ': "' + comment + '"' : '') +
           ' — Regra "basta um": primeiro aprovador libera o chamado. Chamado liberado para atendimento.' +
+          (resumeMinutes > 0
+            ? ' SLA retomado após pausa de ' +
+              resumeMinutes +
+              ' min (total pausado: ' +
+              resumeTotal +
+              ' min).'
+            : '') +
           (cancelledCount > 0 ? ' Outras ' + cancelledCount + ' pendência(s) cancelada(s).' : ''),
       )
       hist.set('field', 'status')
       hist.set('old_value', oldTicketStatus)
-      hist.set('new_value', 'Novo')
+      hist.set('new_value', ticket.getString('status'))
       $app.save(hist)
     } else {
-      // Reprovado -> cancela o chamado e outras aprovações pendentes deste ticket
+      // Reprovado -> encerra o chamado com status "Reprovado" e rejeita as outras pendências
       try {
         var otherPendingRej = $app.findRecordsByFilter(
           'approvals',
@@ -123,7 +228,7 @@ routerAdd('POST', '/backend/v1/approvals/{token}/decide', (e) => {
         }
       } catch (_) {}
 
-      ticket.set('status', 'Encerrado')
+      ticket.set('status', 'Reprovado')
       ticket.set('approval_hold', false)
       $app.save(ticket)
 
@@ -134,16 +239,26 @@ routerAdd('POST', '/backend/v1/approvals/{token}/decide', (e) => {
       histRej.set('user', e.auth ? e.auth.id : approval.getString('requester'))
       histRej.set(
         'action',
-        'Aprovação recusada por ' +
+        'Aprovação reprovada por ' +
+          approverName +
+          ' (' +
           roleLabel +
-          ' | Motivo: ' +
+          ') | Motivo: ' +
           (rejectionReason || comment || 'Não especificado') +
-          '. Chamado encerrado.',
+          '. Chamado encerrado por reprovação.',
       )
       histRej.set('field', 'status')
       histRej.set('old_value', oldTicketStatus)
-      histRej.set('new_value', 'Encerrado')
+      histRej.set('new_value', 'Reprovado')
       $app.save(histRej)
+
+      // E-mail de reprovação ao solicitante (alerta ticket_approval_rejected_notify)
+      sendRejectionEmail({
+        ticket: ticket,
+        approverName: approverName,
+        rejectionReason: rejectionReason || comment || 'Não especificado',
+        referenceId: ticketId + ':rejected',
+      })
     }
 
     // Notificações in-app
@@ -154,7 +269,7 @@ routerAdd('POST', '/backend/v1/approvals/{token}/decide', (e) => {
       'Aprovação ' +
       (isApproved ? 'autorizada' : 'recusada') +
       ' por ' +
-      roleLabel +
+      approverName +
       ' - #' +
       ticket.getString('number')
 
@@ -177,9 +292,14 @@ routerAdd('POST', '/backend/v1/approvals/{token}/decide', (e) => {
   }
 })
 
-// Endpoint direto acionado via clique dos botões no e-mail:
-// GET /backend/v1/approvals/act?token=...&action=approve|reject&reason=...
-routerAdd('GET', '/backend/v1/approvals/act', (e) => {
+function fallbackNow(now) {
+  return now || new Date().toISOString()
+}
+
+// ============================================================================
+// ROTA 2 — GET /backend/v1/approvals/act (botões do e-mail, decisão pública)
+// ============================================================================
+routerAdd('GET', 'back/v1/approvals/act', (e) => {
   var token = e.request.url.query().get('token') || ''
   var action = (e.request.url.query().get('action') || '').toLowerCase().trim()
   var queryReason = e.request.url.query().get('reason') || ''
@@ -207,8 +327,8 @@ routerAdd('GET', '/backend/v1/approvals/act', (e) => {
       esc(statusTitle) +
       ' - Lógos AITSM</title>\n' +
       '  <style>\n' +
-      '    body { margin: 0; padding: 0; background-color: #f1f5f9; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; color: #1e293b; display: flex; align-items: center; justify-content: center; min-height: 100vh; }\n' +
-      '    .card { background: #ffffff; border-radius: 12px; max-width: 540px; width: 90%; margin: 20px; padding: 36px 32px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.07); border: 1px solid #e2e8f0; text-align: center; }\n' +
+      '    body { margin:  " margin: 0; padding: 0; background-color: #f1f5f9; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; color: #1e293b; display: flex; align-items: center; justify-content: center; min-height: 100vh; }\n' +
+      '    .card { background: #ffffff; border-radius: 12px; max-width: 540px; width: 90%; m: 20px; padding: 36px 32px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.07); border: 1px solid #e2e8f0; text-align: center; }\n' +
       '    .icon { font-size: 48px; line-height: 1; margin-bottom: 16px; }\n' +
       '    h1 { font-size: 22px; font-weight: 800; color: #0f172a; margin: 0 0 10px 0; }\n' +
       '    p { font-size: 15px; color: #475569; line-height: 24px; margin: 0 0 20px 0; }\n' +
@@ -294,7 +414,7 @@ routerAdd('GET', '/backend/v1/approvals/act', (e) => {
       )
     }
 
-    var now = new Date().toISOString()
+    var now2 = new Date().toISOString()
     var isApprove = action === 'approve'
     var commentText = 'Decisão registrada diretamente via botão do e-mail institucional'
     var newApprovalStatus = isApprove ? 'Aprovado' : 'Reprovado'
@@ -304,9 +424,9 @@ routerAdd('GET', '/backend/v1/approvals/act', (e) => {
       approval.set('rejection_reason', queryReason)
     }
     if (isApprove) {
-      approval.set('approved_at', now)
+      approval.set('approved_at', now2)
     } else {
-      approval.set('rejected_at', now)
+      approval.set('rejected_at', now2)
     }
     $app.save(approval)
 
@@ -319,17 +439,85 @@ routerAdd('GET', '/backend/v1/approvals/act', (e) => {
           ? 'Aprovador Interno TI'
           : 'Aprovador'
 
+    var approverName = roleText
+    try {
+      var approverRec2 = null
+      try {
+        approverRec2 = $app.findRecordById('users', approval.getString('approver'))
+      } catch (_) {}
+      if (!approverRec2) {
+        try {
+          approverRec2 = $app.findRecordById(
+            'client_contacts',
+            approval.getString('target_contact'),
+          )
+        } catch (_) {}
+      }
+      if (approverRec2) {
+        var nm2 = (approverRec2.getString('name') || '').trim()
+        if (nm2) approverName = nm2
+      }
+    } catch (_) {}
+
     var newTicketStatus = oldTicketStatus
 
     if (ticket) {
       if (isApprove) {
         // Regra BASTA UM: a primeira aprovação libera o chamado imediatamente.
-        newTicketStatus = 'Novo'
-        ticket.set('status', 'Novo')
+        var resumeMinutes2 = 0
+        var resumeTotal2 = 0
+        if (ticket.getBool('sla_paused')) {
+          var nowResume2 = new Date()
+          var nowResume2Iso = nowResume2.toISOString()
+          var openPauses2 = []
+          try {
+            openPauses2 = $app.findRecordsByFilter(
+              'sla_pauses',
+              'ticket = "' + ticketId + '" && resumed_at = ""',
+              '-created',
+              1,
+              0,
+            )
+          } catch (_) {}
+          if (openPauses2.length > 0) {
+            var pauseRec2 = openPauses2[0]
+            var pausedAtStr2 = pauseRec2.getString('paused_at')
+            if (pausedAtStr2) {
+              var pausedAt2 = new Date(pausedAtStr2)
+              var diffMs2 = nowResume2.getTime() - pausedAt2.getTime()
+              resumeMinutes2 = Math.max(1, Math.round(diffMs2 / 60000))
+            }
+            pauseRec2.set('resumed_at', nowResume2Iso)
+            pauseRec2.set('resumed_by', approval.getString('requester'))
+            pauseRec2.set('duration_minutes', resumeMinutes2)
+            $app.save(pauseRec2)
+          }
+          resumeTotal2 = (ticket.getInt('sla_pause_total_minutes') || 0) + resumeMinutes2
+          ticket.set('sla_pause_total_minutes', resumeTotal2)
+          ticket.set('sla_paused', false)
+          var curDl2 = ticket.getString('sla_solution_deadline')
+          if (curDl2 && resumeMinutes2 > 0) {
+            var prevMs2 = new Date(curDl2).getTime()
+            if (!isNaN(prevMs2)) {
+              ticket.set(
+                'sla_solution_deadline',
+                new Date(prevMs2 + resumeMinutes2 * 60000).toISOString(),
+              )
+            }
+          }
+          var updDl2 = ticket.getString('sla_solution_deadline')
+          if (updDl2 && nowResume2.getTime() > new Date(updDl2).getTime()) {
+            ticket.set('sla_status', 'Violado')
+          } else {
+            ticket.set('sla_status', 'Dentro do Prazo')
+          }
+          ticket.set('status', 'Em Atendimento')
+        } else {
+          ticket.set('status', 'Novo')
+        }
         ticket.set('approval_hold', false)
         $app.save(ticket)
 
-        // Fecha as demais pendências como "Cancelado" (resolvida por outro aprovador)
         try {
           var remain = $app.findRecordsByFilter(
             'approvals',
@@ -348,8 +536,8 @@ routerAdd('GET', '/backend/v1/approvals/act', (e) => {
           }
         } catch (_) {}
       } else {
-        // Reprovado -> encerra o chamado e rejeita as outras aprovações pendentes
-        newTicketStatus = 'Encerrado'
+        // Reprovado -> encerra o chamado com status "Reprovado" e rejeita as outras pendências
+        newTicketStatus = 'Reprovado'
         try {
           var othersRej = $app.findRecordsByFilter(
             'approvals',
@@ -359,14 +547,14 @@ routerAdd('GET', '/backend/v1/approvals/act', (e) => {
             0,
           )
           for (var or2 = 0; or2 < othersRej.length; or2++) {
-            othersRej[or2].set('status', 'Cancelado')
+            othersRej[or2].set('status', 'Reprovado')
             othersRej[or2].set('approver_comment', 'Cancelado devido à reprovação por ' + roleText)
             if (queryReason) othersRej[or2].set('rejection_reason', queryReason)
             $app.save(othersRej[or2])
           }
         } catch (_) {}
 
-        ticket.set('status', 'Encerrado')
+        ticket.set('status', 'Reprovado')
         ticket.set('approval_hold', false)
         $app.save(ticket)
       }
@@ -382,12 +570,18 @@ routerAdd('GET', '/backend/v1/approvals/act', (e) => {
         'action',
         isApprove
           ? 'Aprovação autorizada via e-mail por ' +
+              approverName +
+              ' (' +
               roleText +
-              ' — Regra "basta um": primeiro aprovador libera o chamado. Liberado para fila de atendimento.'
-          : 'Aprovação recusada via e-mail por ' +
+              ') — Regra "basta um": primeiro aprovador libera o chamado. Liberado para fila de atendimento.' +
+              (resumeMinutes2 > 0 ? ' SLA retomado (pausa de ' + resumeMinutes2 + ' min).' : '')
+          : 'Aprovação reprovada via e-mail por ' +
+              approverName +
+              ' (' +
               roleText +
+              ')' +
               (queryReason ? ' | Motivo: ' + queryReason : '') +
-              ' — Chamado encerrado.',
+              ' — Chamado encerrado por reprovação.',
       )
       hist.set('field', 'status')
       hist.set('old_value', oldTicketStatus)
@@ -395,6 +589,16 @@ routerAdd('GET', '/backend/v1/approvals/act', (e) => {
       $app.save(hist)
     } catch (hErr) {
       $app.logger().warn('approvals/act: falha ao salvar ticket_history', 'err', hErr.message)
+    }
+
+    // E-mail de reprovação ao solicitante (alerta ticket_approval_rejected_notify)
+    if (!isApprove && ticket) {
+      sendRejectionEmail({
+        ticket: ticket,
+        approverName: approverName,
+        rejectionReason: queryReason || commentText,
+        referenceId: ticketId + ':rejected',
+      })
     }
 
     var successDetails =
@@ -414,10 +618,8 @@ routerAdd('GET', '/backend/v1/approvals/act', (e) => {
       new Date().toLocaleString('pt-BR')
 
     var successMsg = isApprove
-      ? 'Aprovação registrada com sucesso! O chamado foi liberado para atendimento com status "Novo" (regra "basta um": a primeira aprovação decide).'
-      : 'Você reprovou a solicitação. O chamado foi encerrado com o status "' +
-        newTicketStatus +
-        '" e o solicitante foi notificado.'
+      ? 'Aprovação registrada com sucesso! O chamado foi liberado para atendimento com status "Em Atendimento"/"Novo" (regra "basta um": a primeira aprovação decide).'
+      : 'Você reprovou a solicitação. O chamado foi encerrado com o status "Reprovado" e o solicitante foi notificado por e-mail.'
 
     return renderResultHtml(
       isApprove ? 'Decisão Registrada com Sucesso' : 'Chamado Reprovado',
@@ -429,8 +631,289 @@ routerAdd('GET', '/backend/v1/approvals/act', (e) => {
     return renderResultHtml(
       'Aprovação Não Encontrada',
       false,
-      'Não foi possível localizar o registro desta aprovação ou o token expirou.',
+      'Não foi possível localizar o registro desta aprovação ou o token expirado.',
       'Detalhes do erro: ' + err.message,
     )
   }
 })
+
+// ============================================================================
+// ENVIO DE E-MAIL DE REPROVAÇÃO — helpers autocontidos (copiados do
+// ticket_approval_check.js, linhas 1058–1149), padrão Goja. Nada de _g/A0.
+// ============================================================================
+var SKIP_CLOUD_SENDER_EMAIL = 'noreply@mail.goskip.dev'
+var SKIP_CLOUD_SENDER_NAME = 'Lógos AITSM'
+
+function sendRejectionEmail(opts) {
+  if (!opts) return
+  var ticket = opts.ticket
+  var approverName = opts.approverName || 'Aprovador'
+  var rejectionReason = opts.rejectionReason || 'Não especificado'
+  var referenceId = opts.referenceId || ''
+
+  var requesterEmail = ticket.getString('requester_email') || ''
+  var requesterName = ticket.getString('requester_name') || 'Solicitante'
+  var ticketNumber = ticket.getString('number') || ticket.id
+  var ticketTitle = ticket.getString('title') || 'Chamado sem título'
+
+  // --- Central de Alertas: configuração do alerta ---
+  var cfg = null
+  try {
+    var rec = $app.findFirstRecordByFilter(
+      'email_alert_settings',
+      'alert_key = "ticket_approval_rejected_notify"',
+    )
+    if (rec) {
+      cfg = {
+        id: rec.id,
+        enabled: rec.getBool('enabled'),
+        template_layout: rec.getString('template_layout') || 'modern',
+        primary_color: rec.getString('primary_color') || '#D97706',
+        subject_template: rec.getString('subject_template') || '',
+        header_title: rec.getString('header_title') || '',
+        header_subtitle: rec.getString('header_subtitle') || '',
+        body_template: rec.getString('body_template') || '',
+        footer_text: rec.getString('footer_text') || '',
+        show_button: rec.getBool('show_button'),
+        button_label: rec.getString('button_label') || 'Acessar',
+        button_url_template: rec.getString('button_url_template') || '',
+      }
+    }
+  } catch (err) {
+    console.error('[APPROVAL_DECIDE] falha ao ler email_alert_settings: ' + err.message)
+    return
+  }
+  if (!cfg) return
+  if (!cfg.enabled) {
+    console.log(
+      '[APPROVAL_DECIDE] e-mail de reprovação SUPRIMIDO — ticket_approval_rejected_notify desligado na Central',
+    )
+    return
+  }
+
+  var baseUrl = ''
+  try {
+    var host =
+      $os.getenv('PUBLIC_URL') ||
+      $os.getenv('APP_URL') ||
+      $os.getenv('PB_INSTANCE_URL') ||
+      $os.getenv('Site_URL') ||
+      $os.getenv('SITE_URL') ||
+      ''
+    if (host) baseUrl = host.replace(/\/+$/, '')
+  } catch (_) {}
+  var portalLink = baseUrl + '/portal'
+
+  var data = {
+    chamado_numero: ticketNumber,
+    numero: ticketNumber,
+    titulo: ticketTitle,
+    solicitante: requesterName,
+    cliente: requesterName,
+    aprovador: approverName,
+    motivo: rejectionReason,
+    link: portalLink,
+  }
+
+  // ---- interpolação ----
+  function interp(template, dataObj) {
+    if (!template) return ''
+    var result = template
+    var keys = Object.keys(dataObj)
+    for (var i = 0; i < keys.length; i++) {
+      var k = keys[i]
+      var val = dataObj[k] == null ? '' : String(dataObj[k])
+      var regex = new RegExp('\\{\\{\\s*' + k + '\\s*\\}\\}', 'gi')
+      result = result.replace(regex, val)
+    }
+    result = result.replace(/\{\{\s*[a-zA-Z0-9_\-.]+\s*\}\}/g, '')
+    return result
+  }
+
+  var rawSubject =
+    cfg.subject_template ||
+    cfg.default_subject_template ||
+    'Chamado #{{chamado_numero}} reprovado pelo aprovador'
+  var subject = interp(rawSubject, data)
+  var rawBody = cfg.body_template || cfg.default_body_template || ''
+
+  function escHtml(s) {
+    return String(s)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+  }
+
+  var bodyHtml = interp(rawBody, data)
+  var buttonUrl = interp(cfg.button_url_template || '{{link}}', data)
+  var buttonLabel = interp(cfg.button_label || 'Acessar o Portal', data)
+  var primaryColor = cfg.primary_color || '#D97706'
+  var layout = cfg.template_layout || 'modern'
+  var headerTitle = cfg.header_title || 'Lógos AITSM'
+  var headerSubtitle = cfg.header_subtitle || 'Sistema Inteligente de Gestão de Serviços de TI'
+  var footerText = cfg.footer_text || 'Lógos AITSM • Central de Serviços Inteligente'
+  var buttonHtml = ''
+  if (cfg.show_button && buttonUrl) {
+    buttonHtml =
+      '<table role="presentation" border="0" cellpadding="0" cellspacing="0" style="margin: 28px 0 16px 0;">' +
+      '<tr><td align="center" style="border-radius: 6px; background-color: ' +
+      primaryColor +
+      ';">' +
+      '<a href="' +
+      escHtml(buttonUrl) +
+      '" target="_blank" style="font-size: 15px; font-family: -apple-system, BlinkMacSystemFont, \'Segoe UI\', Roboto, Arial, sans-serif; color: #ffffff; text-decoration: none; padding: 12px 26px; border-radius: 6px; display: inline-block; font-weight: 600;">' +
+      escHtml(buttonLabel) +
+      '</a></td></tr></table>'
+  }
+  var htmlContent
+  if (layout === 'minimal') {
+    htmlContent =
+      '<!DOCTYPE html><html><head><meta charset="UTF-8"></head>' +
+      '<body style="margin:0;padding:24px;font-family:Arial,sans-serif;background-color:#f9fafb;color:#111827;">' +
+      '<table role="presentation" width="100%" border="0" cellspacing="0" cellpadding="0" style="max-width:600px;margin:0 auto;background:#ffffff;border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;">' +
+      '<tr><td style="padding:24px 32px;border-bottom:2px solid ' +
+      primaryColor +
+      ';"><span style="font-size:20px;font-weight:800;color:#111827;">' +
+      escHtml(headerTitle) +
+      '</span>' +
+      (headerSubtitle
+        ? '<p style="margin:4px 0 0 0;font-size:13px;color:#6b7280;">' +
+          escHtml(headerSubtitle) +
+          '</p>'
+        : '') +
+      '</td></tr>' +
+      '<tr><td style="padding:32px;line-height:1.6;font-size:15px;color:#374151;">' +
+      bodyHtml +
+      buttonHtml +
+      '</td></tr>' +
+      '<tr><td style="padding:20px 32px;background-color:#f9fafb;font-size:12px;color:#9ca3af;text-align:center;">' +
+      escHtml(footerText) +
+      '</td></tr></table></body></html>'
+  } else if (layout === 'corporate') {
+    htmlContent =
+      '<!DOCTYPE html><html><head><meta charset="UTF-8"></head>' +
+      '<body style="margin:0;padding:24px;font-family:Arial,sans-serif;background-color:#0f172a;color:#0f172a;">' +
+      '<table role="presentation" width="100%" border="0" cellspacing="0" cellpadding="0" style="max-width:620px,margin:0 auto;background:#ffffff;border-radius:10px;overflow:hidden;box-shadow:0 10px 25px rgba(0,0,0,0.15);">' +
+      '<tr><td style="padding:28px 36px;background-color:#17181C;border-bottom:4px solid ' +
+      primaryColor +
+      ';text-align:left;"><span style="font-size:22px;font-weight:900;color:#FCD34D;letter-spacing:0.5px;text-transform:uppercase;">' +
+      escHtml(headerTitle) +
+      '</span>' +
+      (headerSubtitle
+        ? '<p style="margin:6px 0 0 0;font-size:13px;color:#e2e8f0;font-weight:400;">' +
+          escHtml(headerSubtitle) +
+          '</p>'
+        : '') +
+      '</td></tr>' +
+      '<tr><td style="padding:36px;line-height:1.7;font-size:15px;color:#1e293b;">' +
+      bodyHtml +
+      buttonHtml +
+      '</td></tr>' +
+      '<tr><td style="padding:22px 36px;background-color:#f1f5f9;font-size:12px;color:#64748b;text-align:center;">' +
+      escHtml(footerText) +
+      '</td></tr></table></body></html>'
+  } else {
+    // modern (padrão)
+    htmlContent =
+      '<!DOCTYPE html><html><head><meta charset="UTF-8"></head>' +
+      '<body style="margin:0;padding:24px;font-family:Arial,sans-serif;background-color:#f1f5f9;color:#0f172a;">' +
+      '<table role="presentation" width="100%" border="0" cellspacing="0" cellpadding="0" style="max-width:600px;margin:0 auto;background:#ffffff;border-radius:10px;overflow:hidden;box-shadow:0 6px 18px rgba(0,0,0,0.08);">' +
+      '<tr><td style="padding:28px 36px;background-color:#17181C;border-bottom:4px solid ' +
+      primaryColor +
+      ';"><span style="font-size:22px;font-weight:900;color:#FCD34D;letter-spacing:0.5px;text-transform:uppercase;">' +
+      escHtml(headerTitle) +
+      '</span>' +
+      (headerSubtitle
+        ? '<p style="margin:6px 0 0 0;font-size:13px;color:#e2e8f0;font-weight:400;">' +
+          escHtml(headerSubtitle) +
+          '</p>'
+        : '') +
+      '</td></tr>' +
+      '<tr><td style="padding:36px;line-height:1.7;font-size:15px;color:#1e293b;">' +
+      bodyHtml +
+      buttonHtml +
+      '</td></tr>' +
+      '<tr><td style="padding:22px 36px;background-color:#f1f5f9;font-size:12px;color:#64748b;text-align:center;">' +
+      escHtml(footerText) +
+      '</td></tr></table></body></html>'
+  }
+
+  // ---- duplicidade + log + envio ----
+  function hasAlreadyBeenSent(refId, recipient) {
+    if (!refId || !recipient) return false
+    try {
+      var dup = $app.findFirstRecordByFilter(
+        'email_sent_logs',
+        'alert_key = "ticket_approval_rejected_notify" && reference_id = "' +
+          String(refId).replace(/"/g, '\\"') +
+          '" && recipient = "' +
+          String(recipient).trim().toLowerCase().replace(/\"/g, '\\"') +
+          '"',
+      )
+      return Boolean(dup)
+    } catch (_) {
+      return false
+    }
+  }
+
+  function recordSentLog(refId, recipient, subjectSent) {
+    if (!refId || !recipient) return
+    try {
+      var logCol = $app.findCollectionByNameOrId('email_sent_logs')
+      var log = new Record(logCol)
+      log.set('alert_key', 'ticket_approval_rejected_notify')
+      log.set('reference_id', String(refId).trim())
+      log.set('recipient', String(recipient).trim().toLowerCase())
+      log.set('sent_at', new Date().toISOString().replace('T', ' '))
+      log.set('subject', subjectSent || '')
+      $app.save(log)
+    } catch (errLog) {
+      console.warn('[APPROVAL_DECIDE] falha ao salvar email_sent_logs: ' + errLog.message)
+    }
+  }
+
+  var recipient = String(requesterEmail || '')
+    .trim()
+    .toLowerCase()
+  if (!recipient || recipient.indexOf('@') < 1) {
+    console.error('[APPROVAL_DECIDE] e-mail de reprovação ABORTADO — solicitante sem e-mail')
+    return
+  }
+  if (hasAlreadyBeenSent(referenceId, recipient)) {
+    console.log('[APPROVAL_DECIDE] e-mail de reprovação já enviado antes — não reenvia')
+    return
+  }
+
+  try {
+    var senderAddress = SKIP_CLOUD_SENDER_EMAIL
+    var senderName = SKIP_CLOUD_SENDER_NAME
+    try {
+      var s = $app.settings
+      if (typeof s === 'function') s = s()
+      if (s && s.meta && s.meta.senderAddress) senderAddress = s.meta.senderAddress
+      if (s && s.meta && s.meta.senderName) senderName = s.meta.senderName
+    } catch (_) {}
+
+    var message = new MailerMessage({
+      from: { address: senderAddress, name: senderName },
+      to: [{ address: recipient }],
+      subject: subject,
+      html: htmlContent,
+      text: interp(rawBody, data).replace(/<[^>]+>/g, ' '),
+    })
+    var client = $app.newMailClient()
+    client.send(message)
+    recordSentLog(referenceId, recipient, subject)
+    console.log(
+      '[APPROVAL_DECIDE] e-mail de reprovação enviado via Skip Cloud | destinatário=' + recipient,
+    )
+  } catch (errSend) {
+    console.error(
+      '[APPROVAL_DECIDE] FALHA no envio Skip Cloud | destinatário=' +
+        recipient +
+        ' | motivo: ' +
+        (errSend && errSend.message ? errSend.message : String(errSend)),
+    )
+  }
+}

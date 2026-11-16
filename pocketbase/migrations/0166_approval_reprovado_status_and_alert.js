@@ -44,6 +44,13 @@ migrate(
           } catch (_) {}
         }
         safeSet(rec, 'alert_key', 'ticket_approval_rejected_notify')
+        safeSet(rec, 'name', 'Aprovação rejeitada - Notificação ao solicitante')
+        safeSet(
+          rec,
+          'description',
+          'E-mail informando ao solicitante que seu chamado foi reprovado pelo aprovador',
+        )
+        safeSet(rec, 'category', 'tickets')
         safeSet(rec, 'enabled', false)
         safeSet(rec, 'is_customized', false)
         safeSet(rec, 'template_layout', 'modern')
