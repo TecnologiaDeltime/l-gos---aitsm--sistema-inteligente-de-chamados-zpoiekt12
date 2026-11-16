@@ -13,6 +13,7 @@ export const KANBAN_COLUMNS = [
   'Aguardando Validação',
   'Encerrado',
   'Cancelado',
+  'Reprovado',
   'Reaberto',
 ] as const
 

@@ -2023,7 +2023,9 @@ export default function TicketDetail({
               )}
             </div>
           </div>
-          <TicketApprovalsHistoryCard ticketId={ticket.id} refreshKey={ticket.updated} />
+          {perms.canAccessItem('tickets', 'tickets_approval_history') && (
+            <TicketApprovalsHistoryCard ticketId={ticket.id} refreshKey={ticket.updated} />
+          )}
 
           <TicketTagsSection
             ticketId={ticket.id}

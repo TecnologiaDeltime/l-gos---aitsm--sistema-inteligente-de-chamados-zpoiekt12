@@ -45,6 +45,11 @@ const STATUS_CONFIG: Record<string, { dot: string; className: string }> = {
     className:
       'bg-orange-500/10 text-orange-700 border-orange-300 dark:bg-orange-500/15 dark:text-orange-300 dark:border-orange-500/40',
   },
+  Reprovado: {
+    dot: 'bg-rose-400 shadow-[0_0_6px_rgba(251,113,133,0.7)]',
+    className:
+      'bg-rose-500/10 text-rose-700 border-rose-300 dark:bg-rose-500/15 dark:text-rose-300 dark:border-rose-500/40 font-medium',
+  },
   Resolvido: {
     dot: 'bg-green-400 shadow-[0_0_6px_rgba(74,222,128,0.8)]',
     className:

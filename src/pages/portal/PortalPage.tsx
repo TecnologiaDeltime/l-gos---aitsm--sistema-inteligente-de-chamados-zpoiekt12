@@ -32,6 +32,7 @@ import {
 } from 'lucide-react'
 import pb from '@/lib/pocketbase/client'
 import { useAuth } from '@/hooks/use-auth'
+import { usePermissions } from '@/hooks/use-permissions'
 import { useTheme } from '@/hooks/use-theme'
 import { useToast } from '@/hooks/use-toast'
 import { Button } from '@/components/ui/button'
@@ -77,6 +78,8 @@ export default function PortalPage() {
   const { user, logout } = useAuth()
   const { theme, toggleTheme, designSettings } = useTheme()
   const { toast } = useToast()
+  const perms = usePermissions()
+  const canViewApprovalsTab = perms.canAccessItem('tickets', 'tickets_approval_portal_history')
 
   // Verificação estrita de Administrador para o Modo Suporte
   const isAdmin = user?.role === 'admin'
@@ -704,18 +707,20 @@ export default function PortalPage() {
                 Chamados ({tickets.length})
               </TabsTrigger>
 
-              <TabsTrigger
-                value="approvals"
-                className="data-[state=active]:bg-amber-500/15 data-[state=active]:border data-[state=active]:border-amber-500/40 data-[state=active]:text-[#D97706] dark:data-[state=active]:text-[#FCD34D] data-[state=active]:shadow-2xs rounded-lg px-3.5 py-2 text-xs sm:text-sm font-semibold gap-2 transition-all"
-              >
-                <ShieldCheck className="h-4 w-4" />
-                Aprovações
-                {pendingApprovalsCount > 0 && (
-                  <Badge className="bg-[#D97706] text-white text-[10px] px-1.5 py-0 font-bold ml-1">
-                    {pendingApprovalsCount}
-                  </Badge>
-                )}
-              </TabsTrigger>
+              {canViewApprovalsTab && (
+                <TabsTrigger
+                  value="approvals"
+                  className="data-[state=active]:bg-amber-500/15 data-[state=active]:border data-[state=active]:border-amber-500/40 data-[state=active]:text-[#D97706] dark:data-[state=active]:text-[#FCD34D] data-[state=active]:shadow-2xs rounded-lg px-3.5 py-2 text-xs sm:text-sm font-semibold gap-2 transition-all"
+                >
+                  <ShieldCheck className="h-4 w-4" />
+                  Aprovações
+                  {pendingApprovalsCount > 0 && (
+                    <Badge className="bg-[#D97706] text-white text-[10px] px-1.5 py-0 font-bold ml-1">
+                      {pendingApprovalsCount}
+                    </Badge>
+                  )}
+                </TabsTrigger>
+              )}
 
               <TabsTrigger
                 value="assets"
@@ -977,15 +982,17 @@ export default function PortalPage() {
           {/* =========================================================================
               ABA 2: APROVAÇÕES DOS PONTOS FOCAIS
               ========================================================================= */}
-          <TabsContent value="approvals" className="mt-0">
-            <PortalApprovalsTab
-              approvals={data?.approvals || []}
-              loading={loading}
-              onRefresh={() => loadPortalData(true)}
-              isFocalPoint={isFocalPoint}
-              onOpenTicket={(t) => setSelectedTicket(t)}
-            />
-          </TabsContent>
+          {canViewApprovalsTab && (
+            <TabsContent value="approvals" className="mt-0">
+              <PortalApprovalsTab
+                approvals={data?.approvals || []}
+                loading={loading}
+                onRefresh={() => loadPortalData(true)}
+                isFocalPoint={isFocalPoint}
+                onOpenTicket={(t) => setSelectedTicket(t)}
+              />
+            </TabsContent>
+          )}
 
           {/* =========================================================================
               ABA 3: INVENTÁRIO DE TI (CMDB)

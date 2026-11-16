@@ -152,6 +152,20 @@ const BASE_SYSTEM_MODULES: GranularModuleDefinition[] = [
         path: '/tickets',
       },
       {
+        key: 'tickets_approval_history',
+        label: 'Histórico de Aprovações no Chamado',
+        description:
+          'Visualização do histórico de aprovações na ficha do chamado, com aprovador, decisão, motivo e datas (rastreabilidade do fluxo de aprovação)',
+        path: '/tickets',
+      },
+      {
+        key: 'tickets_approval_portal_history',
+        label: 'Histórico de Aprovações no Portal',
+        description:
+          'Aba de aprovações do Portal do Cliente: pendências a decidir e histórico de decisões (aprovadas, reprovadas e canceladas) dos chamados do cliente',
+        path: '/portal',
+      },
+      {
         key: 'tickets_ai_tags',
         label: 'Sugestão de Tags por IA em Chamados',
         description:
