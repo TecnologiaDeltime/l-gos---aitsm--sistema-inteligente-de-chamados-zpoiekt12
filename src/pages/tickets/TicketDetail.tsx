@@ -102,6 +102,7 @@ import { TicketCategoryCard } from '@/components/tickets/TicketCategoryCard'
 import { TicketTriageHistoryCard } from '@/components/tickets/TicketTriageHistoryCard'
 import TicketApprovalsHistoryCard from '@/components/tickets/TicketApprovalsHistoryCard'
 import { StatusBadge } from '@/components/StatusBadge'
+import { sendManualApproval } from '@/services/approvals'
 import { OriginalEmailCard } from '@/components/OriginalEmailCard'
 import { sanitizeEmailHtml } from '@/lib/sanitize-email-html'
 import { SlaDetailBlock } from '@/components/SlaDetailBlock'
@@ -156,6 +157,7 @@ export default function TicketDetail({
   const [timeSpent, setTimeSpent] = useState('')
   const [timeError, setTimeError] = useState('')
   const [sending, setSending] = useState(false)
+  const [sendingManualApproval, setSendingManualApproval] = useState(false)
   const [showVisit, setShowVisit] = useState(false)
   const [contracts, setContracts] = useState<ContractRecord[]>([])
   const [timerRunning, setTimerRunning] = useState(false)
@@ -426,6 +428,17 @@ export default function TicketDetail({
 
   const handleSendComment = async () => {
     if (!comment.trim() || !id || !user) return
+    // Bloqueio real de atuação: chamado em approval_hold não aceita logs de
+    // trabalho (o operador pode LER, mas não ATUAR até a aprovação).
+    if (ticket?.approval_hold || ticket?.status === 'Aguardando Aprovação') {
+      toast({
+        title: 'Ação bloqueada',
+        description:
+          'Aguardando aprovação do cliente — logs de trabalho só podem ser registrados após a aprovação.',
+        variant: 'destructive',
+      })
+      return
+    }
     const timeValidationError = validateTimeSpent(timeSpent)
     if (timeValidationError) {
       setTimeError(timeValidationError)
@@ -478,9 +491,44 @@ export default function TicketDetail({
 
   const handleStatusChange = async (newStatus: string) => {
     if (!id) return
+    // Bloqueio real de atuação: status só muda após a liberação da aprovação.
+    if (ticket?.approval_hold || ticket?.status === 'Aguardando Aprovação') {
+      toast({
+        title: 'Ação bloqueada',
+        description: 'Aguardando aprovação do cliente — o status não pode ser alterado.',
+        variant: 'destructive',
+      })
+      return
+    }
     await updateTicket(id, { status: newStatus })
     loadData()
     toast({ title: `Status alterado para: ${newStatus}` })
+  }
+
+  // ENVIO MANUAL DE APROVAÇÃO (v0.0.430): operador triou tudo e dispara a
+  // pendência conforme a regra empresa+atividade, com e-mails e travamento.
+  const handleSendManualApproval = async () => {
+    if (!id) return
+    setSendingManualApproval(true)
+    try {
+      await sendManualApproval(id)
+      toast({
+        title: 'Chamado enviado para aprovação!',
+        description: 'A pendência foi criada e os aprovadores configurados receberão o e-mail.',
+      })
+      loadData()
+    } catch (err: any) {
+      toast({
+        title: 'Não foi possível enviar para aprovação',
+        description:
+          err?.response?.message ||
+          err?.message ||
+          'Verifique se existe regra de aprovação ativa para a empresa/atividade deste chamado.',
+        variant: 'destructive',
+      })
+    } finally {
+      setSendingManualApproval(false)
+    }
   }
 
   const handlePauseSla = async (reason: string, justification: string) => {
@@ -1005,6 +1053,25 @@ export default function TicketDetail({
                   <MapPin className="mr-1.5 h-4 w-4" /> Agendar Visita
                 </Button>
               )}
+              {canEditTicket &&
+                perms.canAccessItem('tickets', 'tickets_manual_approval_send') &&
+                !ticket.approval_hold &&
+                ticket.status !== 'Aguardando Aprovação' &&
+                ticket.status !== 'Resolvido' &&
+                ticket.status !== 'Encerrado' &&
+                ticket.status !== 'Cancelado' && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="border-amber-400 text-amber-700 hover:bg-amber-50 dark:text-amber-300 dark:hover:bg-amber-950/40"
+                    onClick={handleSendManualApproval}
+                    disabled={sendingManualApproval}
+                    title="Criar a pendência de aprovação conforme a regra cadastrada (empresa + atividade) e notificar os aprovadores por e-mail"
+                  >
+                    <Clock className="mr-1.5 h-4 w-4 text-amber-600" />
+                    {sendingManualApproval ? 'Enviando...' : 'Enviar para Aprovação'}
+                  </Button>
+                )}
             </div>
           </div>
           <Tabs defaultValue="interactions" className="w-full">

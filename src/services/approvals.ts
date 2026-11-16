@@ -104,6 +104,17 @@ export const getTicketApprovals = (ticketId: string) =>
 export const getApprovalByToken = (token: string) =>
   pb.send<any>(`/backend/v1/approvals/${token}`, { method: 'GET' })
 
+/**
+ * ENVIO MANUAL DE APROVAÇÃO (v0.0.430): o operador tria o chamado e dispara
+ * a pendência conforme a regra cadastrada (empresa+atividade), com e-mails
+ * e travamento — via rota /backend/v1/tickets/{id}/send-approval.
+ */
+export const sendManualApproval = (ticketId: string) =>
+  pb.send<{ success: boolean; approval: string }>(`/backend/v1/tickets/${ticketId}/send-approval`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+  })
+
 export const decideApproval = (
   token: string,
   decision: 'approved' | 'rejected',

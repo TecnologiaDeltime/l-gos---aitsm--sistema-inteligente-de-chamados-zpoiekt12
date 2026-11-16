@@ -826,8 +826,116 @@
     return e.next()
   }, 'tickets')
 
+  // RECHECK NO PRÓPRIO ARQUIVO (autocontido): a triagem automática de IA aplica
+  // categoria/subatividade segundos DEPOIS da criação via UPDATE, e o operador
+  // pode re-categorizar. O JSVM (pool Goja) NÃO publica globalThis entre arquivos
+  // nos callbacks — por isso o recheck em ticket_approval_from_triage.js ficava
+  // "ticketApprovalRunCheck indisponível" e o chamado 00135 nunca gerou pendência.
+  // A detecção da mudança de atividade vive AQUI, no mesmo escopo da lógica.
+  onRecordAfterUpdateSuccess((e) => {
+    try {
+      var rec = e.record
+      if (rec.getBool('approval_hold')) return e.next()
+
+      var st = rec.getString('status') || ''
+      if (st === 'Resolvido' || st === 'Encerrado' || st === 'Cancelado') return e.next()
+
+      var newCat = rec.getString('category') || ''
+      var newSub = rec.getString('subcategory') || ''
+      if (!newCat && !newSub) return e.next()
+
+      // Estado ANTES do update (banco já persistido em after-update-success).
+      var oldCat = ''
+      var oldSub = ''
+      try {
+        var orig = typeof rec.original === 'function' ? rec.original() : null
+        if (orig) {
+          oldCat = orig.getString('category') || ''
+          oldSub = orig.getString('subcategory') || ''
+        }
+      } catch (_) {}
+      if (newCat === oldCat && newSub === oldSub) return e.next()
+
+      console.log(
+        '[APPROVAL_CHECK] atividade alterada no chamado #' +
+          (rec.getString('number') || rec.id) +
+          ' — reexecutando checagem de aprovação',
+      )
+      runApprovalCheckEvent(e)
+    } catch (errUpd) {
+      console.error('[APPROVAL_CHECK] erro no recheck pós-update: ' + errUpd.message)
+    }
+    return e.next()
+  }, 'tickets')
+
+  // ===== ENVIO MANUAL DE APROVAÇÃO (botão na ficha do chamado) =====
+  // Operador tria o chamado completamente e dispara a pendência conforme a
+  // regra empresa+atividade cadastrada; sem regra, retorna erro claro.
+  routerAdd('POST', '/backend/v1/tickets/{id}/send-approval', (e) => {
+    if (!e.auth) return e.unauthorizedError('Autenticação necessária')
+
+    try {
+      var ticket = $app.findRecordById('tickets', e.request.pathValue('id'))
+
+      var stNow = ticket.getString('status') || ''
+      if (
+        stNow === 'Resolvido' ||
+        stNow === 'Encerrado' ||
+        stNow === 'Cancelado' ||
+        ticket.getBool('approval_hold')
+      ) {
+        return e.badRequestError(
+          'Este chamado já possui aprovação pendente ou está encerrado/resolvido.',
+        )
+      }
+
+      var dup = null
+      try {
+        dup = $app.findFirstRecordByFilter(
+          'approvals',
+          'ticket = "' + ticket.id + '" && status = "Pendente"',
+        )
+      } catch (_) {}
+      if (dup) {
+        return e.badRequestError('Já existe uma aprovação pendente para este chamado.')
+      }
+
+      var catM = ticket.getString('category') || ''
+      var subM = ticket.getString('subcategory') || ''
+      if (!catM && !subM) {
+        return e.badRequestError(
+          'Classifique a atividade/subatividade do chamado antes de enviar para aprovação.',
+        )
+      }
+
+      runApprovalCheckEvent({
+        record: ticket,
+        auth: e.auth,
+        next: function () {
+          return null
+        },
+      })
+
+      var created = null
+      try {
+        created = $app.findFirstRecordByFilter(
+          'approvals',
+          'ticket = "' + ticket.id + '" && status = "Pendente"',
+        )
+      } catch (_) {}
+      if (!created) {
+        return e.badRequestError(
+          'Nenhuma regra de aprovação ativa encontrada para a empresa/atividade deste chamado (ou nenhum aprovador configurado na regra).',
+        )
+      }
+      return e.json(200, { success: true, approval: created.id })
+    } catch (errMan) {
+      return e.badRequestError('Falha ao enviar para aprovação: ' + errMan.message)
+    }
+  })
+
   // Publica para reexecução após a triagem automática aplicar categoria/
-  // subatividade (ticket_on_create.js). globalThis é visível entre hooks.
+  // subatividade (ticket_on_create.js). Fallback: quando visível entre arquivos.
   if (typeof globalThis !== 'undefined') {
     globalThis.ticketApprovalRunCheck = function (app, ticket, auth) {
       try {

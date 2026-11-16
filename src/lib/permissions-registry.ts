@@ -145,6 +145,13 @@ const BASE_SYSTEM_MODULES: GranularModuleDefinition[] = [
         path: '/tickets',
       },
       {
+        key: 'tickets_manual_approval_send',
+        label: 'Envio Manual para Aprovação',
+        description:
+          'Permite ao operador enviar manualmente o chamado para o fluxo de aprovação após a triagem, criando a pendência e notificando os aprovadores',
+        path: '/tickets',
+      },
+      {
         key: 'tickets_ai_tags',
         label: 'Sugestão de Tags por IA em Chamados',
         description:

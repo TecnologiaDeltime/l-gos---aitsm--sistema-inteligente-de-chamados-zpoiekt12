@@ -173,7 +173,7 @@ export async function getClientPortalApprovals(companyId: string): Promise<Appro
     filter: `ticket.company = "${companyId}"`,
     sort: '-created',
     expand:
-      'ticket,ticket.category,ticket.subcategory,requester,approver,target_contact,approval_config',
+      'ticket,ticket.category,ticket.subcategory,ticket.company,ticket.assigned_to,requester,approver,target_contact,approval_config',
   })
 }
 
