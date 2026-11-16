@@ -702,6 +702,13 @@ const BASE_SYSTEM_MODULES: GranularModuleDefinition[] = [
         path: '/reports/tickets',
       },
       {
+        key: 'rep_approvals_report',
+        label: 'Relatório de Aprovações',
+        description:
+          'Chamados aprovados e reprovados com data da decisão, motivo, solicitante, aprovador e empresa — filtros por período e empresa, exportação XLSX e PDF',
+        path: '/reports/approvals',
+      },
+      {
         key: 'rep_ticket_interactions',
         label: 'Relatório de Interações nos Chamados',
         description:

@@ -62,6 +62,7 @@ import ClientExtractionPage from '@/pages/reports/ClientExtractionPage'
 import MonthlyClientReportPage from '@/pages/reports/MonthlyClientReportPage'
 import OperatorHoursPage from '@/pages/reports/OperatorHoursPage'
 import TicketsReportPage from '@/pages/reports/TicketsReportPage'
+import ApprovalsReportPage from '@/pages/reports/ApprovalsReportPage'
 import TicketInteractionsReportPage from '@/pages/reports/TicketInteractionsReportPage'
 import WorkedHoursReportPage from '@/pages/reports/WorkedHoursReportPage'
 import AssetsReportPage from '@/pages/reports/AssetsReportPage'
@@ -175,14 +176,13 @@ const App = () => (
 
               {/* Rota Modo TV (Tela Cheia sem chrome de layout, protegida por autenticação e permissão) */}
               <Route
-                path="/tv"
+                path="/relatorios/tickets"
                 element={
-                  <ProtectedRoute requiredModule="dashboard" requiredItem="modo_tv">
-                    <TvModePage />
+                  <ProtectedRoute requiredModule="reports" requiredItem="rep_tickets">
+                    <TicketsReportPage />
                   </ProtectedRoute>
                 }
               />
-
               {/* Protected Routes inside Layout */}
               <Route
                 element={
@@ -262,6 +262,14 @@ const App = () => (
                   element={
                     <ProtectedRoute requiredModule="reports" requiredItem="rep_tickets">
                       <TicketsReportPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/reports/approvals"
+                  element={
+                    <ProtectedRoute requiredModule="reports" requiredItem="rep_approvals_report">
+                      <ApprovalsReportPage />
                     </ProtectedRoute>
                   }
                 />

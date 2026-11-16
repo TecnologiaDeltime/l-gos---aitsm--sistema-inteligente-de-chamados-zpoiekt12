@@ -104,6 +104,12 @@ const OTHER_REPORTS = [
     itemKey: 'rep_tickets',
   },
   {
+    title: 'Relatório de Aprovações',
+    desc: 'Chamados aprovados e reprovados com data da decisão, motivo, solicitante, aprovador e empresa. Filtros por período e empresa, exportação XLSX e PDF.',
+    path: '/reports/approvals',
+    itemKey: 'rep_approvals_report',
+  },
+  {
     title: 'Relatório de Interações nos Chamados (Logs)',
     desc: 'Linha a linha com todas as interações e logs lançados com tempo discriminado para auditoria e controle de débito de franquia.',
     path: '/reports/ticket-interactions',

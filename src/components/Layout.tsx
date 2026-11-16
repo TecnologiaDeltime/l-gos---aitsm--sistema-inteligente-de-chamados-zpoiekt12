@@ -24,6 +24,7 @@ import {
   ShieldCheck,
   User,
   CheckCheck,
+  CheckSquare,
   Upload,
   FileCheck,
   MapPin,
@@ -773,6 +774,12 @@ export default function Layout() {
       path: '/reports/tickets',
       icon: Ticket,
       show: permissions.canAccessItem('reports', 'rep_tickets'),
+    },
+    {
+      label: 'Relatório de Aprovações',
+      path: '/reports/approvals',
+      icon: CheckSquare,
+      show: permissions.canAccessItem('reports', 'rep_approvals_report'),
     },
     {
       label: 'Interações nos Chamados',
