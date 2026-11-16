@@ -919,6 +919,14 @@ export default function OperatorsPage() {
                           )}
                         </div>
                         <p className="text-xs text-muted-foreground">{op.email}</p>
+                        {activeAllocationsByOperator[op.id] && (
+                          <span className="mt-0.5 flex items-center gap-1 text-[11px] text-amber-700 dark:text-amber-400">
+                            <MapPin className="h-3 w-3 shrink-0" />
+                            Alocado hoje a{' '}
+                            {getAllocationCompany(activeAllocationsByOperator[op.id])} —{' '}
+                            {formatRecurrence(activeAllocationsByOperator[op.id])}
+                          </span>
+                        )}
                       </div>
                     </div>
 

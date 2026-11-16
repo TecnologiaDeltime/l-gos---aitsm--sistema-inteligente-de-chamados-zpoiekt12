@@ -123,8 +123,8 @@ export function updateOperatorAllocation(
   return pb.collection('operator_allocations').update<OperatorAllocation>(id, data)
 }
 
-export function deleteOperatorAllocation(id: string): Promise<void> {
-  return pb.collection('operator_allocations').delete(id)
+export async function deleteOperatorAllocation(id: string): Promise<void> {
+  await pb.collection('operator_allocations').delete(id)
 }
 
 /** Avalia se uma alocação está vigente agora (cliente, semelhante à regra do hook de auto-assign). */
