@@ -1,10 +1,12 @@
 /**
  * Serviço do Relatório de Aprovações.
- * Busca decisões de aprovação (Aprovado/Reprovado) de chamados, cruzadas com
- * tickets (número, título, solicitante, empresa) e aprovadores.
+ * Busca decisões de aprovação (Aprovado/Reprovado) e pendências (Pendente) de
+ * chamados, cruzadas com tickets (número, título, solicitante, empresa) e aprovadores.
  */
 import pb from '@/lib/pocketbase/client'
 import { getErrorMessage } from '@/lib/pocketbase/errors'
+
+export type ApprovalReportStatus = 'Aprovado' | 'Reprovado' | 'Pendente'
 
 export interface ApprovalReportRow {
   id: string
@@ -12,7 +14,7 @@ export interface ApprovalReportRow {
   ticketId: string
   ticketNumber: string
   ticketTitle: string
-  status: 'Aprovado' | 'Reprovado'
+  status: ApprovalReportStatus
   reason: string
   requesterName: string
   approverName: string
@@ -23,6 +25,7 @@ export interface ApprovalReportRow {
 interface ApprovalRawRecord {
   id: string
   status: string
+  created?: string
   approved_at?: string
   rejected_at?: string
   rejection_reason?: string
@@ -55,8 +58,10 @@ function fmtDateTime(value?: string): string {
 }
 
 /**
- * Busca as decisões de aprovação (Aprovado/Reprovado) no período (data da decisão —
- * approved_at / rejected_at) e da empresa do chamado.
+ * Busca aprovações de chamados no período e da empresa informados.
+ * - Decididas (Aprovado/Reprovado): o período filtra pela data da decisão
+ *   (approved_at / rejected_at).
+ * - Pendentes (Pendente): o período filtra pela data de criação da aprovação (created).
  */
 export async function getApprovalReportRows(params: {
   startDate: string
@@ -66,9 +71,12 @@ export async function getApprovalReportRows(params: {
   try {
     const sd = params.startDate || '2000-01-01'
     const ed = params.endDate || '2099-12-31'
+
+    const period = (field: string) =>
+      `(${field} >= '${sd} 00:00:00.000Z' && ${field} <= '${ed} 23:59:59.999Z')`
+
     const parts = [
-      `(status = 'Aprovado' || status = 'Reprovado')`,
-      `((approved_at >= '${sd} 00:00:00.000Z' && approved_at <= '${ed} 23:59:59.999Z') || (rejected_at >= '${sd} 00:00:00.000Z' && rejected_at <= '${ed} 23:59:59.999Z'))`,
+      `((status = 'Aprovado' && ${period('approved_at')}) || (status = 'Reprovado' && ${period('rejected_at')}) || (status = 'Pendente' && ${period('created')}))`,
     ]
 
     if (params.companyId && params.companyId !== 'all') {
@@ -85,7 +93,9 @@ export async function getApprovalReportRows(params: {
       const t = rec.expand?.ticket
       const approver = rec.expand?.approver
       const contact = rec.expand?.target_contact
-      const decidedAt = rec.approved_at || rec.rejected_at
+      const isPending = rec.status === 'Pendente'
+      // Pendente: data da criação da aprovação; decidida: data da decisão
+      const rowDate = isPending ? rec.created : rec.approved_at || rec.rejected_at
 
       const requesterName = t?.requester_name || '—'
 
@@ -100,13 +110,19 @@ export async function getApprovalReportRows(params: {
       const companyName = t?.expand?.company?.trade_name || t?.expand?.company?.name || '—'
       const ticketNumber = String(t?.number || '—')
 
+      const status: ApprovalReportStatus = isPending
+        ? 'Pendente'
+        : rec.status === 'Aprovado'
+          ? 'Aprovado'
+          : 'Reprovado'
+
       return {
         id: rec.id,
-        decisionDate: fmtDateTime(decidedAt),
+        decisionDate: fmtDateTime(rowDate),
         ticketId: rec.ticket || '',
         ticketNumber,
         ticketTitle: t?.title || '—',
-        status: (rec.status === 'Aprovado' ? 'Aprovado' : 'Reprovado') as 'Aprovado' | 'Reprovado',
+        status,
         // Motivo: na reprovação é o motivo do aprovador; na aprovação, o comentário (se houver)
         reason:
           rec.status === 'Reprovado'

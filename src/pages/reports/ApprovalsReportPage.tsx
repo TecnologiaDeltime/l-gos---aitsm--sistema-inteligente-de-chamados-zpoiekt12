@@ -9,6 +9,7 @@ import {
   AlertCircle,
   CheckCircle2,
   XCircle,
+  Clock,
   Building,
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
@@ -52,6 +53,8 @@ function statusBadgeClass(status: string) {
       return 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30 font-semibold'
     case 'Reprovado':
       return 'bg-rose-500/15 text-rose-700 dark:text-rose-300 border-rose-500/30 font-semibold'
+    case 'Pendente':
+      return 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30 font-semibold'
     default:
       return 'bg-secondary text-secondary-foreground border-border'
   }
@@ -82,7 +85,7 @@ export default function ApprovalsReportPage() {
       .catch((err) => console.error('Erro ao carregar empresas:', err))
   }, [])
 
-  // Carregar decisões (Aprovado/Reprovado) do período/empresa aplicados
+  // Carregar decisões e pendências do período/empresa aplicados
   const loadData = useCallback(async () => {
     setLoading(true)
     setError(null)
@@ -151,6 +154,10 @@ export default function ApprovalsReportPage() {
   )
   const rejectedCount = useMemo(
     () => filteredRows.filter((r) => r.status === 'Reprovado').length,
+    [filteredRows],
+  )
+  const pendingCount = useMemo(
+    () => filteredRows.filter((r) => r.status === 'Pendente').length,
     [filteredRows],
   )
 
@@ -273,7 +280,7 @@ export default function ApprovalsReportPage() {
               </h2>
             </div>
             <p className="text-xs text-muted-foreground mt-1">
-              Decisões de aprovação de chamados (aprovados e reprovados) com data, motivo,
+              Aprovações de chamados (pendentes, aprovadas e reprovadas) com data, motivo,
               solicitante, aprovador e empresa — com filtro por período e empresa.
             </p>
           </div>
@@ -368,7 +375,7 @@ export default function ApprovalsReportPage() {
       </Card>
 
       {/* Cards de Resumo */}
-      <div className="grid gap-3 sm:grid-cols-3">
+      <div className="grid gap-3 sm:grid-cols-4">
         <Card className="itsm-card border-border/80 bg-card/90">
           <CardContent className="p-4 flex items-center justify-between">
             <div>
@@ -405,6 +412,22 @@ export default function ApprovalsReportPage() {
           <CardContent className="p-4 flex items-center justify-between">
             <div>
               <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">
+                Pendentes
+              </p>
+              <p className="text-2xl font-extrabold text-amber-600 dark:text-amber-400 mt-1 tabular-nums">
+                {pendingCount}
+              </p>
+            </div>
+            <div className="p-2.5 rounded-xl bg-amber-500/10 text-amber-500 border border-amber-500/20">
+              <Clock className="h-5 w-5" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="itsm-card border-border/80 bg-card/90">
+          <CardContent className="p-4 flex items-center justify-between">
+            <div>
+              <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">
                 Reprovados
               </p>
               <p className="text-2xl font-extrabold text-rose-600 dark:text-rose-400 mt-1 tabular-nums">
@@ -423,10 +446,10 @@ export default function ApprovalsReportPage() {
         <CardHeader className="p-4 pb-3 border-b border-border/60 flex flex-row items-center justify-between flex-wrap gap-2">
           <div className="space-y-0.5">
             <CardTitle className="text-sm font-semibold text-foreground">
-              Decisões de Aprovação (Aprovados e Reprovados)
+              Aprovações (Aprovadas, Reprovadas e Pendentes)
             </CardTitle>
             <CardDescription className="text-xs">
-              {filteredRows.length} decisão(ões) encontrada(s) • Período de {periodLabel} •{' '}
+              {filteredRows.length} aprovação(ões) encontrada(s) • Período de {periodLabel} •{' '}
               {selectedClientName}
             </CardDescription>
           </div>
@@ -464,7 +487,7 @@ export default function ApprovalsReportPage() {
             </div>
           ) : filteredRows.length === 0 ? (
             <div className="p-12 text-center text-sm text-muted-foreground">
-              Nenhuma aprovação decidida encontrada com os filtros aplicados.
+              Nenhuma aprovação encontrada com os filtros aplicados.
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -550,6 +573,11 @@ export default function ApprovalsReportPage() {
               <span>
                 Reprovados:{' '}
                 <strong className="text-rose-600 dark:text-rose-400">{rejectedCount}</strong>
+              </span>
+              <span>•</span>
+              <span>
+                Pendentes:{' '}
+                <strong className="text-amber-600 dark:text-amber-400">{pendingCount}</strong>
               </span>
             </div>
 
