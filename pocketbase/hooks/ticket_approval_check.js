@@ -102,7 +102,8 @@ onRecordAfterCreateSuccess(function (e) {
       sLower === 'resolvido' ||
       sLower === 'encerrado' ||
       sLower === 'cancelado' ||
-      sLower === 'fechado'
+      sLower === 'fechado' ||
+      sLower === 'reprovado'
     )
   }
 
@@ -1077,7 +1078,8 @@ onRecordAfterUpdateSuccess(function (e) {
       sLower === 'resolvido' ||
       sLower === 'encerrado' ||
       sLower === 'cancelado' ||
-      sLower === 'fechado'
+      sLower === 'fechado' ||
+      sLower === 'reprovado'
     )
   }
 
@@ -2007,7 +2009,8 @@ routerAdd('POST', '/backend/v1/tickets/{id}/send-approval', (e) => {
       sLowerNow === 'resolvido' ||
       sLowerNow === 'encerrado' ||
       sLowerNow === 'cancelado' ||
-      sLowerNow === 'fechado'
+      sLowerNow === 'fechado' ||
+      sLowerNow === 'reprovado'
     if (closedNow || ticket.getBool('approval_hold')) {
       return e.badRequestError(
         'Este chamado já possui aprovação pendente ou está encerrado/resolvido.',
