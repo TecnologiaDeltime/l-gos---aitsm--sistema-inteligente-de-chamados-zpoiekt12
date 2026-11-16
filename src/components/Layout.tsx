@@ -606,6 +606,14 @@ export default function Layout() {
         permissions.canAccessItem('admin', 'admin_profiles') &&
         (permissions.canReadModule('profiles') || permissions.isAdmin),
     },
+    {
+      label: 'Alocação de Operadores',
+      path: '/admin/operador-allocation',
+      icon: MapPin,
+      show:
+        permissions.canAccessItem('admin', 'admin_operator_allocations') &&
+        (permissions.canReadModule('operators') || permissions.isAdmin),
+    },
   ]
   const adminGroupVisible =
     (!permissions.isModuleHidden('operators') || !permissions.isModuleHidden('profiles')) &&

@@ -32,6 +32,7 @@ import RecurrentActivities from '@/pages/reports/RecurrentActivities'
 import KnowledgeBase from '@/pages/knowledge/KnowledgeBase'
 import ProfilesPage from '@/pages/profiles/ProfilesPage'
 import OperatorsPage from '@/pages/operators/OperatorsPage'
+import OperatorAllocationsPage from '@/pages/admin/OperatorAllocationsPage'
 import SettingsPage from '@/pages/settings/SettingsPage'
 import SlaSettings from '@/pages/settings/SlaSettings'
 import TicketTemplates from '@/pages/settings/TicketTemplates'
@@ -249,6 +250,17 @@ const App = () => (
                 <Route path="/settings/profiles" element={<ProfilesPage />} />
                 <Route path="/operators" element={<OperatorsPage />} />
                 <Route path="/admin/operators" element={<OperatorsPage />} />
+                <Route
+                  path="/admin/operador-allocation"
+                  element={
+                    <ProtectedRoute
+                      requiredModule="admin"
+                      requiredItem="admin_operator_allocations"
+                    >
+                      <OperatorAllocationsPage />
+                    </ProtectedRoute>
+                  }
+                />
                 <Route
                   path="/reports/operator-hours"
                   element={

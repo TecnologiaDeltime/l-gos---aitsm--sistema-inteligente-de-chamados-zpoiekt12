@@ -19,6 +19,7 @@ import {
   ShieldAlert,
   Lock as LockIcon,
   Smartphone,
+  MapPin,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -73,6 +74,12 @@ import {
   setEquipmentsAvailableForUser,
   createAssetAutomationLog,
 } from '@/services/asset-automation-logs'
+import {
+  listOperatorAllocations,
+  isAllocationActiveNow,
+  formatRecurrence,
+  OperatorAllocation,
+} from '@/services/operator-allocations'
 
 const DEFAULT_TEAMS = [
   'Suporte N1',
@@ -93,6 +100,7 @@ export default function OperatorsPage() {
 
   const [operators, setOperators] = useState<OperatorItem[]>([])
   const [profiles, setProfiles] = useState<ProfileRecord[]>([])
+  const [allocations, setAllocations] = useState<OperatorAllocation[]>([])
   const [loading, setLoading] = useState(true)
 
   // Filters & Pagination
@@ -176,6 +184,9 @@ export default function OperatorsPage() {
       const [ops, profs] = await Promise.all([getOperators(), getProfiles()])
       setOperators(ops)
       setProfiles(profs)
+      listOperatorAllocations()
+        .then(setAllocations)
+        .catch(() => setAllocations([]))
     } catch (err: any) {
       toast({
         title: 'Erro ao carregar operadores',
@@ -197,6 +208,20 @@ export default function OperatorsPage() {
       .then(setOperators)
       .catch(() => {})
   })
+
+  // Alocação vigente por operador (prioriza exclusiva/permanente)
+  const activeAllocationsByOperator = useMemo(() => {
+    const map: Record<string, OperatorAllocation> = {}
+    for (const a of allocations) {
+      if (isAllocationActiveNow(a)) {
+        if (!map[a.operator] || a.allocation_type === 'permanente') map[a.operator] = a
+      }
+    }
+    return map
+  }, [allocations])
+
+  const getAllocationCompany = (a: OperatorAllocation) =>
+    a.expand?.company?.trade_name || a.expand?.company?.legal_name || 'Cliente'
 
   // Teams list combining default and existing
   const availableTeams = useMemo(() => {
@@ -690,6 +715,14 @@ export default function OperatorsPage() {
                               <Mail className="h-3 w-3" />
                               {op.email}
                             </span>
+                            {activeAllocationsByOperator[op.id] && (
+                              <span className="mt-0.5 flex items-center gap-1 text-[11px] text-amber-700 dark:text-amber-400">
+                                <MapPin className="h-3 w-3 shrink-0" />
+                                Alocado hoje a{' '}
+                                {getAllocationCompany(activeAllocationsByOperator[op.id])} —{' '}
+                                {formatRecurrence(activeAllocationsByOperator[op.id])}
+                              </span>
+                            )}
                           </div>
                         </div>
                       </TableCell>
