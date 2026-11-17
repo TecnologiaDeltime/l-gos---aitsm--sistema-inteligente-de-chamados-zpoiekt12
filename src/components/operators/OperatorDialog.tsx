@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { UsersRound } from 'lucide-react'
 import {
   Dialog,
   DialogContent,
@@ -35,8 +36,10 @@ import {
   OperatorType,
 } from '@/types/operators'
 import { ProfileRecord } from '@/types/profiles'
+import { Badge } from '@/components/ui/badge'
 import { getErrorMessage } from '@/lib/pocketbase/errors'
 import { usePermissions } from '@/hooks/use-permissions'
+import { getSupervisorTeamLinksBySupervisor } from '@/services/supervisor-team-links'
 
 interface OperatorDialogProps {
   open: boolean
@@ -71,6 +74,7 @@ export function OperatorDialog({
   const [position, setPosition] = useState('')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [supervisedTeams, setSupervisedTeams] = useState<string[]>([])
 
   const isEditing = !!operator
 
@@ -122,6 +126,32 @@ export function OperatorDialog({
       setError(null)
     }
   }, [open, operator, profiles, teams])
+
+  // Carrega as equipes (filas) que o gestor acompanha via supervisor_team_links
+  useEffect(() => {
+    if (!open || !operator || operator.role !== 'gestor') {
+      setSupervisedTeams([])
+      return
+    }
+    let cancelled = false
+    getSupervisorTeamLinksBySupervisor(operator.id)
+      .then((links) => {
+        if (cancelled) return
+        const names: string[] = []
+        for (const link of links) {
+          if (link.active === false) continue
+          const name = link.expand?.team?.name || (typeof link.team === 'string' ? link.team : '')
+          if (name && !names.includes(name)) names.push(name)
+        }
+        setSupervisedTeams(names)
+      })
+      .catch(() => {
+        if (!cancelled) setSupervisedTeams([])
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [open, operator])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -480,6 +510,33 @@ export function OperatorDialog({
                 </div>
               </div>
             </div>
+
+            {/* Equipes que acompanha (somente supervisores/gestores) */}
+            {operator?.role === 'gestor' && (
+              <div className="p-3 rounded-xl border border-sky-200 bg-sky-50/60 dark:border-sky-900 dark:bg-sky-950/30">
+                <div className="flex items-center gap-1.5">
+                  <UsersRound className="h-3.5 w-3.5 shrink-0 text-sky-700 dark:text-sky-400" />
+                  <p className="text-xs font-semibold text-sky-800 dark:text-sky-300">
+                    Equipes que acompanha
+                  </p>
+                </div>
+                {supervisedTeams.length > 0 ? (
+                  <div className="flex flex-wrap gap-1.5 mt-2">
+                    {supervisedTeams.map((teamName) => (
+                      <Badge
+                        key={teamName}
+                        variant="outline"
+                        className="text-[11px] font-medium border-sky-300 text-sky-800 dark:border-sky-800 dark:text-sky-300"
+                      >
+                        {teamName}
+                      </Badge>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-xs text-muted-foreground mt-1.5">Sem equipes</p>
+                )}
+              </div>
+            )}
 
             {/* Status Ativo */}
             <div className="flex items-center justify-between p-3 rounded-xl bg-muted/40 border border-border">

@@ -742,12 +742,13 @@ export default function OperatorsPage() {
                                 {formatRecurrence(activeAllocationsByOperator[op.id])}
                               </span>
                             )}
-                            {supervisedTeamsByOperator[op.id]?.length > 0 && (
+                            {op.role === 'gestor' && (
                               <span className="mt-0.5 flex items-start gap-1 text-[11px] text-sky-700 dark:text-sky-400">
                                 <UsersRound className="h-3 w-3 shrink-0 mt-0.5" />
                                 <span>
-                                  Equipes que acompanha:{' '}
-                                  {supervisedTeamsByOperator[op.id].join(', ')}
+                                  {supervisedTeamsByOperator[op.id]?.length > 0
+                                    ? `Equipes que acompanha: ${supervisedTeamsByOperator[op.id].join(', ')}`
+                                    : 'Equipes que acompanha: Sem equipes'}
                                 </span>
                               </span>
                             )}
@@ -955,11 +956,13 @@ export default function OperatorsPage() {
                             {formatRecurrence(activeAllocationsByOperator[op.id])}
                           </span>
                         )}
-                        {supervisedTeamsByOperator[op.id]?.length > 0 && (
+                        {op.role === 'gestor' && (
                           <span className="mt-0.5 flex items-start gap-1 text-[11px] text-sky-700 dark:text-sky-400">
                             <UsersRound className="h-3 w-3 shrink-0 mt-0.5" />
                             <span>
-                              Equipes que acompanha: {supervisedTeamsByOperator[op.id].join(', ')}
+                              {supervisedTeamsByOperator[op.id]?.length > 0
+                                ? `Equipes que acompanha: ${supervisedTeamsByOperator[op.id].join(', ')}`
+                                : 'Equipes que acompanha: Sem equipes'}
                             </span>
                           </span>
                         )}
