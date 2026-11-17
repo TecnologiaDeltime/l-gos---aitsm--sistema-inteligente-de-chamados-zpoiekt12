@@ -15,6 +15,8 @@ import { getCompanies, CompanyRecord } from '@/services/companies'
 import { useToast } from '@/hooks/use-toast'
 import { useRealtime } from '@/hooks/use-realtime'
 import { QueueEditDialog } from '@/components/queues/QueueEditDialog'
+import { TeamSupervisorsSection } from '@/components/queues/TeamSupervisorsSection'
+import { usePermissions } from '@/hooks/use-permissions'
 
 export default function QueueManagement() {
   const [queues, setQueues] = useState<QueueRecord[]>([])
@@ -27,6 +29,8 @@ export default function QueueManagement() {
   const [editOpen, setEditOpen] = useState(false)
   const [creating, setCreating] = useState(false)
   const { toast } = useToast()
+  const { canAccessItem } = usePermissions()
+  const canManageSupervisorTeams = canAccessItem('admin', 'admin_supervisor_teams')
 
   const loadData = () => {
     getQueues()
@@ -177,65 +181,70 @@ export default function QueueManagement() {
             return (
               <div
                 key={q.id}
-                className="rounded-xl border bg-white p-4 shadow-sm flex items-center justify-between dark:bg-slate-900"
+                className="rounded-xl border bg-white p-4 shadow-sm space-y-3 dark:bg-slate-900"
               >
-                <div className="flex items-center gap-3">
-                  <div
-                    className={
-                      q.active
-                        ? 'p-2 rounded-lg bg-blue-50 text-blue-600'
-                        : 'p-2 rounded-lg bg-slate-100 text-slate-400'
-                    }
-                  >
-                    <Inbox className="h-5 w-5" />
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <p className="font-bold text-sm text-slate-900 dark:text-slate-100">
-                        {q.name}
-                      </p>
-                      {q.level ? (
-                        <Badge className="text-xs bg-indigo-50 text-indigo-700 hover:bg-indigo-100 dark:bg-indigo-950 dark:text-indigo-300">
-                          {q.level}
-                        </Badge>
-                      ) : (
-                        <Badge variant="outline" className="text-xs text-slate-400">
-                          Sem nível
-                        </Badge>
-                      )}
-                      {companyName && (
-                        <Badge variant="outline" className="text-xs">
-                          {companyName}
-                        </Badge>
-                      )}
-                      {!companyName && (
-                        <Badge
-                          variant="outline"
-                          className="text-xs border-emerald-300 bg-emerald-50 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300"
-                        >
-                          Global
-                        </Badge>
-                      )}
-                      {!q.active && (
-                        <Badge variant="outline" className="text-xs">
-                          Inativa
-                        </Badge>
-                      )}
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <div
+                      className={
+                        q.active
+                          ? 'p-2 rounded-lg bg-blue-50 text-blue-600'
+                          : 'p-2 rounded-lg bg-slate-100 text-slate-400'
+                      }
+                    >
+                      <Inbox className="h-5 w-5" />
                     </div>
-                    <p className="text-xs text-slate-500">{q.description || 'Sem descrição'}</p>
+                    <div>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <p className="font-bold text-sm text-slate-900 dark:text-slate-100">
+                          {q.name}
+                        </p>
+                        {q.level ? (
+                          <Badge className="text-xs bg-indigo-50 text-indigo-700 hover:bg-indigo-100 dark:bg-indigo-950 dark:text-indigo-300">
+                            {q.level}
+                          </Badge>
+                        ) : (
+                          <Badge variant="outline" className="text-xs text-slate-400">
+                            Sem nível
+                          </Badge>
+                        )}
+                        {companyName && (
+                          <Badge variant="outline" className="text-xs">
+                            {companyName}
+                          </Badge>
+                        )}
+                        {!companyName && (
+                          <Badge
+                            variant="outline"
+                            className="text-xs border-emerald-300 bg-emerald-50 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300"
+                          >
+                            Global
+                          </Badge>
+                        )}
+                        {!q.active && (
+                          <Badge variant="outline" className="text-xs">
+                            Inativa
+                          </Badge>
+                        )}
+                      </div>
+                      <p className="text-xs text-slate-500">{q.description || 'Sem descrição'}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {q.priority != null && (
+                      <span className="text-xs text-slate-400">P: {q.priority}</span>
+                    )}
+                    <span className="text-xs font-medium text-blue-600 bg-blue-50 px-2.5 py-1 rounded-full">
+                      {q.distribution_rule || 'Disponibilidade'}
+                    </span>
+                    <Button variant="ghost" size="sm" onClick={() => handleEdit(q)}>
+                      <Pencil className="h-4 w-4" />
+                    </Button>
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  {q.priority != null && (
-                    <span className="text-xs text-slate-400">P: {q.priority}</span>
-                  )}
-                  <span className="text-xs font-medium text-blue-600 bg-blue-50 px-2.5 py-1 rounded-full">
-                    {q.distribution_rule || 'Disponibilidade'}
-                  </span>
-                  <Button variant="ghost" size="sm" onClick={() => handleEdit(q)}>
-                    <Pencil className="h-4 w-4" />
-                  </Button>
-                </div>
+                {canManageSupervisorTeams && (
+                  <TeamSupervisorsSection queueId={q.id} queueName={q.name} />
+                )}
               </div>
             )
           })}

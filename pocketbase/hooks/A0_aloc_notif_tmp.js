@@ -12,10 +12,7 @@ cronAdd('AA1_aloc_notif_tmp', '*/1 * * * *', function () {
 
   var existing = null
   try {
-    existing = $app.findFirstRecordByFilter(
-      'operator_allocations',
-      'notes ~ "' + MARKER + '"',
-    )
+    existing = $app.findFirstRecordByFilter('operator_allocations', 'notes ~ "' + MARKER + '"')
   } catch (_) {}
 
   if (!existing) {
@@ -30,7 +27,10 @@ cronAdd('AA1_aloc_notif_tmp', '*/1 * * * *', function () {
       $app.save(rec)
       console.log('[AA1_TMP] alocação de teste CRIADA (id=' + rec.id + ')')
     } catch (errC) {
-      console.error('[AA1_TMP] falha ao criar alocação de teste: ' + (errC && errC.message ? errC.message : String(errC)))
+      console.error(
+        '[AA1_TMP] falha ao criar alocação de teste: ' +
+          (errC && errC.message ? errC.message : String(errC)),
+      )
     }
     return
   }
@@ -38,6 +38,8 @@ cronAdd('AA1_aloc_notif_tmp', '*/1 * * * *', function () {
   if (existing.getBool('active')) {
     existing.set('active', false)
     $app.save(existing)
-    console.log('[AA1_TMP] alocação de teste DESATIVADA (id=' + existing.id + ') — registro mantido')
+    console.log(
+      '[AA1_TMP] alocação de teste DESATIVADA (id=' + existing.id + ') — registro mantido',
+    )
   }
 })

@@ -765,6 +765,13 @@ const BASE_SYSTEM_MODULES: GranularModuleDefinition[] = [
           'Alocação presencial de operadores em clientes (sede/filiais): exclusiva/permanente ou por período com recorrência de dias, semanas e meses',
         path: '/admin/operador-allocation',
       },
+      {
+        key: 'admin_supervisor_teams',
+        label: 'Equipes de Supervisores',
+        description:
+          'Gerenciar quais supervisores (gestores) acompanham quais equipes: vínculo supervisor ↔ fila usado nas notificações de alocação de operadores',
+        path: '/queues',
+      },
     ],
   },
   {

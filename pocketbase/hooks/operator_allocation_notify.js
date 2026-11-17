@@ -417,7 +417,45 @@ onRecordAfterCreateSuccess(function (e) {
         var gTeam = (gestores[gi].getString('team') || '').trim()
         if (opTeam && gTeam && gTeam === opTeam) sameTeam.push(gestores[gi])
       }
-      var chosen = sameTeam.length > 0 ? sameTeam : gestores
+      // Supervisores vinculados à equipe do operador via supervisor_team_links
+      // (migração 0173): entram SEMPRE, junto com os da mesma equipe.
+      var vinculados = []
+      if (opTeam) {
+        try {
+          var stlLinks = $app.findRecordsByFilter(
+            'supervisor_team_links',
+            'team = "' + opTeam + '" && active = true',
+            '',
+            0,
+            0,
+          )
+          for (var li = 0; li < stlLinks.length; li++) {
+            var supIdLink = stlLinks[li].getString('supervisor') || ''
+            if (!supIdLink) continue
+            try {
+              var supRecLink = $app.findRecordById('users', supIdLink)
+              var supActive = supRecLink.getBool('active')
+              var supRole = (supRecLink.getString('role') || '').toLowerCase()
+              if (supRole === 'gestor' && supActive) vinculados.push(supRecLink)
+            } catch (errLinkUser) {
+              console.error(
+                '[ALOC_SUP] vínculo de equipe aponta para usuário inexistente (' +
+                  supIdLink +
+                  '): ' +
+                  (errLinkUser && errLinkUser.message ? errLinkUser.message : String(errLinkUser)),
+              )
+            }
+          }
+        } catch (errStl) {
+          console.error(
+            '[ALOC_SUP] falha ao consultar supervisor_team_links: ' +
+              (errStl && errStl.message ? errStl.message : String(errStl)),
+          )
+        }
+      }
+      var chosen = vinculados
+      for (var st = 0; st < sameTeam.length; st++) chosen.push(sameTeam[st])
+      if (chosen.length === 0) chosen = gestores
       for (var ci = 0; ci < chosen.length; ci++) {
         var sId = chosen[ci].id
         if (sId === operatorId) continue // operador não se autonotifica como supervisor
@@ -1097,7 +1135,47 @@ onRecordAfterUpdateSuccess(function (e) {
         var gTeam = (gestores[gi].getString('team') || '').trim()
         if (opTeam && gTeam && gTeam === opTeam) sameTeam.push(gestores[gi])
       }
-      var chosen = sameTeam.length > 0 ? sameTeam : gestores
+      // Supervisores vinculados à equipe do operador via supervisor_team_links
+      // (migração 0173): entram SEMPRE, junto com os da mesma equipe.
+      var vinculados = []
+      if (opTeam) {
+        try {
+          var stlLinks = $app.findRecordsByFilter(
+            'supervisor_team_links',
+            'team = "' + opTeam + '" && active = true',
+            '',
+            0,
+            0,
+          )
+          for (var li = 0; li < stlLinks.length; li++) {
+            var supIdLink = stlLinks[li].getString('supervisor') || ''
+            if (!supIdLink) continue
+            try {
+              var supRecLink = $app.findRecordById('users', supIdLink)
+              var supActive = supRecLink.getBool('active')
+              var supRole = (supRecLink.getString('role') || '').toLowerCase()
+              if (supRole === 'gestor' && supActive) vinculados.push(supRecLink)
+            } catch (errLinkUser2) {
+              console.error(
+                '[ALOC_SUP] vínculo de equipe aponta para usuário inexistente (' +
+                  supIdLink +
+                  '): ' +
+                  (errLinkUser2 && errLinkUser2.message
+                    ? errLinkUser2.message
+                    : String(errLinkUser2)),
+              )
+            }
+          }
+        } catch (errStl2) {
+          console.error(
+            '[ALOC_SUP] falha ao consultar supervisor_team_links: ' +
+              (errStl2 && errStl2.message ? errStl2.message : String(errStl2)),
+          )
+        }
+      }
+      var chosen = vinculados
+      for (var st = 0; st < sameTeam.length; st++) chosen.push(sameTeam[st])
+      if (chosen.length === 0) chosen = gestores
       for (var ci = 0; ci < chosen.length; ci++) {
         var sId = chosen[ci].id
         if (sId === operatorId) continue // operador não se autonotifica como supervisor

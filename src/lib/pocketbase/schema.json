@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-17T00:22:37.900Z",
+  "generatedAt": "2026-11-17T01:13:00.550Z",
   "collections": [
     {
       "name": "users",
@@ -13247,6 +13247,56 @@
       "indexes": [
         "CREATE INDEX idx_operator_allocations_operator ON operator_allocations (operator)",
         "CREATE INDEX idx_operator_allocations_company ON operator_allocations (company)"
+      ]
+    },
+    {
+      "name": "supervisor_team_links",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != ''",
+        "view": "@request.auth.id != ''",
+        "create": "@request.auth.id != '' && (@request.auth.role = \"admin\" || @request.auth.role = \"gestor\")",
+        "update": "@request.auth.id != '' && (@request.auth.role = \"admin\" || @request.auth.role = \"gestor\")",
+        "delete": "@request.auth.id != '' && @request.auth.role = \"admin\""
+      },
+      "fields": [
+        {
+          "name": "supervisor",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "team",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "queues"
+        },
+        {
+          "name": "active",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": [
+        "CREATE UNIQUE INDEX idx_supervisor_team_links_pair ON supervisor_team_links (supervisor, team)"
       ]
     }
   ]
