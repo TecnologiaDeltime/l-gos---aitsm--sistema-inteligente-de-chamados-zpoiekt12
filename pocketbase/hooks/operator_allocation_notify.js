@@ -4,14 +4,19 @@
 // Notificação de Nova Alocação de Operador (Lógos AITSM / Skip Cloud)
 // ----------------------------------------------------------------------------
 // Quando um registro em operator_allocations é criado com active=true (ou um
-// registro existente é reativado — active false→true), notifica o operador:
+// registro existente é reativado — active false→true), notifica o operador E
+// o(s) supervisor(es) responsável(is):
 //   (a) notificação in-app (coleção notifications, type 'Atribuição');
-//   (b) e-mail via Central de Alertas (alert_key = 'operator_allocation_notify',
-//       criado DESLIGADO pela migração 0170 — o envio só ocorre com o alerta
-//       ligado na Central).
+//   (b) e-mail ao operador via Central de Alertas (alert_key =
+//       'operator_allocation_notify', criado DESLIGADO pela migração 0170);
+//   (c) supervisor(es) do operador (role gestor, preferindo a mesma equipe;
+//       fallback admins ativos): notificação in-app + e-mail via alert_key
+//       'operator_allocation_notify_supervisor' (migração 0172, nasce
+//       DESLIGADO), com mensagem "Seu operador {nome} foi alocado ao cliente
+//       {empresa}. Tipo: … Recorrência… Vigência…".
 // Anti-duplicidade: e-mails registrados em email_sent_logs (reference_id =
-// allocation id + ':' + data do dia); notificação in-app verificada por
-// usuário+title+data (uma por operador/dia/título).
+// allocation id + ':' + data do dia; do supervisor: + ':sup:'); notificação
+// in-app verificada por usuário+title+data (uma por destinatário/dia/título).
 // Módulo 100% autocontido (resiliente ao escopo isolado do Goja JSVM no PocketBase):
 // TODA a lógica fica inline dentro de cada callback — nem funções top-level do
 // arquivo, nem helpers publicados via globalThis (_g) são visíveis nos callbacks
@@ -44,10 +49,12 @@ onRecordAfterCreateSuccess(function (e) {
 
     var operatorName = ''
     var operatorEmail = ''
+    var operatorTeam = ''
     try {
       var op = $app.findRecordById('users', operatorId)
       operatorName = op.getString('name') || 'Operador'
       operatorEmail = (op.getString('email') || '').trim()
+      operatorTeam = (op.getString('team') || '').trim()
     } catch (errOp) {
       console.warn(
         '[ALOC_OPERATOR] operador não encontrado (' +
@@ -207,187 +214,487 @@ onRecordAfterCreateSuccess(function (e) {
     }
 
     // =======================================================================
-    // (b) E-MAIL VIA CENTRAL DE ALERTAS (só com o alerta LIGADO)
+    // (b) E-MAIL AO OPERADOR VIA CENTRAL DE ALERTAS (só com o alerta LIGADO)
+    // Isolado em do/while: qualquer break aqui NÃO impede o bloco (c) do
+    // supervisor (o alerta do operador nasce desligado e não pode travá-lo).
     // =======================================================================
-    if (!operatorEmail) {
-      console.warn('[ALOC_OPERATOR] operador sem e-mail — envio pulado')
-      return e.next()
-    }
+    do {
+      if (!operatorEmail) {
+        console.warn('[ALOC_OPERATOR] operador sem e-mail — envio pulado')
+        break
+      }
 
-    var templateData = {
-      operador: operatorName,
-      cliente: companyName || 'Cliente',
-      unidade: unitName || '— (sede)',
-      tipo_alocacao: typeLabel,
-      recorrencia: recurrenceSummary,
-      vigencia: vigencia,
-      observacoes: notes,
-    }
+      var templateData = {
+        operador: operatorName,
+        cliente: companyName || 'Cliente',
+        unidade: unitName || '— (sede)',
+        tipo_alocacao: typeLabel,
+        recorrencia: recurrenceSummary,
+        vigencia: vigencia,
+        observacoes: notes,
+      }
 
-    var cfg = null
-    try {
-      cfg = $app.findFirstRecordByFilter(
-        'email_alert_settings',
-        'alert_key = "operator_allocation_notify"',
-      )
-    } catch (errCfg) {
-      console.error(
-        '[ALOC_OPERATOR] falha ao ler email_alert_settings: ' +
-          (errCfg && errCfg.message ? errCfg.message : String(errCfg)),
-      )
-    }
+      var cfg = null
+      try {
+        cfg = $app.findFirstRecordByFilter(
+          'email_alert_settings',
+          'alert_key = "operator_allocation_notify"',
+        )
+      } catch (errCfg) {
+        console.error(
+          '[ALOC_OPERATOR] falha ao ler email_alert_settings: ' +
+            (errCfg && errCfg.message ? errCfg.message : String(errCfg)),
+        )
+      }
 
-    if (!cfg) {
-      console.error(
-        '[ALOC_OPERATOR] e-mail ABORTADO — configuração do alerta não encontrada (alert_key=operator_allocation_notify)',
-      )
-      return e.next()
-    }
-    if (!cfg.getBool('enabled')) {
-      console.log(
-        '[ALOC_OPERATOR] e-mail PULADO — alerta DESLIGADO na Central de Alertas (operator_allocation_notify)',
-      )
-      return e.next()
-    }
+      if (!cfg) {
+        console.error(
+          '[ALOC_OPERATOR] e-mail ABORTADO — configuração do alerta não encontrada (alert_key=operator_allocation_notify)',
+        )
+        break
+      }
+      if (!cfg.getBool('enabled')) {
+        console.log(
+          '[ALOC_OPERATOR] e-mail PULADO — alerta DESLIGADO na Central de Alertas (operator_allocation_notify)',
+        )
+        break
+      }
 
-    function localInterpolateTemplate(template, data) {
-      if (!template) return ''
-      var result = template
-      if (data && typeof data === 'object') {
-        var keys = Object.keys(data)
-        for (var i = 0; i < keys.length; i++) {
-          var val = data[keys[i]] == null ? '' : String(data[keys[i]])
-          result = result.replace(new RegExp('\\{\\{\\s*' + keys[i] + '\\s*\\}\\}', 'gi'), val)
+      function localInterpolateTemplate(template, data) {
+        if (!template) return ''
+        var result = template
+        if (data && typeof data === 'object') {
+          var keys = Object.keys(data)
+          for (var i = 0; i < keys.length; i++) {
+            var val = data[keys[i]] == null ? '' : String(data[keys[i]])
+            result = result.replace(new RegExp('\\{\\{\\s*' + keys[i] + '\\s*\\}\\}', 'gi'), val)
+          }
+        }
+        return result.replace(/\{\{\s*[a-zA-Z0-9_\-.]+\s*\}\}/g, '')
+      }
+
+      function localHasEmailAlreadyBeenSent(referenceId, recipient) {
+        if (!referenceId || !recipient) return false
+        try {
+          var cleanRecipient = String(recipient).trim().toLowerCase().replace(/"/g, '\\"')
+          var rec = $app.findFirstRecordByFilter(
+            'email_sent_logs',
+            'alert_key = "operator_allocation_notify" && reference_id = "' +
+              String(referenceId).trim().replace(/"/g, '\\"') +
+              '" && recipient = "' +
+              cleanRecipient +
+              '"',
+          )
+          return !!rec
+        } catch (_) {
+          return false
         }
       }
-      return result.replace(/\{\{\s*[a-zA-Z0-9_\-.]+\s*\}\}/g, '')
-    }
 
-    function localHasEmailAlreadyBeenSent(referenceId, recipient) {
-      if (!referenceId || !recipient) return false
-      try {
-        var cleanRecipient = String(recipient).trim().toLowerCase().replace(/"/g, '\\"')
-        var rec = $app.findFirstRecordByFilter(
-          'email_sent_logs',
-          'alert_key = "operator_allocation_notify" && reference_id = "' +
-            String(referenceId).trim().replace(/"/g, '\\"') +
-            '" && recipient = "' +
-            cleanRecipient +
-            '"',
-        )
-        return !!rec
-      } catch (_) {
-        return false
+      function localRecordEmailSentLog(referenceId, recipient, subject) {
+        if (!referenceId || !recipient) return
+        try {
+          var col = $app.findCollectionByNameOrId('email_sent_logs')
+          var log = new Record(col)
+          log.set('alert_key', 'operator_allocation_notify')
+          log.set('reference_id', String(referenceId).trim())
+          log.set('recipient', String(recipient).trim().toLowerCase())
+          log.set('sent_at', new Date().toISOString().replace('T', ' '))
+          log.set('subject', subject || '')
+          log.set('meta', JSON.stringify({ transport: 'skip_cloud' }))
+          $app.save(log)
+        } catch (errL) {
+          console.warn(
+            '[ALOC_OPERATOR] falha ao salvar email_sent_logs: ' +
+              (errL && errL.message ? errL.message : String(errL)),
+          )
+        }
       }
-    }
 
-    function localRecordEmailSentLog(referenceId, recipient, subject) {
-      if (!referenceId || !recipient) return
-      try {
-        var col = $app.findCollectionByNameOrId('email_sent_logs')
-        var log = new Record(col)
-        log.set('alert_key', 'operator_allocation_notify')
-        log.set('reference_id', String(referenceId).trim())
-        log.set('recipient', String(recipient).trim().toLowerCase())
-        log.set('sent_at', new Date().toISOString().replace('T', ' '))
-        log.set('subject', subject || '')
-        log.set('meta', JSON.stringify({ transport: 'skip_cloud' }))
-        $app.save(log)
-      } catch (errL) {
-        console.warn(
-          '[ALOC_OPERATOR] falha ao salvar email_sent_logs: ' +
-            (errL && errL.message ? errL.message : String(errL)),
+      function localBuildEmailHtml(bodyContent, headerSubtitle, footerText) {
+        var primaryColor = cfg.getString('primary_color') || '#D97706'
+        var headerTitle = cfg.getString('header_title') || 'Lógos AITSM'
+        return (
+          '<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>' +
+          '<body style="margin: 0; padding: 24px; font-family: -apple-system, BlinkMacSystemFont, \'Segoe UI\', Roboto, Arial, sans-serif; background-color: #f1f5f9; color: #0f172a;">' +
+          '<table role="presentation" width="100%" border="0" cellspacing="0" cellpadding="0" style="max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);">' +
+          '<tr><td style="padding: 28px 32px; background: linear-gradient(135deg, #17181C 0%, #262930 100%); border-bottom: 3px solid ' +
+          primaryColor +
+          '; text-align: left;">' +
+          '<span style="font-size: 20px; font-weight: 800; color: #FCD34D; letter-spacing: -0.5px;">' +
+          headerTitle +
+          '</span>' +
+          (headerSubtitle
+            ? '<p style="margin: 4px 0 0 0; font-size: 13px; color: #cbd5e1;">' +
+              headerSubtitle +
+              '</p>'
+            : '') +
+          '</td></tr>' +
+          '<tr><td style="padding: 32px; line-height: 1.65; font-size: 15px; color: #334155;">' +
+          bodyContent +
+          '</td></tr>' +
+          '<tr><td style="padding: 22px 32px; background-color: #f8fafc; border-top: 1px solid #e2e8f0; font-size: 12px; color: #64748b; text-align: center; line-height: 1.5;">' +
+          footerText +
+          '</td></tr></table></body></html>'
         )
       }
-    }
 
-    function localBuildEmailHtml(bodyContent, headerSubtitle, footerText) {
-      var primaryColor = cfg.getString('primary_color') || '#D97706'
-      var headerTitle = cfg.getString('header_title') || 'Lógos AITSM'
-      return (
-        '<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>' +
-        '<body style="margin: 0; padding: 24px; font-family: -apple-system, BlinkMacSystemFont, \'Segoe UI\', Roboto, Arial, sans-serif; background-color: #f1f5f9; color: #0f172a;">' +
-        '<table role="presentation" width="100%" border="0" cellspacing="0" cellpadding="0" style="max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);">' +
-        '<tr><td style="padding: 28px 32px; background: linear-gradient(135deg, #17181C 0%, #262930 100%); border-bottom: 3px solid ' +
-        primaryColor +
-        '; text-align: left;">' +
-        '<span style="font-size: 20px; font-weight: 800; color: #FCD34D; letter-spacing: -0.5px;">' +
-        headerTitle +
-        '</span>' +
-        (headerSubtitle
-          ? '<p style="margin: 4px 0 0 0; font-size: 13px; color: #cbd5e1;">' +
-            headerSubtitle +
-            '</p>'
-          : '') +
-        '</td></tr>' +
-        '<tr><td style="padding: 32px; line-height: 1.65; font-size: 15px; color: #334155;">' +
-        bodyContent +
-        '</td></tr>' +
-        '<tr><td style="padding: 22px 32px; background-color: #f8fafc; border-top: 1px solid #e2e8f0; font-size: 12px; color: #64748b; text-align: center; line-height: 1.5;">' +
-        footerText +
-        '</td></tr></table></body></html>'
-      )
-    }
+      var bodyTemplate =
+        cfg.getString('body_template') || cfg.getString('default_body_template') || ''
+      var subjectTemplate =
+        cfg.getString('subject_template') ||
+        cfg.getString('default_subject_template') ||
+        'Nova alocação: {{cliente}}'
+      var headerSubtitle = cfg.getString('header_subtitle') || 'Central de Alocação de Operadores'
+      var footerText =
+        cfg.getString('footer_text') || 'Lógos AITSM • Central de Serviços Inteligente'
 
-    var bodyTemplate =
-      cfg.getString('body_template') || cfg.getString('default_body_template') || ''
-    var subjectTemplate =
-      cfg.getString('subject_template') ||
-      cfg.getString('default_subject_template') ||
-      'Nova alocação: {{cliente}}'
-    var headerSubtitle = cfg.getString('header_subtitle') || 'Central de Alocação de Operadores'
-    var footerText = cfg.getString('footer_text') || 'Lógos AITSM • Central de Serviços Inteligente'
+      var subject = localInterpolateTemplate(subjectTemplate, templateData)
+      var bodyContent = localInterpolateTemplate(bodyTemplate, templateData)
+      var htmlContent = localBuildEmailHtml(bodyContent, headerSubtitle, footerText)
+      var textFallback = bodyContent
+        .replace(/<[^>]+>/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim()
 
-    var subject = localInterpolateTemplate(subjectTemplate, templateData)
-    var bodyContent = localInterpolateTemplate(bodyTemplate, templateData)
-    var htmlContent = localBuildEmailHtml(bodyContent, headerSubtitle, footerText)
-    var textFallback = bodyContent
-      .replace(/<[^>]+>/g, ' ')
-      .replace(/\s+/g, ' ')
-      .trim()
+      var referenceId = allocation.id + ':' + todayPrefix
+      var recipient = operatorEmail.trim().toLowerCase()
 
-    var referenceId = allocation.id + ':' + todayPrefix
-    var recipient = operatorEmail.trim().toLowerCase()
+      if (localHasEmailAlreadyBeenSent(referenceId, recipient)) {
+        console.log(
+          '[ALOC_OPERATOR] e-mail já enviado hoje para este operador — pulado (anti-duplicidade)',
+        )
+        break
+      }
 
-    if (localHasEmailAlreadyBeenSent(referenceId, recipient)) {
-      console.log(
-        '[ALOC_OPERATOR] e-mail já enviado hoje para este operador — pulado (anti-duplicidade)',
-      )
-      return e.next()
-    }
+      try {
+        var senderAddress = 'noreply@mail.goskip.dev'
+        var senderName = 'Lógos AITSM'
+        try {
+          var s = $app.settings
+          if (typeof s === 'function') s = s()
+          if (s && s.meta && s.meta.senderAddress) senderAddress = s.meta.senderAddress
+          if (s && s.meta && s.meta.senderName) senderName = s.meta.senderName
+        } catch (_) {}
 
+        var message = new MailerMessage({
+          from: { address: senderAddress, name: senderName },
+          to: [{ address: recipient }],
+          subject: subject,
+          html: htmlContent,
+          text: textFallback,
+        })
+        $app.newMailClient().send(message)
+        localRecordEmailSentLog(referenceId, recipient, subject)
+        console.log(
+          '[ALOC_OPERATOR] e-mail enviado via Skip Cloud | destinatário=' +
+            recipient +
+            ' | assunto=' +
+            subject,
+        )
+      } catch (errSend) {
+        console.error(
+          '[ALOC_OPERATOR] FALHA no envio Skip Cloud | destinatário=' +
+            recipient +
+            ' | motivo: ' +
+            (errSend && errSend.message ? errSend.message : String(errSend)),
+        )
+      }
+    } while (false)
+    // =======================================================================
+    // (c) SUPERVISOR(ES) — resolve supervisores do operador (role gestor,
+    //     preferindo gestores da mesma equipe; fallback admins ativos) e
+    //     notifica: in-app sempre; e-mail só com o alerta
+    //     operator_allocation_notify_supervisor LIGADO (migração 0172).
+    // =======================================================================
+    var supervisors = []
+    var supervisorIds = {}
     try {
-      var senderAddress = 'noreply@mail.goskip.dev'
-      var senderName = 'Lógos AITSM'
-      try {
-        var s = $app.settings
-        if (typeof s === 'function') s = s()
-        if (s && s.meta && s.meta.senderAddress) senderAddress = s.meta.senderAddress
-        if (s && s.meta && s.meta.senderName) senderName = s.meta.senderName
-      } catch (_) {}
-
-      var message = new MailerMessage({
-        from: { address: senderAddress, name: senderName },
-        to: [{ address: recipient }],
-        subject: subject,
-        html: htmlContent,
-        text: textFallback,
-      })
-      $app.newMailClient().send(message)
-      localRecordEmailSentLog(referenceId, recipient, subject)
-      console.log(
-        '[ALOC_OPERATOR] e-mail enviado via Skip Cloud | destinatário=' +
-          recipient +
-          ' | assunto=' +
-          subject,
-      )
-    } catch (errSend) {
+      var opTeam = (operatorTeam || '').trim()
+      var gestores = $app.findRecordsByFilter('users', 'role = "gestor" && active = true', '', 0, 0)
+      var sameTeam = []
+      for (var gi = 0; gi < gestores.length; gi++) {
+        var gTeam = (gestores[gi].getString('team') || '').trim()
+        if (opTeam && gTeam && gTeam === opTeam) sameTeam.push(gestores[gi])
+      }
+      var chosen = sameTeam.length > 0 ? sameTeam : gestores
+      for (var ci = 0; ci < chosen.length; ci++) {
+        var sId = chosen[ci].id
+        if (sId === operatorId) continue // operador não se autonotifica como supervisor
+        if (!supervisorIds[sId]) {
+          supervisorIds[sId] = true
+          supervisors.push(chosen[ci])
+        }
+      }
+      if (supervisors.length === 0) {
+        // Fallback da casa (padrão change_approval_check): sem gestores → admins ativos
+        var admins = $app.findRecordsByFilter('users', 'role = "admin" && active = true', '', 0, 0)
+        for (var ai = 0; ai < admins.length; ai++) {
+          var aId = admins[ai].id
+          if (aId === operatorId) continue
+          if (!supervisorIds[aId]) {
+            supervisorIds[aId] = true
+            supervisors.push(admins[ai])
+          }
+        }
+      }
+    } catch (errSupRes) {
       console.error(
-        '[ALOC_OPERATOR] FALHA no envio Skip Cloud | destinatário=' +
-          recipient +
-          ' | motivo: ' +
-          (errSend && errSend.message ? errSend.message : String(errSend)),
+        '[ALOC_SUP] falha ao resolver supervisores: ' +
+          (errSupRes && errSupRes.message ? errSupRes.message : String(errSupRes)),
       )
+    }
+
+    if (supervisors.length === 0) {
+      console.log(
+        '[ALOC_SUP] nenhum supervisor/gestor aplicável — notificação ao supervisor pulada',
+      )
+    } else {
+      var supNotifTitle = 'Alocação do seu operador: ' + (operatorName || 'Operador')
+      var supMessage =
+        'Seu operador ' +
+        (operatorName || 'Operador') +
+        ' foi alocado ao cliente ' +
+        (companyName || 'Cliente') +
+        (unitName ? ' (' + unitName + ')' : '') +
+        '. Tipo: ' +
+        typeLabel +
+        '. Recorrência: ' +
+        recurrenceSummary +
+        '. Vigência: ' +
+        vigencia +
+        '.'
+
+      // ---- (c.1) notificação in-app ao supervisor (uma por supervisor/dia/título) ----
+      for (var ni = 0; ni < supervisors.length; ni++) {
+        var supRec = supervisors[ni]
+        var supName = supRec.getString('name') || 'Supervisor'
+        var supDup = false
+        try {
+          var cleanSupId = String(supRec.id).replace(/"/g, '\\"')
+          var cleanSupTitle = supNotifTitle.replace(/"/g, '\\"')
+          supDup = !!$app.findFirstRecordByFilter(
+            'notifications',
+            'user = "' +
+              cleanSupId +
+              '" && title = "' +
+              cleanSupTitle +
+              '" && created >= "' +
+              todayPrefix +
+              ' 00:00:00.000Z"',
+          )
+        } catch (_) {}
+        if (supDup) {
+          console.log('[ALOC_SUP] notificação in-app já existe hoje para ' + supName + ' — pulada')
+          continue
+        }
+        try {
+          var notifsColSup = $app.findCollectionByNameOrId('notifications')
+          var notifSup = new Record(notifsColSup)
+          notifSup.set('user', supRec.id)
+          notifSup.set('title', supNotifTitle)
+          notifSup.set('message', supMessage)
+          notifSup.set('type', 'Atribuição')
+          notifSup.set('read', false)
+          $app.save(notifSup)
+          console.log('[ALOC_SUP] notificação in-app criada para supervisor ' + supName)
+        } catch (errNSup) {
+          console.error(
+            '[ALOC_SUP] falha na notificação in-app (' +
+              supName +
+              '): ' +
+              (errNSup && errNSup.message ? errNSup.message : String(errNSup)),
+          )
+        }
+      }
+
+      // ---- (c.2) e-mail ao supervisor via Central de Alertas (só com o alerta LIGADO) ----
+      var supCfg = null
+      try {
+        supCfg = $app.findFirstRecordByFilter(
+          'email_alert_settings',
+          'alert_key = "operator_allocation_notify_supervisor"',
+        )
+      } catch (errSupCfg) {
+        console.error(
+          '[ALOC_SUP] falha ao ler email_alert_settings: ' +
+            (errSupCfg && errSupCfg.message ? errSupCfg.message : String(errSupCfg)),
+        )
+      }
+      if (!supCfg) {
+        console.error(
+          '[ALOC_SUP] e-mail ABORTADO — configuração do alerta não encontrada (alert_key=operator_allocation_notify_supervisor)',
+        )
+      } else if (!supCfg.getBool('enabled')) {
+        console.log(
+          '[ALOC_SUP] e-mail PULADO — alerta DESLIGADO na Central de Alertas (operator_allocation_notify_supervisor)',
+        )
+      } else {
+        function supInterpolateTemplate(template, data) {
+          if (!template) return ''
+          var result = template
+          if (data && typeof data === 'object') {
+            var keys = Object.keys(data)
+            for (var i = 0; i < keys.length; i++) {
+              var val = data[keys[i]] == null ? '' : String(data[keys[i]])
+              result = result.replace(new RegExp('\\{\\{\\s*' + keys[i] + '\\s*\\}\\}', 'gi'), val)
+            }
+          }
+          return result.replace(/\{\{\s*[a-zA-Z0-9_\-.]+\s*\}\}/g, '')
+        }
+
+        function supHasEmailAlreadyBeenSent(referenceId, recipient) {
+          if (!referenceId || !recipient) return false
+          try {
+            var cleanRecipient = String(recipient).trim().toLowerCase().replace(/"/g, '\\"')
+            var rec = $app.findFirstRecordByFilter(
+              'email_sent_logs',
+              'alert_key = "operator_allocation_notify_supervisor" && reference_id = "' +
+                String(referenceId).trim().replace(/"/g, '\\"') +
+                '" && recipient = "' +
+                cleanRecipient +
+                '"',
+            )
+            return !!rec
+          } catch (_) {
+            return false
+          }
+        }
+
+        function supRecordEmailSentLog(referenceId, recipient, subject) {
+          if (!referenceId || !recipient) return
+          try {
+            var col = $app.findCollectionByNameOrId('email_sent_logs')
+            var log = new Record(col)
+            log.set('alert_key', 'operator_allocation_notify_supervisor')
+            log.set('reference_id', String(referenceId).trim())
+            log.set('recipient', String(recipient).trim().toLowerCase())
+            log.set('sent_at', new Date().toISOString().replace('T', ' '))
+            log.set('subject', subject || '')
+            log.set('meta', JSON.stringify({ transport: 'skip_cloud' }))
+            $app.save(log)
+          } catch (errL) {
+            console.warn(
+              '[ALOC_SUP] falha ao salvar email_sent_logs: ' +
+                (errL && errL.message ? errL.message : String(errL)),
+            )
+          }
+        }
+
+        function supBuildEmailHtml(bodyContent, headerSubtitle, footerText) {
+          var primaryColor = supCfg.getString('primary_color') || '#D97706'
+          var headerTitle = supCfg.getString('header_title') || 'Lógos AITSM'
+          return (
+            '<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>' +
+            '<body style="margin: 0; padding: 24px; font-family: -apple-system, BlinkMacSystemFont, \'Segoe UI\', Roboto, Arial, sans-serif; background-color: #f1f5f9; color: #0f172a;">' +
+            '<table role="presentation" width="100%" border="0" cellspacing="0" cellpadding="0" style="max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);">' +
+            '<tr><td style="padding: 28px 32px; background: linear-gradient(135deg, #17181C 0%, #262930 100%); border-bottom: 3px solid ' +
+            primaryColor +
+            '; text-align: left;">' +
+            '<span style="font-size: 20px; font-weight: 800; color: #FCD34D; letter-spacing: -0.5px;">' +
+            headerTitle +
+            '</span>' +
+            (headerSubtitle
+              ? '<p style="margin: 4px 0 0 0; font-size: 13px; color: #cbd5e1;">' +
+                headerSubtitle +
+                '</p>'
+              : '') +
+            '</td></tr>' +
+            '<tr><td style="padding: 32px; line-height: 1.65; font-size: 15px; color: #334155;">' +
+            bodyContent +
+            '</td></tr>' +
+            '<tr><td style="padding: 22px 32px; background-color: #f8fafc; border-top: 1px solid #e2e8f0; font-size: 12px; color: #64748b; text-align: center; line-height: 1.5;">' +
+            footerText +
+            '</td></tr></table></body></html>'
+          )
+        }
+
+        for (var ei = 0; ei < supervisors.length; ei++) {
+          var supMail = supervisors[ei]
+          var supDisplayName = supMail.getString('name') || 'Supervisor'
+          var supEmail = (supMail.getString('email') || '').trim().toLowerCase()
+          if (!supEmail) {
+            console.warn('[ALOC_SUP] supervisor sem e-mail — pulado: ' + supDisplayName)
+            continue
+          }
+
+          var supTemplateData = {
+            supervisor: supDisplayName,
+            operador: operatorName,
+            cliente: companyName || 'Cliente',
+            unidade: unitName || '— (sede)',
+            tipo_alocacao: typeLabel,
+            recorrencia: recurrenceSummary,
+            vigencia: vigencia,
+            observacoes: notes,
+          }
+
+          var supSubjectTemplate =
+            supCfg.getString('subject_template') ||
+            supCfg.getString('default_subject_template') ||
+            'Nova alocação de operador: {{operador}} alocado a {{cliente}}'
+          var supBodyTemplate =
+            supCfg.getString('body_template') || supCfg.getString('default_body_template') || ''
+          var supSubject = supInterpolateTemplate(supSubjectTemplate, supTemplateData)
+          var supBodyContent = supInterpolateTemplate(supBodyTemplate, supTemplateData)
+          var supHtmlContent = supBuildEmailHtml(
+            supBodyContent,
+            supCfg.getString('header_subtitle') || 'Central de Alocação de Operadores',
+            supCfg.getString('footer_text') || 'Lógos AITSM • Central de Serviços Inteligente',
+          )
+          var supTextFallback = supBodyContent
+            .replace(/<[^>]+>/g, ' ')
+            .replace(/\s+/g, ' ')
+            .trim()
+
+          var supReferenceId = allocation.id + ':sup:' + todayPrefix
+
+          if (supHasEmailAlreadyBeenSent(supReferenceId, supEmail)) {
+            console.log(
+              '[ALOC_SUP] e-mail já enviado hoje para ' +
+                supDisplayName +
+                ' — pulado (anti-duplicidade)',
+            )
+            continue
+          }
+
+          try {
+            var supSenderAddress = 'noreply@mail.goskip.dev'
+            var supSenderName = 'Lógos AITSM'
+            try {
+              var supSettings = $app.settings
+              if (typeof supSettings === 'function') supSettings = supSettings()
+              if (supSettings && supSettings.meta && supSettings.meta.senderAddress)
+                supSenderAddress = supSettings.meta.senderAddress
+              if (supSettings && supSettings.meta && supSettings.meta.senderName)
+                supSenderName = supSettings.meta.senderName
+            } catch (_) {}
+
+            var supMessageMail = new MailerMessage({
+              from: { address: supSenderAddress, name: supSenderName },
+              to: [{ address: supEmail }],
+              subject: supSubject,
+              html: supHtmlContent,
+              text: supTextFallback,
+            })
+            $app.newMailClient().send(supMessageMail)
+            supRecordEmailSentLog(supReferenceId, supEmail, supSubject)
+            console.log(
+              '[ALOC_SUP] e-mail enviado via Skip Cloud | destinatário=' +
+                supEmail +
+                ' | assunto=' +
+                supSubject,
+            )
+          } catch (errSupSend) {
+            console.error(
+              '[ALOC_SUP] FALHA no envio Skip Cloud | destinatário=' +
+                supEmail +
+                ' | motivo: ' +
+                (errSupSend && errSupSend.message ? errSupSend.message : String(errSupSend)),
+            )
+          }
+        }
+      }
     }
   } catch (err) {
     console.error(
@@ -433,10 +740,12 @@ onRecordAfterUpdateSuccess(function (e) {
 
     var operatorName = ''
     var operatorEmail = ''
+    var operatorTeam = ''
     try {
       var op = $app.findRecordById('users', operatorId)
       operatorName = op.getString('name') || 'Operador'
       operatorEmail = (op.getString('email') || '').trim()
+      operatorTeam = (op.getString('team') || '').trim()
     } catch (_) {}
 
     var companyName = ''
@@ -586,186 +895,488 @@ onRecordAfterUpdateSuccess(function (e) {
       }
     }
 
-    // ---- (b) e-mail via Central de Alertas (só com o alerta LIGADO) ----
-    if (!operatorEmail) {
-      console.warn('[ALOC_OPERATOR] operador sem e-mail — envio pulado')
-      return e.next()
-    }
+    // ---- (b) e-mail ao operador via Central de Alertas (só com o alerta LIGADO) ----
+    // Isolado em do/while: qualquer break aqui NÃO impede o bloco (c) do
+    // supervisor (o alerta do operador nasce desligado e não pode travá-lo).
+    do {
+      if (!operatorEmail) {
+        console.warn('[ALOC_OPERATOR] operador sem e-mail — envio pulado')
+        break
+      }
 
-    var templateData = {
-      operador: operatorName,
-      cliente: companyName || 'Cliente',
-      unidade: unitName || '— (sede)',
-      tipo_alocacao: typeLabel,
-      recorrencia: recurrenceSummary,
-      vigencia: vigencia,
-      observacoes: notes,
-    }
+      var templateData = {
+        operador: operatorName,
+        cliente: companyName || 'Cliente',
+        unidade: unitName || '— (sede)',
+        tipo_alocacao: typeLabel,
+        recorrencia: recurrenceSummary,
+        vigencia: vigencia,
+        observacoes: notes,
+      }
 
-    var cfg = null
-    try {
-      cfg = $app.findFirstRecordByFilter(
-        'email_alert_settings',
-        'alert_key = "operator_allocation_notify"',
-      )
-    } catch (errCfg) {
-      console.error(
-        '[ALOC_OPERATOR] falha ao ler email_alert_settings: ' +
-          (errCfg && errCfg.message ? errCfg.message : String(errCfg)),
-      )
-    }
+      var cfg = null
+      try {
+        cfg = $app.findFirstRecordByFilter(
+          'email_alert_settings',
+          'alert_key = "operator_allocation_notify"',
+        )
+      } catch (errCfg) {
+        console.error(
+          '[ALOC_OPERATOR] falha ao ler email_alert_settings: ' +
+            (errCfg && errCfg.message ? errCfg.message : String(errCfg)),
+        )
+      }
 
-    if (!cfg) {
-      console.error(
-        '[ALOC_OPERATOR] e-mail ABORTADO — configuração do alerta não encontrada (alert_key=operator_allocation_notify)',
-      )
-      return e.next()
-    }
-    if (!cfg.getBool('enabled')) {
-      console.log(
-        '[ALOC_OPERATOR] e-mail PULADO — alerta DESLIGADO na Central de Alertas (operator_allocation_notify)',
-      )
-      return e.next()
-    }
+      if (!cfg) {
+        console.error(
+          '[ALOC_OPERATOR] e-mail ABORTADO — configuração do alerta não encontrada (alert_key=operator_allocation_notify)',
+        )
+        break
+      }
+      if (!cfg.getBool('enabled')) {
+        console.log(
+          '[ALOC_OPERATOR] e-mail PULADO — alerta DESLIGADO na Central de Alertas (operator_allocation_notify)',
+        )
+        break
+      }
 
-    function localInterpolateTemplate(template, data) {
-      if (!template) return ''
-      var result = template
-      if (data && typeof data === 'object') {
-        var keys = Object.keys(data)
-        for (var i = 0; i < keys.length; i++) {
-          var val = data[keys[i]] == null ? '' : String(data[keys[i]])
-          result = result.replace(new RegExp('\\{\\{\\s*' + keys[i] + '\\s*\\}\\}', 'gi'), val)
+      function localInterpolateTemplate(template, data) {
+        if (!template) return ''
+        var result = template
+        if (data && typeof data === 'object') {
+          var keys = Object.keys(data)
+          for (var i = 0; i < keys.length; i++) {
+            var val = data[keys[i]] == null ? '' : String(data[keys[i]])
+            result = result.replace(new RegExp('\\{\\{\\s*' + keys[i] + '\\s*\\}\\}', 'gi'), val)
+          }
+        }
+        return result.replace(/\{\{\s*[a-zA-Z0-9_\-.]+\s*\}\}/g, '')
+      }
+
+      function localHasEmailAlreadyBeenSent(referenceId, recipient) {
+        if (!referenceId || !recipient) return false
+        try {
+          var cleanRecipient = String(recipient).trim().toLowerCase().replace(/"/g, '\\"')
+          var rec = $app.findFirstRecordByFilter(
+            'email_sent_logs',
+            'alert_key = "operator_allocation_notify" && reference_id = "' +
+              String(referenceId).trim().replace(/"/g, '\\"') +
+              '" && recipient = "' +
+              cleanRecipient +
+              '"',
+          )
+          return !!rec
+        } catch (_) {
+          return false
         }
       }
-      return result.replace(/\{\{\s*[a-zA-Z0-9_\-.]+\s*\}\}/g, '')
-    }
 
-    function localHasEmailAlreadyBeenSent(referenceId, recipient) {
-      if (!referenceId || !recipient) return false
-      try {
-        var cleanRecipient = String(recipient).trim().toLowerCase().replace(/"/g, '\\"')
-        var rec = $app.findFirstRecordByFilter(
-          'email_sent_logs',
-          'alert_key = "operator_allocation_notify" && reference_id = "' +
-            String(referenceId).trim().replace(/"/g, '\\"') +
-            '" && recipient = "' +
-            cleanRecipient +
-            '"',
-        )
-        return !!rec
-      } catch (_) {
-        return false
+      function localRecordEmailSentLog(referenceId, recipient, subject) {
+        if (!referenceId || !recipient) return
+        try {
+          var col = $app.findCollectionByNameOrId('email_sent_logs')
+          var log = new Record(col)
+          log.set('alert_key', 'operator_allocation_notify')
+          log.set('reference_id', String(referenceId).trim())
+          log.set('recipient', String(recipient).trim().toLowerCase())
+          log.set('sent_at', new Date().toISOString().replace('T', ' '))
+          log.set('subject', subject || '')
+          log.set('meta', JSON.stringify({ transport: 'skip_cloud' }))
+          $app.save(log)
+        } catch (errL) {
+          console.warn(
+            '[ALOC_OPERATOR] falha ao salvar email_sent_logs: ' +
+              (errL && errL.message ? errL.message : String(errL)),
+          )
+        }
       }
-    }
 
-    function localRecordEmailSentLog(referenceId, recipient, subject) {
-      if (!referenceId || !recipient) return
-      try {
-        var col = $app.findCollectionByNameOrId('email_sent_logs')
-        var log = new Record(col)
-        log.set('alert_key', 'operator_allocation_notify')
-        log.set('reference_id', String(referenceId).trim())
-        log.set('recipient', String(recipient).trim().toLowerCase())
-        log.set('sent_at', new Date().toISOString().replace('T', ' '))
-        log.set('subject', subject || '')
-        log.set('meta', JSON.stringify({ transport: 'skip_cloud' }))
-        $app.save(log)
-      } catch (errL) {
-        console.warn(
-          '[ALOC_OPERATOR] falha ao salvar email_sent_logs: ' +
-            (errL && errL.message ? errL.message : String(errL)),
+      function localBuildEmailHtml(bodyContent, headerSubtitle, footerText) {
+        var primaryColor = cfg.getString('primary_color') || '#D97706'
+        var headerTitle = cfg.getString('header_title') || 'Lógos AITSM'
+        return (
+          '<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>' +
+          '<body style="margin: 0; padding: 24px; font-family: -apple-system, BlinkMacSystemFont, \'Segoe UI\', Roboto, Arial, sans-serif; background-color: #f1f5f9; color: #0f172a;">' +
+          '<table role="presentation" width="100%" border="0" cellspacing="0" cellpadding="0" style="max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);">' +
+          '<tr><td style="padding: 28px 32px; background: linear-gradient(135deg, #17181C 0%, #262930 100%); border-bottom: 3px solid ' +
+          primaryColor +
+          '; text-align: left;">' +
+          '<span style="font-size: 20px; font-weight: 800; color: #FCD34D; letter-spacing: -0.5px;">' +
+          headerTitle +
+          '</span>' +
+          (headerSubtitle
+            ? '<p style="margin: 4px 0 0 0; font-size: 13px; color: #cbd5e1;">' +
+              headerSubtitle +
+              '</p>'
+            : '') +
+          '</td></tr>' +
+          '<tr><td style="padding: 32px; line-height: 1.65; font-size: 15px; color: #334155;">' +
+          bodyContent +
+          '</td></tr>' +
+          '<tr><td style="padding: 22px 32px; background-color: #f8fafc; border-top: 1px solid #e2e8f0; font-size: 12px; color: #64748b; text-align: center; line-height: 1.5;">' +
+          footerText +
+          '</td></tr></table></body></html>'
         )
       }
-    }
 
-    function localBuildEmailHtml(bodyContent, headerSubtitle, footerText) {
-      var primaryColor = cfg.getString('primary_color') || '#D97706'
-      var headerTitle = cfg.getString('header_title') || 'Lógos AITSM'
-      return (
-        '<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>' +
-        '<body style="margin: 0; padding: 24px; font-family: -apple-system, BlinkMacSystemFont, \'Segoe UI\', Roboto, Arial, sans-serif; background-color: #f1f5f9; color: #0f172a;">' +
-        '<table role="presentation" width="100%" border="0" cellspacing="0" cellpadding="0" style="max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);">' +
-        '<tr><td style="padding: 28px 32px; background: linear-gradient(135deg, #17181C 0%, #262930 100%); border-bottom: 3px solid ' +
-        primaryColor +
-        '; text-align: left;">' +
-        '<span style="font-size: 20px; font-weight: 800; color: #FCD34D; letter-spacing: -0.5px;">' +
-        headerTitle +
-        '</span>' +
-        (headerSubtitle
-          ? '<p style="margin: 4px 0 0 0; font-size: 13px; color: #cbd5e1;">' +
-            headerSubtitle +
-            '</p>'
-          : '') +
-        '</td></tr>' +
-        '<tr><td style="padding: 32px; line-height: 1.65; font-size: 15px; color: #334155;">' +
-        bodyContent +
-        '</td></tr>' +
-        '<tr><td style="padding: 22px 32px; background-color: #f8fafc; border-top: 1px solid #e2e8f0; font-size: 12px; color: #64748b; text-align: center; line-height: 1.5;">' +
-        footerText +
-        '</td></tr></table></body></html>'
-      )
-    }
+      var bodyTemplate =
+        cfg.getString('body_template') || cfg.getString('default_body_template') || ''
+      var subjectTemplate =
+        cfg.getString('subject_template') ||
+        cfg.getString('default_subject_template') ||
+        'Nova alocação: {{cliente}}'
+      var headerSubtitle = cfg.getString('header_subtitle') || 'Central de Alocação de Operadores'
+      var footerText =
+        cfg.getString('footer_text') || 'Lógos AITSM • Central de Serviços Inteligente'
 
-    var bodyTemplate =
-      cfg.getString('body_template') || cfg.getString('default_body_template') || ''
-    var subjectTemplate =
-      cfg.getString('subject_template') ||
-      cfg.getString('default_subject_template') ||
-      'Nova alocação: {{cliente}}'
-    var headerSubtitle = cfg.getString('header_subtitle') || 'Central de Alocação de Operadores'
-    var footerText = cfg.getString('footer_text') || 'Lógos AITSM • Central de Serviços Inteligente'
+      var subject = localInterpolateTemplate(subjectTemplate, templateData)
+      var bodyContent = localInterpolateTemplate(bodyTemplate, templateData)
+      var htmlContent = localBuildEmailHtml(bodyContent, headerSubtitle, footerText)
+      var textFallback = bodyContent
+        .replace(/<[^>]+>/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim()
 
-    var subject = localInterpolateTemplate(subjectTemplate, templateData)
-    var bodyContent = localInterpolateTemplate(bodyTemplate, templateData)
-    var htmlContent = localBuildEmailHtml(bodyContent, headerSubtitle, footerText)
-    var textFallback = bodyContent
-      .replace(/<[^>]+>/g, ' ')
-      .replace(/\s+/g, ' ')
-      .trim()
+      var referenceId = allocation.id + ':' + todayPrefix
+      var recipient = operatorEmail.trim().toLowerCase()
 
-    var referenceId = allocation.id + ':' + todayPrefix
-    var recipient = operatorEmail.trim().toLowerCase()
+      if (localHasEmailAlreadyBeenSent(referenceId, recipient)) {
+        console.log(
+          '[ALOC_OPERATOR] e-mail já enviado hoje para este operador — pulado (anti-duplicidade)',
+        )
+        break
+      }
 
-    if (localHasEmailAlreadyBeenSent(referenceId, recipient)) {
-      console.log(
-        '[ALOC_OPERATOR] e-mail já enviado hoje para este operador — pulado (anti-duplicidade)',
-      )
-      return e.next()
-    }
+      try {
+        var senderAddress = 'noreply@mail.goskip.dev'
+        var senderName = 'Lógos AITSM'
+        try {
+          var s = $app.settings
+          if (typeof s === 'function') s = s()
+          if (s && s.meta && s.meta.senderAddress) senderAddress = s.meta.senderAddress
+          if (s && s.meta && s.meta.senderName) senderName = s.meta.senderName
+        } catch (_) {}
 
+        var message = new MailerMessage({
+          from: { address: senderAddress, name: senderName },
+          to: [{ address: recipient }],
+          subject: subject,
+          html: htmlContent,
+          text: textFallback,
+        })
+        $app.newMailClient().send(message)
+        localRecordEmailSentLog(referenceId, recipient, subject)
+        console.log(
+          '[ALOC_OPERATOR] e-mail enviado via Skip Cloud | destinatário=' +
+            recipient +
+            ' | assunto=' +
+            subject,
+        )
+      } catch (errSend) {
+        console.error(
+          '[ALOC_OPERATOR] FALHA no envio Skip Cloud | destinatário=' +
+            recipient +
+            ' | motivo: ' +
+            (errSend && errSend.message ? errSend.message : String(errSend)),
+        )
+      }
+    } while (false)
+    // =======================================================================
+    // (c) SUPERVISOR(ES) — resolve supervisores do operador (role gestor,
+    //     preferindo gestores da mesma equipe; fallback admins ativos) e
+    //     notifica: in-app sempre; e-mail só com o alerta
+    //     operator_allocation_notify_supervisor LIGADO (migração 0172).
+    // =======================================================================
+    var supervisors = []
+    var supervisorIds = {}
     try {
-      var senderAddress = 'noreply@mail.goskip.dev'
-      var senderName = 'Lógos AITSM'
-      try {
-        var s = $app.settings
-        if (typeof s === 'function') s = s()
-        if (s && s.meta && s.meta.senderAddress) senderAddress = s.meta.senderAddress
-        if (s && s.meta && s.meta.senderName) senderName = s.meta.senderName
-      } catch (_) {}
-
-      var message = new MailerMessage({
-        from: { address: senderAddress, name: senderName },
-        to: [{ address: recipient }],
-        subject: subject,
-        html: htmlContent,
-        text: textFallback,
-      })
-      $app.newMailClient().send(message)
-      localRecordEmailSentLog(referenceId, recipient, subject)
-      console.log(
-        '[ALOC_OPERATOR] e-mail enviado via Skip Cloud | destinatário=' +
-          recipient +
-          ' | assunto=' +
-          subject,
-      )
-    } catch (errSend) {
+      var opTeam = (operatorTeam || '').trim()
+      var gestores = $app.findRecordsByFilter('users', 'role = "gestor" && active = true', '', 0, 0)
+      var sameTeam = []
+      for (var gi = 0; gi < gestores.length; gi++) {
+        var gTeam = (gestores[gi].getString('team') || '').trim()
+        if (opTeam && gTeam && gTeam === opTeam) sameTeam.push(gestores[gi])
+      }
+      var chosen = sameTeam.length > 0 ? sameTeam : gestores
+      for (var ci = 0; ci < chosen.length; ci++) {
+        var sId = chosen[ci].id
+        if (sId === operatorId) continue // operador não se autonotifica como supervisor
+        if (!supervisorIds[sId]) {
+          supervisorIds[sId] = true
+          supervisors.push(chosen[ci])
+        }
+      }
+      if (supervisors.length === 0) {
+        // Fallback da casa (padrão change_approval_check): sem gestores → admins ativos
+        var admins = $app.findRecordsByFilter('users', 'role = "admin" && active = true', '', 0, 0)
+        for (var ai = 0; ai < admins.length; ai++) {
+          var aId = admins[ai].id
+          if (aId === operatorId) continue
+          if (!supervisorIds[aId]) {
+            supervisorIds[aId] = true
+            supervisors.push(admins[ai])
+          }
+        }
+      }
+    } catch (errSupRes) {
       console.error(
-        '[ALOC_OPERATOR] FALHA no envio Skip Cloud | destinatário=' +
-          recipient +
-          ' | motivo: ' +
-          (errSend && errSend.message ? errSend.message : String(errSend)),
+        '[ALOC_SUP] falha ao resolver supervisores: ' +
+          (errSupRes && errSupRes.message ? errSupRes.message : String(errSupRes)),
       )
+    }
+
+    if (supervisors.length === 0) {
+      console.log(
+        '[ALOC_SUP] nenhum supervisor/gestor aplicável — notificação ao supervisor pulada',
+      )
+    } else {
+      var supNotifTitle = 'Alocação do seu operador: ' + (operatorName || 'Operador')
+      var supMessage =
+        'Seu operador ' +
+        (operatorName || 'Operador') +
+        ' foi alocado ao cliente ' +
+        (companyName || 'Cliente') +
+        (unitName ? ' (' + unitName + ')' : '') +
+        '. Tipo: ' +
+        typeLabel +
+        '. Recorrência: ' +
+        recurrenceSummary +
+        '. Vigência: ' +
+        vigencia +
+        '.'
+
+      // ---- (c.1) notificação in-app ao supervisor (uma por supervisor/dia/título) ----
+      for (var ni = 0; ni < supervisors.length; ni++) {
+        var supRec = supervisors[ni]
+        var supName = supRec.getString('name') || 'Supervisor'
+        var supDup = false
+        try {
+          var cleanSupId = String(supRec.id).replace(/"/g, '\\"')
+          var cleanSupTitle = supNotifTitle.replace(/"/g, '\\"')
+          supDup = !!$app.findFirstRecordByFilter(
+            'notifications',
+            'user = "' +
+              cleanSupId +
+              '" && title = "' +
+              cleanSupTitle +
+              '" && created >= "' +
+              todayPrefix +
+              ' 00:00:00.000Z"',
+          )
+        } catch (_) {}
+        if (supDup) {
+          console.log('[ALOC_SUP] notificação in-app já existe hoje para ' + supName + ' — pulada')
+          continue
+        }
+        try {
+          var notifsColSup = $app.findCollectionByNameOrId('notifications')
+          var notifSup = new Record(notifsColSup)
+          notifSup.set('user', supRec.id)
+          notifSup.set('title', supNotifTitle)
+          notifSup.set('message', supMessage)
+          notifSup.set('type', 'Atribuição')
+          notifSup.set('read', false)
+          $app.save(notifSup)
+          console.log(
+            '[ALOC_SUP] notificação in-app (reativação) criada para supervisor ' + supName,
+          )
+        } catch (errNSup) {
+          console.error(
+            '[ALOC_SUP] falha na notificação in-app (reativação, ' +
+              supName +
+              '): ' +
+              (errNSup && errNSup.message ? errNSup.message : String(errNSup)),
+          )
+        }
+      }
+
+      // ---- (c.2) e-mail ao supervisor via Central de Alertas (só com o alerta LIGADO) ----
+      var supCfg = null
+      try {
+        supCfg = $app.findFirstRecordByFilter(
+          'email_alert_settings',
+          'alert_key = "operator_allocation_notify_supervisor"',
+        )
+      } catch (errSupCfg) {
+        console.error(
+          '[ALOC_SUP] falha ao ler email_alert_settings: ' +
+            (errSupCfg && errSupCfg.message ? errSupCfg.message : String(errSupCfg)),
+        )
+      }
+      if (!supCfg) {
+        console.error(
+          '[ALOC_SUP] e-mail ABORTADO — configuração do alerta não encontrada (alert_key=operator_allocation_notify_supervisor)',
+        )
+      } else if (!supCfg.getBool('enabled')) {
+        console.log(
+          '[ALOC_SUP] e-mail PULADO — alerta DESLIGADO na Central de Alertas (operator_allocation_notify_supervisor)',
+        )
+      } else {
+        function supInterpolateTemplate(template, data) {
+          if (!template) return ''
+          var result = template
+          if (data && typeof data === 'object') {
+            var keys = Object.keys(data)
+            for (var i = 0; i < keys.length; i++) {
+              var val = data[keys[i]] == null ? '' : String(data[keys[i]])
+              result = result.replace(new RegExp('\\{\\{\\s*' + keys[i] + '\\s*\\}\\}', 'gi'), val)
+            }
+          }
+          return result.replace(/\{\{\s*[a-zA-Z0-9_\-.]+\s*\}\}/g, '')
+        }
+
+        function supHasEmailAlreadyBeenSent(referenceId, recipient) {
+          if (!referenceId || !recipient) return false
+          try {
+            var cleanRecipient = String(recipient).trim().toLowerCase().replace(/"/g, '\\"')
+            var rec = $app.findFirstRecordByFilter(
+              'email_sent_logs',
+              'alert_key = "operator_allocation_notify_supervisor" && reference_id = "' +
+                String(referenceId).trim().replace(/"/g, '\\"') +
+                '" && recipient = "' +
+                cleanRecipient +
+                '"',
+            )
+            return !!rec
+          } catch (_) {
+            return false
+          }
+        }
+
+        function supRecordEmailSentLog(referenceId, recipient, subject) {
+          if (!referenceId || !recipient) return
+          try {
+            var col = $app.findCollectionByNameOrId('email_sent_logs')
+            var log = new Record(col)
+            log.set('alert_key', 'operator_allocation_notify_supervisor')
+            log.set('reference_id', String(referenceId).trim())
+            log.set('recipient', String(recipient).trim().toLowerCase())
+            log.set('sent_at', new Date().toISOString().replace('T', ' '))
+            log.set('subject', subject || '')
+            log.set('meta', JSON.stringify({ transport: 'skip_cloud' }))
+            $app.save(log)
+          } catch (errL) {
+            console.warn(
+              '[ALOC_SUP] falha ao salvar email_sent_logs: ' +
+                (errL && errL.message ? errL.message : String(errL)),
+            )
+          }
+        }
+
+        function supBuildEmailHtml(bodyContent, headerSubtitle, footerText) {
+          var primaryColor = supCfg.getString('primary_color') || '#D97706'
+          var headerTitle = supCfg.getString('header_title') || 'Lógos AITSM'
+          return (
+            '<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>' +
+            '<body style="margin: 0; padding: 24px; font-family: -apple-system, BlinkMacSystemFont, \'Segoe UI\', Roboto, Arial, sans-serif; background-color: #f1f5f9; color: #0f172a;">' +
+            '<table role="presentation" width="100%" border="0" cellspacing="0" cellpadding="0" style="max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);">' +
+            '<tr><td style="padding: 28px 32px; background: linear-gradient(135deg, #17181C 0%, #262930 100%); border-bottom: 3px solid ' +
+            primaryColor +
+            '; text-align: left;">' +
+            '<span style="font-size: 20px; font-weight: 800; color: #FCD34D; letter-spacing: -0.5px;">' +
+            headerTitle +
+            '</span>' +
+            (headerSubtitle
+              ? '<p style="margin: 4px 0 0 0; font-size: 13px; color: #cbd5e1;">' +
+                headerSubtitle +
+                '</p>'
+              : '') +
+            '</td></tr>' +
+            '<tr><td style="padding: 32px; line-height: 1.65; font-size: 15px; color: #334155;">' +
+            bodyContent +
+            '</td></tr>' +
+            '<tr><td style="padding: 22px 32px; background-color: #f8fafc; border-top: 1px solid #e2e8f0; font-size: 12px; color: #64748b; text-align: center; line-height: 1.5;">' +
+            footerText +
+            '</td></tr></table></body></html>'
+          )
+        }
+
+        for (var ei = 0; ei < supervisors.length; ei++) {
+          var supMail = supervisors[ei]
+          var supDisplayName = supMail.getString('name') || 'Supervisor'
+          var supEmail = (supMail.getString('email') || '').trim().toLowerCase()
+          if (!supEmail) {
+            console.warn('[ALOC_SUP] supervisor sem e-mail — pulado: ' + supDisplayName)
+            continue
+          }
+
+          var supTemplateData = {
+            supervisor: supDisplayName,
+            operador: operatorName,
+            cliente: companyName || 'Cliente',
+            unidade: unitName || '— (sede)',
+            tipo_alocacao: typeLabel,
+            recorrencia: recurrenceSummary,
+            vigencia: vigencia,
+            observacoes: notes,
+          }
+
+          var supSubjectTemplate =
+            supCfg.getString('subject_template') ||
+            supCfg.getString('default_subject_template') ||
+            'Nova alocação de operador: {{operador}} alocado a {{cliente}}'
+          var supBodyTemplate =
+            supCfg.getString('body_template') || supCfg.getString('default_body_template') || ''
+          var supSubject = supInterpolateTemplate(supSubjectTemplate, supTemplateData)
+          var supBodyContent = supInterpolateTemplate(supBodyTemplate, supTemplateData)
+          var supHtmlContent = supBuildEmailHtml(
+            supBodyContent,
+            supCfg.getString('header_subtitle') || 'Central de Alocação de Operadores',
+            supCfg.getString('footer_text') || 'Lógos AITSM • Central de Serviços Inteligente',
+          )
+          var supTextFallback = supBodyContent
+            .replace(/<[^>]+>/g, ' ')
+            .replace(/\s+/g, ' ')
+            .trim()
+
+          var supReferenceId = allocation.id + ':sup:' + todayPrefix
+
+          if (supHasEmailAlreadyBeenSent(supReferenceId, supEmail)) {
+            console.log(
+              '[ALOC_SUP] e-mail já enviado hoje para ' +
+                supDisplayName +
+                ' — pulado (anti-duplicidade)',
+            )
+            continue
+          }
+
+          try {
+            var supSenderAddress = 'noreply@mail.goskip.dev'
+            var supSenderName = 'Lógos AITSM'
+            try {
+              var supSettings = $app.settings
+              if (typeof supSettings === 'function') supSettings = supSettings()
+              if (supSettings && supSettings.meta && supSettings.meta.senderAddress)
+                supSenderAddress = supSettings.meta.senderAddress
+              if (supSettings && supSettings.meta && supSettings.meta.senderName)
+                supSenderName = supSettings.meta.senderName
+            } catch (_) {}
+
+            var supMessageMail = new MailerMessage({
+              from: { address: supSenderAddress, name: supSenderName },
+              to: [{ address: supEmail }],
+              subject: supSubject,
+              html: supHtmlContent,
+              text: supTextFallback,
+            })
+            $app.newMailClient().send(supMessageMail)
+            supRecordEmailSentLog(supReferenceId, supEmail, supSubject)
+            console.log(
+              '[ALOC_SUP] e-mail enviado via Skip Cloud | destinatário=' +
+                supEmail +
+                ' | assunto=' +
+                supSubject,
+            )
+          } catch (errSupSend) {
+            console.error(
+              '[ALOC_SUP] FALHA no envio Skip Cloud | destinatário=' +
+                supEmail +
+                ' | motivo: ' +
+                (errSupSend && errSupSend.message ? errSupSend.message : String(errSupSend)),
+            )
+          }
+        }
+      }
     }
   } catch (err) {
     console.error(

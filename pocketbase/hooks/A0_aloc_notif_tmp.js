@@ -1,12 +1,12 @@
 /// <reference path="../pb_data/types.d.ts" />
 
-// TEMPORÁRIO — validação do operator_allocation_notify (REMOVER APÓS O TESTE)
-// Run 1: cria alocação de teste (se não existir) → dispara hook de notificação
+// TEMPORÁRIO — validação do operator_allocation_notify + supervisor (REMOVER APÓS O TESTE)
+// Run 1: cria NOVA alocação de teste (marca única por dia) → dispara hook de notificação
 // Run 2: desativa (active=false) → mantém registro para histórico
 // Marca de teste: notes contém 'TESTE-NOTIF-AUTO'
 
 cronAdd('AA1_aloc_notif_tmp', '*/1 * * * *', function () {
-  var MARKER = 'TESTE-NOTIF-AUTO'
+  var MARKER = 'TESTE-NOTIF-AUTO-' + new Date().toISOString().slice(0, 10)
   var OPERATOR_ID = 'y76axlkjkx1nute' // operador teste (tecnico)
   var COMPANY_ID = '0j705kwwux2lf6n' // SEMPER ENERGIA
 
