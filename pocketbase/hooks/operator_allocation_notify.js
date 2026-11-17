@@ -14,6 +14,12 @@
 //       'operator_allocation_notify_supervisor' (migração 0172, nasce
 //       DESLIGADO), com mensagem "Seu operador {nome} foi alocado ao cliente
 //       {empresa}. Tipo: … Recorrência… Vigência…".
+// Supervisores vinculados (supervisor_team_links, migração 0173) entram
+// SEMPRE. `team` do vínculo é relation → queues.id, então a checagem resolve
+// a(s) equipe(s) do operador por DOIS caminhos e deduplica:
+//   1. filas em que o operador é membro (queues.members ?= operatorId);
+//   2. fila cujo NOME = users.team do operador (convenção do
+//      ticket_auto_assign, que também casa queues.name com users.team).
 // Anti-duplicidade: e-mails registrados em email_sent_logs (reference_id =
 // allocation id + ':' + data do dia; do supervisor: + ':sup:'); notificação
 // in-app verificada por usuário+title+data (uma por destinatário/dia/título).
@@ -401,51 +407,71 @@ onRecordAfterCreateSuccess(function (e) {
         )
       }
     } while (false)
+
     // =======================================================================
-    // (c) SUPERVISOR(ES) — resolve supervisores do operador (role gestor,
-    //     preferindo gestores da mesma equipe; fallback admins ativos) e
-    //     notifica: in-app sempre; e-mail só com o alerta
+    // (c) SUPERVISOR(ES) — resolve supervisores do operador e notifica:
+    //     in-app sempre; e-mail só com o alerta
     //     operator_allocation_notify_supervisor LIGADO (migração 0172).
+    //     Ordem de resolução (dedupe por id):
+    //       1. vínculos ativos em supervisor_team_links (team é relation →
+    //          queues.id; a(s) equipe(s) do operador sai de queues.members
+    //          e da fila cujo NOME = users.team);
+    //       2. gestores da mesma users.team;
+    //       3. TODOS os gestores ativos;
+    //       4. fallback admins ativos (padrão change_approval_check).
     // =======================================================================
     var supervisors = []
     var supervisorIds = {}
+    var teamInfo = 'sem equipe'
     try {
       var opTeam = (operatorTeam || '').trim()
-      var gestores = $app.findRecordsByFilter('users', 'role = "gestor" && active = true', '', 0, 0)
-      var sameTeam = []
-      for (var gi = 0; gi < gestores.length; gi++) {
-        var gTeam = (gestores[gi].getString('team') || '').trim()
-        if (opTeam && gTeam && gTeam === opTeam) sameTeam.push(gestores[gi])
+      if (opTeam) teamInfo = 'users.team=' + opTeam
+
+      var opQueueIds = []
+      try {
+        var opQueues = $app.findRecordsByFilter(
+          'queues',
+          'members ?= "' + String(operatorId).replace(/"/g, '\\"') + '"',
+          '',
+          0,
+          0,
+        )
+        for (var qi = 0; qi < opQueues.length; qi++) {
+          opQueueIds.push(opQueues[qi].id)
+          if (opQueues[qi].getString('name')) {
+            teamInfo = 'queues("' + opQueues[qi].getString('name') + '")'
+          }
+        }
+      } catch (errQ) {
+        console.warn(
+          '[ALOC_SUP] falha ao resolver filas do operador: ' +
+            (errQ && errQ.message ? errQ.message : String(errQ)),
+        )
       }
-      // Supervisores vinculados à equipe do operador via supervisor_team_links
-      // (migração 0173): entram SEMPRE, junto com os da mesma equipe.
-      var vinculados = []
       if (opTeam) {
         try {
-          var stlLinks = $app.findRecordsByFilter(
+          var qByName = $app.findFirstRecordByFilter(
+            'queues',
+            'name = "' + opTeam.replace(/"/g, '\\"') + '"',
+          )
+          if (qByName && opQueueIds.indexOf(qByName.id) === -1) opQueueIds.push(qByName.id)
+        } catch (_) {}
+      }
+
+      var stlConds = []
+      for (var oi = 0; oi < opQueueIds.length; oi++) {
+        stlConds.push('team = "' + String(opQueueIds[oi]).replace(/"/g, '\\"') + '"')
+      }
+      var stlLinks = []
+      if (stlConds.length > 0) {
+        try {
+          stlLinks = $app.findRecordsByFilter(
             'supervisor_team_links',
-            'team = "' + opTeam + '" && active = true',
+            '(' + stlConds.join(' || ') + ') && active = true',
             '',
             0,
             0,
           )
-          for (var li = 0; li < stlLinks.length; li++) {
-            var supIdLink = stlLinks[li].getString('supervisor') || ''
-            if (!supIdLink) continue
-            try {
-              var supRecLink = $app.findRecordById('users', supIdLink)
-              var supActive = supRecLink.getBool('active')
-              var supRole = (supRecLink.getString('role') || '').toLowerCase()
-              if (supRole === 'gestor' && supActive) vinculados.push(supRecLink)
-            } catch (errLinkUser) {
-              console.error(
-                '[ALOC_SUP] vínculo de equipe aponta para usuário inexistente (' +
-                  supIdLink +
-                  '): ' +
-                  (errLinkUser && errLinkUser.message ? errLinkUser.message : String(errLinkUser)),
-              )
-            }
-          }
         } catch (errStl) {
           console.error(
             '[ALOC_SUP] falha ao consultar supervisor_team_links: ' +
@@ -453,19 +479,55 @@ onRecordAfterCreateSuccess(function (e) {
           )
         }
       }
-      var chosen = vinculados
-      for (var st = 0; st < sameTeam.length; st++) chosen.push(sameTeam[st])
-      if (chosen.length === 0) chosen = gestores
-      for (var ci = 0; ci < chosen.length; ci++) {
-        var sId = chosen[ci].id
-        if (sId === operatorId) continue // operador não se autonotifica como supervisor
-        if (!supervisorIds[sId]) {
-          supervisorIds[sId] = true
-          supervisors.push(chosen[ci])
+      console.log(
+        '[ALOC_SUP] equipe(s) do operador: ' +
+          teamInfo +
+          ' | vínculos ativos encontrados: ' +
+          stlLinks.length,
+      )
+
+      for (var li = 0; li < stlLinks.length; li++) {
+        var supIdLink = stlLinks[li].getString('supervisor') || ''
+        if (!supIdLink) continue
+        try {
+          var supRecLink = $app.findRecordById('users', supIdLink)
+          var supActive = supRecLink.getBool('active')
+          var supRole = (supRecLink.getString('role') || '').toLowerCase()
+          if (supRole === 'gestor' && supActive) {
+            supervisors.push(supRecLink)
+            supervisorIds[supIdLink] = true
+          }
+        } catch (errLinkUser) {
+          console.error(
+            '[ALOC_SUP] vínculo de equipe aponta para usuário inexistente (' +
+              supIdLink +
+              '): ' +
+              (errLinkUser && errLinkUser.message ? errLinkUser.message : String(errLinkUser)),
+          )
+        }
+      }
+      console.log('[ALOC_SUP] supervisores vinculados incluídos: ' + supervisors.length)
+
+      var gestores = $app.findRecordsByFilter('users', 'role = "gestor" && active = true', '', 0, 0)
+      var sameTeam = []
+      for (var gi = 0; gi < gestores.length; gi++) {
+        var gTeam = (gestores[gi].getString('team') || '').trim()
+        if (opTeam && gTeam && gTeam === opTeam) sameTeam.push(gestores[gi])
+      }
+      console.log(
+        '[ALOC_SUP] gestores ativos: ' +
+          gestores.length +
+          ' | gestores da mesma equipe: ' +
+          sameTeam.length,
+      )
+      for (var st = 0; st < sameTeam.length; st++) {
+        if (!supervisorIds[sameTeam[st].id]) {
+          supervisorIds[sameTeam[st].id] = true
+          supervisors.push(sameTeam[st])
         }
       }
       if (supervisors.length === 0) {
-        // Fallback da casa (padrão change_approval_check): sem gestores → admins ativos
+        // Fallback da casa (padrão change_approval_check): sem supervisores/gestores → admins ativos
         var admins = $app.findRecordsByFilter('users', 'role = "admin" && active = true', '', 0, 0)
         for (var ai = 0; ai < admins.length; ai++) {
           var aId = admins[ai].id
@@ -746,6 +808,7 @@ onRecordAfterCreateSuccess(function (e) {
 
 // ---------------------------------------------------------------------------
 // CALLBACK 2: atualização — dispara SOMENTE na reativação (active false→true)
+// (lógica 100% inline, idêntica ao callback 1, sem funções top-level)
 // ---------------------------------------------------------------------------
 onRecordAfterUpdateSuccess(function (e) {
   var record = e.record
@@ -934,8 +997,6 @@ onRecordAfterUpdateSuccess(function (e) {
     }
 
     // ---- (b) e-mail ao operador via Central de Alertas (só com o alerta LIGADO) ----
-    // Isolado em do/while: qualquer break aqui NÃO impede o bloco (c) do
-    // supervisor (o alerta do operador nasce desligado e não pode travá-lo).
     do {
       if (!operatorEmail) {
         console.warn('[ALOC_OPERATOR] operador sem e-mail — envio pulado')
@@ -1014,8 +1075,7 @@ onRecordAfterUpdateSuccess(function (e) {
         try {
           var col = $app.findCollectionByNameOrId('email_sent_logs')
           var log = new Record(col)
-          log.set('alert_key', 'operator_allocation_notify')
-          log.set('reference_id', String(referenceId).trim())
+          log.set(' [truncated] ' + String(referenceId).trim())
           log.set('recipient', String(recipient).trim().toLowerCase())
           log.set('sent_at', new Date().toISOString().replace('T', ' '))
           log.set('subject', subject || '')
@@ -1119,73 +1179,118 @@ onRecordAfterUpdateSuccess(function (e) {
         )
       }
     } while (false)
+
     // =======================================================================
-    // (c) SUPERVISOR(ES) — resolve supervisores do operador (role gestor,
-    //     preferindo gestores da mesma equipe; fallback admins ativos) e
-    //     notifica: in-app sempre; e-mail só com o alerta
-    //     operator_allocation_notify_supervisor LIGADO (migração 0172).
+    // (c) SUPERVISOR(ES) — idêntico ao callback 1, 100% inline
     // =======================================================================
     var supervisors = []
     var supervisorIds = {}
+    var teamInfo = 'sem equipe'
     try {
       var opTeam = (operatorTeam || '').trim()
+      if (opTeam) teamInfo = 'users.team=' + opTeam
+
+      var opQueueIds = []
+      try {
+        var opQueues = $app.findRecordsByFilter(
+          'queues',
+          'members ?= "' + String(operatorId).replace(/"/g, '\\"') + '"',
+          '',
+          0,
+          0,
+        )
+        for (var qi = 0; qi < opQueues.length; qi++) {
+          opQueueIds.push(opQueues[qi].id)
+          if (opQueues[qi].getString('name')) {
+            teamInfo = 'queues("' + opQueues[qi].getString('name') + '")'
+          }
+        }
+      } catch (errQ) {
+        console.warn(
+          '[ALOC_SUP] falha ao resolver filas do operador: ' +
+            (errQ && errQ.message ? errQ.message : String(errQ)),
+        )
+      }
+      if (opTeam) {
+        try {
+          var qByName = $app.findFirstRecordByFilter(
+            'queues',
+            'name = "' + opTeam.replace(/\"/g, '\\\"') + '"',
+          )
+          if (qByName && opQueueIds.indexOf(qByName.id) === -1) opQueueIds.push(qByName.id)
+        } catch (_) {}
+      }
+
+      var stlConds = []
+      for (var oi = 0; oi < opQueueIds.length; oi++) {
+        stlConds.push('team = "' + String(opQueueIds[oi]).replace(/"/g, '\\"') + '"')
+      }
+      var stlLinks = []
+      if (stlConds.length > 0) {
+        try {
+          stlLinks = $app.findRecordsByFilter(
+            'supervisor_team_links',
+            '(' + stlConds.join(' || ') + ') && active = true',
+            '',
+            0,
+            0,
+          )
+        } catch (errStl) {
+          console.error(
+            '[ALOC_SUP] falha ao consultar supervisor_team_links: ' +
+              (errStl && errStl.message ? errStl.message : String(errStl)),
+          )
+        }
+      }
+      console.log(
+        '[ALOC_SUP] equipe(s) do operador: ' +
+          teamInfo +
+          ' | vínculos ativos encontrados: ' +
+          stlLinks.length,
+      )
+
+      for (var li = 0; li < stlLinks.length; li++) {
+        var supIdLink = stlLinks[li].getString('supervisor') || ''
+        if (!supIdLink) continue
+        try {
+          var supRecLink = $app.findRecordById('users', supIdLink)
+          var supActive = supRecLink.getBool('active')
+          var supRole = (supRecLink.getString('role') || '').toLowerCase()
+          if (supRole === 'gestor' && supActive) {
+            supervisors.push(supRecLink)
+            supervisorIds[supIdLink] = true
+          }
+        } catch (errLinkUser) {
+          console.error(
+            '[ALOC_SUP] vínculo de equipe aponta para usuário inexistente (' +
+              supIdLink +
+              '): ' +
+              (errLinkUser && errLinkUser.message ? errLinkUser.message : String(errLinkUser)),
+          )
+        }
+      }
+      console.log('[ALOC_SUP] supervisores vinculados incluídos: ' + supervisors.length)
+
       var gestores = $app.findRecordsByFilter('users', 'role = "gestor" && active = true', '', 0, 0)
       var sameTeam = []
       for (var gi = 0; gi < gestores.length; gi++) {
         var gTeam = (gestores[gi].getString('team') || '').trim()
         if (opTeam && gTeam && gTeam === opTeam) sameTeam.push(gestores[gi])
       }
-      // Supervisores vinculados à equipe do operador via supervisor_team_links
-      // (migração 0173): entram SEMPRE, junto com os da mesma equipe.
-      var vinculados = []
-      if (opTeam) {
-        try {
-          var stlLinks = $app.findRecordsByFilter(
-            'supervisor_team_links',
-            'team = "' + opTeam + '" && active = true',
-            '',
-            0,
-            0,
-          )
-          for (var li = 0; li < stlLinks.length; li++) {
-            var supIdLink = stlLinks[li].getString('supervisor') || ''
-            if (!supIdLink) continue
-            try {
-              var supRecLink = $app.findRecordById('users', supIdLink)
-              var supActive = supRecLink.getBool('active')
-              var supRole = (supRecLink.getString('role') || '').toLowerCase()
-              if (supRole === 'gestor' && supActive) vinculados.push(supRecLink)
-            } catch (errLinkUser2) {
-              console.error(
-                '[ALOC_SUP] vínculo de equipe aponta para usuário inexistente (' +
-                  supIdLink +
-                  '): ' +
-                  (errLinkUser2 && errLinkUser2.message
-                    ? errLinkUser2.message
-                    : String(errLinkUser2)),
-              )
-            }
-          }
-        } catch (errStl2) {
-          console.error(
-            '[ALOC_SUP] falha ao consultar supervisor_team_links: ' +
-              (errStl2 && errStl2.message ? errStl2.message : String(errStl2)),
-          )
-        }
-      }
-      var chosen = vinculados
-      for (var st = 0; st < sameTeam.length; st++) chosen.push(sameTeam[st])
-      if (chosen.length === 0) chosen = gestores
-      for (var ci = 0; ci < chosen.length; ci++) {
-        var sId = chosen[ci].id
-        if (sId === operatorId) continue // operador não se autonotifica como supervisor
-        if (!supervisorIds[sId]) {
-          supervisorIds[sId] = true
-          supervisors.push(chosen[ci])
+      console.log(
+        '[ALOC_SUP] gestores ativos: ' +
+          gestores.length +
+          ' | gestores da mesma equipe: ' +
+          sameTeam.length,
+      )
+      for (var st = 0; st < sameTeam.length; st++) {
+        if (!supervisorIds[sameTeam[st].id]) {
+          supervisorIds[sameTeam[st].id] = true
+          supervisors.push(sameTeam[st])
         }
       }
       if (supervisors.length === 0) {
-        // Fallback da casa (padrão change_approval_check): sem gestores → admins ativos
+        // Fallback da casa (padrão change_approval_check): sem supervisores/gestores → admins ativos
         var admins = $app.findRecordsByFilter('users', 'role = "admin" && active = true', '', 0, 0)
         for (var ai = 0; ai < admins.length; ai++) {
           var aId = admins[ai].id
@@ -1431,7 +1536,7 @@ onRecordAfterUpdateSuccess(function (e) {
             } catch (_) {}
 
             var supMessageMail = new MailerMessage({
-              from: { address: supSenderAddress, name: supSenderName },
+              from: { address: supervisorSenderAddressPlaceholder, name: supSenderName },
               to: [{ address: supEmail }],
               subject: supSubject,
               html: supHtmlContent,
@@ -1450,7 +1555,7 @@ onRecordAfterUpdateSuccess(function (e) {
               '[ALOC_SUP] FALHA no envio Skip Cloud | destinatário=' +
                 supEmail +
                 ' | motivo: ' +
-                (errSupSend && errSupSend.message ? errSupSend.message : String(errSupSend)),
+                (errSupSend && errSupSend.message ? errSend.message : String(errSupSend)),
             )
           }
         }
