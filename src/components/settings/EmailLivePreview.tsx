@@ -118,7 +118,7 @@ export const EmailLivePreview: React.FC<EmailLivePreviewProps> = ({ setting }) =
                 </a>
               </div>
             )}
-            <div className="px-6 py-4 bg-[#0f172a] text-slate-400 text-[11px] text-center border-t border-slate-800">
+            <div className="px-6 py-4 bg-[#1F2126] text-slate-400 text-[11px] text-center border-t border-[#17181C]">
               <strong className="text-slate-200">{setting.header_title || 'Lógos AITSM'}</strong> —
               Sistema Corporativo de TI
               <br />

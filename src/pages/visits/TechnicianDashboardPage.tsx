@@ -584,7 +584,7 @@ export default function TechnicianDashboardPage() {
             </Button>
             <div className="min-w-[150px] text-center px-2">
               <span className="text-xs font-semibold text-slate-900 dark:text-slate-100 flex items-center justify-center gap-1">
-                <CalendarDays className="h-3.5 w-3.5 text-blue-600" />
+                <CalendarDays className="h-3.5 w-3.5 text-amber-600" />
                 {`${MONTH_NAMES[selectedMonth.month]} / ${selectedMonth.year}`}
               </span>
             </div>
@@ -628,8 +628,8 @@ export default function TechnicianDashboardPage() {
         {/* 1. Visitas Hoje (mantido) */}
         <Card className="border border-slate-200 dark:border-slate-800">
           <CardContent className="p-4">
-            <div className="p-2 rounded-lg bg-blue-50 dark:bg-blue-950/50 w-fit mb-2">
-              <Calendar className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+            <div className="p-2 rounded-lg bg-amber-50 dark:bg-amber-950/50 w-fit mb-2">
+              <Calendar className="h-4 w-4 text-amber-600 dark:text-amber-400" />
             </div>
             <p className="text-[11px] font-medium text-slate-500">Visitas Hoje</p>
             <p className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
@@ -789,7 +789,7 @@ export default function TechnicianDashboardPage() {
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <CardTitle className="text-sm font-semibold flex items-center gap-2">
-                <Timer className="h-4 w-4 text-blue-600" />
+                <Timer className="h-4 w-4 text-amber-600" />
                 Chamados Iniciados: SLA Resposta
               </CardTitle>
               <Badge variant="outline" className="text-[10px]">
@@ -856,7 +856,7 @@ export default function TechnicianDashboardPage() {
           <CardHeader className="pb-2">
             <div className="flex items-center justify-between">
               <CardTitle className="text-sm font-semibold flex items-center gap-2">
-                <Clock className="h-4 w-4 text-blue-600" />
+                <Clock className="h-4 w-4 text-amber-600" />
                 Tempo Médio de Atendimento
               </CardTitle>
               <Badge variant="outline" className="text-[10px]">
@@ -921,7 +921,7 @@ export default function TechnicianDashboardPage() {
           <CardHeader className="pb-2">
             <div className="flex items-center justify-between">
               <CardTitle className="text-sm font-bold flex items-center gap-2">
-                <BarChart3 className="h-4 w-4 text-blue-600" />
+                <BarChart3 className="h-4 w-4 text-amber-600" />
                 Horas de Interações dos Últimos 3 Meses
               </CardTitle>
               <Badge variant="secondary" className="text-[10px]">
@@ -967,7 +967,7 @@ export default function TechnicianDashboardPage() {
                       dataKey="Horas"
                       position="top"
                       formatter={formatHoursNumberLabel}
-                      style={{ fontSize: 11, fontWeight: 600, fill: '#1e293b' }}
+                      style={{ fontSize: 11, fontWeight: 600, fill: '#17181C' }}
                     />
                   </Bar>
                 </BarChart>
@@ -1046,7 +1046,7 @@ export default function TechnicianDashboardPage() {
       <Card className="border border-slate-200 dark:border-slate-800">
         <CardHeader>
           <CardTitle className="text-sm font-bold flex items-center gap-2">
-            <Calendar className="h-4 w-4 text-blue-600" /> Agenda de Visitas de Hoje
+            <Calendar className="h-4 w-4 text-amber-600" /> Agenda de Visitas de Hoje
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-2">
@@ -1083,7 +1083,7 @@ export default function TechnicianDashboardPage() {
                 {v.expand?.ticket && (
                   <Link
                     to={`/tickets/${v.ticket}`}
-                    className="text-xs font-medium text-blue-600 hover:underline"
+                    className="text-xs font-medium text-amber-600 hover:underline"
                   >
                     #{v.expand.ticket.number}
                   </Link>

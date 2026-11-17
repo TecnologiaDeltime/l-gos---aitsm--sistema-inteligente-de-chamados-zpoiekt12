@@ -66,8 +66,8 @@ const SECTOR_COLORS = [
   '#78716c', // stone-500
   '#f97316', // orange-500
   '#b45309', // amber-700
-  '#14b8a6', // teal-500
-  '#64748b', // slate-500
+  '#fbbf24', // amber-400
+  '#a16207', // yellow-700 (tom quente da casa)
 ]
 
 export default function PortalDashboardTab({

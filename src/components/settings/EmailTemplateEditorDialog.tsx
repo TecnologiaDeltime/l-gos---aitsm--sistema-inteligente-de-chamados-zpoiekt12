@@ -104,6 +104,7 @@ export function EmailTemplateEditorDialog({
       seen.add(v.key)
       return true
     })
+  }, [draft])
 
   const sampleData = useMemo(() => {
     return (
@@ -116,7 +117,6 @@ export function EmailTemplateEditorDialog({
   }, [draft?.alert_key])
 
   const isCustomized = Boolean(draft?.is_customized)
-
 
   const handleFieldChange = <K extends keyof EmailAlertSetting>(
     field: K,
@@ -165,6 +165,7 @@ export function EmailTemplateEditorDialog({
   const handleInsertVariable = (varKey: string) => {
     if (!canEdit) return
     const token = `{{${varKey}}}`
+    const target = insertTarget
 
     setDraft((prev) => {
       if (!prev) return prev
@@ -231,6 +232,7 @@ export function EmailTemplateEditorDialog({
     } finally {
       setSaving(false)
     }
+  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -281,9 +283,9 @@ export function EmailTemplateEditorDialog({
               </Tabs>
             </div>
           </div>
+        </DialogHeader>
 
         <div className="flex-1 overflow-y-auto p-5">
->>>>>>>
           {activeTab === 'preview' ? (
             <div className="space-y-4">
               <div className="flex items-center justify-between text-xs text-muted-foreground bg-muted/40 p-2.5 rounded-lg border">
