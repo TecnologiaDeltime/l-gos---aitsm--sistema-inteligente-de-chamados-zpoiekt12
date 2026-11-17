@@ -109,27 +109,16 @@ export default function ProfilesPage({ embeddedTab = false }: ProfilesPageProps)
     )
   }, [profiles, search])
 
-  const handleSaveProfile = async (data: {
+  const handleSaveProfile = async (data?: {
     name: string
     description: string
     permissions: any
   }) => {
-    if (editingProfile) {
+    if (data && editingProfile) {
       await updateProfile(editingProfile.id, data)
       toast({
         title: 'Perfil atualizado com sucesso!',
         description: `O perfil "${data.name}" foi atualizado.`,
-      })
-    } else {
-      await createProfile({
-        name: data.name,
-        description: data.description,
-        permissions: data.permissions,
-        is_system: false,
-      })
-      toast({
-        title: 'Perfil criado com sucesso!',
-        description: `O perfil "${data.name}" foi cadastrado no sistema.`,
       })
     }
     await loadData()
@@ -578,7 +567,7 @@ export default function ProfilesPage({ embeddedTab = false }: ProfilesPageProps)
         open={dialogOpen}
         onOpenChange={setDialogOpen}
         profile={editingProfile}
-        onSuccess={loadData}
+        onSuccess={handleSaveProfile}
       />
 
       {/* Delete Confirmation Alert */}

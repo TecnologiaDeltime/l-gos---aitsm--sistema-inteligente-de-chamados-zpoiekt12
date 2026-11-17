@@ -9,6 +9,40 @@ import {
   ProfilePermissionMap,
 } from '@/types/profiles'
 
+/**
+ * Erros 429 (Too Many Requests) do backend: o seed/salvamento da matriz
+ * granular pode gerar >100 writes de uma vez e o rate limit rejeita o excesso.
+ * Retentamos com backoff crescente em vez de abortar o save inteiro.
+ */
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
+
+const isRateLimitError = (err: any): boolean => err?.status === 429 || err?.response?.status === 429
+
+async function writePermissionWithRetry(op: () => Promise<any>, retries = 5): Promise<any> {
+  try {
+    return await op()
+  } catch (err: any) {
+    if (isRateLimitError(err) && retries > 0) {
+      await sleep(400 * (6 - retries))
+      return writePermissionWithRetry(op, retries - 1)
+    }
+    throw err
+  }
+}
+
+/**
+ * Executa writes de permissões em lotes pequenos e sequenciais para não
+ * estourar o rate limit do backend (evita o erro genérico de "Save").
+ */
+async function runPermissionWritesBatches(
+  ops: Array<() => Promise<any>>,
+  batchSize = 6,
+): Promise<void> {
+  for (let i = 0; i < ops.length; i += batchSize) {
+    await Promise.all(ops.slice(i, i + batchSize).map((op) => writePermissionWithRetry(op)))
+  }
+}
+
 export const getDefaultPermissions = (allGranted = false): PermissionsMap => {
   const map: PermissionsMap = {}
   GRANULAR_SYSTEM_MODULES.forEach((mod) => {
@@ -68,10 +102,6 @@ export const getProfilePermissions = async (
 }
 
 /**
- * Garante que todas as chaves do catálogo existam na collection para o perfil.
- * Caso falte alguma chave, ela é inserida com `defaultGranted` (true por padrão para não quebrar acesso).
- */
-/**
  * Normaliza o nível de permissão vindo do banco ou padrão
  */
 export const normalizePermissionLevel = (
@@ -108,8 +138,8 @@ export const initializeProfilePermissions = async (
     }
   })
 
-  // Criar registros faltantes
-  const promises: Promise<any>[] = []
+  // Criar registros faltantes em lotes (evita 429 Too Many Requests)
+  const ops: Array<() => Promise<any>> = []
   for (const mod of GRANULAR_SYSTEM_MODULES) {
     for (const item of mod.items) {
       const fullKey = `${mod.key}.${item.key}`
@@ -119,25 +149,21 @@ export const initializeProfilePermissions = async (
           granted: defaultGranted,
           level: itemLevel,
         }
-        promises.push(
-          pb
-            .collection('profile_permissions')
-            .create({
-              profile: profileId,
-              module_key: mod.key,
-              item_key: item.key,
-              granted: defaultGranted,
-              level: itemLevel,
-            })
-            .catch(() => {}),
+        ops.push(() =>
+          pb.collection('profile_permissions').create({
+            profile: profileId,
+            module_key: mod.key,
+            item_key: item.key,
+            granted: defaultGranted,
+            level: itemLevel,
+          }),
         )
       }
     }
   }
 
-  if (promises.length > 0) {
-    await Promise.all(promises)
-  }
+  // Falha de duplicidade (corrida entre chamadas simultâneas) não deve quebrar o fluxo
+  await runPermissionWritesBatches(ops).catch(() => {})
 
   return map
 }
@@ -155,7 +181,7 @@ export const saveProfileGranularPermissions = async (
     existingByKey[`${r.module_key}.${r.item_key}`] = r
   })
 
-  const promises: Promise<any>[] = []
+  const ops: Array<() => Promise<any>> = []
 
   for (const mod of GRANULAR_SYSTEM_MODULES) {
     for (const item of mod.items) {
@@ -176,7 +202,7 @@ export const saveProfileGranularPermissions = async (
 
       if (existingRec) {
         if (existingRec.granted !== isGranted || existingRec.level !== level) {
-          promises.push(
+          ops.push(() =>
             pb.collection('profile_permissions').update(existingRec.id, {
               granted: isGranted,
               level,
@@ -184,7 +210,7 @@ export const saveProfileGranularPermissions = async (
           )
         }
       } else {
-        promises.push(
+        ops.push(() =>
           pb.collection('profile_permissions').create({
             profile: profileId,
             module_key: mod.key,
@@ -197,5 +223,5 @@ export const saveProfileGranularPermissions = async (
     }
   }
 
-  await Promise.all(promises)
+  await runPermissionWritesBatches(ops)
 }

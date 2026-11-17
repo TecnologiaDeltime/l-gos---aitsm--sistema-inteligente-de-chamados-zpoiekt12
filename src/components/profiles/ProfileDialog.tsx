@@ -172,9 +172,19 @@ export function ProfileDialog({ open, onOpenChange, profile, onSuccess }: Profil
       onOpenChange(false)
       onSuccess()
     } catch (err: any) {
+      // 400 com "name" = nome duplicado (índice único idx_profiles_name):
+      // o perfil chegou a ser criado em uma tentativa anterior cujo seed de
+      // permissões falhou (429), e o usuário reenviou o formulário.
+      const isDuplicateName =
+        err?.status === 400 &&
+        !!err?.response?.data?.name &&
+        /unique|duplicate/i.test(err?.response?.message || '')
+
       toast({
-        title: 'Erro ao salvar perfil',
-        description: err.message || 'Ocorreu um erro ao salvar o perfil.',
+        title: isDuplicateName ? 'Já existe um perfil com este nome' : 'Erro ao salvar perfil',
+        description: isDuplicateName
+          ? `O perfil "${name.trim()}" já foi criado anteriormente (a lista já foi atualizada). Ajuste o nome se deseja criar outro perfil.`
+          : err?.response?.message || err.message || 'Ocorreu um erro ao salvar o perfil.',
         variant: 'destructive',
       })
     } finally {
