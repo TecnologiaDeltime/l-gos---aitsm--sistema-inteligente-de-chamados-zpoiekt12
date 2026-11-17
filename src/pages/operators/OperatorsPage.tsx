@@ -80,6 +80,8 @@ import {
   formatRecurrence,
   OperatorAllocation,
 } from '@/services/operator-allocations'
+import { getSupervisorTeamLinks, SupervisorTeamLink } from '@/services/supervisor-team-links'
+import { UsersRound } from 'lucide-react'
 
 const DEFAULT_TEAMS = [
   'Suporte N1',
@@ -101,6 +103,7 @@ export default function OperatorsPage() {
   const [operators, setOperators] = useState<OperatorItem[]>([])
   const [profiles, setProfiles] = useState<ProfileRecord[]>([])
   const [allocations, setAllocations] = useState<OperatorAllocation[]>([])
+  const [teamLinks, setTeamLinks] = useState<SupervisorTeamLink[]>([])
   const [loading, setLoading] = useState(true)
 
   // Filters & Pagination
@@ -187,6 +190,9 @@ export default function OperatorsPage() {
       listOperatorAllocations()
         .then(setAllocations)
         .catch(() => setAllocations([]))
+      getSupervisorTeamLinks()
+        .then((links) => setTeamLinks(links.filter((l) => l.active !== false)))
+        .catch(() => setTeamLinks([]))
     } catch (err: any) {
       toast({
         title: 'Erro ao carregar operadores',
@@ -222,6 +228,19 @@ export default function OperatorsPage() {
 
   const getAllocationCompany = (a: OperatorAllocation) =>
     a.expand?.company?.trade_name || a.expand?.company?.legal_name || 'Cliente'
+
+  // Equipes (filas) que cada supervisor acompanha via supervisor_team_links (active=true)
+  const supervisedTeamsByOperator = useMemo(() => {
+    const map: Record<string, string[]> = {}
+    for (const link of teamLinks) {
+      if (link.active === false) continue
+      const name = link.expand?.team?.name || (typeof link.team === 'string' ? link.team : '')
+      if (!name) continue
+      if (!map[link.supervisor]) map[link.supervisor] = []
+      if (!map[link.supervisor].includes(name)) map[link.supervisor].push(name)
+    }
+    return map
+  }, [teamLinks])
 
   // Teams list combining default and existing
   const availableTeams = useMemo(() => {
@@ -723,6 +742,15 @@ export default function OperatorsPage() {
                                 {formatRecurrence(activeAllocationsByOperator[op.id])}
                               </span>
                             )}
+                            {supervisedTeamsByOperator[op.id]?.length > 0 && (
+                              <span className="mt-0.5 flex items-start gap-1 text-[11px] text-sky-700 dark:text-sky-400">
+                                <UsersRound className="h-3 w-3 shrink-0 mt-0.5" />
+                                <span>
+                                  Equipes que acompanha:{' '}
+                                  {supervisedTeamsByOperator[op.id].join(', ')}
+                                </span>
+                              </span>
+                            )}
                           </div>
                         </div>
                       </TableCell>
@@ -925,6 +953,14 @@ export default function OperatorsPage() {
                             Alocado hoje a{' '}
                             {getAllocationCompany(activeAllocationsByOperator[op.id])} —{' '}
                             {formatRecurrence(activeAllocationsByOperator[op.id])}
+                          </span>
+                        )}
+                        {supervisedTeamsByOperator[op.id]?.length > 0 && (
+                          <span className="mt-0.5 flex items-start gap-1 text-[11px] text-sky-700 dark:text-sky-400">
+                            <UsersRound className="h-3 w-3 shrink-0 mt-0.5" />
+                            <span>
+                              Equipes que acompanha: {supervisedTeamsByOperator[op.id].join(', ')}
+                            </span>
                           </span>
                         )}
                       </div>
