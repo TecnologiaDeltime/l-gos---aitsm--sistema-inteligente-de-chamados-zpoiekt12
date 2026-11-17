@@ -5,6 +5,32 @@ routerAdd(
     const interactionId = e.request.pathValue('id')
     if (!interactionId) return e.badRequestError('ID da interação é obrigatório')
 
+    // Guard server-side: somente admin ou perfil com o item
+    // 'clients.admin_accompaniment_hours_edit' concedido pode alterar horas de acompanhamento
+    var authRecord = e.auth
+    if (!authRecord) return e.forbiddenError('Autenticação obrigatória')
+    var canEditAccompanimentHours = authRecord.getString('role') === 'admin'
+    if (!canEditAccompanimentHours) {
+      try {
+        var profId = authRecord.getString('profile_id')
+        if (profId) {
+          var permRows = $app.findRecordsByFilter(
+            'profile_permissions',
+            'profile = "' +
+              profId +
+              '" && module_key = "clients" && item_key = "admin_accompaniment_hours_edit" && granted = true',
+            '',
+            1,
+            0,
+          )
+          canEditAccompanimentHours = permRows.length > 0
+        }
+      } catch (_) {}
+    }
+    if (!canEditAccompanimentHours) {
+      return e.forbiddenError('Sem permissão para alterar horas de acompanhamento')
+    }
+
     var body = e.requestInfo().body || {}
 
     var newContent = body.content
@@ -145,6 +171,32 @@ routerAdd(
     } catch (err) {
       $app.logger().error('Error saving edited interaction', 'error', err.message)
       return e.json(500, { error: 'Erro ao salvar interação' })
+    }
+
+    // Rastreabilidade: interação interna com hour_type 'Interna' (não debita franquia,
+    // ver on_interaction_consume.js) registrando a correção no histórico do chamado
+    if (ticketId && origin !== 'Cronômetro') {
+      try {
+        var traceCol = $app.findCollectionByNameOrId('ticket_interactions')
+        var trace = new Record(traceCol)
+        trace.set('ticket', ticketId)
+        trace.set('author', authRecord.id)
+        trace.set('type', 'Interno')
+        trace.set('hour_type', 'Interna')
+        trace.set('origin', 'Automático')
+        trace.set('billing_status', 'Não Faturável')
+        trace.set(
+          'content',
+          'Horas de acompanhamento corrigidas: ' +
+            (oldDuration / 60).toFixed(2) +
+            'h → ' +
+            (effectiveNewDuration / 60).toFixed(2) +
+            'h',
+        )
+        $app.save(trace)
+      } catch (err) {
+        $app.logger().error('Error recording hours correction trace', 'error', err.message)
+      }
     }
 
     return e.json(200, { success: true, record: interaction })

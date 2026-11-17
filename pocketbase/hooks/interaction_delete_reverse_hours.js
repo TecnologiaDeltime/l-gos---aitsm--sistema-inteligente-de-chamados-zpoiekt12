@@ -5,6 +5,32 @@ routerAdd(
     const interactionId = e.request.pathValue('id')
     if (!interactionId) return e.badRequestError('ID da interação é obrigatório')
 
+    // Guard server-side: somente admin ou perfil com o item
+    // 'clients.admin_accompaniment_hours_edit' concedido pode excluir horas de acompanhamento
+    var authRecord = e.auth
+    if (!authRecord) return e.forbiddenError('Autenticação obrigatória')
+    var canDeleteAccompanimentHours = authRecord.getString('role') === 'admin'
+    if (!canDeleteAccompanimentHours) {
+      try {
+        var profId = authRecord.getString('profile_id')
+        if (profId) {
+          var permRows = $app.findRecordsByFilter(
+            'profile_permissions',
+            'profile = "' +
+              profId +
+              '" && module_key = "clients" && item_key = "admin_accompaniment_hours_edit" && granted = true',
+            '',
+            1,
+            0,
+          )
+          canDeleteAccompanimentHours = permRows.length > 0
+        }
+      } catch (_) {}
+    }
+    if (!canDeleteAccompanimentHours) {
+      return e.forbiddenError('Sem permissão para excluir horas de acompanhamento')
+    }
+
     var interaction
     try {
       interaction = $app.findRecordById('ticket_interactions', interactionId)
@@ -76,6 +102,28 @@ routerAdd(
     } catch (err) {
       $app.logger().error('Error deleting interaction', 'error', err.message)
       return e.json(500, { error: 'Erro ao excluir interação' })
+    }
+
+    // Rastreabilidade: interação interna com hour_type 'Interna' (não debita franquia,
+    // ver on_interaction_consume.js) registrando a exclusão no histórico do chamado
+    if (ticketId && origin !== 'Cronômetro') {
+      try {
+        var traceCol = $app.findCollectionByNameOrId('ticket_interactions')
+        var trace = new Record(traceCol)
+        trace.set('ticket', ticketId)
+        trace.set('author', authRecord.id)
+        trace.set('type', 'Interno')
+        trace.set('hour_type', 'Interna')
+        trace.set('origin', 'Automático')
+        trace.set('billing_status', 'Não Faturável')
+        trace.set(
+          'content',
+          'Horas de acompanhamento excluídas: ' + (duration / 60).toFixed(2) + 'h estornadas',
+        )
+        $app.save(trace)
+      } catch (err) {
+        $app.logger().error('Error recording hours deletion trace', 'error', err.message)
+      }
     }
 
     return e.json(200, { success: true, id: interactionId })

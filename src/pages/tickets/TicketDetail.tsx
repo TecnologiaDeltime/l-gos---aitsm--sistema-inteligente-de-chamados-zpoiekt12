@@ -1146,28 +1146,30 @@ export default function TicketDetail({
                         <span className="text-slate-400">
                           {new Date(i.created).toLocaleString('pt-BR')}
                         </span>{' '}
-                        {(perms.isTecnico || perms.isAdmin || perms.isGestor) && (
-                          <>
-                            {canEditTicket && i.origin !== 'Cronômetro' && (
-                              <button
-                                onClick={() => handleEditInteraction(i)}
-                                className="text-slate-400 hover:text-blue-600 transition-colors"
-                                title="Editar interação"
-                              >
-                                <Pencil className="h-3.5 w-3.5" />
-                              </button>
-                            )}
-                            {canDeleteTicket && (
-                              <button
-                                onClick={() => setDeleteTarget(i)}
-                                className="text-slate-400 hover:text-red-600 transition-colors"
-                                title="Excluir interação"
-                              >
-                                <Trash2 className="h-3.5 w-3.5" />
-                              </button>
-                            )}
-                          </>
-                        )}
+                        {(perms.isTecnico || perms.isAdmin || perms.isGestor) &&
+                          i.origin !== 'Cronômetro' &&
+                          perms.canAccessItem('clients', 'admin_accompaniment_hours_edit') && (
+                            <>
+                              {canEditTicket && (
+                                <button
+                                  onClick={() => handleEditInteraction(i)}
+                                  className="text-slate-400 hover:text-amber-600 transition-colors"
+                                  title="Editar horas de acompanhamento"
+                                >
+                                  <Pencil className="h-3.5 w-3.5" />
+                                </button>
+                              )}
+                              {canDeleteTicket && (
+                                <button
+                                  onClick={() => setDeleteTarget(i)}
+                                  className="text-slate-400 hover:text-red-600 transition-colors"
+                                  title="Excluir horas de acompanhamento"
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </button>
+                              )}
+                            </>
+                          )}
                       </div>
                     </div>
                     {i.email_html ? (

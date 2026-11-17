@@ -193,6 +193,13 @@ const BASE_SYSTEM_MODULES: GranularModuleDefinition[] = [
           'Sugestão automática de categoria e subcategoria por IA no diálogo de abertura de chamados filhos',
         path: '/tickets',
       },
+      {
+        key: 'admin_accompaniment_hours_edit',
+        label: 'Editar/Excluir Horas de Acompanhamento',
+        description:
+          'Permite alterar ou excluir horas lançadas como logs de acompanhamento (origem ≠ Cronômetro), estornando ou ajustando a franquia do cliente e registrando a correção no histórico do chamado',
+        path: '/tickets',
+      },
     ],
   },
   {
