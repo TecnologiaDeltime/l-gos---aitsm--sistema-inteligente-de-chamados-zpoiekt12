@@ -88,9 +88,9 @@ export const DEFAULT_EMAIL_ALERT_FACTORY_TEMPLATES: Record<string, EmailAlertFac
     body_template:
       '<p>Olá <strong>{{cliente}}</strong>,</p>' +
       '<p>Houve uma atualização no andamento do seu chamado <strong>#{{chamado_numero}}</strong>.</p>' +
-      '<div style="background-color: #f8fafc; border-left: 4px solid #2563EB; padding: 14px 18px; margin: 20px 0; border-radius: 4px;">' +
+      '<div style="background-color: #f8fafc; border-left: 4px solid #D97706; padding: 14px 18px; margin: 20px 0; border-radius: 4px;">' +
       '<p style="margin: 0 0 6px 0;"><strong>Chamado:</strong> #{{chamado_numero}} - {{titulo}}</p>' +
-      '<p style="margin: 0 0 6px 0;"><strong>Novo Status:</strong> <span style="display: inline-block; padding: 2px 8px; background: #e0f2fe; color: #0369a1; border-radius: 4px; font-weight: bold;">{{status}}</span></p>' +
+      '<p style="margin: 0 0 6px 0;"><strong>Novo Status:</strong> <span style="display: inline-block; padding: 2px 8px; background: #FEF3C7; color: #92400E; border-radius: 4px; font-weight: bold;">{{status}}</span></p>' +
       '<p style="margin: 0 0 6px 0;"><strong>Status Anterior:</strong> {{status_anterior}}</p>' +
       '<p style="margin: 0 0 6px 0;"><strong>Responsável Técnico:</strong> {{responsavel}}</p>' +
       '<p style="margin: 0;"><strong>Data e Hora:</strong> {{data_hora}}</p>' +
@@ -100,7 +100,7 @@ export const DEFAULT_EMAIL_ALERT_FACTORY_TEMPLATES: Record<string, EmailAlertFac
     button_label: 'Ver Chamado',
     button_url_template: '{{link}}',
     show_button: true,
-    primary_color: '#2563EB',
+    primary_color: '#D97706',
     template_layout: 'modern',
   },
   ticket_resolved: {
