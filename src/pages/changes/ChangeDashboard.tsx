@@ -15,8 +15,8 @@ const COLORS = [
   '#b45309',
   '#ef4444',
   '#f97316',
-  '#eab308',
-  '#64748b',
+  '#fcd34d',
+  '#78716c',
 ]
 
 export default function ChangeDashboard() {

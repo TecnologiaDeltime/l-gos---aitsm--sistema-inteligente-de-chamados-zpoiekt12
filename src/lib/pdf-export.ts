@@ -25,13 +25,13 @@ export function exportContractPdf(contract: ContractRecord, userName: string, lo
     : `<div style="margin-bottom:16px;display:flex;align-items:center;gap:8px"><span style="font-size:16px;font-weight:800;color:#17181c;background:#fef3c7;border:1px solid #f59e0b;padding:4px 10px;border-radius:6px;font-family:sans-serif">Lógos AITSM</span></div>`
   const html = `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="utf-8">
 <title>Contrato ${contract.number}</title>
-<style>body{font-family:Arial,sans-serif;margin:40px;color:#1e293b}
-h1{font-size:20px;color:#1e40af;border-bottom:2px solid #1e40af;padding-bottom:8px}
-h2{font-size:14px;color:#475569;margin-top:24px;border-bottom:1px solid #e2e8f0;padding-bottom:4px}
+<style>body{font-family:Arial,sans-serif;margin:40px;color:#1F2126}
+h1{font-size:20px;color:#D97706;border-bottom:2px solid #D97706;padding-bottom:8px}
+h2{font-size:14px;color:#4A4C55;margin-top:24px;border-bottom:1px solid #DFDBD4;padding-bottom:4px}
 table{width:100%;border-collapse:collapse;margin-top:8px}
 td{padding:4px 8px;font-size:12px;vertical-align:top}
-td:first-child{font-weight:bold;width:35%;color:#64748b}
-.footer{margin-top:40px;padding-top:12px;border-top:1px solid #e2e8f0;font-size:10px;color:#94a3b8}
+td:first-child{font-weight:bold;width:35%;color:#6E5B4F}
+.footer{margin-top:40px;padding-top:12px;border-top:1px solid #DFDBD4;font-size:10px;color:#A7A9B0}
 @media print{body{margin:20px}}</style></head><body>
 ${logoHeader}
 <h1>Contrato de Serviços - ${fmt(contract.number)}</h1>

@@ -28,7 +28,7 @@ const COLORS = [
   '#ef4444',
   '#fcd34d',
   '#78350f',
-  '#64748b',
+  '#78716c',
 ]
 
 export default function VisitReportsPage() {

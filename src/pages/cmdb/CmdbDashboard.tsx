@@ -18,8 +18,8 @@ const COLORS = [
   '#fcd34d',
   '#78350f',
   '#84cc16',
-  '#64748b',
-  '#475569',
+  '#78716c',
+  '#57534e',
 ]
 
 const ASSET_DEVICE_TYPES = ['Desktop', 'Notebook', 'Tablet', 'Celular']

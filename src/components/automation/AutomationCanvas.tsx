@@ -103,11 +103,11 @@ export function AutomationCanvas({
                 <path
                   d={`M ${x1} ${y1} C ${midX} ${y1}, ${midX} ${y2}, ${x2} ${y2}`}
                   fill="none"
-                  stroke={conn.sourcePort === 'no' ? '#ef4444' : '#3b82f6'}
+                  stroke={conn.sourcePort === 'no' ? '#ef4444' : '#d97706'}
                   strokeWidth={2}
                   strokeDasharray={connectingFrom === conn.source ? '0' : '0'}
                 />
-                <circle cx={x2} cy={y2} r={4} fill="#3b82f6" />
+                <circle cx={x2} cy={y2} r={4} fill="#d97706" />
               </g>
             )
           })}

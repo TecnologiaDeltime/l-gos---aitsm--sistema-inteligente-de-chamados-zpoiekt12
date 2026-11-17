@@ -6,7 +6,7 @@ interface SlaGaugeProps {
 
 const STATUS_COLORS: Record<string, string> = {
   atingida: '#22c55e',
-  proxima: '#eab308',
+  proxima: '#f59e0b',
   nao_atingida: '#ef4444',
 }
 

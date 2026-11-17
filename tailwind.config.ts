@@ -4,6 +4,46 @@ import animatePlugin from 'tailwindcss-animate'
 import typographyPlugin from '@tailwindcss/typography'
 import aspectRatioPlugin from '@tailwindcss/aspect-ratio'
 
+/*
+ * Padrão oficial de cores LÓGOS AITSM:
+ *  - Escuro "Amber Alert": fundo grafite #17181C, destaque #FCD34D, ativo #D97706
+ *  - Claro "Marrom & Branco": fundo off-white/marrom, ativo #D97706
+ *
+ * Todas as famílias de azul (blue/indigo/sky/cyan) usadas soltas pelo código
+ * são REMAPEADAS para a escala âmbar da casa, e a escala "slate" deixa de ser
+ * azulada e passa a ser grafite neutro (#17181C/#1F2126). Assim, qualquer
+ * classe blue-* (ex.: bg-blue-600, dark:text-blue-300, dark:bg-blue-950/40)
+ * renderiza no padrão oficial em TODAS as telas, sem edição arquivo a arquivo.
+ * Cores semânticas (green/rose/red/orange/purple) permanecem intactas.
+ */
+const escalaAmbar = {
+  50: '#FFFBEB',
+  100: '#FEF3C7',
+  200: '#FDE68A',
+  300: '#FCD34D', // destaque oficial
+  400: '#FBBF24',
+  500: '#F59E0B',
+  600: '#D97706', // ativo oficial
+  700: '#B45309',
+  800: '#92400E',
+  900: '#78350F',
+  950: '#451A03',
+}
+
+const escalaGrafite = {
+  50: '#F5F5F6',
+  100: '#ECECEE',
+  200: '#D5D6DA',
+  300: '#A7A9B0',
+  400: '#7A7C86',
+  500: '#4A4C55',
+  600: '#35373F',
+  700: '#2A2C33',
+  800: '#1F2126', // card grafite oficial
+  900: '#17181C', // fundo grafite oficial
+  950: '#101114',
+}
+
 export default {
   darkMode: ['class'],
   content: [
@@ -93,6 +133,12 @@ export default {
           4: 'hsl(var(--chart-4))',
           5: 'hsl(var(--chart-5))',
         },
+        // Remapeamentos do padrão oficial (ver cabeçalho)
+        blue: escalaAmbar,
+        indigo: escalaAmbar,
+        sky: escalaAmbar,
+        cyan: escalaAmbar,
+        slate: escalaGrafite,
       },
       borderRadius: {
         lg: 'var(--radius)',

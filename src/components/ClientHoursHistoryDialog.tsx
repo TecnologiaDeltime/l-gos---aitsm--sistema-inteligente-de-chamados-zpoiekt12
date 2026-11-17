@@ -82,8 +82,8 @@ export function ClientHoursHistoryDialog({
     if (open) load()
   })
 
-  const consumedColor = theme === 'dark' ? '#eab308' : '#475569'
-  const contractedColor = theme === 'dark' ? '#64748b' : '#94a3b8'
+  const consumedColor = theme === 'dark' ? '#fcd34d' : '#b45309'
+  const contractedColor = theme === 'dark' ? '#78716c' : '#a7a9b0'
 
   const chartConfig: ChartConfig = {
     consumed: { label: 'Consumido', color: consumedColor },

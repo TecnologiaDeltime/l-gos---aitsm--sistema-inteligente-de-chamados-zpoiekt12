@@ -140,7 +140,7 @@ export function CiDetailRelationships({ equipmentId }: { equipmentId: string }) 
                   y1="150"
                   x2={x}
                   y2={y}
-                  stroke="#94a3b8"
+                  stroke="#a7a9b0"
                   strokeWidth="1.5"
                   strokeDasharray="4"
                 />
@@ -156,9 +156,9 @@ export function CiDetailRelationships({ equipmentId }: { equipmentId: string }) 
                   cx={x}
                   cy={y}
                   r="35"
-                  fill="#e2e8f0"
+                  fill="#ECECEE"
                   opacity="0.6"
-                  stroke="#94a3b8"
+                  stroke="#a7a9b0"
                   strokeWidth="1.5"
                 />
                 <text x={x} y={y + 3} textAnchor="middle" className="text-[8px] fill-slate-700">
@@ -231,7 +231,7 @@ export function CiDetailRelationships({ equipmentId }: { equipmentId: string }) 
                 <div
                   key={e.id}
                   onClick={() => setTargetCi(e.id)}
-                  className={`p-2 rounded cursor-pointer text-sm ${targetCi === e.id ? 'bg-blue-100' : 'hover:bg-slate-100'}`}
+                  className={`p-2 rounded cursor-pointer text-sm ${targetCi === e.id ? 'bg-amber-100' : 'hover:bg-slate-100'}`}
                 >
                   {e.name} {e.serial_number ? `(${e.serial_number})` : ''}
                 </div>
