@@ -345,12 +345,20 @@ export default function ExecutivePresentation() {
     <div className="flex h-screen w-full flex-col overflow-hidden bg-background text-foreground">
       {/* Área do slide */}
       <main className="relative flex-1" onClick={next}>
+        {/* Clique no corpo avança 1 slide; o rodapé faz stopPropagation
+            para que os botões Anterior/Próximo não disparem next de novo. */}
         <div key={current} className="h-full w-full">
           {renderSlide(current)}
         </div>
 
-        {/* Rodapé fixo do slide: progresso + navegação */}
-        <div className="pointer-events-auto absolute bottom-0 left-0 right-0 flex items-center justify-between border-t border-border bg-background/80 px-6 py-4 backdrop-blur">
+        {/* Rodapé fixo do slide: progresso + navegação.
+            stopPropagation: os botões Anterior/Próximo não podem borbulhar
+            para o onClick={next} do main — sem isso, "Próximo" avançava 2
+            (botão + bolha) e "Anterior" voltava 1 e avançava 1 (net 0). */}
+        <div
+          className="pointer-events-auto absolute bottom-0 left-0 right-0 flex items-center justify-between border-t border-border bg-background/80 px-6 py-4 backdrop-blur"
+          onClick={(e) => e.stopPropagation()}
+        >
           <p className="flex items-center gap-2 text-sm text-muted-foreground">
             <BarChart3 className="h-4 w-4 text-primary" />
             Slide {current + 1} de {TOTAL_SLIDES}
