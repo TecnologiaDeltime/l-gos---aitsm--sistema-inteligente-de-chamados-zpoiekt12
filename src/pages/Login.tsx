@@ -357,10 +357,10 @@ export default function Login() {
                 {isLoading ? 'Autenticando...' : 'Entrar no Sistema'}
               </Button>
 
-              {/* Link discreto — o login de cliente tem tela própria em /portal/login */}
+              {/* Link discreto — o login de cliente tem tela própria em /cliente */}
               <div className="w-full pt-2 border-t text-center">
                 <a
-                  href="/portal/login"
+                  href="/cliente"
                   className="text-[11px] text-muted-foreground hover:text-primary hover:underline"
                 >
                   Acesso do Cliente (Ponto Focal)

@@ -202,6 +202,11 @@ export default function PortalLogin() {
             Abertura e acompanhamento de chamados, aprovações, visitas técnicas, ativos e saldo de
             horas
           </CardDescription>
+          {isAdmin && (
+            <div className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-amber-500/40 bg-amber-500/10 px-3 py-1 text-[11px] font-semibold text-amber-700 dark:text-amber-300">
+              <Wrench className="h-3 w-3" /> Você está em modo suporte
+            </div>
+          )}
         </CardHeader>
 
         <div className="px-6 space-y-3">

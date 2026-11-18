@@ -274,7 +274,7 @@ export default function PortalPage() {
 
   const handleLogout = () => {
     logout()
-    navigate('/portal/login')
+    navigate('/cliente')
   }
 
   // Filtragem dos chamados

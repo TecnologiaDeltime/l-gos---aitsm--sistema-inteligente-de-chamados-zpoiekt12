@@ -144,7 +144,7 @@ function PortalProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, user, loading } = useAuth()
   if (loading) return null
   if (!isAuthenticated) {
-    return <Navigate to="/portal/login" replace />
+    return <Navigate to="/cliente" replace />
   }
   // Portal do Cliente (Ponto Focal) é exclusivo de clientes e do admin (modo suporte);
   // operador comum tem área própria e é levado de volta ao login de operadores.
@@ -172,7 +172,10 @@ const App = () => (
             <Routes>
               {/* Public Auth Routes */}
               <Route path="/login" element={<Login />} />
-              <Route path="/portal/login" element={<PortalLogin />} />
+              {/* Login do Cliente (Ponto Focal): URL própria e clara /cliente.
+                  /portal/login permanece como redirecionamento p/ links antigos. */}
+              <Route path="/cliente" element={<PortalLogin />} />
+              <Route path="/portal/login" element={<Navigate to="/cliente" replace />} />
               {/* Portal do Colaborador (separado do Portal do Ponto Focal) */}
               <Route path="/portal/colaborador" element={<CollaboratorLogin />} />
               <Route

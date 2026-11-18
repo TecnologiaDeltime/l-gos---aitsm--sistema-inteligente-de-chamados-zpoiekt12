@@ -155,7 +155,7 @@ export default function CollaboratorLogin() {
             <div className="flex items-center justify-between w-full pt-2 border-t border-slate-200 dark:border-slate-800 text-xs text-slate-500 dark:text-slate-400">
               <span>É ponto focal ou operador?</span>
               <a
-                href="/portal/login"
+                href="/cliente"
                 className="text-slate-700 dark:text-slate-300 hover:underline font-semibold flex items-center gap-1"
               >
                 <KeyRound className="h-3 w-3" /> Portal do Ponto Focal
