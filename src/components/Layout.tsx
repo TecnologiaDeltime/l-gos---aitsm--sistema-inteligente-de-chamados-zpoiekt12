@@ -62,6 +62,7 @@ import {
   History,
   FolderKanban,
   Send,
+  Presentation,
 } from 'lucide-react'
 import { useAuth } from '@/hooks/use-auth'
 import { useTheme } from '@/hooks/use-theme'
@@ -332,6 +333,12 @@ export default function Layout() {
       path: '/tv',
       icon: Tv,
       show: permissions.canAccessItem('dashboard', 'modo_tv'),
+    },
+    {
+      label: 'Apresentação Executiva',
+      path: '/apresentacao',
+      icon: Presentation,
+      show: permissions.canAccessItem('dashboard', 'apresentacao_executiva'),
     },
   ]
 

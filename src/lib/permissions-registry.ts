@@ -59,6 +59,13 @@ const BASE_SYSTEM_MODULES: GranularModuleDefinition[] = [
           'Exibição em tela cheia com rotação automática de dashboards operacionais e gerenciais',
         path: '/tv',
       },
+      {
+        key: 'apresentacao_executiva',
+        label: 'Apresentação Executiva',
+        description:
+          'Apresentação de slides com a direção do sistema LÓGOS AITSM — módulos, automações, IA e números',
+        path: '/apresentacao',
+      },
     ],
   },
   {

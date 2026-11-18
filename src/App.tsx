@@ -72,6 +72,7 @@ import AutomationEditor from '@/pages/automations/AutomationEditor'
 import TechnicalAgenda from '@/pages/visits/TechnicalAgenda'
 import VisitManagerDashboard from '@/pages/visits/VisitManagerDashboard'
 import { TvModePage } from '@/pages/tv/TvModePage'
+import ExecutivePresentation from '@/pages/ExecutivePresentation'
 import ChangeDashboard from '@/pages/changes/ChangeDashboard'
 import ChangeList from '@/pages/changes/ChangeList'
 import MyChanges from '@/pages/changes/MyChanges'
@@ -343,6 +344,17 @@ const App = () => (
                       requiredItem="rep_asset_automation_logs"
                     >
                       <AssetAutomationLogsPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/apresentacao"
+                  element={
+                    <ProtectedRoute
+                      requiredModule="dashboard"
+                      requiredItem="apresentacao_executiva"
+                    >
+                      <ExecutivePresentation />
                     </ProtectedRoute>
                   }
                 />
