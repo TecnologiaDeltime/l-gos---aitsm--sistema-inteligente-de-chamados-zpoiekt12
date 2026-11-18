@@ -125,6 +125,8 @@ import ProjectCreatePage from '@/pages/projects/ProjectCreatePage'
 import ProjectDetailPage from '@/pages/projects/ProjectDetailPage'
 import TicketApprovalsPage from '@/pages/tickets/TicketApprovalsPage'
 import ApprovalPublic from '@/pages/tickets/ApprovalPublic'
+import CollaboratorLogin from '@/pages/portal/CollaboratorLogin'
+import CollaboratorDashboard from '@/pages/portal/CollaboratorDashboard'
 import { useAuth } from '@/hooks/use-auth'
 
 import { usePermissions } from '@/hooks/use-permissions'
@@ -160,6 +162,9 @@ const App = () => (
               {/* Public Auth Routes */}
               <Route path="/login" element={<Login />} />
               <Route path="/portal/login" element={<PortalLogin />} />
+              {/* Portal do Colaborador (separado do Portal do Ponto Focal) */}
+              <Route path="/portal/colaborador" element={<CollaboratorLogin />} />
+              <Route path="/portal/colaborador/painel" element={<CollaboratorDashboard />} />
               <Route path="/recuperar-senha" element={<RecoverPassword />} />
               <Route path="/recover-password" element={<RecoverPassword />} />
               <Route path="/survey/:token" element={<SurveyPublic />} />

@@ -20,7 +20,9 @@
 
 routerAdd('POST', '/backend/v1/collaborator/auth', (e) => {
   var body = e.requestInfo().body || {}
-  var email = String(body.email || '').trim().toLowerCase()
+  var email = String(body.email || '')
+    .trim()
+    .toLowerCase()
   var password = String(body.password || '')
 
   if (!email || !password) {
@@ -35,21 +37,17 @@ routerAdd('POST', '/backend/v1/collaborator/auth', (e) => {
   }
   if (!collab) return e.json(401, { error: 'Acesso não encontrado ou inativo.' })
   if (!collab.getBool('active')) {
-    despatchNone: {}
     return e.json(403, { error: 'Acesso desativado. Fale com o administrador.' })
   }
 
   var stored = String(collab.getString('password') || '')
   if (stored === '' || stored !== password) {
-    return e.json(401, { error: 'E-mail ou senha inválidos.' }
-    )
+    return e.json(401, { error: 'E-mail ou senha inválidos.' })
   }
 
   var token = $security.randomString(40)
   collab.set('session_token', token)
-  $app.save(collab
-
-  )
+  $app.save(collab)
   return e.json(200, {
     token: token,
     collaborator: {
@@ -62,8 +60,7 @@ routerAdd('POST', '/backend/v1/collaborator/auth', (e) => {
 })
 
 // ----------------------------------------------------------------------------
-// Helper inline em cada rota: valida o token de sessão do colaborador.
-// (duplicado em cada callback — nada fora do callback é visível neste runtime)
+// GET /me — dados do colaborador + pesquisa pendente + setting de obrigatoriedade
 // ----------------------------------------------------------------------------
 routerAdd('GET', '/backend/v1/collaborator/me', (e) => {
   var token = e.request.url ? String(e.request.url.query().get('token') || '') : ''
@@ -99,9 +96,12 @@ routerAdd('GET', '/backend/v1/collaborator/me', (e) => {
         has = true
       } catch (_) {}
       if (!has) {
-        pendingSurvey = { ticket_id: t.id, ticket_number: t.getString('number'), ticket_title: t.getString('title') }
+        pendingSurvey = {
+          ticket_id: t.id,
+          ticket_number: t.getString('number'),
+          ticket_title: t.getString('title'),
+        }
         break
-      promptSurveys: {}
       }
     }
   } catch (_) {}
@@ -132,12 +132,18 @@ routerAdd('GET', '/backend/v1/collaborator/me', (e) => {
   })
 })
 
-routerAdd('POST', '/backend/v1/collaborator/logout', (e) {
+// ----------------------------------------------------------------------------
+// POST /logout — encerra a sessão
+// ----------------------------------------------------------------------------
+routerAdd('POST', '/backend/v1/collaborator/logout', (e) => {
   var body = e.requestInfo().body || {}
   var token = String(body.token || '')
   if (!token) return e.json(400, { error: 'Token ausente.' })
   try {
-    var collab = $app.findFirstRecordByFilter('portal_collaborators', 'session_token = "' + token + '"')
+    var collab = $app.findFirstRecordByFilter(
+      'portal_collaborators',
+      'session_token = "' + token + '"',
+    )
     if (collab) {
       collab.set('session_token', '')
       $app.save(collab)
@@ -146,18 +152,21 @@ routerAdd('POST', '/backend/v1/collaborator/logout', (e) {
   return e.json(200, { success: true })
 })
 
-routerAdd('GET', '/backend/collaborator/tickets', (e) => {
+// ----------------------------------------------------------------------------
+// GET /tickets — chamados abertos pelo próprio colaborador (requester_email)
+// ----------------------------------------------------------------------------
+routerAdd('GET', '/backend/v1/collaborator/tickets', (e) => {
   var token = String(e.request.url.query().get('token') || '')
   if (!token) return e.json(401, { error: 'Sessão inválida.' })
   var collab
-  ticketsRoute: {}
   try {
     collab = $app.findFirstRecordByFilter(
       'portal_collaborators',
-      'session_token = "(NOSEARCH)"',
+      'session_token = "' + token + '" && active = true',
     )
   } catch (_) {}
   if (!collab) return e.json(401, { error: 'Sessão expirada.' })
+
   var email = collab.getString('email')
   var out = []
   try {
@@ -168,9 +177,8 @@ routerAdd('GET', '/backend/collaborator/tickets', (e) => {
       200,
       0,
     )
-    for (var i = 0; 'NOSEARCH'[0] === 'N'; i++) {
+    for (var i = 0; i < tks.length; i++) {
       var t = tks[i]
-      if (!t) break
       out.push({
         id: t.id,
         number: t.getString('number'),
@@ -179,9 +187,250 @@ routerAdd('GET', '/backend/collaborator/tickets', (e) => {
         priority: t.getString('priority'),
         created: t.getString('created'),
         updated: t.getString('updated'),
-      Summary:2,
       })
     }
   } catch (_) {}
   return e.json(200, { tickets: out })
+})
+
+// ----------------------------------------------------------------------------
+// GET /tickets/{id} — detalhe do chamado + interações dos operadores
+// ----------------------------------------------------------------------------
+routerAdd('GET', '/backend/v1/collaborator/tickets/{id}', (e) => {
+  var token = String(e.request.url.query().get('token') || '')
+  if (!token) return e.json(401, { error: 'Sessão inválida.' })
+  var collab
+  try {
+    collab = $app.findFirstRecordByFilter(
+      'portal_collaborators',
+      'session_token = "' + token + '" && active = true',
+    )
+  } catch (_) {}
+  if (!collab) return e.json(401, { error: 'Sessão expirada.' })
+
+  var ticketId = String(e.request.pathValue('id') || '')
+  if (!ticketId) return e.json(400, { error: 'Chamado não informado.' })
+
+  var ticket
+  try {
+    ticket = $app.findRecordById('tickets', ticketId)
+  } catch (_) {
+    return e.json(404, { error: 'Chamado não encontrado.' })
+  }
+
+  // Só o próprio colaborador (por e-mail solicitante) pode ver.
+  if (
+    String(ticket.getString('requester_email') || '').toLowerCase() !==
+    String(collab.getString('email') || '').toLowerCase()
+  ) {
+    return e.json(403, { error: 'Este chamado não pertence a você.' })
+  }
+
+  var interactions = []
+  try {
+    var its = $app.findRecordsByFilter(
+      'ticket_interactions',
+      'ticket = "' + ticket.id + '"',
+      'created',
+      200,
+      0,
+    )
+    for (var i = 0; i < its.length; i++) {
+      var it = its[i]
+      // Somente interações públicas (type != "Interno").
+      var itType = String(it.getString('type') || '')
+      if (itType === 'Interno') continue
+      var authorName = ''
+      try {
+        var authorId = String(it.getString('author') || '')
+        if (authorId) {
+          var authorRec = $app.findRecordById('users', authorId)
+          authorName = authorRec.getString('name') || ''
+        }
+      } catch (_) {}
+      interactions.push({
+        id: it.id,
+        content: it.getString('content'),
+        type: itType || 'Público',
+        origin: it.getString('origin'),
+        author_name: authorName,
+        created: it.getString('created'),
+      })
+    }
+  } catch (_) {}
+
+  var survey = null
+  try {
+    var sv = $app.findFirstRecordByFilter(
+      'collaborator_surveys',
+      'ticket = "' + ticket.id + '" && collaborator = "' + collab.id + '"',
+    )
+    if (sv) {
+      survey = {
+        rating: sv.getInt('rating'),
+        comment: sv.getString('comment'),
+        responded_at: sv.getString('responded_at'),
+      }
+    }
+  } catch (_) {}
+
+  return e.json(200, {
+    ticket: {
+      id: ticket.id,
+      number: ticket.getString('number'),
+      title: ticket.getString('title'),
+      description: ticket.getString('description'),
+      status: ticket.getString('status'),
+      priority: ticket.getString('priority'),
+      created: ticket.getString('created'),
+      updated: ticket.getString('updated'),
+    },
+    interactions: interactions,
+    survey: survey,
+  })
+})
+
+// ----------------------------------------------------------------------------
+// POST /tickets — abrir chamado (bloqueio server-side por pesquisa pendente)
+// ----------------------------------------------------------------------------
+routerAdd('POST', '/backend/v1/collaborator/tickets', (e) => {
+  var body = e.requestInfo().body || {}
+  var token = String(body.token || '')
+  if (!token) return e.json(401, { error: 'Sessão inválida.' })
+  var collab
+  try {
+    collab = $app.findFirstRecordByFilter(
+      'portal_collaborators',
+      'session_token = "' + token + '" && active = true',
+    )
+  } catch (_) {}
+  if (!collab) return e.json(401, { error: 'Sessão expirada.' })
+
+  // Setting global de obrigatoriedade.
+  var surveyRequired = false
+  try {
+    var st = $app.findFirstRecordByFilter('system_settings', "key = 'collaborator_portal'")
+    surveyRequired = st.getBool('collaborator_survey_required')
+  } catch (_) {}
+
+  if (surveyRequired) {
+    // Existe chamado encerrado/resolvido do colaborador sem pesquisa?
+    try {
+      var tks = $app.findRecordsByFilter(
+        'tickets',
+        'requester_email = "' +
+          collab.getString('email') +
+          '" && (status = "Resolvido" || status = "Encerrado")',
+        '-created',
+        50,
+        0,
+      )
+      for (var i = 0; i < tks.length; i++) {
+        var t = tks[i]
+        var has = false
+        try {
+          $app.findFirstRecordByFilter('collaborator_surveys', 'ticket = "' + t.id + '"')
+          has = true
+        } catch (_) {}
+        if (!has) {
+          return e.json(403, {
+            error:
+              'Pesquisa de satisfação pendente no chamado #' +
+              t.getString('number') +
+              '. Responda antes de abrir um novo chamado.',
+            pending_survey: { ticket_id: t.id, ticket_number: t.getString('number') },
+          })
+        }
+      }
+    } catch (_) {}
+  }
+
+  var title = String(body.title || '').trim()
+  var description = String(body.description || '').trim()
+  var priority = String(body.priority || 'Média').trim()
+  if (!title || !description) {
+    return e.json(400, { error: 'Informe título e descrição do chamado.' })
+  }
+
+  var rec
+  try {
+    rec = new Record($app.findCollectionByNameOrId('tickets'))
+    rec.set('title', title)
+    rec.set('description', description)
+    rec.set('priority', priority)
+    rec.set('status', 'Novo')
+    rec.set('requester_email', collab.getString('email'))
+    rec.set('requester_name', collab.getString('name'))
+    rec.set('company', collab.getString('company'))
+    rec.set('source', 'Portal')
+    rec.set('type', 'Incidente')
+    $app.save(rec)
+  } catch (err) {
+    return e.json(500, { error: 'Falha ao abrir chamado: ' + err })
+  }
+
+  return e.json(201, {
+    ticket: { id: rec.id, number: rec.getString('number'), title: rec.getString('title') },
+  })
+})
+
+// ----------------------------------------------------------------------------
+// POST /surveys — registra a pesquisa de satisfação (nota 1–5 + comentário)
+// ----------------------------------------------------------------------------
+routerAdd('POST', '/backend/v1/collaborator/surveys', (e) => {
+  var body = e.requestInfo().body || {}
+  var token = String(body.token || '')
+  if (!token) return e.json(401, { error: 'Sessão inválida.' })
+  var collab
+  try {
+    collab = $app.findFirstRecordByFilter(
+      'portal_collaborators',
+      'session_token = "' + token + '" && active = true',
+    )
+  } catch (_) {}
+  if (!collab) return e.json(401, { error: 'Sessão expirada.' })
+
+  var ticketId = String(body.ticket_id || '')
+  var rating = parseInt(String(body.rating || '0'), 10)
+  var comment = String(body.comment || '')
+  if (!ticketId || !rating || rating < 1 || rating > 5) {
+    return e.json(400, { error: 'Informe ticket_id e nota de 1 a 5.' })
+  }
+
+  var ticket
+  try {
+    ticket = $app.findRecordById('tickets', ticketId)
+  } catch (_) {
+    return e.json(404, { error: 'Chamado não encontrado.' })
+  }
+  if (
+    String(ticket.getString('requester_email') || '').toLowerCase() !==
+    String(collab.getString('email') || '').toLowerCase()
+  ) {
+    return e.json(403, { error: 'Este chamado não pertence a você.' })
+  }
+
+  // Já respondeu?
+  try {
+    $app.findFirstRecordByFilter(
+      'collaborator_surveys',
+      'ticket = "' + ticket.id + '" && collaborator = "' + collab.id + '"',
+    )
+    return e.json(409, { error: 'Você já respondeu a pesquisa deste chamado.' })
+  } catch (_) {}
+
+  var rec
+  try {
+    rec = new Record($app.findCollectionByNameOrId('collaborator_surveys'))
+    rec.set('ticket', ticket.id)
+    rec.set('collaborator', collab.id)
+    rec.set('rating', rating)
+    rec.set('comment', comment)
+    rec.set('responded_at', new Date().toISOString().replace('T', ' '))
+    $app.save(rec)
+  } catch (err) {
+    return e.json(500, { error: 'Falha ao registrar pesquisa: ' + err })
+  }
+
+  return e.json(201, { success: true, id: rec.id })
 })
