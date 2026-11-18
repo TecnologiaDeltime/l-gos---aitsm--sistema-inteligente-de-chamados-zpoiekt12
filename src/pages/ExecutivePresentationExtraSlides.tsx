@@ -15,6 +15,9 @@ import {
   MonitorSmartphone,
   Wrench,
   Construction,
+  TicketPlus,
+  ScrollText,
+  BadgeCheck,
 } from 'lucide-react'
 import { SlideShell } from './ExecutivePresentationSlidesShell'
 
@@ -100,50 +103,80 @@ export function SlideTransparencia() {
   )
 }
 
-/* Slide: Visão do Cliente */
+/* Slide: Visão do Cliente — módulos do Portal do Ponto Focal */
 export function SlideVisaoCliente() {
   const itens = [
     {
-      icon: Timer,
-      titulo: 'Consumo da franquia de horas',
+      icon: TicketPlus,
+      titulo: 'Abertura de chamados',
       descricao:
-        'O cliente acompanha saldo e consumo das horas contratadas em tempo real, com alertas por nível.',
+        'O ponto focal abre o chamado pelo portal, com o ativo da máquina pré-preenchido automaticamente (celular, impressora e scanner prioritários) e triagem por IA.',
+    },
+    {
+      icon: ScrollText,
+      titulo: 'Acompanhamento em tempo real',
+      descricao:
+        'Logs públicos e interações dos operadores visíveis a cada movimentação, com status do chamado atualizado em tempo real.',
+    },
+    {
+      icon: BadgeCheck,
+      titulo: 'Aprovações',
+      descricao:
+        'Chamados que exigem aprovação ficam travados até o cliente decidir: aprova ou reprova com motivo obrigatório na reprovação.',
     },
     {
       icon: MonitorSmartphone,
-      titulo: 'Inventário de TI (ativos/CMDB)',
-      descricao: 'Acesso aos ativos da própria empresa: máquinas, serial, localização e histórico.',
+      titulo: 'Inventário de TI (CMDB)',
+      descricao:
+        'Consulta aos ativos da própria empresa: máquinas, número de série, localização, histórico de atendimentos e documentos.',
     },
     {
       icon: CalendarClock,
-      titulo: 'Visitas agendadas',
-      descricao: 'Agenda de visitas técnicas com check-in e check-out visíveis ao cliente.',
+      titulo: 'Visitas técnicas',
+      descricao:
+        'Agenda de visitas agendadas com acompanhamento do check-in e do check-out do técnico em tempo real.',
+    },
+    {
+      icon: Timer,
+      titulo: 'Horas contratadas',
+      descricao:
+        'Controle do consumo da franquia de horas do contrato, com saldo disponível, histórico por interação e alertas por nível.',
     },
     {
       icon: Star,
-      titulo: 'Pesquisa de satisfação do chamado',
-      descricao: 'Avaliação nota 1–5 e comentário direto sobre o atendimento recebido.',
+      titulo: 'Pesquisa do chamado',
+      descricao:
+        'Ao encerrar o atendimento, avaliação nota 1–5 e comentário direto sobre o chamado recebido.',
     },
     {
       icon: ClipboardCheck,
-      titulo: 'Pesquisa do ponto focal',
-      descricao: 'Avaliação mensal do ponto focal sobre o trabalho prestado no mês.',
+      titulo: 'Pesquisa mensal do ponto focal',
+      descricao:
+        'Avaliação mensal do ponto focal sobre o trabalho prestado no mês, com nota e comentário.',
     },
   ]
   return (
     <SlideShell eyebrow="Visão do Cliente">
       <h2 className="text-3xl font-bold text-foreground md:text-4xl">
-        O cliente enxerga <span className="text-primary">tudo o que importa</span>
+        O portal do cliente: <span className="text-primary">8 módulos de autonomia</span>
       </h2>
-      <div className="mt-8 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+      <p className="mt-3 max-w-3xl text-lg text-muted-foreground md:text-xl">
+        Tudo o que o ponto focal vê e faz no Portal do Cliente — sem depender de e-mail ou telefone.
+      </p>
+      <div className="mt-6 grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-4">
         {itens.map((i) => (
-          <div key={i.titulo} className="rounded-lg border border-border bg-card p-5">
-            <i.icon className="h-6 w-6 text-primary" />
-            <h3 className="mt-3 font-semibold text-primary">{i.titulo}</h3>
+          <div key={i.titulo} className="rounded-lg border border-border bg-card p-4">
+            <i.icon className="h-5 w-5 text-primary" />
+            <h3 className="mt-2 font-semibold text-primary md:text-lg">{i.titulo}</h3>
             <p className="mt-1 text-sm text-muted-foreground">{i.descricao}</p>
           </div>
         ))}
       </div>
+      <p className="mt-4 text-sm text-muted-foreground md:text-base">
+        Portal dedicado ao ponto focal em{' '}
+        <span className="font-semibold text-primary">/cliente</span>, com acesso independente e
+        visual próprio — e portal do colaborador para quem só abre chamados.
+      </p>
     </SlideShell>
   )
 }
