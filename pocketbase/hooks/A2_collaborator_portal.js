@@ -428,6 +428,22 @@ routerAdd('POST', '/backend/v1/collaborator/tickets', (e) => {
     return e.json(400, { error: 'Informe título e descrição do chamado.' })
   }
 
+  // Ativo (equipamento) opcional: precisa existir e pertencer à mesma empresa
+  // do colaborador — nunca confia em id arbitrário do cliente.
+  var equipmentId = String(body.equipment || '').trim()
+  if (equipmentId) {
+    var eqOk = false
+    try {
+      var eq = $app.findRecordById('equipments', equipmentId)
+      eqOk = String(eq.getString('company') || '') === String(collab.getString('company') || '')
+    } catch (_) {
+      eqOk = false
+    }
+    if (!eqOk) {
+      return e.json(400, { error: 'Ativo informado não pertence à sua empresa.' })
+    }
+  }
+
   var rec
   try {
     rec = new Record($app.findCollectionByNameOrId('tickets'))
@@ -440,6 +456,7 @@ routerAdd('POST', '/backend/v1/collaborator/tickets', (e) => {
     rec.set('company', collab.getString('company'))
     rec.set('source', 'Portal')
     rec.set('type', 'Incidente')
+    if (equipmentId) rec.set('equipment', equipmentId)
     $app.save(rec)
   } catch (err) {
     return e.json(500, { error: 'Falha ao abrir chamado: ' + err })

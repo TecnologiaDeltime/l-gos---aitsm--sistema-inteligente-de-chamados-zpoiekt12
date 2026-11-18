@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -14,6 +14,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Skeleton } from '@/components/ui/skeleton'
 import {
@@ -39,6 +46,8 @@ import {
   type CollaboratorTicket,
 } from '@/services/collaborator-portal'
 import { clearImpersonation } from '@/services/collaborator-impersonation'
+import type { EquipmentRecord } from '@/services/equipments'
+import pb from '@/lib/pocketbase/client'
 import { LogosLogoPanel } from '@/components/brand/LogosLogo'
 
 const CLOSED_STATUSES = ['Resolvido', 'Encerrado', 'Cancelado']
@@ -133,6 +142,43 @@ export default function CollaboratorDashboard() {
   const [newDescription, setNewDescription] = useState('')
   const [newSending, setNewSending] = useState(false)
   const [newError, setNewError] = useState<string | null>(null)
+  const [newEquipment, setNewEquipment] = useState('')
+  const [newEquipments, setNewEquipments] = useState<EquipmentRecord[]>([])
+  const [newEquipLoading, setNewEquipLoading] = useState(false)
+  const wasNewOpenRef = useRef(false)
+
+  // Ativos da empresa do colaborador — carregados na transição
+  // fechado->aberto do diálogo (padrão wasOpenRef: nunca depender do objeto
+  // user recriado a cada render). Pré-seleciona celular/impressora/scanner
+  // quando houver, mesmo comportamento das telas de operador e ponto focal.
+  useEffect(() => {
+    if (newOpen && !wasNewOpenRef.current && collaborator) {
+      setNewEquipment('')
+      setNewEquipLoading(true)
+      pb.collection('equipments')
+        .getFullList<EquipmentRecord>({
+          filter: `company = "${collaborator.company}"`,
+          sort: 'name',
+        })
+        .then((list) => {
+          setNewEquipments(list)
+          const pref = list.find((eq) => {
+            const dt = `${eq.device_type || ''} ${eq.type || ''} ${eq.name || ''}`.toLowerCase()
+            return (
+              dt.includes('celular') ||
+              dt.includes('smartphone') ||
+              dt.includes('impressora') ||
+              dt.includes('printer') ||
+              dt.includes('scanner')
+            )
+          })
+          if (pref) setNewEquipment(pref.id)
+        })
+        .catch(() => setNewEquipments([]))
+        .finally(() => setNewEquipLoading(false))
+    }
+    wasNewOpenRef.current = newOpen
+  }, [newOpen, collaborator])
 
   const stats = useMemo(() => {
     const open = tickets.filter((t) => !CLOSED_STATUSES.includes(t.status)).length
@@ -208,11 +254,13 @@ export default function CollaboratorDashboard() {
           token,
           title: newTitle.trim(),
           description: newDescription.trim(),
+          equipment: newEquipment || undefined,
         },
       })
       setNewOpen(false)
       setNewTitle('')
       setNewDescription('')
+      setNewEquipment('')
       await reload()
       await refresh()
     } catch (err) {
@@ -631,6 +679,39 @@ export default function CollaboratorDashboard() {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
+            <div className="space-y-1">
+              <Label className="text-xs">Ativo (equipamento)</Label>
+              <Select
+                value={newEquipment || 'none'}
+                onValueChange={(v) => setNewEquipment(v === 'none' ? '' : v)}
+                disabled={newEquipLoading}
+              >
+                <SelectTrigger className="text-sm">
+                  <SelectValue
+                    placeholder={
+                      newEquipLoading
+                        ? 'Carregando ativos...'
+                        : newEquipments.length === 0
+                          ? '— Nenhum ativo vinculado —'
+                          : 'Selecione o ativo (opcional)'
+                    }
+                  />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">— Nenhum —</SelectItem>
+                  {newEquipments.map((eq) => (
+                    <SelectItem key={eq.id} value={eq.id}>
+                      {eq.name}
+                      {eq.device_type ? ` [${eq.device_type}]` : ''}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-[11px] text-slate-400">
+                Pré-preenchido com o celular, impressora ou scanner em nome do colaborador, quando
+                houver.
+              </p>
+            </div>
             <div className="space-y-1">
               <Label className="text-xs">Título *</Label>
               <Input
