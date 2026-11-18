@@ -162,6 +162,104 @@ export default function TicketCreate() {
   const [currentStep, setCurrentStep] = useState(0)
   const [submitting, setSubmitting] = useState(false)
 
+  // Tipos de ativo que o usuário pediu para priorizar no pré-preenchimento
+  // automático: celular, impressora e scanner da área.
+  const PRIORITY_ASSET_TYPES = ['celular', 'impressora', 'scanner']
+  const normalizeAssetText = (v?: string | null) =>
+    (v || '')
+      .toString()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .replace(/\s+/g, ' ')
+      .trim()
+
+  // Verifica se o ativo é um celular, impressora ou scanner (qualquer campo de
+  // tipo/identificação: device_type, type, name, model ou notes).
+  const isPriorityAssetType = (eq: EquipmentRecord) => {
+    const haystack = [eq.device_type, eq.type, eq.name, eq.model, eq.notes]
+      .map((v) => normalizeAssetText(v))
+      .join(' | ')
+    return PRIORITY_ASSET_TYPES.some((t) => haystack.includes(t))
+  }
+
+  // Lista TODOS os ativos em nome do contato (não só o primeiro): casa
+  // responsável exato, primeiro nome + sobrenome, ou primeiro nome + sobrenome
+  // parciais (ex: "Patricia Santos" casa "Patricia dos Santos").
+  const findEquipmentsForContact = useCallback(
+    (c: ClientContactRecord): EquipmentRecord[] => {
+      const matched = equipments.filter((eq) => {
+        const resp = (eq.responsible_user || eq.owner || '').toString().trim()
+        if (!resp) return false
+        const normResp = normalizeAssetText(resp)
+        const normContact = normalizeAssetText(c.full_name)
+        if (!normContact) return false
+        if (normResp === normContact) return true
+        // Nome limpo antes de travessão/hífen de departamento ex.: "Nome — Depto"
+        const cleanResp = normResp.split(/\s+[—–-]\s+/)[0].trim()
+        if (cleanResp === normContact) return true
+        const respParts = cleanResp.split(/\s+/)
+        const contactParts = normContact.split(/\s+/)
+        const firstName = respParts[0] || ''
+        const lastName = respParts.length > 1 ? respParts[respParts.length - 1] : ''
+        if (firstName && lastName && normContact.length >= 4) {
+          return (
+            normContact.includes(firstName) &&
+            (normContact.includes(lastName) ||
+              lastName.includes(contactParts[contactParts.length - 1] || ''))
+          )
+        }
+        return false
+      })
+      // Ordena: celular/impressora/scanner primeiro (pedidos do usuário), depois os demais
+      return [...matched].sort((a, b) => {
+        const aPri = isPriorityAssetType(a) ? 0 : 1
+        const bPri = isPriorityAssetType(b) ? 0 : 1
+        return aPri - bPri
+      })
+    },
+    [equipments],
+  )
+
+  // Pré-seleciona automaticamente o ativo em nome do solicitante assim que os
+  // contatos da empresa carregam e assim que o solicitante muda. Busca nas duas
+  // frentes: (1) contatos da empresa (busca exata), (2) ativos cujo responsável
+  // bate com nome/e-mail do solicitante (cobre colas imprecisas). Escolhe o
+  // primeiro ativo do tipo celular, impressora ou scanner se houver.
+  useEffect(() => {
+    if (!company || ticketScope !== 'client') return
+    if (selectedContact || !requesterName) return
+    const requesterLower = requesterName.trim().toLowerCase()
+    const requesterEmailLower = (requesterEmail || '').trim().toLowerCase()
+    const byRequester = findEquipmentsForContact({
+      id: '',
+      full_name: requesterName,
+    } as ClientContactRecord)
+    if (byRequester.length > 0) {
+      setEquipment(byRequester[0].id)
+      setItemType('asset')
+      return
+    }
+    if (requesterEmailLower) {
+      const byEmail = equipments.find(
+        (eq) =>
+          (eq.responsible_user || eq.owner || '').toString().trim().toLowerCase() ===
+          requesterEmailLower,
+      )
+      if (byEmail) {
+        setEquipment(byEmail.id)
+        setItemType('asset')
+      }
+    }
+  }, [
+    company,
+    ticketScope,
+    selectedContact,
+    requesterName,
+    requesterEmail,
+    findEquipmentsForContact,
+  ])
+
   const parentCategories = useMemo(() => {
     return categories.filter((c) => !c.parent && c.active !== false)
   }, [categories])
@@ -318,16 +416,9 @@ export default function TicketCreate() {
         if (c.departments && c.departments.length > 0) {
           setDepartment(c.departments[0])
         }
-        const matchedEquipment = equipments.find(
-          (eq) =>
-            (!eq.device_type ||
-              ['Desktop', 'Notebook', 'Tablet', 'Celular'].includes(eq.device_type)) &&
-            ((eq.responsible_user &&
-              eq.responsible_user.trim().toLowerCase() === c.full_name.trim().toLowerCase()) ||
-              (eq.owner && eq.owner.trim().toLowerCase() === c.full_name.trim().toLowerCase())),
-        )
-        if (matchedEquipment) {
-          setEquipment(matchedEquipment.id)
+        const matchedEquipments = findEquipmentsForContact(c)
+        if (matchedEquipments.length > 0) {
+          setEquipment(matchedEquipments[0].id)
           setItemType('asset')
         }
       } else {
@@ -337,15 +428,19 @@ export default function TicketCreate() {
         setDepartment('')
       }
     },
-    [contacts, equipments],
+    [contacts, equipments, findEquipmentsForContact],
   )
 
-  // Filtragem de ativos conforme regra de Ponto Focal
+  // Filtragem de ativos conforme regra de Ponto Focal.
+  // Inclui também impressoras e scanners: podem estar em nome do solicitante
+  // (ex.: impressora da área) e hoje desapareciam do seletor.
   const availableEquipments = useMemo(() => {
-    // Apenas dispositivos (Desktop, Notebook, Tablet, Celular)
     const deviceAssets = equipments.filter(
       (eq) =>
-        !eq.device_type || ['Desktop', 'Notebook', 'Tablet', 'Celular'].includes(eq.device_type),
+        !eq.device_type ||
+        ['Desktop', 'Notebook', 'Tablet', 'Celular', 'Impressora', 'Scanner'].includes(
+          eq.device_type,
+        ),
     )
 
     // Verifica se o operador logado é ponto focal nos contatos da empresa
@@ -368,12 +463,29 @@ export default function TicketCreate() {
       return deviceAssets
     }
 
+    // Mesma correspondência tolerante do pré-preenchimento: nome exato,
+    // nome antes do travessão de departamento e primeiro+último nome.
     const reqName = requesterName.trim().toLowerCase()
-    return deviceAssets.filter(
-      (eq) =>
-        (eq.responsible_user && eq.responsible_user.trim().toLowerCase() === reqName) ||
-        (eq.owner && eq.owner.trim().toLowerCase() === reqName),
-    )
+    const normReq = normalizeAssetText(reqName)
+    const cleanReq = normReq.split(/\s+[—–-]\s+/)[0].trim()
+    return deviceAssets.filter((eq) => {
+      const resp = (eq.responsible_user || eq.owner || '').toString().trim()
+      if (!resp) return false
+      const normResp = normalizeAssetText(resp)
+      const cleanResp = normResp.split(/\s+[—–-]\s+/)[0].trim()
+      if (normResp === normReq || cleanResp === normReq || cleanResp === cleanReq) return true
+      const respParts = cleanResp.split(/\s+/)
+      const reqParts = normReq.split(/\s+/)
+      const firstName = respParts[0] || ''
+      const lastName = respParts.length > 1 ? respParts[respParts.length - 1] : ''
+      if (firstName && lastName && normReq.length >= 4) {
+        return (
+          normReq.includes(firstName) &&
+          (normReq.includes(lastName) || lastName.includes(reqParts[reqParts.length - 1] || ''))
+        )
+      }
+      return false
+    })
   }, [equipments, contacts, user, requesterName])
 
   const handleSubActivityChange = (id: string) => {

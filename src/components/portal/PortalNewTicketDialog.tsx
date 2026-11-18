@@ -153,6 +153,13 @@ export default function PortalNewTicketDialog({
     setPriority('Média')
     setSelectedFile(null)
     setExtraEquipment(null)
+
+    // Pré-preenchimento automático do ativo do solicitante ao entrar na tela:
+    // busca os ativos em nome do usuário logado e seleciona um (priorizando
+    // celular, impressora ou scanner). A escolha manual continua livre.
+    if (currentUser) {
+      void findAndSelectAssetForPerson(currentUser.id || '', currentUser.name || '')
+    }
   }, [open])
 
   // Colaboradores exibidos no campo "Nome do contato":
@@ -223,14 +230,30 @@ export default function PortalNewTicketDialog({
     return false
   }
 
-  // Busca e seleciona o ativo vinculado a uma pessoa (pelo id e/ou nome)
+  // Tipos de ativo que o usuário pediu para priorizar no pré-preenchimento:
+  // celular, impressora e scanner da área do solicitante.
+  const PRIORITY_ASSET_TYPES = ['celular', 'impressora', 'scanner']
+  const isPriorityAssetType = (a: ConfigurationItemRecord | EquipmentRecord) => {
+    const haystack = [a.name, a.model, a.type, (a as any).device_type, (a as any).notes]
+      .map((v) => normalizeText(v))
+      .join(' | ')
+    return PRIORITY_ASSET_TYPES.some((t) => haystack.includes(t))
+  }
+
+  // Busca e seleciona o ativo vinculado a uma pessoa (pelo id e/ou nome).
+  // Prioriza ativos do tipo celular, impressora ou scanner quando houver mais de um.
   const findAndSelectAssetForPerson = async (personId: string, personName: string) => {
     if (!personName && !personId) return
 
     // 1) Busca nos ativos já carregados da empresa (props.assets)
-    const matchedAsset = assets.find((a) => matchAssetToContact(a, personId, personName))
-    if (matchedAsset) {
-      setSelectedAsset(matchedAsset.id)
+    const matchedAssets = assets
+      .filter((a) => matchAssetToContact(a, personId, personName))
+      .sort((a, b) => Number(isPriorityAssetType(b)) - Number(isPriorityAssetType(a)))
+    if (matchedAssets.length > 0) {
+      if (!assets.some((a) => a.id === matchedAssets[0].id)) {
+        setExtraEquipment(matchedAssets[0] as unknown as EquipmentRecord)
+      }
+      setSelectedAsset(matchedAssets[0].id)
       return
     }
 
@@ -239,12 +262,12 @@ export default function PortalNewTicketDialog({
       const companyIdToSearch = companyId || user.company_id
       if (companyIdToSearch) {
         const equipments = await getEquipments({ company: companyIdToSearch })
-        const matchedEquipment = equipments.find((eq) =>
-          matchAssetToContact(eq, personId, personName),
-        )
-        if (matchedEquipment) {
-          setExtraEquipment(matchedEquipment)
-          setSelectedAsset(matchedEquipment.id)
+        const matchedEquipments = equipments
+          .filter((eq) => matchAssetToContact(eq, personId, personName))
+          .sort((a, b) => Number(isPriorityAssetType(b)) - Number(isPriorityAssetType(a)))
+        if (matchedEquipments.length > 0) {
+          setExtraEquipment(matchedEquipments[0])
+          setSelectedAsset(matchedEquipments[0].id)
           return
         }
       }
