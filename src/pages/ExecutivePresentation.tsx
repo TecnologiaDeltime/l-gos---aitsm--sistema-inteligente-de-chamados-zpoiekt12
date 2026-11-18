@@ -11,8 +11,15 @@ import {
 } from 'lucide-react'
 import { LogosLogoFull as LogosLogo } from '@/components/brand/LogosLogo'
 import { Button } from '@/components/ui/button'
+import { SlideShell } from './ExecutivePresentationSlidesShell'
+import {
+  SlideProjects,
+  SlideTransparencia,
+  SlideVisaoCliente,
+  SlideEmConstrucao,
+} from './ExecutivePresentationExtraSlides'
 
-const TOTAL_SLIDES = 8
+const TOTAL_SLIDES = 12
 
 interface AutomationArea {
   area: string
@@ -150,24 +157,11 @@ const NUMEROS: Array<{ valor: string; legenda: string }> = [
   { valor: 'SLA', legenda: 'Por expediente e por cliente' },
 ]
 
-function SlideShell({ children, eyebrow }: { children: React.ReactNode; eyebrow?: string }) {
-  return (
-    <div className="flex h-full w-full flex-col justify-center px-8 md:px-20 lg:px-28">
-      {eyebrow && (
-        <p className="mb-4 text-sm font-semibold uppercase tracking-[0.25em] text-primary">
-          {eyebrow}
-        </p>
-      )}
-      {children}
-    </div>
-  )
-}
-
 function renderSlide(index: number): React.ReactNode {
   switch (index) {
     case 0:
       return (
-        <SlideShell>
+        <SlideShell eyebrow="Abertura">
           <div className="flex flex-col items-start gap-6">
             <LogosLogo monogramClassName="h-14 w-14" textClassName="h-10 w-auto" />
             <h1 className="text-5xl font-bold leading-tight text-foreground md:text-6xl">
@@ -190,10 +184,6 @@ function renderSlide(index: number): React.ReactNode {
           </h2>
           <ul className="mt-10 space-y-5 text-xl text-foreground/90 md:text-2xl">
             <li className="flex gap-4">
-              <Layers className="mt-1 h-7 w-7 shrink-0 text-primary" />
-              Atendimento multicanal com console omnichannel
-            </li>
-            <li className="flex gap-4">
               <Zap className="mt-1 h-7 w-7 shrink-0 text-primary" />
               Controle de SLA por expediente, com pausa fora do horário
             </li>
@@ -204,6 +194,10 @@ function renderSlide(index: number): React.ReactNode {
             <li className="flex gap-4">
               <Bot className="mt-1 h-7 w-7 shrink-0 text-primary" />
               Inteligência artificial aplicada ao ciclo de vida do chamado
+            </li>
+            <li className="flex gap-4">
+              <Layers className="mt-1 h-7 w-7 shrink-0 text-primary" />
+              Projetos, conhecimento, visitas e contratos no mesmo sistema
             </li>
           </ul>
         </SlideShell>
@@ -225,6 +219,8 @@ function renderSlide(index: number): React.ReactNode {
         </SlideShell>
       )
     case 3:
+      return <SlideProjects />
+    case 4:
       return (
         <SlideShell eyebrow="Automações rodando 24×7">
           <h2 className="text-3xl font-bold text-foreground md:text-4xl">
@@ -251,7 +247,7 @@ function renderSlide(index: number): React.ReactNode {
           </div>
         </SlideShell>
       )
-    case 4:
+    case 5:
       return (
         <SlideShell eyebrow="Inteligência Artificial">
           <div className="flex items-center gap-4">
@@ -272,7 +268,11 @@ function renderSlide(index: number): React.ReactNode {
           </div>
         </SlideShell>
       )
-    case 5:
+    case 6:
+      return <SlideTransparencia />
+    case 7:
+      return <SlideVisaoCliente />
+    case 8:
       return (
         <SlideShell eyebrow="Acessos e segurança">
           <h2 className="text-3xl font-bold text-foreground md:text-4xl">
@@ -288,7 +288,7 @@ function renderSlide(index: number): React.ReactNode {
           </ul>
         </SlideShell>
       )
-    case 6:
+    case 9:
       return (
         <SlideShell eyebrow="Números para destacar">
           <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-5">
@@ -301,6 +301,8 @@ function renderSlide(index: number): React.ReactNode {
           </div>
         </SlideShell>
       )
+    case 10:
+      return <SlideEmConstrucao />
     default:
       return (
         <SlideShell>
