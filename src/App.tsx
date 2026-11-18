@@ -127,6 +127,7 @@ import TicketApprovalsPage from '@/pages/tickets/TicketApprovalsPage'
 import ApprovalPublic from '@/pages/tickets/ApprovalPublic'
 import CollaboratorLogin from '@/pages/portal/CollaboratorLogin'
 import CollaboratorDashboard from '@/pages/portal/CollaboratorDashboard'
+import { CollaboratorRouteGuard } from '@/components/CollaboratorRouteGuard'
 import { useAuth } from '@/hooks/use-auth'
 
 import { usePermissions } from '@/hooks/use-permissions'
@@ -140,10 +141,20 @@ function RootRedirect() {
 }
 
 function PortalProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated, loading } = useAuth()
+  const { isAuthenticated, user, loading } = useAuth()
   if (loading) return null
   if (!isAuthenticated) {
     return <Navigate to="/portal/login" replace />
+  }
+  // Portal do Cliente (Ponto Focal) é exclusivo de clientes e do admin (modo suporte);
+  // operador comum tem área própria e é levado de volta ao login de operadores.
+  if (
+    user &&
+    user.role !== 'cliente_solicitante' &&
+    user.role !== 'cliente_gestor' &&
+    user.role !== 'admin'
+  ) {
+    return <Navigate to="/login" replace />
   }
   return <>{children}</>
 }
@@ -164,7 +175,14 @@ const App = () => (
               <Route path="/portal/login" element={<PortalLogin />} />
               {/* Portal do Colaborador (separado do Portal do Ponto Focal) */}
               <Route path="/portal/colaborador" element={<CollaboratorLogin />} />
-              <Route path="/portal/colaborador/painel" element={<CollaboratorDashboard />} />
+              <Route
+                path="/portal/colaborador/painel"
+                element={
+                  <CollaboratorRouteGuard>
+                    <CollaboratorDashboard />
+                  </CollaboratorRouteGuard>
+                }
+              />
               <Route path="/recuperar-senha" element={<RecoverPassword />} />
               <Route path="/recover-password" element={<RecoverPassword />} />
               <Route path="/survey/:token" element={<SurveyPublic />} />

@@ -35,6 +35,12 @@ export function ProtectedRoute({
     return <Navigate to="/login" state={{ from: location }} replace />
   }
 
+  // Cliente autenticado em rota de operador: volta para o portal dele
+  // (ponto focal) — a área interna é exclusiva de operadores.
+  if (user?.role === 'cliente_solicitante' || user?.role === 'cliente_gestor') {
+    return <Navigate to="/portal" replace />
+  }
+
   // Se for admin, acesso total garantido (Regra 3 - Administrador é imune)
   if (!isAdmin) {
     // Fallback padrão se a rota atual for bloqueada:

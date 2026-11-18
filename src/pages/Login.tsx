@@ -273,7 +273,7 @@ export default function Login() {
             )}
           </div>
           <CardTitle className="text-2xl font-bold tracking-tight text-foreground">
-            {step === 'credentials' && 'Portal de Acesso'}
+            {step === 'credentials' && 'Acesso de Operadores'}
             {step === 'totp' && 'Verificação em Duas Etapas'}
             {step === 'totp_setup' && 'Configurar 2FA (Obrigatório)'}
           </CardTitle>
@@ -357,13 +357,13 @@ export default function Login() {
                 {isLoading ? 'Autenticando...' : 'Entrar no Sistema'}
               </Button>
 
-              <div className="flex items-center justify-between w-full pt-2 border-t text-xs text-muted-foreground">
-                <span>É cliente ou ponto focal?</span>
+              {/* Link discreto — o login de cliente tem tela própria em /portal/login */}
+              <div className="w-full pt-2 border-t text-center">
                 <a
                   href="/portal/login"
-                  className="text-primary hover:underline font-semibold flex items-center gap-1"
+                  className="text-[11px] text-muted-foreground hover:text-primary hover:underline"
                 >
-                  Portal do Cliente &rarr;
+                  Acesso do Cliente (Ponto Focal)
                 </a>
               </div>
             </CardFooter>

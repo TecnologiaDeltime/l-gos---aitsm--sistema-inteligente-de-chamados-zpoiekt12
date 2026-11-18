@@ -116,8 +116,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       sessionStorage.setItem(SESSION_EXPIRED_KEY, reason)
     }
 
-    // Se estiver fora da página de login, redirecionar
-    if (!window.location.pathname.startsWith('/login')) {
+    // Se estiver fora da página de login, redirecionar para o login da área:
+    // clientes (portal do ponto focal) voltam para /portal/login, o restante para /login.
+    const path = window.location.pathname
+    const isOperatorArea = !path.startsWith('/login') && !path.startsWith('/portal')
+    if (path.startsWith('/portal')) {
+      if (!path.startsWith('/portal/login')) {
+        window.location.href = '/portal/login'
+      }
+    } else if (isOperatorArea) {
       window.location.href = '/login'
     }
   }, [])

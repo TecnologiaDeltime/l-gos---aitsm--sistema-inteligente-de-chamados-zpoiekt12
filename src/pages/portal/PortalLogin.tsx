@@ -73,15 +73,16 @@ export default function PortalLogin() {
     }
   }, [isAdmin])
 
-  // Se já autenticado como cliente, redireciona ao portal automaticamente
+  // Se já autenticado como cliente, redireciona ao portal automaticamente.
+  // Operador (gestor/técnico/operador) tem tela própria (/login) e NÃO entra aqui:
+  // este login é exclusivo de clientes (ponto focal) e do admin em modo suporte.
   useEffect(() => {
     if (isAuthenticated && user) {
       if (user.role === 'cliente_solicitante' || user.role === 'cliente_gestor') {
         navigate('/portal', { replace: true })
-      }
-      // Se for operador comum (gestor, tecnico, operador sem role admin), vai ao dashboard ou portal normal
-      else if (user.role !== 'admin') {
-        navigate('/portal', { replace: true })
+      } else if (user.role !== 'admin') {
+        // Operador tentando acessar o portal de cliente: volta para o login de operadores
+        navigate('/login', { replace: true })
       }
       // Se for admin, NÃO redireciona de imediato de forma cega: permite escolher a empresa ou entrar como suporte
     }
@@ -106,12 +107,20 @@ export default function PortalLogin() {
       const authData = await pb.collection('users').authWithPassword(email.trim(), password)
       const role = authData.record?.role
 
+      if (role !== 'cliente_solicitante' && role !== 'cliente_gestor' && role !== 'admin') {
+        // Operador tentando entrar pelo login de cliente: sessão não é iniciada,
+        // redireciona para a tela de login de operadores.
+        setIsLoading(false)
+        navigate('/login', { replace: true })
+        return
+      }
+
       login(authData.token, authData.record)
 
       if (role === 'cliente_solicitante' || role === 'cliente_gestor') {
         navigate('/portal', { replace: true })
       } else {
-        // Usuário é operador ou admin: entra no portal com visão de cliente/teste ou pode ir ao dashboard
+        // Admin: entra no portal em modo suporte (escolhe a empresa ao chegar lá)
         navigate('/portal', { replace: true })
       }
     } catch (err: any) {
