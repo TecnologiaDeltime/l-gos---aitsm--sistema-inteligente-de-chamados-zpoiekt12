@@ -131,7 +131,6 @@ export default function CollaboratorDashboard() {
   const [newOpen, setNewOpen] = useState(false)
   const [newTitle, setNewTitle] = useState('')
   const [newDescription, setNewDescription] = useState('')
-  const [newPriority, setNewPriority] = useState('Média')
   const [newSending, setNewSending] = useState(false)
   const [newError, setNewError] = useState<string | null>(null)
 
@@ -209,13 +208,11 @@ export default function CollaboratorDashboard() {
           token,
           title: newTitle.trim(),
           description: newDescription.trim(),
-          priority: newPriority,
         },
       })
       setNewOpen(false)
       setNewTitle('')
       setNewDescription('')
-      setNewPriority('Média')
       await reload()
       await refresh()
     } catch (err) {
@@ -651,23 +648,6 @@ export default function CollaboratorDashboard() {
                 placeholder="Detalhe o problema, mensagens de erro, etc."
                 className="text-sm"
               />
-            </div>
-            <div className="space-y-1">
-              <Label className="text-xs">Prioridade</Label>
-              <div className="flex gap-1.5">
-                {['Baixa', 'Média', 'Alta'].map((p) => (
-                  <Button
-                    key={p}
-                    type="button"
-                    size="sm"
-                    variant={newPriority === p ? 'default' : 'outline'}
-                    className={`h-7 text-xs ${newPriority === p ? 'bg-slate-700 hover:bg-slate-800 text-white' : ''}`}
-                    onClick={() => setNewPriority(p)}
-                  >
-                    {p}
-                  </Button>
-                ))}
-              </div>
             </div>
             {newError && <p className="text-xs text-rose-500">{newError}</p>}
           </div>

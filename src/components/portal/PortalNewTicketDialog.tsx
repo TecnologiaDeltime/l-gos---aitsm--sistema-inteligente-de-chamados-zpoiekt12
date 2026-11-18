@@ -37,7 +37,7 @@ import { getEquipments, EquipmentRecord } from '@/services/equipments'
 import { triggerPortalTriageFireAndForget } from '@/services/portal-triage'
 import { useToast } from '@/hooks/use-toast'
 import { usePermissions } from '@/hooks/use-permissions'
-import { Sparkles, AlertCircle } from 'lucide-react'
+import { Sparkles } from 'lucide-react'
 
 interface PortalNewTicketDialogProps {
   open: boolean
@@ -75,7 +75,9 @@ export default function PortalNewTicketDialog({
 
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
-  const [priority, setPriority] = useState<'Baixa' | 'Média' | 'Alta' | 'Crítica'>('Média')
+  // A prioridade NÃO é mais escolhida pelo solicitante: ela vem do catálogo e da
+  // triagem do agente IA. O campo é omitido da tela e o chamado nasce sem priority
+  // (o backend aceita nulo; hooks usam fallback 'Média' até a triagem definir).
   const [selectedAsset, setSelectedAsset] = useState<string>(initialAssetId || 'none')
 
   useEffect(() => {
@@ -347,19 +349,8 @@ export default function PortalNewTicketDialog({
     try {
       setSubmitting(true)
 
-      const urgencyMap: Record<string, string> = {
-        Baixa: 'Baixa',
-        Média: 'Média',
-        Alta: 'Alta',
-        Crítica: 'Alta',
-      }
-      const impactMap: Record<string, string> = {
-        Baixa: 'Baixo',
-        Média: 'Médio',
-        Alta: 'Alto',
-        Crítica: 'Alto',
-      }
-
+      // Sem impacto/urgência/prioridade vindos do usuário: a prioridade fica a
+      // cargo do catálogo e da triagem do agente IA (fire-and-forget abaixo).
       const createdTicket = await createTicket({
         number: 'PENDENTE',
         company: companyId,
@@ -368,9 +359,6 @@ export default function PortalNewTicketDialog({
         title: title.trim(),
         description: description.trim(),
         type: 'Incidente',
-        impact: impactMap[priority] || 'Médio',
-        urgency: urgencyMap[priority] || 'Média',
-        priority: priority,
         status: 'Novo',
         requester_name: contactName.trim() || user.name || 'Solicitante do Portal',
         requester_email: contactEmail.trim() || user.email,
@@ -420,7 +408,6 @@ export default function PortalNewTicketDialog({
       // Limpa campos
       setTitle('')
       setDescription('')
-      setPriority('Média')
       setSelectedAsset('none')
       setExtraEquipment(null)
       setSelectedSector('none')
@@ -550,8 +537,9 @@ export default function PortalNewTicketDialog({
             </div>
           </div>
 
-          {/* Linha 2: Equipamento/Ativo Envolvido e Prioridade */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {/* Linha 2: Equipamento/Ativo Envolvido (a prioridade é definida pelo
+              catálogo + triagem da IA — não é mais escolhida pelo solicitante) */}
+          <div className="grid grid-cols-1 gap-3">
             <div className="space-y-1.5">
               <label className="text-xs font-semibold text-foreground flex items-center gap-1.5">
                 <Laptop className="h-3.5 w-3.5 text-amber-500" />
@@ -574,44 +562,6 @@ export default function PortalNewTicketDialog({
                       {extraEquipment.serial_number ? `(${extraEquipment.serial_number})` : ''}
                     </SelectItem>
                   )}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-foreground flex items-center gap-1.5">
-                <AlertCircle className="h-3.5 w-3.5 text-amber-500" />
-                Prioridade da Solicitação
-              </label>
-              <Select value={priority} onValueChange={(val: any) => setPriority(val)}>
-                <SelectTrigger className="text-xs h-9">
-                  <SelectValue placeholder="Selecione a prioridade" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Baixa">
-                    <span className="flex items-center gap-1.5">
-                      <span className="h-1.5 w-1.5 rounded-full bg-slate-400" />
-                      Baixa — Pouco impacto no dia a dia
-                    </span>
-                  </SelectItem>
-                  <SelectItem value="Média">
-                    <span className="flex items-center gap-1.5">
-                      <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />
-                      Média — Trabalho normal com limitações
-                    </span>
-                  </SelectItem>
-                  <SelectItem value="Alta">
-                    <span className="flex items-center gap-1.5">
-                      <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
-                      Alta — Atividade essencial prejudicada
-                    </span>
-                  </SelectItem>
-                  <SelectItem value="Crítica">
-                    <span className="flex items-center gap-1.5">
-                      <span className="h-1.5 w-1.5 rounded-full bg-red-500 animate-pulse" />
-                      Crítica — Operação completamente parada
-                    </span>
-                  </SelectItem>
                 </SelectContent>
               </Select>
             </div>

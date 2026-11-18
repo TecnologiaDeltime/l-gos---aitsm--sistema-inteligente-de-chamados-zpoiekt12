@@ -41,7 +41,6 @@ import {
 } from '@/services/configuration-items'
 import { getClientContacts, type ClientContactRecord } from '@/services/client-contacts'
 import { useAuth } from '@/hooks/use-auth'
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { getCompanyUnitsByCompany, type CompanyUnitRecord } from '@/services/company-units'
 import { createTicket } from '@/services/tickets'
 import { getQueues, type QueueRecord, QUEUE_LEVELS } from '@/services/queues'
@@ -146,7 +145,6 @@ export default function TicketCreate() {
   const [autoImpact, setAutoImpact] = useState('')
   const [autoUrgency, setAutoUrgency] = useState('')
   const [autoPriority, setAutoPriority] = useState('')
-  const [itemType, setItemType] = useState<'none' | 'asset' | 'ci'>('none')
   const [equipment, setEquipment] = useState('')
   const [configurationItem, setConfigurationItem] = useState('')
   const [title, setTitle] = useState('')
@@ -237,7 +235,6 @@ export default function TicketCreate() {
     } as ClientContactRecord)
     if (byRequester.length > 0) {
       setEquipment(byRequester[0].id)
-      setItemType('asset')
       return
     }
     if (requesterEmailLower) {
@@ -248,7 +245,6 @@ export default function TicketCreate() {
       )
       if (byEmail) {
         setEquipment(byEmail.id)
-        setItemType('asset')
       }
     }
   }, [
@@ -346,6 +342,9 @@ export default function TicketCreate() {
     }
     const load = async () => {
       try {
+        // Ao trocar de empresa, limpa ativo/CI selecionados (podem pertencer à empresa anterior)
+        setEquipment('')
+        setConfigurationItem('')
         const [c, u, eq, ciList] = await Promise.all([
           getClientContacts(company),
           getCompanyUnitsByCompany(company),
@@ -419,13 +418,15 @@ export default function TicketCreate() {
         const matchedEquipments = findEquipmentsForContact(c)
         if (matchedEquipments.length > 0) {
           setEquipment(matchedEquipments[0].id)
-          setItemType('asset')
+        } else {
+          setEquipment('')
         }
       } else {
         setRequesterName('')
         setRequesterEmail('')
         setRequesterPhone('')
         setDepartment('')
+        setEquipment('')
       }
     },
     [contacts, equipments, findEquipmentsForContact],
@@ -595,9 +596,8 @@ export default function TicketCreate() {
         type,
         category: mainCategory || undefined,
         subcategory: subActivity || undefined,
-        equipment: !isInternal && itemType === 'asset' && equipment ? equipment : undefined,
-        configuration_item:
-          !isInternal && itemType === 'ci' && configurationItem ? configurationItem : undefined,
+        equipment: !isInternal && equipment ? equipment : undefined,
+        configuration_item: !isInternal && configurationItem ? configurationItem : undefined,
         queue: queueId || undefined,
         impact: autoImpact || 'Médio',
         urgency: autoUrgency || 'Média',
@@ -972,58 +972,27 @@ export default function TicketCreate() {
                 </div>
               </div>
             )}
-            {/* Tipo de Item (Nenhum, Ativo, Item de Configuração) */}
+            {/* Ativo e Item de Configuração — SEMPRE visíveis (não dependem de
+                escolha de "Tipo de Item"). O ativo é pré-preenchido
+                automaticamente com o celular/impressora/scanner do solicitante
+                quando houver; sem ativos, fica "— Nenhum —". */}
             <div className="space-y-3 rounded-lg border p-3.5 bg-slate-50/50 dark:bg-slate-800/30">
-              <FieldLabel>Tipo de Item</FieldLabel>
-              <RadioGroup
-                value={itemType}
-                onValueChange={(val: 'none' | 'asset' | 'ci') => {
-                  setItemType(val)
-                  if (val === 'none') {
-                    setEquipment('')
-                    setConfigurationItem('')
-                  } else if (val === 'asset') {
-                    setConfigurationItem('')
-                  } else if (val === 'ci') {
-                    setEquipment('')
-                  }
-                }}
-                className="flex flex-col sm:flex-row gap-4"
-              >
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="none" id="item-type-none" />
-                  <label htmlFor="item-type-none" className="text-xs font-medium cursor-pointer">
-                    Nenhum
-                  </label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="asset" id="item-type-asset" />
-                  <label htmlFor="item-type-asset" className="text-xs font-medium cursor-pointer">
-                    Ativo (computador, notebook, celular)
-                  </label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="ci" id="item-type-ci" />
-                  <label htmlFor="item-type-ci" className="text-xs font-medium cursor-pointer">
-                    Item de Configuração (impressora, rede, switch)
-                  </label>
-                </div>
-              </RadioGroup>
-
-              {itemType === 'asset' && (
-                <div className="space-y-1.5 pt-2">
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="space-y-1.5">
                   <FieldLabel>Ativo do Solicitante / Empresa</FieldLabel>
-                  <Select value={equipment} onValueChange={setEquipment}>
+                  <Select
+                    value={equipment || 'none'}
+                    onValueChange={(val) => setEquipment(val === 'none' ? '' : val)}
+                  >
                     <SelectTrigger className="rounded-lg">
                       <SelectValue
                         placeholder={
-                          availableEquipments.length === 0
-                            ? 'Nenhum ativo disponível'
-                            : 'Selecione o ativo...'
+                          availableEquipments.length === 0 ? '— Nenhum —' : 'Selecione o ativo...'
                         }
                       />
                     </SelectTrigger>
                     <SelectContent>
+                      <SelectItem value="none">— Nenhum —</SelectItem>
                       {availableEquipments.map((eq) => (
                         <SelectItem key={eq.id} value={eq.id}>
                           {eq.name} {eq.device_type ? `[${eq.device_type}]` : ''}{' '}
@@ -1032,23 +1001,28 @@ export default function TicketCreate() {
                       ))}
                     </SelectContent>
                   </Select>
+                  <p className="text-[11px] text-slate-400">
+                    Pré-preenchido com o celular, impressora ou scanner do solicitante, quando
+                    houver.
+                  </p>
                 </div>
-              )}
-
-              {itemType === 'ci' && (
-                <div className="space-y-1.5 pt-2">
-                  <FieldLabel>Item de Configuração de Infraestrutura</FieldLabel>
-                  <Select value={configurationItem} onValueChange={setConfigurationItem}>
+                <div className="space-y-1.5">
+                  <FieldLabel>Item de Configuração (opcional)</FieldLabel>
+                  <Select
+                    value={configurationItem || 'none'}
+                    onValueChange={(val) => setConfigurationItem(val === 'none' ? '' : val)}
+                  >
                     <SelectTrigger className="rounded-lg">
                       <SelectValue
                         placeholder={
                           configurationItems.length === 0
-                            ? 'Nenhum item de configuração cadastrado para esta empresa'
+                            ? '— Nenhum —'
                             : 'Selecione o item de configuração...'
                         }
                       />
                     </SelectTrigger>
                     <SelectContent>
+                      <SelectItem value="none">— Nenhum —</SelectItem>
                       {configurationItems.map((ci) => (
                         <SelectItem key={ci.id} value={ci.id}>
                           {ci.name} · {ci.type} {ci.brand ? `(${ci.brand})` : ''}
@@ -1057,7 +1031,7 @@ export default function TicketCreate() {
                     </SelectContent>
                   </Select>
                 </div>
-              )}
+              </div>
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
@@ -1214,10 +1188,10 @@ export default function TicketCreate() {
                 {autoPriority || 'Sem prioridade'}
                 {subActivity && ' · Atividade selecionada'}
                 {queueId && ' · Fila vinculada'}
-                {itemType === 'asset' && equipment && (
+                {equipment && (
                   <> · Ativo: {equipments.find((e) => e.id === equipment)?.name || 'Selecionado'}</>
                 )}
-                {itemType === 'ci' && configurationItem && (
+                {configurationItem && (
                   <>
                     {' '}
                     · CI:{' '}
