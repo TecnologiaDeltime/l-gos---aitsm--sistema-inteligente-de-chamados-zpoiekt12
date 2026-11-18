@@ -1,5 +1,4 @@
-import React, { useEffect } from 'react'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useState, useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
@@ -15,13 +14,6 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
 import { useToast } from '@/hooks/use-toast'
 import { Loader2 } from 'lucide-react'
 import {
@@ -54,7 +46,7 @@ export function CollaboratorPortalDialog({
   onSaved,
 }: Props) {
   const { toast } = useToast()
-  const queryClient = useQueryClient()
+  const [saving, setSaving] = useState(false)
   const isEdit = Boolean(collaborator)
 
   const {
@@ -82,40 +74,7 @@ export function CollaboratorPortalDialog({
 
   const active = watch('active')
 
-  const mutation = useMutation({
-    mutationFn: (data: FormData) => {
-      const payload: any = {
-        name: data.name,
-        email: data.email,
-        active: data.active,
-      }
-      if (data.password) payload.password = data.password
-      if (isEdit && collaborator) {
-        return updatePortalCollaborator(collaborator.id, payload)
-      }
-      return createPortalCollaborator({ ...payload, company: companyId })
-    },
-    onSuccess: async () => {
-      toast({
-        title: isEdit ? 'Colaborador atualizado' : 'Colaborador criado',
-        description: isEdit
-          ? 'As alterações foram salvas.'
-          : 'O acesso ao Portal do Colaborador foi criado.',
-      })
-      queryClient.invalidateQueries({ queryKey: ['portal-collaborators', companyId] })
-      await onSaved?.()
-      onOpenChange(false)
-    },
-    onError: (err: any) => {
-      toast({
-        title: 'Erro',
-        description: err?.response?.message || err?.message || 'Falha ao salvar colaborador.',
-        variant: 'destructive',
-      })
-    },
-  })
-
-  const onSubmit = (data: FormData) => {
+  const onSubmit = async (data: FormData) => {
     if (!isEdit && !data.password) {
       toast({
         title: 'Senha obrigatória',
@@ -124,7 +83,41 @@ export function CollaboratorPortalDialog({
       })
       return
     }
-    mutation.mutate(data)
+    setSaving(true)
+    try {
+      const payload: {
+        name: string
+        email: string
+        active: boolean
+        password?: string
+      } = {
+        name: data.name,
+        email: data.email,
+        active: data.active,
+      }
+      if (data.password) payload.password = data.password
+      if (isEdit && collaborator) {
+        await updatePortalCollaborator(collaborator.id, payload)
+      } else {
+        await createPortalCollaborator({ ...payload, company: companyId })
+      }
+      toast({
+        title: isEdit ? 'Colaborador atualizado' : 'Colaborador criado',
+        description: isEdit
+          ? 'As alterações foram salvas.'
+          : 'O acesso ao Portal do Colaborador foi criado.',
+      })
+      await onSaved?.()
+      onOpenChange(false)
+    } catch (err: any) {
+      toast({
+        title: 'Erro',
+        description: err?.response?.message || err?.message || 'Falha ao salvar colaborador.',
+        variant: 'destructive',
+      })
+    } finally {
+      setSaving(false)
+    }
   }
 
   return (
@@ -183,8 +176,8 @@ export function CollaboratorPortalDialog({
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancelar
             </Button>
-            <Button type="submit" disabled={mutation.isPending}>
-              {mutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            <Button type="submit" disabled={saving}>
+              {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {isEdit ? 'Salvar' : 'Criar acesso'}
             </Button>
           </DialogFooter>
