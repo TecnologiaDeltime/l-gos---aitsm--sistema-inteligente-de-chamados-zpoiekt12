@@ -127,6 +127,26 @@ import { usePermissions } from '@/hooks/use-permissions'
 import { useRealtime } from '@/hooks/use-realtime'
 import { useToast } from '@/hooks/use-toast'
 
+/** Opções de status para troca manual dentro da ficha do chamado. */
+const STATUS_OPTIONS = [
+  'Novo',
+  'Em Triagem',
+  'Aguardando Atribuição',
+  'Atribuído',
+  'Pendente',
+  'Em Atendimento',
+  'Aguardando Cliente',
+  'Aguardando Aprovação',
+  'Aguardando Terceiro',
+  'Agendado',
+  'Escalonado',
+  'Resolvido',
+  'Aguardando Validação',
+  'Encerrado',
+  'Cancelado',
+  'Reaberto',
+] as const
+
 interface TicketDetailProps {
   ticketId?: string
   onTicketUpdated?: () => void
@@ -901,6 +921,23 @@ export default function TicketDetail({
                 )}
                 <PriorityBadge priority={ticket.priority} />
                 <StatusBadge status={ticket.status} />
+                {canEditTicket && (
+                  <Select value={ticket.status} onValueChange={handleStatusChange}>
+                    <SelectTrigger
+                      className="h-7 text-xs w-[150px] border-border bg-card"
+                      title="Alterar status do chamado"
+                    >
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {STATUS_OPTIONS.map((s) => (
+                        <SelectItem key={s} value={s}>
+                          {s === 'Atribuído' ? 'Em aberto' : s}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
                 {ticket.approval_hold && (
                   <Badge
                     variant="outline"

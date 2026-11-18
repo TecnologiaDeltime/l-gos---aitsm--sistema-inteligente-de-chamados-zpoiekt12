@@ -38,6 +38,7 @@ import {
   AlertCircle,
   Plus,
   Eye,
+  Hourglass,
 } from 'lucide-react'
 import {
   useCollaboratorAuth,
@@ -67,6 +68,9 @@ function statusBadgeClass(status: string) {
   }
   if (status === 'Cancelado') {
     return 'bg-slate-100 text-slate-500 border-slate-300 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700'
+  }
+  if (status === 'Pendente') {
+    return 'bg-amber-100 text-amber-700 border-amber-300 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800'
   }
   return 'bg-sky-100 text-sky-700 border-sky-300 dark:bg-sky-950/40 dark:text-sky-300 dark:border-sky-800'
 }
@@ -183,7 +187,8 @@ export default function CollaboratorDashboard() {
   const stats = useMemo(() => {
     const open = tickets.filter((t) => !CLOSED_STATUSES.includes(t.status)).length
     const resolved = tickets.filter((t) => ['Resolvido', 'Encerrado'].includes(t.status)).length
-    return { open, resolved, total: tickets.length }
+    const pendente = tickets.filter((t) => t.status === 'Pendente').length
+    return { open, resolved, pendente, total: tickets.length }
   }, [tickets])
 
   const filtered = useMemo(() => {
@@ -391,7 +396,7 @@ export default function CollaboratorDashboard() {
         )}
 
         {/* Cards de resumo — somente os chamados do próprio colaborador */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <Card className="border-slate-200 dark:border-slate-800">
             <CardHeader className="pb-1 pt-4 px-4">
               <CardDescription className="text-[11px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
@@ -403,6 +408,19 @@ export default function CollaboratorDashboard() {
             </CardHeader>
             <CardContent className="px-4 pb-3">
               <p className="text-[11px] text-slate-400">Chamados aguardando atendimento</p>
+            </CardContent>
+          </Card>
+          <Card className="border-slate-200 dark:border-slate-800">
+            <CardHeader className="pb-1 pt-4 px-4">
+              <CardDescription className="text-[11px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+                <Hourglass className="h-3.5 w-3.5 text-amber-500" /> Pendentes
+              </CardDescription>
+              <CardTitle className="text-3xl font-bold text-slate-900 dark:text-slate-100">
+                {stats.pendente}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="px-4 pb-3">
+              <p className="text-[11px] text-slate-400">Chamados com status "Pendente"</p>
             </CardContent>
           </Card>
           <Card className="border-slate-200 dark:border-slate-800">

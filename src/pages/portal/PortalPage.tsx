@@ -806,6 +806,7 @@ export default function PortalPage() {
                     <SelectItem value="Novo">Novo</SelectItem>
                     <SelectItem value="Em Andamento">Em Andamento</SelectItem>
                     <SelectItem value="Aguardando Solicitante">Aguardando Você</SelectItem>
+                    <SelectItem value="Pendente">Pendente</SelectItem>
                     <SelectItem value="Resolvido">Resolvido</SelectItem>
                     <SelectItem value="Fechado">Fechado</SelectItem>
                   </SelectContent>

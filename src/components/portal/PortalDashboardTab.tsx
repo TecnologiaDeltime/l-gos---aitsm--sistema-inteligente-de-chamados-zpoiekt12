@@ -368,7 +368,15 @@ export default function PortalDashboardTab({
             </div>
           </CardHeader>
           <CardContent className="p-4 pt-0 text-[11px] text-muted-foreground flex items-center justify-between border-t border-border/40 mt-2">
-            <span>{metrics?.totalTicketsPending || 0} em andamento</span>
+            <span>
+              {metrics?.totalTicketsPending || 0} em andamento
+              {(metrics?.totalTicketsStatusPendente || 0) > 0 && (
+                <span className="text-amber-600 dark:text-amber-400 font-semibold">
+                  {' '}
+                  • {metrics?.totalTicketsStatusPendente} pendente(s)
+                </span>
+              )}
+            </span>
             <span className="text-amber-500 flex items-center font-semibold gap-0.5">
               Ver chamados <ArrowUpRight className="h-3 w-3" />
             </span>

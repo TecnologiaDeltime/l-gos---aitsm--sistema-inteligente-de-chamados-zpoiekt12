@@ -3,6 +3,7 @@ export const KANBAN_COLUMNS = [
   'Em Triagem',
   'Aguardando Atribuição',
   'Atribuído',
+  'Pendente',
   'Em Atendimento',
   'Aguardando Cliente',
   'Aguardando Aprovação',

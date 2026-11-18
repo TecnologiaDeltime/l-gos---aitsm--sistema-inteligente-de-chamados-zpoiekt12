@@ -19,6 +19,7 @@ import {
   CalendarDays,
   Percent,
   TrendingUp,
+  Hourglass,
 } from 'lucide-react'
 import {
   BarChart,
@@ -749,6 +750,22 @@ export default function OperatorDashboard() {
             </p>
             <p className="text-[10px] text-muted-foreground mt-0.5 truncate">
               {activeMonthRange.label}
+            </p>
+          </CardContent>
+        </Card>
+
+        {/* 5b. Pendentes (status Pendente) */}
+        <Card className="border border-border bg-card">
+          <CardContent className="p-4">
+            <div className="p-2 rounded-lg bg-amber-500/10 w-fit mb-2">
+              <Hourglass className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+            </div>
+            <p className="text-[11px] font-medium text-muted-foreground">Pendentes</p>
+            <p className="text-2xl font-bold tracking-tight text-foreground">
+              {tickets.filter((t) => t.status === 'Pendente').length}
+            </p>
+            <p className="text-[10px] text-muted-foreground mt-0.5 truncate">
+              Status aguardando ação
             </p>
           </CardContent>
         </Card>

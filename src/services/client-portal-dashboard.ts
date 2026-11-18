@@ -53,6 +53,7 @@ export interface PortalDashboardMetrics {
   totalTicketsOpened: number
   totalTicketsClosed: number
   totalTicketsPending: number
+  totalTicketsStatusPendente: number
   resolutionRate: number
   currentMonthConsumedHours: number
   currentMonthContractedHours: number
@@ -93,6 +94,7 @@ export async function getClientPortalDashboardMetrics(
       totalTicketsOpened: 0,
       totalTicketsClosed: 0,
       totalTicketsPending: 0,
+      totalTicketsStatusPendente: 0,
       resolutionRate: 0,
       currentMonthConsumedHours: 0,
       currentMonthContractedHours: 0,
@@ -214,6 +216,7 @@ export async function getClientPortalDashboardMetrics(
     (t) => t.status === 'Resolvido' || t.status === 'Fechado' || t.status === 'Encerrado',
   ).length
   const totalPending = totalOpened - totalClosed
+  const totalStatusPendente = ticketsInPeriod.filter((t) => t.status === 'Pendente').length
   const resolutionRate = totalOpened > 0 ? Math.round((totalClosed / totalOpened) * 100) : 0
 
   // Cálculo da satisfação dos chamados do período
@@ -486,6 +489,7 @@ export async function getClientPortalDashboardMetrics(
     totalTicketsOpened: totalOpened,
     totalTicketsClosed: totalClosed,
     totalTicketsPending: totalPending,
+    totalTicketsStatusPendente: totalStatusPendente,
     resolutionRate,
     currentMonthConsumedHours: currentMonthData?.consumedHours || 0,
     currentMonthContractedHours: currentMonthData?.contractedHours || 0,

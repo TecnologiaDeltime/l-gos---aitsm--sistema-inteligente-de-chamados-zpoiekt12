@@ -39,6 +39,7 @@ type FilterKey =
   | 'criticos'
   | 'slaRisco'
   | 'pendente'
+  | 'statusPendente'
   | 'resolvidos'
   | 'backlog'
 
@@ -50,6 +51,7 @@ const FILTER_PREDICATES: Record<FilterKey, (t: TicketRecord) => boolean> = {
   criticos: (t) => t.priority === 'Crítica',
   slaRisco: (t) => t.sla_status === 'Risco' || t.sla_status === 'Crítico',
   pendente: (t) => PENDING_STATUSES.includes(t.status),
+  statusPendente: (t) => t.status === 'Pendente',
   resolvidos: (t) => t.status === 'Resolvido' || t.status === 'Encerrado',
   backlog: () => true,
 }
@@ -112,6 +114,7 @@ export default function Dashboard() {
     (t) => t.status === 'Resolvido' || t.status === 'Encerrado',
   ).length
   const totalPendente = openTickets.filter((t) => PENDING_STATUSES.includes(t.status)).length
+  const totalStatusPendente = openTickets.filter((t) => t.status === 'Pendente').length
 
   const kpis: KpiConfig[] = [
     {
@@ -169,6 +172,14 @@ export default function Dashboard() {
       color: 'text-amber-600 dark:text-amber-400',
       bg: 'bg-amber-500/10',
       filterKey: 'pendente',
+    },
+    {
+      label: 'Pendentes',
+      value: totalStatusPendente,
+      icon: Hourglass,
+      color: 'text-amber-700 dark:text-amber-300',
+      bg: 'bg-amber-500/15',
+      filterKey: 'statusPendente',
     },
     {
       label: 'Resolvidos',
