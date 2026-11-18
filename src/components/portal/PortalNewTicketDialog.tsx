@@ -152,7 +152,6 @@ export default function PortalNewTicketDialog({
     setContactPhone(currentUser?.phone || '')
     setSelectedSector('none')
     setPreferredContactId('')
-    setPriority('Média')
     setSelectedFile(null)
     setExtraEquipment(null)
 
