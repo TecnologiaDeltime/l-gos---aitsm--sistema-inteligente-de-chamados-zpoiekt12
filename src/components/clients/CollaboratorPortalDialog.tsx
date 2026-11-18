@@ -43,9 +43,16 @@ interface Props {
   onOpenChange: (open: boolean) => void
   companyId: string
   collaborator?: PortalCollaboratorRecord | null
+  onSaved?: () => void | Promise<void>
 }
 
-export function CollaboratorPortalDialog({ open, onOpenChange, companyId, collaborator }: Props) {
+export function CollaboratorPortalDialog({
+  open,
+  onOpenChange,
+  companyId,
+  collaborator,
+  onSaved,
+}: Props) {
   const { toast } = useToast()
   const queryClient = useQueryClient()
   const isEdit = Boolean(collaborator)
@@ -88,7 +95,7 @@ export function CollaboratorPortalDialog({ open, onOpenChange, companyId, collab
       }
       return createPortalCollaborator({ ...payload, company: companyId })
     },
-    onSuccess: () => {
+    onSuccess: async () => {
       toast({
         title: isEdit ? 'Colaborador atualizado' : 'Colaborador criado',
         description: isEdit
@@ -96,6 +103,7 @@ export function CollaboratorPortalDialog({ open, onOpenChange, companyId, collab
           : 'O acesso ao Portal do Colaborador foi criado.',
       })
       queryClient.invalidateQueries({ queryKey: ['portal-collaborators', companyId] })
+      await onSaved?.()
       onOpenChange(false)
     },
     onError: (err: any) => {

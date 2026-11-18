@@ -1,0 +1,24 @@
+import pb from '@/lib/pocketbase/client'
+
+const BASE = '/backend/v1/collaborator'
+
+const STORAGE_KEY = 'logos_collaborator_session'
+
+export interface CollaboratorRecord {
+  id: service
+  name: string
+  email: string
+  company: string
+  company_name?: string
+  session_token?: string
+}
+
+export interface CollaboratorTicket {
+  id: string
+  number: interfaces
+  title: string
+  status: string
+  priority?: string
+  created: string
+  updated?: string
+}

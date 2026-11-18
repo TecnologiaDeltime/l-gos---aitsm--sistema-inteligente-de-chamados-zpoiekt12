@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import pb from '@/lib/pocketbase/client'
 
 const BASE_URL = '/backend/v1/collaborator'
 
@@ -66,17 +67,19 @@ function writeToken(token: string | null) {
   }
 }
 
-async function api<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(BASE_URL + path, {
+/**
+ * Chamada às rotas do hook A2_collaborator_portal via pb.send
+ * (mesmo padrão dos demais hooks: base URL do PocketBase).
+ */
+export async function collaboratorApi<T>(
+  path: string,
+  options?: { method?: string; body?: unknown },
+): Promise<T> {
+  return pb.send<T>(BASE_URL + path, {
+    method: options?.method || 'GET',
     headers: { 'Content-Type': 'application/json' },
-    ...init,
+    ...(options?.body !== undefined ? { body: JSON.stringify(options.body) } : {}),
   })
-  const data = await res.json().catch(() => ({}))
-  if (!res.ok) {
-    const err = new Error((data as { error?: string })?.error || 'Erro inesperado.')
-    throw err
-  }
-  return data as T
 }
 
 export function useCollaboratorAuth() {
@@ -92,7 +95,7 @@ export function useCollaboratorAuth() {
       return
     }
     try {
-      const me = await api<MeResponse>(`/me?token=${encodeURIComponent(token)}`)
+      const me = await collaboratorApi<MeResponse>(`/me?token=${encodeURIComponent(token)}`)
       setCollaborator(me.collaborator)
       setSurveyRequired(me.survey_required)
       setPendingSurvey(me.pending_survey)
@@ -110,10 +113,10 @@ export function useCollaboratorAuth() {
 
   const login = useCallback(
     async (email: string, password: string) => {
-      const data = await api<{ token: string; collaborator: CollaboratorRecord }>('/auth', {
-        method: 'POST',
-        body: JSON.stringify({ email, password }),
-      })
+      const data = await collaboratorApi<{ token: string; collaborator: CollaboratorRecord }>(
+        '/auth',
+        { method: 'POST', body: { email, password } },
+      )
       writeToken(data.token)
       setCollaborator(data.collaborator)
       await refresh()
@@ -125,7 +128,7 @@ export function useCollaboratorAuth() {
     const token = readToken()
     if (token) {
       try {
-        await api('/logout', { method: 'POST', body: JSON.stringify({ token }) })
+        await collaboratorApi('/logout', { method: 'POST', body: { token } })
       } catch {
         /* ignore */
       }
@@ -157,7 +160,7 @@ export function useCollaboratorTickets(token: string | null) {
     }
     setLoading(true)
     try {
-      const data = await api<{ tickets: CollaboratorTicket[] }>(
+      const data = await collaboratorApi<{ tickets: CollaboratorTicket[] }>(
         `/tickets?token=${encodeURIComponent(token)}`,
       )
       setTickets(data.tickets)

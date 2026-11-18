@@ -273,6 +273,13 @@ const BASE_SYSTEM_MODULES: GranularModuleDefinition[] = [
         path: '/clients',
       },
       {
+        key: 'clients_collaborator_portal',
+        label: 'Portal do Colaborador',
+        description:
+          'CRUD dos acessos ao Portal do Colaborador no cadastro do cliente (criar, editar, ativar/desativar e excluir colaboradores)',
+        path: '/clients',
+      },
+      {
         key: 'clients_contrato',
         label: 'Gestão de Contratos',
         description: 'Contratos vigentes, franquias de horas e regras',

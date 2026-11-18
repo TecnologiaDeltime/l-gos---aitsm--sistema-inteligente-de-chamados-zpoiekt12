@@ -27,6 +27,7 @@ import { SectorSection } from '@/components/clients/SectorSection'
 import { CollaboratorSection } from '@/components/clients/CollaboratorSection'
 import { BranchSection } from '@/components/clients/BranchSection'
 import { FocalPointSection } from '@/components/clients/FocalPointSection'
+import { CollaboratorPortalSection } from '@/components/clients/CollaboratorPortalSection'
 import { EmailDomainSection } from '@/components/clients/EmailDomainSection'
 import { ClientConsumptionSection } from '@/components/clients/ClientConsumptionSection'
 
@@ -497,6 +498,7 @@ export default function ClientEdit() {
       <SectorSection clientId={id} />
       <CollaboratorSection clientId={id} />
       <FocalPointSection clientId={id} />
+      <CollaboratorPortalSection clientId={id} />
       <BranchSection clientId={id} />
       <EmailDomainSection clientId={id} />
       <ClientConsumptionSection

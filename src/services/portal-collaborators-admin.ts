@@ -1,6 +1,7 @@
 import pb from '@/lib/pocketbase/client'
 import { createCompanyAuditLog, getCompanyDepartments } from '@/services/companies'
 import type { ClientContactRecord } from '@/services/client-contacts'
+import { getCompanyUnitsByCompany } from '@/services/company-units'
 
 export interface PortalCollaboratorRecord {
   id: string

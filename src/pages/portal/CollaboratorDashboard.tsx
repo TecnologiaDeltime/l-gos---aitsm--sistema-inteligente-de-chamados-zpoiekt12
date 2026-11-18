@@ -34,6 +34,7 @@ import {
 import {
   useCollaboratorAuth,
   useCollaboratorTickets,
+  collaboratorApi,
   type CollaboratorTicket,
 } from '@/services/collaborator-portal'
 import { LogosLogoPanel } from '@/components/brand/LogosLogo'
@@ -93,8 +94,6 @@ interface TicketDetail {
   survey: { rating: number; comment: string; responded_at?: string } | null
 }
 
-const BASE_URL = '/backend/v1/collaborator'
-
 function readToken(): string | null {
   try {
     return localStorage.getItem('logos_collaborator_session')
@@ -151,17 +150,12 @@ export default function CollaboratorDashboard() {
     setDetailError(null)
     setDetailLoading(true)
     try {
-      const res = await fetch(
-        `${BASE_URL}/tickets/${t.id}?token=${encodeURIComponent(token || '')}`,
+      const data = await collaboratorApi<TicketDetail>(
+        `/tickets/${t.id}?token=${encodeURIComponent(token || '')}`,
       )
-      const data = await res.json().catch(() => ({}))
-      if (!res.ok) throw new Error((data as { error?: string })?.error || 'Erro ao carregar.')
-      setDetail(data as TicketDetail)
-      if (
-        ['Resolvido', 'Encerrado'].includes((data as TicketDetail).ticket.status) &&
-        !(data as TicketDetail).survey
-      ) {
-        setSurveyTicket({ id: t.id, number: (data as TicketDetail).ticket.number })
+      setDetail(data)
+      if (['Resolvido', 'Encerrado'].includes(data.ticket.status) && !data.survey) {
+        setSurveyTicket({ id: t.id, number: data.ticket.number })
         setRating(0)
         setComment('')
         setSurveyOpen(true)
@@ -181,13 +175,10 @@ export default function CollaboratorDashboard() {
     setSurveySending(true)
     setSurveyError(null)
     try {
-      const res = await fetch(`${BASE_URL}/surveys`, {
+      await collaboratorApi('/surveys', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token, ticket_id: surveyTicket.id, rating, comment }),
+        body: { token, ticket_id: surveyTicket.id, rating, comment },
       })
-      const data = await res.json().catch(() => ({}))
-      if (!res.ok) throw new Error((data as { error?: string })?.error || 'Erro ao enviar.')
       setSurveyOpen(false)
       setSurveyTicket(null)
       setRating(0)
@@ -209,20 +200,15 @@ export default function CollaboratorDashboard() {
     }
     setNewSending(true)
     try {
-      const res = await fetch(`${BASE_URL}/tickets`, {
+      await collaboratorApi('/tickets', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+        body: {
           token,
           title: newTitle.trim(),
           description: newDescription.trim(),
           priority: newPriority,
-        }),
+        },
       })
-      const data = await res.json().catch(() => ({}))
-      if (!res.ok) {
-        throw new Error((data as { error?: string })?.error || 'Erro ao abrir chamado.')
-      }
       setNewOpen(false)
       setNewTitle('')
       setNewDescription('')
