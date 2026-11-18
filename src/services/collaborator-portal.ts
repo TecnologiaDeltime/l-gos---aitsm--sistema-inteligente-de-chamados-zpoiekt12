@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import pb from '@/lib/pocketbase/client'
+import { readImpersonation } from '@/services/collaborator-impersonation'
 
 const BASE_URL = '/backend/v1/collaborator'
 
@@ -89,7 +90,11 @@ export function useCollaboratorAuth() {
   const [loading, setLoading] = useState(true)
 
   const refresh = useCallback(async () => {
-    const token = readToken()
+    // Impersonação de admin: sessão em sessionStorage tem prioridade sobre o
+    // token normal (localStorage) — o painel mostra exatamente o que o
+    // colaborador vê, via o mesmo token do portal.
+    const imp = readImpersonation()
+    const token = imp ? imp.token : readToken()
     if (!token) {
       setLoading(false)
       return
@@ -138,6 +143,8 @@ export function useCollaboratorAuth() {
     setPendingSurvey(null)
   }, [])
 
+  const impersonation = readImpersonation()
+
   return {
     collaborator,
     surveyRequired,
@@ -146,6 +153,7 @@ export function useCollaboratorAuth() {
     login,
     logout,
     refresh,
+    impersonation,
   }
 }
 

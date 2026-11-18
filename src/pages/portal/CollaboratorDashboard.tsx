@@ -30,6 +30,7 @@ import {
   MessageSquare,
   AlertCircle,
   Plus,
+  Eye,
 } from 'lucide-react'
 import {
   useCollaboratorAuth,
@@ -37,6 +38,7 @@ import {
   collaboratorApi,
   type CollaboratorTicket,
 } from '@/services/collaborator-portal'
+import { clearImpersonation } from '@/services/collaborator-impersonation'
 import { LogosLogoPanel } from '@/components/brand/LogosLogo'
 
 const CLOSED_STATUSES = ['Resolvido', 'Encerrado', 'Cancelado']
@@ -111,8 +113,9 @@ export default function CollaboratorDashboard() {
     loading: authLoading,
     logout,
     refresh,
+    impersonation,
   } = useCollaboratorAuth()
-  const token = readToken()
+  const token = impersonation ? impersonation.token : readToken()
   const { tickets, loading: ticketsLoading, reload } = useCollaboratorTickets(token)
 
   const [search, setSearch] = useState('')
@@ -223,6 +226,12 @@ export default function CollaboratorDashboard() {
   }
 
   const handleLogout = () => {
+    if (impersonation) {
+      const companyId = impersonation.companyId
+      clearImpersonation()
+      navigate(`/clients/${companyId}/edit`, { replace: true })
+      return
+    }
     logout()
     navigate('/portal/colaborador', { replace: true })
   }
@@ -277,6 +286,26 @@ export default function CollaboratorDashboard() {
           </div>
         </div>
       </div>
+
+      {/* Banner de impersonação do admin */}
+      {impersonation && (
+        <div className="bg-amber-400 text-[#17181C]">
+          <div className="max-w-5xl mx-auto px-4 py-2 flex items-center justify-between gap-3">
+            <p className="text-xs font-semibold flex items-center gap-1.5 truncate">
+              <Eye className="h-3.5 w-3.5" />
+              Visualizando como {impersonation.collaboratorName} — o que você vê é o que ele vê.
+            </p>
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-7 border-[#17181C]/40 text-[#17181C] hover:bg-[#17181C]/10"
+              onClick={handleLogout}
+            >
+              <LogOut className="h-3.5 w-3.5" /> Sair
+            </Button>
+          </div>
+        </div>
+      )}
 
       <div className="max-w-5xl mx-auto px-4 py-6 space-y-5">
         {/* Pesquisa pendente */}

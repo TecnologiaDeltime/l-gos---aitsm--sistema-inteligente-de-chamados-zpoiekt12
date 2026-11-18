@@ -60,6 +60,61 @@ routerAdd('POST', '/backend/v1/collaborator/auth', (e) => {
 })
 
 // ----------------------------------------------------------------------------
+// POST /impersonate — admin emite ticket de sessão curto para um colaborador.
+// Exige usuário autenticado (e.auth) com role 'admin'. Nunca expõe a senha do
+// colaborador: apenas registra um session_token novo, como o login faria.
+// ----------------------------------------------------------------------------
+routerAdd('POST', '/backend/v1/collaborator/impersonate', (e) => {
+  var authUser = e.auth
+  if (!authUser) {
+    // Fallback: resolver token do cabeçalho Authorization (padrão dos demais hooks)
+    try {
+      var authHeader = ''
+      if (typeof e.requestInfo === 'function') {
+        var info = e.requestInfo()
+        if (info && info.headers) {
+          authHeader = info.headers['authorization'] || info.headers['Authorization'] || ''
+        }
+      }
+      var hdrToken = authHeader.replace(/^Bearer\s+/i, '').trim()
+      if (hdrToken) {
+        try {
+          authUser = $app.findAuthRecordByToken(hdrToken, 'auth')
+        } catch (_) {
+          try {
+            authUser = $app.findAuthRecordByToken(hdrToken)
+          } catch (_) {}
+        }
+      }
+    } catch (_) {}
+  }
+  if (!authUser || authUser.getString('role') !== 'admin') {
+    return e.json(403, {
+      error: 'Apenas administradores podem visualizar o portal do colaborador.',
+    })
+  }
+
+  var body = e.requestInfo().body || {}
+  var collabId = String(body.collaborator_id || '')
+  if (!collabId) return e.json(400, { error: 'Colaborador não informado.' })
+
+  var collab
+  try {
+    collab = $app.findRecordById('portal_collaborators', collabId)
+  } catch (_) {
+    return e.json(404, { error: 'Acesso do colaborador não encontrado.' })
+  }
+  if (!collab.getBool('active')) {
+    return e.json(403, { error: 'Acesso desativado. Ative-o antes de visualizar o portal.' })
+  }
+
+  var token = $security.randomString(40)
+  collab.set('session_token', token)
+  $app.save(collab)
+  return e.json(200, { token: token })
+})
+
+// ----------------------------------------------------------------------------
 // GET /me — dados do colaborador + pesquisa pendente + setting de obrigatoriedade
 // ----------------------------------------------------------------------------
 routerAdd('GET', '/backend/v1/collaborator/me', (e) => {

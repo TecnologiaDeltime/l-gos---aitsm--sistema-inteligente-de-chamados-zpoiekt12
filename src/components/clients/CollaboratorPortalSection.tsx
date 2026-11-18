@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Badge } from '@/components/ui/badge'
@@ -13,12 +14,13 @@ import {
   AlertDialogCancel,
   AlertDialogAction,
 } from '@/components/ui/alert-dialog'
-import { Plus, Pencil, Trash2, UserRound, Loader2 } from 'lucide-react'
+import { Plus, Pencil, Trash2, UserRound, Loader2, Eye } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 import { useAuth } from '@/hooks/use-auth'
 import { usePermissions } from '@/hooks/use-permissions'
 import { useRealtime } from '@/hooks/use-realtime'
 import { CollaboratorPortalDialog } from '@/components/clients/CollaboratorPortalDialog'
+import { startImpersonation } from '@/services/collaborator-impersonation'
 import {
   getPortalCollaborators,
   deletePortalCollaborator,
@@ -43,6 +45,9 @@ export function CollaboratorPortalSection({ clientId }: { clientId: string }) {
   const [editing, setEditing] = useState<PortalCollaboratorRecord | null>(null)
   const [deleteId, setDeleteId] = useState<string | null>(null)
   const [deleting, setDeleting] = useState(false)
+  const [impersonatingId, setImpersonatingId] = useState<string | null>(null)
+  const navigate = useNavigate()
+  const canImpersonate = canView('clients_collaborator_portal')
 
   const canManage =
     canEdit('clients_collaborator_portal') || canEdit('clients_cadastro') || canEdit('clients')
@@ -82,6 +87,22 @@ export function CollaboratorPortalSection({ clientId }: { clientId: string }) {
       await loadData()
     } catch {
       toast({ title: 'Erro ao atualizar acesso', variant: 'destructive' })
+    }
+  }
+
+  const handleImpersonate = async (rec: PortalCollaboratorRecord) => {
+    if (!rec.active) return
+    setImpersonatingId(rec.id)
+    try {
+      await startImpersonation(clientId, rec.id, rec.name, rec.email)
+      navigate('/portal/colaborador/painel')
+    } catch {
+      toast({
+        title: 'Não foi possível abrir a visão do colaborador',
+        description: 'Tente novamente em instantes.',
+        variant: 'destructive',
+      })
+      setImpersonatingId(null)
     }
   }
 
@@ -158,6 +179,23 @@ export function CollaboratorPortalSection({ clientId }: { clientId: string }) {
                 <p className="text-xs text-slate-500 truncate">{r.email}</p>
               </div>
               <div className="flex items-center gap-1.5 shrink-0">
+                {canImpersonate && r.active && (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-6 px-2 text-[11px] text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 gap-1"
+                    disabled={impersonatingId === r.id}
+                    onClick={() => handleImpersonate(r)}
+                    title={`Ver o portal como ${r.name}`}
+                  >
+                    {impersonatingId === r.id ? (
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                    ) : (
+                      <Eye className="h-3 w-3" />
+                    )}
+                    Ver portal como {r.name.split(' ')[0]}
+                  </Button>
+                )}
                 {canManage && (
                   <Switch
                     checked={r.active}

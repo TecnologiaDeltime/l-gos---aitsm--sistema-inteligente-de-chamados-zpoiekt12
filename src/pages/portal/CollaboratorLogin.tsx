@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -14,6 +14,7 @@ import {
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Loader2, ShieldAlert, ArrowRight, UserRound, KeyRound } from 'lucide-react'
 import { useCollaboratorAuth } from '@/services/collaborator-portal'
+import { readImpersonation } from '@/services/collaborator-impersonation'
 import { LogosLogoPanel } from '@/components/brand/LogosLogo'
 
 export default function CollaboratorLogin() {
@@ -23,6 +24,13 @@ export default function CollaboratorLogin() {
   const [error, setError] = useState<string | null>(null)
   const { login } = useCollaboratorAuth()
   const navigate = useNavigate()
+
+  // Sessão de impersonação do admin ativa: segue direto para o painel.
+  useEffect(() => {
+    if (readImpersonation()) {
+      navigate('/portal/colaborador/painel', { replace: true })
+    }
+  }, [navigate])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
