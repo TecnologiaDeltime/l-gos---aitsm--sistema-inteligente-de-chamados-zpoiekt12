@@ -6,9 +6,14 @@
 // globalThis/_g são visíveis entre callbacks).
 //
 // Rotas:
-//  POST /backend/v1/collaborator/auth  { email, password }  -> login
+//  POST /backend/v1/collaborator/auth  { email, password }  -> login (session_token)
+//  POST /backend/v1/collaborator/impersonate               -> modo suporte (support_token)
 //  GET  /backend/v1/collaborator/me?token=...              -> dados do colaborador
 //  POST /backend/v1/collaborator/logout { token }          -> logout
+//
+// Tokens: sessões são independentes — o login normal grava/valida
+// session_token; o modo suporte (impersonação do admin) grava/valida
+// support_token. Um nunca derruba o outro.
 //  GET  /backend/v1/collaborator/tickets?token=...         -> chamados do próprio
 //  GET  /backend/v1/collaborator/tickets/{id}?token=...    -> detalhe + interações
 //  POST /backend/v1/collaborator/tickets                   -> abre chamado
@@ -50,6 +55,7 @@ routerAdd('POST', '/backend/v1/collaborator/auth', (e) => {
   $app.save(collab)
   return e.json(200, {
     token: token,
+    mode: 'normal',
     collaborator: {
       id: collab.id,
       name: collab.getString('name'),
@@ -62,7 +68,8 @@ routerAdd('POST', '/backend/v1/collaborator/auth', (e) => {
 // ----------------------------------------------------------------------------
 // POST /impersonate — admin emite ticket de sessão curto para um colaborador.
 // Exige usuário autenticado (e.auth) com role 'admin'. Nunca expõe a senha do
-// colaborador: apenas registra um session_token novo, como o login faria.
+// colaborador: registra um SUPPORT_TOKEN próprio, que NÃO toca no
+// session_token — assim a sessão real do colaborador não é derrubada.
 // ----------------------------------------------------------------------------
 routerAdd('POST', '/backend/v1/collaborator/impersonate', (e) => {
   var authUser = e.auth
@@ -109,9 +116,9 @@ routerAdd('POST', '/backend/v1/collaborator/impersonate', (e) => {
   }
 
   var token = $security.randomString(40)
-  collab.set('session_token', token)
+  collab.set('support_token', token)
   $app.save(collab)
-  return e.json(200, { token: token })
+  return e.json(200, { token: token, mode: 'support' })
 })
 
 // ----------------------------------------------------------------------------
@@ -120,11 +127,11 @@ routerAdd('POST', '/backend/v1/collaborator/impersonate', (e) => {
 routerAdd('GET', '/backend/v1/collaborator/me', (e) => {
   var token = e.request.url ? String(e.request.url.query().get('token') || '') : ''
   if (!token) return e.json(401, { error: 'Sessão inválida.' })
-  var collab
+  var collab = null
   try {
     collab = $app.findFirstRecordByFilter(
       'portal_collaborators',
-      'session_token = "' + token + '" && active = true',
+      '(session_token = "' + token + '" || support_token = "' + token + '") && active = true',
     )
   } catch (_) {
     return e.json(401, { error: 'Sessão expirada. Entre novamente.' })
@@ -194,16 +201,30 @@ routerAdd('POST', '/backend/v1/collaborator/logout', (e) => {
   var body = e.requestInfo().body || {}
   var token = String(body.token || '')
   if (!token) return e.json(400, { error: 'Token ausente.' })
+  var isSupport = false
   try {
     var collab = $app.findFirstRecordByFilter(
       'portal_collaborators',
-      'session_token = "' + token + '"',
+      'support_token = "' + token + '"',
     )
     if (collab) {
-      collab.set('session_token', '')
+      isSupport = true
+      collab.set('support_token', '')
       $app.save(collab)
     }
   } catch (_) {}
+  if (!isSupport) {
+    try {
+      var collab2 = $app.findFirstRecordByFilter(
+        'portal_collaborators',
+        'session_token = "' + token + '"',
+      )
+      if (collab2) {
+        collab2.set('session_token', '')
+        $app.save(collab2)
+      }
+    } catch (_) {}
+  }
   return e.json(200, { success: true })
 })
 
@@ -217,7 +238,7 @@ routerAdd('GET', '/backend/v1/collaborator/tickets', (e) => {
   try {
     collab = $app.findFirstRecordByFilter(
       'portal_collaborators',
-      'session_token = "' + token + '" && active = true',
+      '(session_token = "' + token + '" || support_token = "' + token + '") && active = true',
     )
   } catch (_) {}
   if (!collab) return e.json(401, { error: 'Sessão expirada.' })
@@ -258,7 +279,7 @@ routerAdd('GET', '/backend/v1/collaborator/tickets/{id}', (e) => {
   try {
     collab = $app.findFirstRecordByFilter(
       'portal_collaborators',
-      'session_token = "' + token + '" && active = true',
+      '(session_token = "' + token + '" || support_token = "' + token + '") && active = true',
     )
   } catch (_) {}
   if (!collab) return e.json(401, { error: 'Sessão expirada.' })
@@ -356,7 +377,7 @@ routerAdd('POST', '/backend/v1/collaborator/tickets', (e) => {
   try {
     collab = $app.findFirstRecordByFilter(
       'portal_collaborators',
-      'session_token = "' + token + '" && active = true',
+      '(session_token = "' + token + '" || support_token = "' + token + '") && active = true',
     )
   } catch (_) {}
   if (!collab) return e.json(401, { error: 'Sessão expirada.' })
@@ -440,7 +461,7 @@ routerAdd('POST', '/backend/v1/collaborator/surveys', (e) => {
   try {
     collab = $app.findFirstRecordByFilter(
       'portal_collaborators',
-      'session_token = "' + token + '" && active = true',
+      '(session_token = "' + token + '" || support_token = "' + token + '") && active = true',
     )
   } catch (_) {}
   if (!collab) return e.json(401, { error: 'Sessão expirada.' })

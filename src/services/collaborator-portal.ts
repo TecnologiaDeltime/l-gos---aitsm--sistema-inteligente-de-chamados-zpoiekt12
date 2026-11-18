@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import pb from '@/lib/pocketbase/client'
-import { readImpersonation } from '@/services/collaborator-impersonation'
+import { clearImpersonation, readImpersonation } from '@/services/collaborator-impersonation'
 
 const BASE_URL = '/backend/v1/collaborator'
 
@@ -105,8 +105,15 @@ export function useCollaboratorAuth() {
       setSurveyRequired(me.survey_required)
       setPendingSurvey(me.pending_survey)
     } catch {
+      if (imp) {
+        // Sessão de suporte órfã: o token de impersonação não é mais válido
+        // (expirado, revogado, acesso desativado). Limpa a entrada inteira,
+        // senão o guard renderiza o painel com collaborator = null.
+        clearImpersonation()
+      }
       writeToken(null)
       setCollaborator(null)
+      setPendingSurvey(null)
     } finally {
       setLoading(false)
     }

@@ -227,7 +227,15 @@ export default function CollaboratorDashboard() {
 
   const handleLogout = () => {
     if (impersonation) {
+      // Encerra APENAS a sessão de suporte (token de impersonação em
+      // sessionStorage). A sessão real do colaborador (session_token) fica
+      // intacta — "Encerrar suporte" nunca derruba o colaborador.
       const companyId = impersonation.companyId
+      try {
+        collaboratorApi('/logout', { method: 'POST', body: { token: impersonation.token } })
+      } catch {
+        /* ignore */
+      }
       clearImpersonation()
       navigate(`/clients/${companyId}/edit`, { replace: true })
       return
@@ -287,21 +295,25 @@ export default function CollaboratorDashboard() {
         </div>
       </div>
 
-      {/* Banner de impersonação do admin */}
+      {/* Banner de modo suporte (impersonação do admin) — sessão própria, não
+          toca no session_token do colaborador */}
       {impersonation && (
         <div className="bg-amber-400 text-[#17181C]">
           <div className="max-w-5xl mx-auto px-4 py-2 flex items-center justify-between gap-3">
             <p className="text-xs font-semibold flex items-center gap-1.5 truncate">
-              <Eye className="h-3.5 w-3.5" />
+              <Eye className="h-3.5 w-3.5 shrink-0" />
+              <Badge className="bg-[#17181C] text-amber-300 hover:bg-[#17181C] text-[10px] font-mono uppercase tracking-wider h-5 px-1.5">
+                Modo suporte
+              </Badge>
               Visualizando como {impersonation.collaboratorName} — o que você vê é o que ele vê.
             </p>
             <Button
               size="sm"
               variant="outline"
-              className="h-7 border-[#17181C]/40 text-[#17181C] hover:bg-[#17181C]/10"
+              className="h-7 border-[#17181C]/40 text-[#17181C] hover:bg-[#17181C]/10 shrink-0"
               onClick={handleLogout}
             >
-              <LogOut className="h-3.5 w-3.5" /> Sair
+              <LogOut className="h-3.5 w-3.5" /> Encerrar suporte
             </Button>
           </div>
         </div>

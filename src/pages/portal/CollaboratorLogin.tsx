@@ -25,7 +25,7 @@ export default function CollaboratorLogin() {
   const { login } = useCollaboratorAuth()
   const navigate = useNavigate()
 
-  // Sessão de impersonação do admin ativa: segue direto para o painel.
+  // Sessão de suporte (impersonação do admin) ativa: segue direto para o painel.
   useEffect(() => {
     if (readImpersonation()) {
       navigate('/portal/colaborador/painel', { replace: true })
