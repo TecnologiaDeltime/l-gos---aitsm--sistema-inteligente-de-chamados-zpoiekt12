@@ -30,6 +30,12 @@ const STATUS_CONFIG: Record<string, { dot: string; className: string }> = {
     className:
       'bg-amber-500/10 text-amber-700 border-amber-300 dark:bg-amber-500/15 dark:text-amber-300 dark:border-amber-500/40',
   },
+  // Novo status "Pendente" — tom neutro âmbar claro, distinto de "Em aberto"
+  Pendente: {
+    dot: 'bg-yellow-300 shadow-[0_0_6px_rgba(253,224,71,0.8)]',
+    className:
+      'bg-yellow-400/15 text-yellow-800 border-yellow-400 dark:bg-yellow-400/10 dark:text-yellow-300 dark:border-yellow-500/40',
+  },
   'Em Atendimento': {
     dot: 'bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]',
     className:

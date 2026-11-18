@@ -65,6 +65,7 @@ const TICKET_STATUSES = [
   'Em Triagem',
   'Aguardando Atribuição',
   'Atribuído',
+  'Pendente',
   'Em Atendimento',
   'Aguardando Cliente',
   'Aguardando Aprovação',
