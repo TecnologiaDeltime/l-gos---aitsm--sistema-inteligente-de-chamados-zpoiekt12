@@ -1,0 +1,61 @@
+/*
+ * Exportação PDF da Apresentação Executiva (/apresentacao).
+ * Na tela, o bloco #apresentacao-print fica oculto. Ao imprimir (window.print),
+ * todo o restante da aplicação é ocultado e os 12 slides são impressos em
+ * sequência, um por página A4 paisagem, cada um em caixa 16:9 reduzida para caber.
+ */
+
+#apresentacao-print {
+  display: none;
+}
+
+@media print {
+  @page {
+    size: A4 landscape;
+    margin: 0;
+  }
+
+  html,
+  body {
+    height: auto !important;
+    overflow: visible !important;
+    background: #ffffff !important;
+  }
+
+  body * {
+    visibility: hidden !important;
+  }
+
+  #apresentacao-print,
+  #apresentacao-print * {
+    visibility: visible !important;
+  }
+
+  #apresentacao-print {
+    display: block !important;
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+  }
+
+  #apresentacao-print .apresentacao-print-slide {
+    position: relative;
+    box-sizing: border-box;
+    width: 1280px;
+    height: 720px;
+    overflow: hidden;
+    zoom: 0.87;
+    break-after: page;
+    page-break-after: always;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  #apresentacao-print .apresentacao-print-slide:last-child {
+    break-after: auto;
+    page-break-after: auto;
+  }
+}

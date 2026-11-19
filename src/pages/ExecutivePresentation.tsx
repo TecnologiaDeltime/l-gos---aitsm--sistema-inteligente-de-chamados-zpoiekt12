@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import {
   ChevronLeft,
   ChevronRight,
+  Download,
   ShieldCheck,
   Bot,
   Zap,
@@ -12,6 +13,7 @@ import {
 import { LogosLogoFull as LogosLogo } from '@/components/brand/LogosLogo'
 import { Button } from '@/components/ui/button'
 import { SlideShell } from './ExecutivePresentationSlidesShell'
+import './ExecutivePresentationPrint.css'
 import {
   SlideProjects,
   SlideTransparencia,
@@ -324,6 +326,19 @@ function renderSlide(index: number): React.ReactNode {
 export default function ExecutivePresentation() {
   const [current, setCurrent] = useState(0)
 
+  // Exporta como PDF via impressão do navegador ("Salvar como PDF").
+  // A folha @media print mostra todos os slides, um por página, em paisagem.
+  const exportPdf = useCallback(() => {
+    const previousTitle = document.title
+    document.title = 'Apresentação Executiva - LÓGOS AITSM'
+    const restore = () => {
+      document.title = previousTitle
+      window.removeEventListener('afterprint', restore)
+    }
+    window.addEventListener('afterprint', restore)
+    window.print()
+  }, [])
+
   const next = useCallback(() => setCurrent((c) => Math.min(c + 1, TOTAL_SLIDES - 1)), [])
   const prev = useCallback(() => setCurrent((c) => Math.max(c - 1, 0)), [])
 
@@ -376,6 +391,15 @@ export default function ExecutivePresentation() {
             <Button
               variant="outline"
               size="sm"
+              onClick={exportPdf}
+              aria-label="Exportar apresentação em PDF"
+            >
+              <Download className="h-4 w-4" />
+              Exportar PDF
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
               onClick={prev}
               disabled={current === 0}
               aria-label="Slide anterior"
@@ -395,6 +419,16 @@ export default function ExecutivePresentation() {
           </div>
         </div>
       </main>
+
+      {/* Versão de impressão: todos os slides em sequência (oculta na tela;
+          visível apenas no PDF via ExecutivePresentationPrint.css). */}
+      <div id="apresentacao-print" aria-hidden="true">
+        {Array.from({ length: TOTAL_SLIDES }, (_, i) => (
+          <div key={i} className="apresentacao-print-slide bg-background text-foreground">
+            {renderSlide(i)}
+          </div>
+        ))}
+      </div>
     </div>
   )
 }
