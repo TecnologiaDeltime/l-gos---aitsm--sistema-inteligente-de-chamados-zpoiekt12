@@ -202,7 +202,7 @@ const App = () => (
                 }
               />
 
-              {/* Rota Modo TV (Tela Cheia sem chrome de layout, protegida por autenticação e permissão) */}
+              {/* Rota de relatório de chamados (protegida por permissão) */}
               <Route
                 path="/relatorios/tickets"
                 element={
@@ -355,6 +355,14 @@ const App = () => (
                       requiredItem="apresentacao_executiva"
                     >
                       <ExecutivePresentation />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/tv"
+                  element={
+                    <ProtectedRoute requiredModule="dashboard" requiredItem="modo_tv">
+                      <TvModePage />
                     </ProtectedRoute>
                   }
                 />
