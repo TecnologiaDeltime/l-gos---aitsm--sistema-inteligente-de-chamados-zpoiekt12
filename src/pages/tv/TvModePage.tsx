@@ -2,6 +2,8 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   TV_DASHBOARDS_CATALOG,
+  TV_PERIOD_OPTIONS,
+  DEFAULT_TV_PERIOD,
   loadTvPreferences,
   saveTvPreferences,
   fetchQueueTicketsSummary,
@@ -11,7 +13,9 @@ import {
   fetchExecutiveGoalsData,
   fetchChangesSummary,
   fetchProblemsSummary,
+  getTvPeriodOption,
   type TvModePreferences,
+  type TvPeriodId,
   type QueueTicketsSummary,
   type TicketStatusSummary,
   type OnlineUserItem,
@@ -34,6 +38,14 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { CalendarRange, CalendarClock } from 'lucide-react'
 import {
   Tv,
   Play,
@@ -61,6 +73,9 @@ export function TvModePage() {
   const [isFullscreen, setIsFullscreen] = useState<boolean>(false)
   const [showConfigModal, setShowConfigModal] = useState<boolean>(false)
 
+  // Período aplicado aos dados (trocar o período recarrega as visões sensíveis a data)
+  const [period, setPeriod] = useState<TvPeriodId>(prefs.period || DEFAULT_TV_PERIOD)
+
   // Relógio
   const [currentTime, setCurrentTime] = useState<Date>(new Date())
 
@@ -81,6 +96,15 @@ export function TvModePage() {
 
   const containerRef = useRef<HTMLDivElement>(null)
 
+  // Dashboards ativos ordenados
+  const activeDashboards = TV_DASHBOARDS_CATALOG.filter((d) =>
+    prefs.enabledDashboards.includes(d.id),
+  )
+
+  // Esconde o seletor de período durante a rotação automática (fica visível
+  // na prévia e ao pausar, para não atrapalhar a leitura da TV)
+  const hidePeriodSelector = isPlaying && activeDashboards.length > 1
+
   // Relógio digital em tempo real
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000)
@@ -88,62 +112,67 @@ export function TvModePage() {
   }, [])
 
   // Carregar dados de todos os dashboards
-  const loadAllData = useCallback(async () => {
-    // Trata expiração de sessão de forma graciosa sem quebrar
-    if (!pb.authStore.isValid) {
-      console.warn('Sessão expirada no Modo TV')
-      return
-    }
+  const loadAllData = useCallback(
+    async (periodId?: TvPeriodId) => {
+      // Trata expiração de sessão de forma graciosa sem quebrar
+      if (!pb.authStore.isValid) {
+        console.warn('Sessão expirada no Modo TV')
+        return
+      }
 
-    try {
-      setLoading(true)
-      const [q, st, onl, ch, g, chg, prob] = await Promise.all([
-        fetchQueueTicketsSummary().catch((err) => {
-          console.error('Erro queueData:', err)
-          return []
-        }),
-        fetchTicketStatusSummary().catch((err) => {
-          console.error('Erro statusData:', err)
-          return []
-        }),
-        fetchOnlineUsers().catch((err) => {
-          console.error('Erro onlineUsers:', err)
-          return []
-        }),
-        fetchClientHoursSummary().catch((err) => {
-          console.error('Erro clientHours:', err)
-          return []
-        }),
-        fetchExecutiveGoalsData().catch((err) => {
-          console.error('Erro goalsData:', err)
-          return null
-        }),
-        fetchChangesSummary().catch((err) => {
-          console.error('Erro changesData:', err)
-          return null
-        }),
-        fetchProblemsSummary().catch((err) => {
-          console.error('Erro problemsData:', err)
-          return null
-        }),
-      ])
+      const effectivePeriod = periodId ?? period
 
-      setQueueData(q)
-      setStatusData(st)
-      setOnlineUsers(onl)
-      setClientHours(ch)
-      setGoalsData(g)
-      setChangesData(chg)
-      setProblemsData(prob)
-      setLastRefreshedAt(new Date())
-    } catch (err) {
-      console.error('Erro ao carregar dados do Modo TV:', err)
-    } finally {
-      setLoading(false)
-    }
-  }, [])
+      try {
+        setLoading(true)
+        const [q, st, onl, ch, g, chg, prob] = await Promise.all([
+          fetchQueueTicketsSummary(effectivePeriod).catch((err) => {
+            console.error('Erro queueData:', err)
+            return []
+          }),
+          fetchTicketStatusSummary(effectivePeriod).catch((err) => {
+            console.error('Erro statusData:', err)
+            return []
+          }),
+          fetchOnlineUsers().catch((err) => {
+            console.error('Erro onlineUsers:', err)
+            return []
+          }),
+          fetchClientHoursSummary(effectivePeriod).catch((err) => {
+            console.error('Erro clientHours:', err)
+            return []
+          }),
+          fetchExecutiveGoalsData().catch((err) => {
+            console.error('Erro goalsData:', err)
+            return null
+          }),
+          fetchChangesSummary(effectivePeriod).catch((err) => {
+            console.error('Erro changesData:', err)
+            return null
+          }),
+          fetchProblemsSummary(effectivePeriod).catch((err) => {
+            console.error('Erro problemsData:', err)
+            return null
+          }),
+        ])
 
-  // Polling automático a cada 45 segundos
+        setQueueData(q)
+        setStatusData(st)
+        setOnlineUsers(onl)
+        setClientHours(ch)
+        setGoalsData(g)
+        setChangesData(chg)
+        setProblemsData(prob)
+        setLastRefreshedAt(new Date())
+      } catch (err) {
+        console.error('Erro ao carregar dados do Modo TV:', err)
+      } finally {
+        setLoading(false)
+      }
+    },
+    [period],
+  )
+
+  // Polling automático a cada 45 segundos (e recarga imediata ao trocar o período)
   useEffect(() => {
     loadAllData()
     const pollInterval = setInterval(() => {
@@ -152,10 +181,18 @@ export function TvModePage() {
     return () => clearInterval(pollInterval)
   }, [loadAllData])
 
-  // Dashboards ativos ordenados
-  const activeDashboards = TV_DASHBOARDS_CATALOG.filter((d) =>
-    prefs.enabledDashboards.includes(d.id),
-  )
+  // Troca de período: salva na preferência e recarrega os dados com o novo intervalo
+  const handlePeriodChange = useCallback((value: string) => {
+    const next = (
+      TV_PERIOD_OPTIONS.some((o) => o.id === value) ? value : DEFAULT_TV_PERIOD
+    ) as TvPeriodId
+    setPeriod(next)
+    setPrefs((prev) => {
+      const updated = { ...prev, period: next }
+      saveTvPreferences(updated)
+      return updated
+    })
+  }, [])
 
   // Avançar dashboard
   const handleNext = useCallback(() => {
@@ -402,6 +439,39 @@ export function TvModePage() {
               </CardContent>
             </Card>
 
+            {/* Filtro de Período */}
+            <Card className="bg-[#17181C] border-amber-500/30 text-white shadow-xl">
+              <CardContent className="p-5 flex items-center justify-between gap-4">
+                <div>
+                  <Label className="text-sm font-bold text-amber-300 flex items-center gap-2">
+                    <CalendarRange className="h-4 w-4 text-amber-400" />
+                    Período dos Dados
+                  </Label>
+                  <p className="text-xs text-slate-400 mt-0.5">
+                    Aplica-se a chamados, mudanças, problemas e horas
+                  </p>
+                </div>
+                <div className="w-44">
+                  <Select value={period} onValueChange={handlePeriodChange}>
+                    <SelectTrigger className="bg-black/60 border-amber-500/40 text-amber-300 font-bold">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="bg-[#17181C] border-amber-500/30 text-white">
+                      {TV_PERIOD_OPTIONS.map((opt) => (
+                        <SelectItem
+                          key={opt.id}
+                          value={opt.id}
+                          className="text-white hover:bg-amber-500/20 focus:bg-amber-500/20 focus:text-amber-200"
+                        >
+                          {opt.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </CardContent>
+            </Card>
+
             {/* Ajuste de Intervalo */}
             <Card className="bg-[#17181C] border-amber-500/30 text-white shadow-xl">
               <CardContent className="p-5 flex items-center justify-between gap-4">
@@ -558,6 +628,32 @@ export function TvModePage() {
 
         {/* Direita: Relógio grande, Controles e Botão Sair */}
         <div className="flex items-center gap-4">
+          {/* Filtro de Período — discreto; oculto durante a rotação automática */}
+          {!hidePeriodSelector && (
+            <div className="flex items-center gap-1.5 mr-1">
+              <CalendarClock className="h-4 w-4 text-amber-400 shrink-0" />
+              <Select value={period} onValueChange={handlePeriodChange}>
+                <SelectTrigger
+                  title="Período dos dados (aplica-se a chamados, mudanças, problemas e horas)"
+                  className="h-8 bg-black/50 border-amber-500/40 text-amber-300 text-xs font-bold px-2.5 gap-1 [&>svg]:h-3.5 [&>svg]:w-3.5 [&>svg]:text-amber-400"
+                >
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="bg-[#17181C] border-amber-500/30 text-white">
+                  {TV_PERIOD_OPTIONS.map((opt) => (
+                    <SelectItem
+                      key={opt.id}
+                      value={opt.id}
+                      className="text-white hover:bg-amber-500/20 focus:bg-amber-500/20 focus:text-amber-200"
+                    >
+                      {opt.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
           {/* Relógio Digital */}
           <div className="text-right">
             <p className="text-lg lg:text-xl font-mono font-black text-amber-300 leading-none">
@@ -662,6 +758,10 @@ export function TvModePage() {
           </span>
           <span>·</span>
           <span>Intervalo: {prefs.rotationIntervalSeconds}s</span>
+          <span>·</span>
+          <span className="text-amber-300/90 font-semibold">
+            Período: {getTvPeriodOption(period)?.label}
+          </span>
         </div>
 
         <div className="flex items-center gap-2">

@@ -4,6 +4,9 @@ import { getOperators } from '@/services/operators'
 import { getClientHoursData, type ClientHoursData } from '@/services/client-hours'
 import { getChanges, type ChangeRecord } from '@/services/changes'
 import { getProblems, type ProblemRecord } from '@/services/problems'
+import { getCompanies } from '@/services/companies'
+import { getContractPeriods } from '@/services/contract-periods'
+import { parseDurationToSeconds } from '@/lib/duration'
 import {
   computeKpis,
   computeSlaByPriority,
@@ -51,6 +54,68 @@ export interface TvModePreferences {
   enabledDashboards: string[]
   rotationIntervalSeconds: number
   themeMode?: 'dark' | 'light'
+  period: TvPeriodId
+}
+
+/**
+ * Períodos disponíveis no filtro do Modo TV.
+ * Aplicam-se às visões com dimensão temporal (chamados, mudanças, problemas,
+ * horas por cliente). "Quem está Online" e "Metas Executivas" são sempre
+ * instantâneos e ignoram o período.
+ */
+export type TvPeriodId = 'today' | '7d' | '30d' | 'month' | 'all'
+
+export interface TvPeriodOption {
+  id: TvPeriodId
+  label: string
+  shortLabel: string
+}
+
+export const TV_PERIOD_OPTIONS: TvPeriodOption[] = [
+  { id: 'today', label: 'Hoje', shortLabel: 'Hoje' },
+  { id: '7d', label: 'Últimos 7 dias', shortLabel: '7 dias' },
+  { id: '30d', label: 'Últimos 30 dias', shortLabel: '30 dias' },
+  { id: 'month', label: 'Mês atual', shortLabel: 'Mês' },
+  { id: 'all', label: 'Todo o período', shortLabel: 'Tudo' },
+]
+
+export const DEFAULT_TV_PERIOD: TvPeriodId = 'all'
+
+export function getTvPeriodOption(id: TvPeriodId | undefined): TvPeriodOption {
+  return (
+    TV_PERIOD_OPTIONS.find((o) => o.id === id) ?? TV_PERIOD_OPTIONS[TV_PERIOD_OPTIONS.length - 1]
+  )
+}
+
+const pad2 = (n: number) => String(n).padStart(2, '0')
+const fmtDate = (d: Date) => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`
+
+/** Data/hora de início do período, no formato dos filtros do PocketBase. */
+export function getTvPeriodStartDate(id: TvPeriodId): string | null {
+  const now = new Date()
+  switch (id) {
+    case 'today':
+      return `${fmtDate(now)} 00:00:00`
+    case 'month': {
+      const start = new Date(now.getFullYear(), now.getMonth(), 1)
+      return `${fmtDate(start)} 00:00:00`
+    }
+    case '7d':
+    case '30d': {
+      const days = id === '7d' ? 7 : 30
+      const start = new Date(now)
+      start.setDate(start.getDate() - (days - 1))
+      return `${fmtDate(start)} 00:00:00`
+    }
+    default:
+      return null
+  }
+}
+
+/** Filtro PocketBase do período sobre o campo informado (padrão: created). */
+export function buildTvPeriodFilter(id: TvPeriodId, field = 'created'): string | undefined {
+  const start = getTvPeriodStartDate(id)
+  return start ? `${field} >= "${start}"` : undefined
 }
 
 export const TV_DASHBOARDS_CATALOG = [
@@ -103,6 +168,7 @@ export const DEFAULT_TV_PREFERENCES: TvModePreferences = {
   ],
   rotationIntervalSeconds: 30,
   themeMode: 'dark',
+  period: DEFAULT_TV_PERIOD,
 }
 
 const STORAGE_KEY = 'logos_aitsm_tv_mode_prefs'
@@ -122,6 +188,9 @@ export function loadTvPreferences(): TvModePreferences {
           ? parsed.rotationIntervalSeconds
           : DEFAULT_TV_PREFERENCES.rotationIntervalSeconds,
       themeMode: parsed.themeMode === 'light' ? 'light' : 'dark',
+      period: TV_PERIOD_OPTIONS.some((o) => o.id === parsed.period)
+        ? (parsed.period as TvPeriodId)
+        : DEFAULT_TV_PERIOD,
     }
   } catch {
     return DEFAULT_TV_PREFERENCES
@@ -139,10 +208,13 @@ export function saveTvPreferences(prefs: TvModePreferences): void {
 /**
  * 1. Total de chamados por Fila com os status
  */
-export async function fetchQueueTicketsSummary(): Promise<QueueTicketsSummary[]> {
+export async function fetchQueueTicketsSummary(
+  period: TvPeriodId = DEFAULT_TV_PERIOD,
+): Promise<QueueTicketsSummary[]> {
   const [queues, tickets] = await Promise.all([
     getQueues(),
     pb.collection('tickets').getFullList<TicketRecord>({
+      filter: buildTvPeriodFilter(period),
       fields: 'id,number,queue,status,priority',
     }),
   ])
@@ -201,8 +273,11 @@ export async function fetchQueueTicketsSummary(): Promise<QueueTicketsSummary[]>
 /**
  * 2. Total de chamados por status (geral)
  */
-export async function fetchTicketStatusSummary(): Promise<TicketStatusSummary[]> {
+export async function fetchTicketStatusSummary(
+  period: TvPeriodId = DEFAULT_TV_PERIOD,
+): Promise<TicketStatusSummary[]> {
   const tickets = await pb.collection('tickets').getFullList<TicketRecord>({
+    filter: buildTvPeriodFilter(period),
     fields: 'id,status',
   })
 
@@ -309,8 +384,70 @@ export async function fetchOnlineUsers(): Promise<OnlineUserItem[]> {
 /**
  * 4. Consumo de horas dos clientes
  */
-export async function fetchClientHoursSummary(): Promise<ClientHoursData[]> {
-  return await getClientHoursData()
+export async function fetchClientHoursSummary(
+  period: TvPeriodId = DEFAULT_TV_PERIOD,
+): Promise<ClientHoursData[]> {
+  // Sem período: comportamento original (mesmo do Dashboard de Horas).
+  if (period === DEFAULT_TV_PERIOD) return await getClientHoursData()
+
+  // Com período: horas contratadas = períodos ativos; consumidas =
+  // interações com hora "Contratada" registradas dentro do intervalo.
+  const start = getTvPeriodStartDate(period)
+  const [companies, contracts, periods, tickets, interactions] = await Promise.all([
+    getCompanies(),
+    getContracts(),
+    getContractPeriods(),
+    pb.collection('tickets').getFullList<any>({ fields: 'id,company' }),
+    pb
+      .collection('ticket_interactions')
+      .getFullList<any>({
+        filter: `hour_type = "Contratada"${start ? ` && created >= "${start}"` : ''}`,
+        fields: 'id,ticket,duration_minutes,created',
+      })
+      .catch(() => []),
+  ])
+
+  const contractCompanyMap = new Map<string, string>()
+  contracts.forEach((c) => contractCompanyMap.set(c.id, c.company))
+
+  const ticketCompanyMap = new Map<string, string>()
+  tickets.forEach((t: any) => {
+    if (t.company) ticketCompanyMap.set(t.id, t.company)
+  })
+
+  const companyMap = new Map<string, { contractedSec: number; consumedSec: number }>()
+
+  periods.forEach((p) => {
+    if (p.status !== 'Ativo') return
+    const companyId = contractCompanyMap.get(p.contract)
+    if (!companyId) return
+    const entry = companyMap.get(companyId) || { contractedSec: 0, consumedSec: 0 }
+    entry.contractedSec += parseDurationToSeconds(p.contracted_hours) ?? 0
+    companyMap.set(companyId, entry)
+  })
+
+  interactions.forEach((i: any) => {
+    const companyId = ticketCompanyMap.get(i.ticket)
+    if (!companyId) return
+    const entry = companyMap.get(companyId)
+    if (!entry) return
+    entry.consumedSec += Math.round((Number(i.duration_minutes) || 0) * 60)
+  })
+
+  const result: ClientHoursData[] = []
+  companies.forEach((company) => {
+    const data = companyMap.get(company.id)
+    if (!data || data.contractedSec === 0) return
+    const pct = (data.consumedSec / data.contractedSec) * 100
+    result.push({
+      company,
+      contractedSeconds: data.contractedSec,
+      consumedSeconds: data.consumedSec,
+      percentage: pct,
+    })
+  })
+
+  return result.sort((a, b) => b.percentage - a.percentage)
 }
 
 /**
@@ -366,8 +503,10 @@ export async function fetchExecutiveGoalsData(): Promise<TvMetasData> {
 /**
  * 6. Mudanças: abertas, em andamento, fechadas
  */
-export async function fetchChangesSummary(): Promise<ChangesSummary> {
-  const changes = await getChanges()
+export async function fetchChangesSummary(
+  period: TvPeriodId = DEFAULT_TV_PERIOD,
+): Promise<ChangesSummary> {
+  const changes = await getChanges(buildTvPeriodFilter(period))
   const byStatus: Record<string, number> = {}
 
   let open = 0
@@ -400,8 +539,10 @@ export async function fetchChangesSummary(): Promise<ChangesSummary> {
 /**
  * 7. Problemas: abertos, em teste de efetividade, concluídos
  */
-export async function fetchProblemsSummary(): Promise<ProblemsSummary> {
-  const problems = await getProblems()
+export async function fetchProblemsSummary(
+  period: TvPeriodId = DEFAULT_TV_PERIOD,
+): Promise<ProblemsSummary> {
+  const problems = await getProblems(buildTvPeriodFilter(period))
   const byStatus: Record<string, number> = {}
 
   let open = 0

@@ -7,9 +7,14 @@ import type { QueueTicketsSummary } from '@/services/tv-mode'
 interface TvQueueTicketsDashboardProps {
   data: QueueTicketsSummary[]
   loading?: boolean
+  periodLabel?: string
 }
 
-export function TvQueueTicketsDashboard({ data, loading }: TvQueueTicketsDashboardProps) {
+export function TvQueueTicketsDashboard({
+  data,
+  loading,
+  periodLabel,
+}: TvQueueTicketsDashboardProps) {
   const totalAllTickets = useMemo(() => data.reduce((acc, q) => acc + q.total, 0), [data])
 
   if (loading && data.length === 0) {
@@ -22,6 +27,15 @@ export function TvQueueTicketsDashboard({ data, loading }: TvQueueTicketsDashboa
 
   return (
     <div className="flex h-full flex-col gap-6 p-2">
+      {/* Legenda discreta do período aplicado */}
+      {periodLabel && (
+        <div className="flex items-center justify-end">
+          <span className="rounded-full border border-amber-500/40 bg-amber-500/10 px-4 py-1 text-sm font-bold uppercase tracking-wider text-amber-300">
+            Período: {periodLabel}
+          </span>
+        </div>
+      )}
+
       {/* Top Banner KPI */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card className="bg-[#17181C]/90 border-amber-500/40 text-white shadow-xl">
