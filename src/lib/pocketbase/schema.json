@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-20T23:12:27.093Z",
+  "generatedAt": "2026-11-20T23:56:08.359Z",
   "collections": [
     {
       "name": "users",
@@ -13435,6 +13435,126 @@
       "indexes": [
         "CREATE UNIQUE INDEX idx_collab_survey_unique ON collaborator_surveys (ticket, collaborator)",
         "CREATE INDEX idx_collab_survey_collaborator ON collaborator_surveys (collaborator)"
+      ]
+    },
+    {
+      "name": "kb_sources",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != ''",
+        "view": "@request.auth.id != ''",
+        "create": "@request.auth.id != ''",
+        "update": "@request.auth.id != ''",
+        "delete": "@request.auth.id != ''"
+      },
+      "fields": [
+        {
+          "name": "name",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "file",
+          "type": "file",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "source_type",
+          "type": "select",
+          "required": true,
+          "system": false,
+          "selectValues": ["pdf", "closure"]
+        },
+        {
+          "name": "status",
+          "type": "select",
+          "required": true,
+          "system": false,
+          "selectValues": ["Processando", "Pronto", "Erro"]
+        },
+        {
+          "name": "extracted_text",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "summary",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "pages",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "error",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "ticket",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "tickets"
+        },
+        {
+          "name": "ticket_number",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "category",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "tokens",
+          "type": "json",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "uploaded_by",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "processed_at",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": [
+        "CREATE INDEX idx_kb_sources_type ON kb_sources (source_type)",
+        "CREATE INDEX idx_kb_sources_status ON kb_sources (status)",
+        "CREATE INDEX idx_kb_sources_ticket ON kb_sources (ticket)"
       ]
     }
   ]
