@@ -41,18 +41,18 @@ export function TvChangesDashboard({ data, loading }: TvChangesDashboardProps) {
           </CardContent>
         </Card>
 
-        <Card className="bg-[#17181C] border-blue-500/40 text-white shadow-xl">
+        <Card className="bg-[#17181C] border-orange-500/40 text-white shadow-xl">
           <CardContent className="p-6 flex items-center justify-between">
             <div>
-              <p className="text-sm font-semibold uppercase tracking-wider text-blue-400">
+              <p className="text-sm font-semibold uppercase tracking-wider text-orange-400">
                 Em Andamento
               </p>
-              <p className="text-4xl lg:text-6xl font-black text-blue-300 mt-2">
+              <p className="text-4xl lg:text-6xl font-black text-orange-300 mt-2">
                 {data.inProgress}
               </p>
               <p className="text-xs text-slate-400 mt-1">Agendadas, em execução ou em validação</p>
             </div>
-            <div className="p-4 rounded-2xl bg-blue-500/20 text-blue-400 border border-blue-500/30">
+            <div className="p-4 rounded-2xl bg-orange-500/20 text-orange-400 border border-orange-500/30">
               <Clock className="h-12 w-12" />
             </div>
           </CardContent>
@@ -108,15 +108,15 @@ export function TvChangesDashboard({ data, loading }: TvChangesDashboardProps) {
 
                 let badgeColor = 'border-amber-500/30 text-amber-400'
                 if (isClosed) badgeColor = 'border-emerald-500/40 text-emerald-400'
-                else if (isProgress) badgeColor = 'border-blue-500/40 text-blue-400'
+                else if (isProgress) badgeColor = 'border-orange-500/40 text-orange-400'
 
                 return (
                   <div
                     key={status}
                     className={`p-4 rounded-xl bg-black/40 border ${badgeColor} flex flex-col justify-between`}
                   >
-                    <span className="text-sm font-semibold text-slate-200 truncate">{status}</span>
-                    <span className="text-3xl font-black mt-2 text-white">{count}</span>
+                    <span className="text-lg font-semibold text-white truncate">{status}</span>
+                    <span className="text-4xl font-black mt-2 text-amber-300">{count}</span>
                   </div>
                 )
               })}

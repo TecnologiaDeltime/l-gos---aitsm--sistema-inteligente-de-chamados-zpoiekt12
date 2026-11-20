@@ -214,13 +214,19 @@ export function TvModePage() {
       } else if (e.key === 'ArrowLeft') {
         e.preventDefault()
         handlePrev()
-      } else if (e.key === 'Escape' && isPlaying) {
-        // Se estiver em fullscreen, o navegador já sai do fullscreen
+      } else if (e.key === 'Escape') {
+        // ESC sai do Modo TV: encerra a exibição, fecha fullscreen e volta ao sistema
+        e.preventDefault()
+        if (document.fullscreenElement) {
+          document.exitFullscreen().catch(() => {})
+        }
+        setIsPlaying(false)
+        navigate('/dashboard')
       }
     }
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [showConfigModal, isPlaying, handleNext, handlePrev])
+  }, [showConfigModal, isPlaying, handleNext, handlePrev, navigate])
 
   // Alternar tela cheia (Fullscreen)
   const toggleFullscreen = async () => {
@@ -663,7 +669,7 @@ export function TvModePage() {
             Painel {currentIndex + 1} de {activeDashboards.length}
           </span>
           <span>·</span>
-          <span className="text-slate-500">[Espaço] Pausar · [ESC] Sair</span>
+          <span className="text-slate-500">[Espaço] Pausar · [ESC] Sair do Modo TV</span>
         </div>
       </footer>
     </div>

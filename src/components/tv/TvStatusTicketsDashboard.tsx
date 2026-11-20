@@ -42,13 +42,13 @@ export function TvStatusTicketsDashboard({ data, loading }: TvStatusTicketsDashb
         <Card className="bg-[#17181C] border-amber-500/40 text-white shadow-xl">
           <CardContent className="p-6 flex items-center justify-between">
             <div>
-              <p className="text-sm font-semibold uppercase tracking-wider text-amber-400">
+              <p className="text-lg font-bold uppercase tracking-wider text-amber-400">
                 Total de Chamados
               </p>
-              <p className="text-4xl lg:text-6xl font-black text-white mt-1">{total}</p>
+              <p className="text-5xl lg:text-7xl font-black text-white mt-2">{total}</p>
             </div>
             <div className="p-4 rounded-2xl bg-amber-500/20 text-amber-400 border border-amber-500/30">
-              <Archive className="h-10 w-10" />
+              <Archive className="h-12 w-12" />
             </div>
           </CardContent>
         </Card>
@@ -56,13 +56,13 @@ export function TvStatusTicketsDashboard({ data, loading }: TvStatusTicketsDashb
         <Card className="bg-[#17181C] border-amber-500/40 text-white shadow-xl">
           <CardContent className="p-6 flex items-center justify-between">
             <div>
-              <p className="text-sm font-semibold uppercase tracking-wider text-amber-400">
+              <p className="text-lg font-bold uppercase tracking-wider text-amber-400">
                 Chamados Ativos / Em Aberto
               </p>
-              <p className="text-4xl lg:text-6xl font-black text-amber-300 mt-1">{activeTickets}</p>
+              <p className="text-5xl lg:text-7xl font-black text-amber-300 mt-2">{activeTickets}</p>
             </div>
             <div className="p-4 rounded-2xl bg-amber-500/20 text-amber-400 border border-amber-500/30">
-              <Clock className="h-10 w-10" />
+              <Clock className="h-12 w-12" />
             </div>
           </CardContent>
         </Card>
@@ -70,15 +70,15 @@ export function TvStatusTicketsDashboard({ data, loading }: TvStatusTicketsDashb
         <Card className="bg-[#17181C] border-emerald-500/40 text-white shadow-xl">
           <CardContent className="p-6 flex items-center justify-between">
             <div>
-              <p className="text-sm font-semibold uppercase tracking-wider text-emerald-400">
+              <p className="text-lg font-bold uppercase tracking-wider text-emerald-400">
                 Resolvidos / Encerrados
               </p>
-              <p className="text-4xl lg:text-6xl font-black text-emerald-400 mt-1">
+              <p className="text-5xl lg:text-7xl font-black text-emerald-400 mt-2">
                 {resolvedTickets}
               </p>
             </div>
             <div className="p-4 rounded-2xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
-              <CheckCircle2 className="h-10 w-10" />
+              <CheckCircle2 className="h-12 w-12" />
             </div>
           </CardContent>
         </Card>
@@ -106,22 +106,22 @@ export function TvStatusTicketsDashboard({ data, loading }: TvStatusTicketsDashb
               className={`bg-[#17181C] ${colorClass} p-5 flex flex-col justify-between shadow-lg hover:border-amber-500/60 transition-all`}
             >
               <div className="flex items-start justify-between">
-                <div>
-                  <span className="text-lg lg:text-xl font-bold text-white tracking-tight">
+                <div className="min-w-0">
+                  <span className="text-xl lg:text-2xl font-black text-white tracking-tight">
                     {item.status}
                   </span>
-                  <p className="text-xs text-slate-400 mt-0.5">
+                  <p className="text-sm text-slate-400 mt-0.5 font-semibold">
                     {item.percentage}% do volume total
                   </p>
                 </div>
-                <span className="text-3xl lg:text-4xl font-extrabold text-amber-300">
+                <span className="text-5xl lg:text-6xl font-black text-amber-300 shrink-0 ml-2">
                   {item.count}
                 </span>
               </div>
 
               {/* Barra de Proporção */}
               <div className="mt-4">
-                <div className="h-3 w-full rounded-full bg-black/60 overflow-hidden border border-white/10">
+                <div className="h-4 w-full rounded-full bg-black/60 overflow-hidden border border-white/10">
                   <div
                     className={`h-full rounded-full ${barBg} transition-all duration-700`}
                     style={{ width: `${Math.max(4, Math.min(100, item.percentage))}%` }}

@@ -26,33 +26,33 @@ export function TvOnlineUsersDashboard({ data, loading }: TvOnlineUsersDashboard
         <Card className="bg-[#17181C] border-emerald-500/40 text-white shadow-xl">
           <CardContent className="p-6 flex items-center justify-between">
             <div>
-              <p className="text-sm font-semibold uppercase tracking-wider text-emerald-400">
+              <p className="text-lg font-bold uppercase tracking-wider text-emerald-400">
                 Operadores / Usuários Online Agora
               </p>
-              <p className="text-4xl lg:text-6xl font-black text-emerald-400 mt-1">{onlineCount}</p>
-              <p className="text-xs text-slate-400 mt-1">
+              <p className="text-5xl lg:text-7xl font-black text-emerald-400 mt-2">{onlineCount}</p>
+              <p className="text-sm text-slate-400 mt-1">
                 Atividade detectada nos últimos 15 minutos
               </p>
             </div>
             <div className="p-4 rounded-2xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
-              <Wifi className="h-12 w-12 animate-pulse" />
+              <Wifi className="h-14 w-14 animate-pulse" />
             </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-[#17181C] border-amber-500/30 text-white shadow-xl">
+        <Card className="bg-[#17181C] border-amber-500/40 text-white shadow-xl">
           <CardContent className="p-6 flex items-center justify-between">
             <div>
-              <p className="text-sm font-semibold uppercase tracking-wider text-amber-400">
+              <p className="text-lg font-bold uppercase tracking-wider text-amber-400">
                 Total de Usuários Cadastrados
               </p>
-              <p className="text-4xl lg:text-6xl font-black text-white mt-1">{data.length}</p>
-              <p className="text-xs text-slate-400 mt-1">
+              <p className="text-5xl lg:text-7xl font-black text-white mt-2">{data.length}</p>
+              <p className="text-sm text-slate-400 mt-1">
                 Equipe técnica, administrativa e gestores
               </p>
             </div>
             <div className="p-4 rounded-2xl bg-amber-500/20 text-amber-400 border border-amber-500/30">
-              <Users className="h-12 w-12" />
+              <Users className="h-14 w-14" />
             </div>
           </CardContent>
         </Card>
@@ -83,16 +83,18 @@ export function TvOnlineUsersDashboard({ data, loading }: TvOnlineUsersDashboard
                     />
                   </div>
                   <div className="truncate">
-                    <p className="text-base font-bold text-white truncate">{user.name}</p>
-                    <p className="text-xs text-slate-400 truncate">{user.email}</p>
+                    <p className="text-lg font-black text-white truncate leading-tight">
+                      {user.name}
+                    </p>
+                    <p className="text-sm text-slate-400 truncate">{user.email}</p>
                   </div>
                 </div>
 
                 <Badge
                   className={
                     user.isOnline
-                      ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40 text-xs font-semibold'
-                      : 'bg-slate-800 text-slate-400 border-slate-700 text-xs'
+                      ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40 text-sm font-bold'
+                      : 'bg-slate-800 text-slate-300 border-slate-700 text-sm font-bold'
                   }
                 >
                   {user.isOnline ? 'ONLINE' : 'AUSENTE'}
@@ -103,15 +105,15 @@ export function TvOnlineUsersDashboard({ data, loading }: TvOnlineUsersDashboard
               <div className="mt-3 flex flex-wrap gap-1.5 items-center">
                 <Badge
                   variant="outline"
-                  className="text-[11px] bg-black/40 border-white/15 text-slate-300 flex items-center gap-1"
+                  className="text-sm bg-black/40 border-white/15 text-slate-200 flex items-center gap-1"
                 >
-                  <Shield className="h-3 w-3 text-amber-400" />
+                  <Shield className="h-3.5 w-3.5 text-amber-400" />
                   {user.profileName}
                 </Badge>
                 {user.team && (
                   <Badge
                     variant="outline"
-                    className="text-[11px] bg-black/40 border-white/15 text-slate-300"
+                    className="text-sm bg-black/40 border-white/15 text-slate-200"
                   >
                     {user.team}
                   </Badge>
@@ -121,23 +123,23 @@ export function TvOnlineUsersDashboard({ data, loading }: TvOnlineUsersDashboard
 
             {/* Filas */}
             <div className="mt-3 pt-2.5 border-t border-white/10">
-              <p className="text-[10px] uppercase font-semibold text-slate-400 mb-1">
+              <p className="text-xs uppercase font-bold text-slate-400 mb-1.5">
                 Filas de Atendimento:
               </p>
               {user.queues.length === 0 ? (
-                <span className="text-xs text-slate-500 italic">Sem fila atribuída</span>
+                <span className="text-sm text-slate-500 italic">Sem fila atribuída</span>
               ) : (
                 <div className="flex flex-wrap gap-1">
                   {user.queues.slice(0, 3).map((q) => (
                     <span
                       key={q}
-                      className="px-2 py-0.5 text-[10px] rounded bg-amber-500/10 text-amber-300 border border-amber-500/20"
+                      className="px-2 py-0.5 text-xs font-semibold rounded bg-amber-500/10 text-amber-300 border border-amber-500/20"
                     >
                       {q}
                     </span>
                   ))}
                   {user.queues.length > 3 && (
-                    <span className="text-[10px] text-slate-400 self-center">
+                    <span className="text-xs text-slate-400 self-center">
                       +{user.queues.length - 3}
                     </span>
                   )}

@@ -120,8 +120,8 @@ export function TvProblemsDashboard({ data, loading }: TvProblemsDashboardProps)
                     key={status}
                     className={`p-4 rounded-xl bg-black/40 border ${badgeColor} flex flex-col justify-between`}
                   >
-                    <span className="text-sm font-semibold text-slate-200 truncate">{status}</span>
-                    <span className="text-3xl font-black mt-2 text-white">{count}</span>
+                    <span className="text-lg font-semibold text-white truncate">{status}</span>
+                    <span className="text-4xl font-black mt-2 text-amber-300">{count}</span>
                   </div>
                 )
               })}
