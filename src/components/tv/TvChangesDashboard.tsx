@@ -5,9 +5,10 @@ import type { ChangesSummary } from '@/services/tv-mode'
 interface TvChangesDashboardProps {
   data: ChangesSummary | null
   loading?: boolean
+  periodLabel?: string
 }
 
-export function TvChangesDashboard({ data, loading }: TvChangesDashboardProps) {
+export function TvChangesDashboard({ data, loading, periodLabel }: TvChangesDashboardProps) {
   if (loading && !data) {
     return (
       <div className="flex h-full items-center justify-center">
@@ -22,6 +23,15 @@ export function TvChangesDashboard({ data, loading }: TvChangesDashboardProps) {
 
   return (
     <div className="flex h-full flex-col gap-6 p-2">
+      {/* Legenda discreta do período aplicado */}
+      {periodLabel && (
+        <div className="flex items-center justify-end">
+          <span className="rounded-full border border-amber-500/40 bg-amber-500/10 px-4 py-1 text-sm font-bold uppercase tracking-wider text-amber-300">
+            Período: {periodLabel}
+          </span>
+        </div>
+      )}
+
       {/* 3 Top Big Numbers: Abertas, Em Andamento, Fechadas */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <Card className="bg-[#17181C] border-amber-500/40 text-white shadow-xl">

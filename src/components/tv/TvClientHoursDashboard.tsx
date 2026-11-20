@@ -6,9 +6,14 @@ import type { ClientHoursData } from '@/services/client-hours'
 interface TvClientHoursDashboardProps {
   data: ClientHoursData[]
   loading?: boolean
+  periodLabel?: string
 }
 
-export function TvClientHoursDashboard({ data, loading }: TvClientHoursDashboardProps) {
+export function TvClientHoursDashboard({
+  data,
+  loading,
+  periodLabel,
+}: TvClientHoursDashboardProps) {
   if (loading && data.length === 0) {
     return (
       <div className="flex h-full items-center justify-center">
@@ -26,8 +31,15 @@ export function TvClientHoursDashboard({ data, loading }: TvClientHoursDashboard
             Consumo de Horas por Cliente
           </h2>
           <p className="mt-1 text-lg text-white/70">
-            Horas consumidas no mês e percentual da franquia contratada
+            {periodLabel
+              ? 'Horas consumidas no período e percentual da franquia contratada'
+              : 'Horas consumidas no mês e percentual da franquia contratada'}
           </p>
+          {periodLabel && (
+            <span className="mt-2 inline-block rounded-full border border-amber-500/40 bg-amber-500/10 px-4 py-1 text-sm font-bold uppercase tracking-wider text-amber-300">
+              Período: {periodLabel}
+            </span>
+          )}
         </div>
         <div className="flex items-center gap-6 text-lg font-bold text-white">
           <div className="flex items-center gap-2">

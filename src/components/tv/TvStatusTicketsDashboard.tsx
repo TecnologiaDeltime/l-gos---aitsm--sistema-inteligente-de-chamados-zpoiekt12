@@ -6,9 +6,14 @@ import type { TicketStatusSummary } from '@/services/tv-mode'
 interface TvStatusTicketsDashboardProps {
   data: TicketStatusSummary[]
   loading?: boolean
+  periodLabel?: string
 }
 
-export function TvStatusTicketsDashboard({ data, loading }: TvStatusTicketsDashboardProps) {
+export function TvStatusTicketsDashboard({
+  data,
+  loading,
+  periodLabel,
+}: TvStatusTicketsDashboardProps) {
   const total = useMemo(() => data.reduce((acc, curr) => acc + curr.count, 0), [data])
 
   const activeTickets = useMemo(
@@ -37,6 +42,15 @@ export function TvStatusTicketsDashboard({ data, loading }: TvStatusTicketsDashb
 
   return (
     <div className="flex h-full flex-col gap-6 p-2">
+      {/* Legenda discreta do período aplicado */}
+      {periodLabel && (
+        <div className="flex items-center justify-end">
+          <span className="rounded-full border border-amber-500/40 bg-amber-500/10 px-4 py-1 text-sm font-bold uppercase tracking-wider text-amber-300">
+            Período: {periodLabel}
+          </span>
+        </div>
+      )}
+
       {/* 3 Top Big Numbers */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
         <Card className="bg-[#17181C] border-amber-500/40 text-white shadow-xl">

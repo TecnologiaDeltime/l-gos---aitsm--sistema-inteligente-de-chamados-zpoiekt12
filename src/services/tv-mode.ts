@@ -6,6 +6,7 @@ import { getChanges, type ChangeRecord } from '@/services/changes'
 import { getProblems, type ProblemRecord } from '@/services/problems'
 import { getCompanies } from '@/services/companies'
 import { getContractPeriods } from '@/services/contract-periods'
+import { getContracts } from '@/services/contracts'
 import { parseDurationToSeconds } from '@/lib/duration'
 import {
   computeKpis,

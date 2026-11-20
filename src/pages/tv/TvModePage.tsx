@@ -333,21 +333,53 @@ export function TvModePage() {
       )
     }
 
+    const currentPeriodLabel = getTvPeriodOption(period)?.label
+
     switch (currentDashboard.id) {
       case 'queue_tickets':
-        return <TvQueueTicketsDashboard data={queueData} loading={loading} />
+        return (
+          <TvQueueTicketsDashboard
+            data={queueData}
+            loading={loading}
+            periodLabel={currentPeriodLabel}
+          />
+        )
       case 'status_tickets':
-        return <TvStatusTicketsDashboard data={statusData} loading={loading} />
+        return (
+          <TvStatusTicketsDashboard
+            data={statusData}
+            loading={loading}
+            periodLabel={currentPeriodLabel}
+          />
+        )
       case 'online_users':
         return <TvOnlineUsersDashboard data={onlineUsers} loading={loading} />
       case 'client_hours':
-        return <TvClientHoursDashboard data={clientHours} loading={loading} />
+        return (
+          <TvClientHoursDashboard
+            data={clientHours}
+            loading={loading}
+            periodLabel={currentPeriodLabel}
+          />
+        )
       case 'executive_goals':
         return <TvExecutiveGoalsDashboard data={goalsData} loading={loading} />
       case 'changes_summary':
-        return <TvChangesDashboard data={changesData} loading={loading} />
+        return (
+          <TvChangesDashboard
+            data={changesData}
+            loading={loading}
+            periodLabel={currentPeriodLabel}
+          />
+        )
       case 'problems_summary':
-        return <TvProblemsDashboard data={problemsData} loading={loading} />
+        return (
+          <TvProblemsDashboard
+            data={problemsData}
+            loading={loading}
+            periodLabel={currentPeriodLabel}
+          />
+        )
       default:
         return null
     }
@@ -709,7 +741,7 @@ export function TvModePage() {
             <Button
               variant="ghost"
               size="icon"
-              onClick={loadAllData}
+              onClick={() => void loadAllData()}
               title="Atualizar Dados Agora"
               className="h-8 w-8 text-slate-400 hover:text-white hover:bg-white/10"
             >
