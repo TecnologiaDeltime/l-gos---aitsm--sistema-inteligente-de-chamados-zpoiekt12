@@ -12,7 +12,7 @@ export function TvExecutiveGoalsDashboard({ data, loading }: TvExecutiveGoalsDas
   if (loading && !data) {
     return (
       <div className="flex h-full items-center justify-center">
-        <div className="h-12 w-12 animate-spin rounded-full border-4 border-amber-500 border-t-transparent" />
+        <div className="h-16 w-16 animate-spin rounded-full border-4 border-[#D97706] border-t-transparent" />
       </div>
     )
   }
@@ -20,111 +20,96 @@ export function TvExecutiveGoalsDashboard({ data, loading }: TvExecutiveGoalsDas
   if (!data) return null
 
   const { kpis, slaByPriority } = data
+  const negative = kpis.balanceHours < 0
 
   return (
-    <div className="flex h-full flex-col gap-6 p-2">
-      {/* Bloco 1: KPIs Principais do Gerencial */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Card className="bg-[#17181C] border-amber-500/30 text-white shadow-xl">
-          <CardContent className="p-5 flex items-center justify-between">
+    <div className="flex h-full flex-col gap-5">
+      {/* Indicadores principais em destaque */}
+      <div className="grid grid-cols-2 gap-5 md:grid-cols-4">
+        <Card className="border-2 border-[#D97706]/60 bg-[#17181C] text-white">
+          <CardContent className="flex items-center justify-between p-6">
             <div>
-              <p className="text-xs uppercase font-semibold text-amber-400">Chamados Abertos</p>
-              <p className="text-3xl lg:text-4xl font-black text-white mt-1">{kpis.opened}</p>
+              <p className="text-lg font-bold uppercase text-[#FCD34D]">Chamados abertos</p>
+              <p className="mt-2 text-6xl font-black text-white">{kpis.opened}</p>
             </div>
-            <div className="p-3 rounded-xl bg-amber-500/20 text-amber-400">
-              <Inbox className="h-8 w-8" />
-            </div>
+            <Inbox className="h-14 w-14 text-[#D97706]" />
           </CardContent>
         </Card>
 
-        <Card className="bg-[#17181C] border-emerald-500/30 text-white shadow-xl">
-          <CardContent className="p-5 flex items-center justify-between">
+        <Card className="border-2 border-[#FCD34D]/60 bg-[#17181C] text-white">
+          <CardContent className="flex items-center justify-between p-6">
             <div>
-              <p className="text-xs uppercase font-semibold text-emerald-400">Resolvidos</p>
-              <p className="text-3xl lg:text-4xl font-black text-emerald-400 mt-1">
-                {kpis.resolved}
-              </p>
+              <p className="text-lg font-bold uppercase text-[#FCD34D]">Resolvidos</p>
+              <p className="mt-2 text-6xl font-black text-white">{kpis.resolved}</p>
             </div>
-            <div className="p-3 rounded-xl bg-emerald-500/20 text-emerald-400">
-              <CheckCircle2 className="h-8 w-8" />
-            </div>
+            <CheckCircle2 className="h-14 w-14 text-[#FCD34D]" />
           </CardContent>
         </Card>
 
-        <Card className="bg-[#17181C] border-amber-500/30 text-white shadow-xl">
-          <CardContent className="p-5 flex items-center justify-between">
+        <Card className="border-2 border-[#D97706]/60 bg-[#17181C] text-white">
+          <CardContent className="flex items-center justify-between p-6">
             <div>
-              <p className="text-xs uppercase font-semibold text-amber-400">Horas Consumidas</p>
-              <p className="text-2xl lg:text-3xl font-black text-amber-300 mt-1 font-mono">
+              <p className="text-lg font-bold uppercase text-[#FCD34D]">Horas consumidas</p>
+              <p className="mt-2 font-mono text-4xl font-black text-white lg:text-5xl">
                 {kpis.consumedDisplay}
               </p>
             </div>
-            <div className="p-3 rounded-xl bg-amber-500/20 text-amber-400">
-              <Timer className="h-8 w-8" />
-            </div>
+            <Timer className="h-14 w-14 text-[#D97706]" />
           </CardContent>
         </Card>
 
         <Card
-          className={`bg-[#17181C] text-white shadow-xl border ${
-            kpis.balanceHours < 0 ? 'border-red-500/50' : 'border-emerald-500/30'
+          className={`border-2 bg-[#17181C] text-white ${
+            negative ? 'border-red-600' : 'border-[#FCD34D]/60'
           }`}
         >
-          <CardContent className="p-5 flex items-center justify-between">
+          <CardContent className="flex items-center justify-between p-6">
             <div>
               <p
-                className={`text-xs uppercase font-semibold ${
-                  kpis.balanceHours < 0 ? 'text-red-400' : 'text-emerald-400'
+                className={`text-lg font-bold uppercase ${
+                  negative ? 'text-red-500' : 'text-[#FCD34D]'
                 }`}
               >
-                Saldo de Horas
+                Saldo de horas
               </p>
               <p
-                className={`text-2xl lg:text-3xl font-black mt-1 font-mono ${
-                  kpis.balanceHours < 0 ? 'text-red-400' : 'text-emerald-400'
+                className={`mt-2 font-mono text-4xl font-black lg:text-5xl ${
+                  negative ? 'text-red-500' : 'text-white'
                 }`}
               >
                 {kpis.balanceDisplay}
               </p>
             </div>
-            <div
-              className={`p-3 rounded-xl ${
-                kpis.balanceHours < 0
-                  ? 'bg-red-500/20 text-red-400'
-                  : 'bg-emerald-500/20 text-emerald-400'
-              }`}
-            >
-              <Hourglass className="h-8 w-8" />
-            </div>
+            <Hourglass className={`h-14 w-14 ${negative ? 'text-red-500' : 'text-[#FCD34D]'}`} />
           </CardContent>
         </Card>
       </div>
 
-      {/* Bloco 2: Painel "Cumprimento de Meta por Prioridade" (Gauges do Dashboard Gerencial) */}
-      <Card className="bg-[#17181C] border-amber-500/30 text-white flex-1 p-6 flex flex-col justify-between shadow-2xl">
+      {/* Metas de SLA por prioridade */}
+      <Card className="flex flex-1 flex-col justify-between border-2 border-[#D97706]/50 bg-[#17181C] p-6 text-white">
         <div>
-          <div className="flex items-center justify-between border-b border-white/10 pb-4 mb-6">
+          <div className="mb-6 flex flex-wrap items-end justify-between gap-4 border-b border-white/15 pb-4">
             <div>
-              <h3 className="text-2xl lg:text-3xl font-black text-amber-300 tracking-tight">
-                Cumprimento de Meta por Prioridade
+              <h3 className="text-4xl font-black tracking-tight text-[#FCD34D] lg:text-5xl">
+                Cumprimento de meta por prioridade
               </h3>
-              <p className="text-sm text-slate-400 mt-1">
-                Aderência às metas de SLA contratual por nível de criticidade
+              <p className="mt-1 text-lg text-white/70">
+                Aderência ao SLA contratual por nível de criticidade
               </p>
             </div>
             <div className="text-right">
-              <span className="text-xs text-slate-400">Referência Contratual</span>
-              <p className="text-xs font-semibold text-amber-400">
+              <p className="text-base font-bold text-white/70">Referência</p>
+              <p className="text-lg font-black text-[#FCD34D]">
                 Verde ≥ 90% · Amarelo ≥ 80% · Vermelho &lt; 80%
               </p>
             </div>
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 py-4">
+          <div className="grid grid-cols-2 gap-6 py-2 md:grid-cols-4">
             {slaByPriority.map((d) => (
               <div
                 key={d.priority}
-                className="p-4 rounded-2xl bg-black/40 border border-white/5 flex flex-col items-center justify-center"
+                className="flex flex-col items-center justify-center rounded-2xl border border-white/10 bg-black/40 p-4"
               >
                 <SlaGauge data={d} />
               </div>
@@ -132,16 +117,16 @@ export function TvExecutiveGoalsDashboard({ data, loading }: TvExecutiveGoalsDas
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6 pt-4 border-t border-white/10 text-xs text-slate-400">
-          <div className="flex items-center justify-between p-3 rounded-lg bg-black/40 border border-white/5">
-            <span className="font-semibold text-slate-300">Total de Horas Contratadas:</span>
-            <span className="font-mono text-base font-bold text-white">
+        <div className="mt-6 grid grid-cols-1 gap-4 border-t border-white/15 pt-5 md:grid-cols-2">
+          <div className="flex items-center justify-between rounded-lg border border-white/10 bg-black/40 p-4">
+            <span className="text-xl font-bold text-white/80">Total de horas contratadas</span>
+            <span className="font-mono text-3xl font-black text-white">
               {kpis.contractedDisplay}
             </span>
           </div>
-          <div className="flex items-center justify-between p-3 rounded-lg bg-black/40 border border-white/5">
-            <span className="font-semibold text-slate-300">Total de Chamados Fechados:</span>
-            <span className="font-mono text-base font-bold text-white">{kpis.closed}</span>
+          <div className="flex items-center justify-between rounded-lg border border-white/10 bg-black/40 p-4">
+            <span className="text-xl font-bold text-white/80">Total de chamados fechados</span>
+            <span className="font-mono text-3xl font-black text-white">{kpis.closed}</span>
           </div>
         </div>
       </Card>

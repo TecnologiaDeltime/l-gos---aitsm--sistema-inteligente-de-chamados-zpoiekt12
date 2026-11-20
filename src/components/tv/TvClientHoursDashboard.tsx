@@ -12,48 +12,45 @@ export function TvClientHoursDashboard({ data, loading }: TvClientHoursDashboard
   if (loading && data.length === 0) {
     return (
       <div className="flex h-full items-center justify-center">
-        <div className="h-12 w-12 animate-spin rounded-full border-4 border-amber-500 border-t-transparent" />
+        <div className="h-16 w-16 animate-spin rounded-full border-4 border-[#D97706] border-t-transparent" />
       </div>
     )
   }
 
   return (
-    <div className="flex h-full flex-col gap-5 p-2">
-      {/* Top Banner */}
-      <div className="p-4 rounded-xl bg-[#17181C] border border-amber-500/30 flex items-center justify-between text-white">
+    <div className="flex h-full flex-col gap-5">
+      {/* Cabeçalho com legenda grande */}
+      <div className="flex flex-wrap items-center justify-between gap-4 rounded-xl border-2 border-[#D97706]/50 bg-[#17181C] p-5">
         <div>
-          <h2 className="text-xl lg:text-2xl font-black text-amber-300 tracking-tight">
+          <h2 className="text-4xl font-black tracking-tight text-[#FCD34D] lg:text-5xl">
             Consumo de Horas por Cliente
           </h2>
-          <p className="text-xs text-slate-400 mt-0.5">
-            Cartões com Total Consumido em destaque grande, percentual e franquia contratada em
-            00:00:00
+          <p className="mt-1 text-lg text-white/70">
+            Horas consumidas no mês e percentual da franquia contratada
           </p>
         </div>
-        <div className="flex items-center gap-4 text-xs font-semibold">
-          <div className="flex items-center gap-1.5">
-            <span className="h-3 w-3 rounded-full bg-emerald-500" />
-            <span className="text-slate-300">Normal (&lt;80%)</span>
+        <div className="flex items-center gap-6 text-lg font-bold text-white">
+          <div className="flex items-center gap-2">
+            <span className="h-4 w-4 rounded-full bg-[#FCD34D]" />
+            <span>Normal (&lt;80%)</span>
           </div>
-          <div className="flex items-center gap-1.5">
-            <span className="h-3 w-3 rounded-full bg-yellow-500" />
-            <span className="text-slate-300">Atenção (80-99%)</span>
+          <div className="flex items-center gap-2">
+            <span className="h-4 w-4 rounded-full bg-[#D97706]" />
+            <span>Atenção (80–99%)</span>
           </div>
-          <div className="flex items-center gap-1.5">
-            <span className="h-3 w-3 rounded-full bg-red-600" />
-            <span className="text-slate-300">Estourado (≥100%)</span>
+          <div className="flex items-center gap-2">
+            <span className="h-4 w-4 rounded-full bg-red-600" />
+            <span>Estourado (≥100%)</span>
           </div>
         </div>
       </div>
 
-      {/* Grid de Cartões por Cliente */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 flex-1 overflow-y-auto pr-1">
+      {/* Grade de cartões por cliente */}
+      <div className="grid flex-1 grid-cols-1 gap-5 overflow-y-auto pr-1 md:grid-cols-2 xl:grid-cols-3">
         {data.length === 0 ? (
-          <div className="col-span-full flex flex-col items-center justify-center py-20 text-slate-400">
-            <Building2 className="h-12 w-12 mb-3 text-slate-500" />
-            <p className="text-lg font-bold">
-              Nenhum contrato ativo de horas encontrado para este mês
-            </p>
+          <div className="col-span-full flex flex-col items-center justify-center py-20 text-white/70">
+            <Building2 className="mb-4 h-16 w-16 text-[#D97706]" />
+            <p className="text-3xl font-black">Nenhum contrato ativo de horas neste mês</p>
           </div>
         ) : (
           data.map((item) => {
@@ -61,18 +58,21 @@ export function TvClientHoursDashboard({ data, loading }: TvClientHoursDashboard
             const isExceeded = pct >= 100
             const isWarning = pct >= 80 && pct < 100
 
-            let borderColor = 'border-amber-500/25'
-            let pctColor = 'text-emerald-400 bg-emerald-500/10 border-emerald-500/30'
-            let barColor = 'bg-emerald-500'
+            let borderColor = 'border-[#D97706]/40'
+            let pctClass = 'bg-[#FCD34D] text-[#17181C]'
+            let barColor = 'bg-[#FCD34D]'
+            let consumedClass = 'text-[#FCD34D]'
 
             if (isExceeded) {
-              borderColor = 'border-red-600 shadow-red-900/30'
-              pctColor = 'text-red-400 bg-red-600/15 border-red-600/40 animate-pulse'
+              borderColor = 'border-red-600'
+              pctClass = 'bg-red-600 text-white'
               barColor = 'bg-red-600'
+              consumedClass = 'text-red-500'
             } else if (isWarning) {
-              borderColor = 'border-yellow-500/60 shadow-yellow-900/20'
-              pctColor = 'text-yellow-400 bg-yellow-500/15 border-yellow-500/40'
-              barColor = 'bg-yellow-500'
+              borderColor = 'border-[#D97706]'
+              pctClass = 'bg-[#D97706] text-white'
+              barColor = 'bg-[#D97706]'
+              consumedClass = 'text-[#D97706]'
             }
 
             const consumedFormatted = formatSeconds(item.consumedSeconds)
@@ -81,45 +81,45 @@ export function TvClientHoursDashboard({ data, loading }: TvClientHoursDashboard
             return (
               <Card
                 key={item.company.id}
-                className={`bg-[#17181C] text-white flex flex-col justify-between p-5 border ${borderColor} shadow-xl hover:scale-[1.01] transition-transform`}
+                className={`flex flex-col justify-between border-2 ${borderColor} bg-[#17181C] p-6 text-white`}
               >
-                {/* Nome do Cliente e Percentual discreto */}
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex-1 truncate">
-                    <p className="text-lg lg:text-xl font-extrabold text-white truncate leading-tight">
+                {/* Nome do cliente e percentual */}
+                <div className="flex items-start justify-between gap-4">
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-3xl font-black leading-tight text-white">
                       {item.company.trade_name || item.company.legal_name}
                     </p>
-                    <p className="text-[11px] text-slate-400 truncate mt-0.5">
+                    <p className="mt-1 truncate text-base text-white/60">
                       {item.company.legal_name}
                     </p>
                   </div>
-                  <div className={`px-2.5 py-1 rounded-full text-xs font-black border ${pctColor}`}>
+                  <div className={`shrink-0 rounded-xl px-4 py-2 text-3xl font-black ${pctClass}`}>
                     {pct}%
                   </div>
                 </div>
 
-                {/* Destaque Grande: HORAS CONSUMIDAS */}
-                <div className="my-4 py-3 px-4 rounded-xl bg-black/50 border border-white/5 flex flex-col items-center justify-center">
-                  <span className="text-[11px] uppercase tracking-wider font-semibold text-slate-400">
-                    Horas Consumidas
+                {/* Destaque: horas consumidas */}
+                <div className="my-5 flex flex-col items-center justify-center rounded-xl border border-white/10 bg-black/50 px-4 py-4">
+                  <span className="text-base font-bold uppercase tracking-wider text-white/70">
+                    Horas consumidas
                   </span>
                   <span
-                    className={`text-3xl lg:text-4xl font-black tracking-tight mt-1 ${
-                      isExceeded ? 'text-red-400' : isWarning ? 'text-yellow-400' : 'text-amber-300'
-                    }`}
+                    className={`mt-1 font-mono text-6xl font-black tracking-tight ${consumedClass}`}
                   >
                     {consumedFormatted}
                   </span>
                 </div>
 
-                {/* Total Contratado & Barra */}
+                {/* Franquia e barra */}
                 <div>
-                  <div className="flex items-center justify-between text-xs text-slate-300 mb-1.5 font-medium">
-                    <span className="text-slate-400">Franquia Contratada:</span>
-                    <span className="font-bold text-white font-mono">{contractedFormatted}</span>
+                  <div className="mb-2 flex items-center justify-between text-xl font-semibold">
+                    <span className="text-white/70">Franquia contratada</span>
+                    <span className="font-mono text-2xl font-black text-white">
+                      {contractedFormatted}
+                    </span>
                   </div>
 
-                  <div className="h-2 w-full rounded-full bg-black/70 overflow-hidden border border-white/10">
+                  <div className="h-4 w-full overflow-hidden rounded-full border border-white/15 bg-black/70">
                     <div
                       className={`h-full rounded-full ${barColor} transition-all duration-700`}
                       style={{ width: `${Math.min(100, Math.max(2, pct))}%` }}
@@ -127,8 +127,8 @@ export function TvClientHoursDashboard({ data, loading }: TvClientHoursDashboard
                   </div>
 
                   {isExceeded && (
-                    <div className="flex items-center gap-1.5 text-xs text-red-400 font-bold mt-2">
-                      <AlertTriangle className="h-3.5 w-3.5" />
+                    <div className="mt-3 flex items-center gap-2 text-xl font-black text-red-500">
+                      <AlertTriangle className="h-6 w-6" />
                       <span>Franquia estourada</span>
                     </div>
                   )}
