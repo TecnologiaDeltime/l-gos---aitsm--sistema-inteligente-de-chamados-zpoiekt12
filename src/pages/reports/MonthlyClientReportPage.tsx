@@ -132,7 +132,19 @@ function formatCountLabel(value: any): string {
   if (num === 0) return '0'
   return String(num)
 }
-export default function MonthlyClientReportPage() {
+interface MonthlyClientReportPageProps {
+  /**
+   * Modo IMPRESSÃO: a página é renderizada numa rota dedicada FORA do shell
+   * (/reports/monthly-client/impressao, aberta via window.open). O relatório é
+   * o único conteúdo do body, em fluxo normal de página, permitindo que o
+   * navegador pagine o PDF corretamente (sem folhas em branco).
+   */
+  printMode?: boolean
+}
+
+export default function MonthlyClientReportPage({
+  printMode = false,
+}: MonthlyClientReportPageProps) {
   const { toast } = useToast()
   const { designSettings } = useTheme()
   const [searchParams, setSearchParams] = useSearchParams()
@@ -149,6 +161,8 @@ export default function MonthlyClientReportPage() {
   const [loadingReport, setLoadingReport] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [scheduleDialogOpen, setScheduleDialogOpen] = useState(false)
+  // Guarda se o auto-print já disparou nesta janela dedicada (roda uma única vez)
+  const [sentToPrinter, setSentToPrinter] = useState(false)
   const { user } = useAuth()
   const [clientReportRecord, setClientReportRecord] = useState<ClientMonthlyReportRecord | null>(
     null,
@@ -220,9 +234,49 @@ export default function MonthlyClientReportPage() {
     }
   }, [companyId, monthKey, loadReport])
 
-  const handlePrint = () => {
-    window.print()
-  }
+  // Abre a ROTA DE IMPRESSÃO DEDICADA em nova janela: fora do shell, o relatório
+  // é o único conteúdo do body em fluxo normal — o navegador pagina o PDF sem
+  // folhas em branco. A janela dedicada se auto-imprime e se fecha sozinha.
+  const handlePrint = useCallback(() => {
+    if (printMode) {
+      window.print()
+      return
+    }
+    const params = new URLSearchParams()
+    if (companyId) params.set('company', companyId)
+    if (monthKey) params.set('month', monthKey)
+    const url = `/reports/monthly-client/impressao?${params.toString()}`
+    const win = window.open(url, '_blank', 'width=1024,height=768')
+    if (!win) {
+      toast({
+        title: 'Não foi possível abrir a janela de impressão',
+        description:
+          'O navegador bloqueou a popup. Permita popups para este site e tente novamente.',
+        variant: 'destructive',
+      })
+    }
+  }, [companyId, monthKey, printMode, toast])
+
+  // Auto-print + fechamento automático SOMENTE na rota dedicada, depois que o
+  // relatório terminou de carregar (gráficos pré-renderizados no DOM).
+  useEffect(() => {
+    if (!printMode || sentToPrinter || loadingReport || error || !reportData) return
+    const timer = window.setTimeout(() => {
+      setSentToPrinter(true)
+      window.print()
+    }, 800)
+    return () => window.clearTimeout(timer)
+  }, [printMode, sentToPrinter, loadingReport, error, reportData])
+
+  // Fecha a janela dedicada após a fila de impressão terminar.
+  useEffect(() => {
+    if (!printMode) return
+    const closeAfterPrint = () => {
+      window.setTimeout(() => window.close(), 300)
+    }
+    window.addEventListener('afterprint', closeAfterPrint)
+    return () => window.removeEventListener('afterprint', closeAfterPrint)
+  }, [printMode])
 
   // Ação de liberação do relatório mensal ao Portal do Cliente
   const handleToggleReleaseToClient = async () => {
@@ -335,7 +389,93 @@ export default function MonthlyClientReportPage() {
   }, [reportData])
 
   return (
-    <div className="space-y-6 print:m-0 print:p-0 print:space-y-0">
+    <div
+      className={
+        printMode
+          ? 'monthly-print-root bg-background text-foreground'
+          : 'space-y-6 print:m-0 print:p-0 print:space-y-0'
+      }
+    >
+      {printMode && (
+        <style>{`
+          html, body, #root {
+            background: #ffffff !important;
+            margin: 0 !important;
+            padding: 0 !important;
+          }
+          /* Janela dedicada sempre em cores de IMPRESSÃO (papel): mesmo que o
+             app esteja no tema escuro Amber Alert, a rota dedicada usa as
+             variáveis do tema claro Marrom & Branco — texto grafite sobre
+             papel branco, zero azul. */
+          :root, .dark, html {
+            --background: 35 25% 98% !important;
+            --foreground: 24 50% 12% !important;
+            color-scheme: light !important;
+            --card: 0 0% 100% !important;
+            --card-foreground: 24 50% 12% !important;
+            --popover: 0 0% 100% !important;
+            --popover-foreground: 24 50% 12% !important;
+            --muted: 35 20% 93% !important;
+            --muted-foreground: 24 20% 40% !important;
+            --border: 35 15% 86% !important;
+            --input: 35 15% 86% !important;
+          }
+          .monthly-print-root {
+            max-width: 980px;
+            margin: 0 auto;
+            padding: 24px 16px 48px;
+            font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+          }
+          @media print {
+            html, body, #root {
+              background: #ffffff !important;
+              height: auto !important;
+              max-height: none !important;
+              overflow: visible !important;
+              display: block !important;
+            }
+            .monthly-print-root {
+              max-width: 100% !important;
+              margin: 0 !important;
+              padding: 0 !important;
+            }
+          }
+        `}</style>
+      )}
+      {printMode && (
+        <div className="flex items-center justify-between gap-3 mb-6 print:hidden">
+          <div>
+            <h1 className="text-lg font-bold text-foreground">Impressão do Relatório Mensal</h1>
+            <p className="text-xs text-muted-foreground">
+              {reportData?.company?.trade_name || reportData?.company?.legal_name || ''} ·{' '}
+              {reportData?.periodLabel || ''}
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handlePrint}
+              disabled={loadingReport || !reportData}
+            >
+              <Printer className="h-4 w-4 mr-1.5" /> Imprimir / Salvar PDF
+            </Button>
+            <Button variant="ghost" size="sm" onClick={() => window.close()}>
+              Fechar
+            </Button>
+          </div>
+        </div>
+      )}
+      {printMode && loadingReport && (
+        <div className="py-16 text-center text-sm text-muted-foreground">
+          Carregando relatório para impressão…
+        </div>
+      )}
+      {printMode && error && (
+        <div className="py-16 text-center text-sm text-destructive">
+          {error} — feche esta janela e tente novamente na tela do relatório.
+        </div>
+      )}
       {/* Estilos ABNT para impressão com suporte a páginas paisagem e retrato */}
       <style>{`
         @media print {
@@ -615,183 +755,186 @@ export default function MonthlyClientReportPage() {
         }
       `}</style>
 
-      {/* Barra de Filtros e Controles no Topo (Oculto na Impressão) */}
-      <div className="print:hidden space-y-4">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-2">
-            <div>
-              <h1 className="text-xl font-bold flex items-center gap-2 text-foreground">
-                <FileText className="h-5 w-5 text-amber-600 dark:text-amber-400" /> Relatório Mensal
-                do Cliente
-              </h1>
-              <p className="text-xs text-muted-foreground">
-                Extração gráfica mensal com consolidação de acordos, setores, solicitantes e ativos
-                (Normas ABNT).
-              </p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setScheduleDialogOpen(true)}
-              disabled={!companyId}
-              className="border-amber-600 text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/40"
-            >
-              <Mail className="h-4 w-4 mr-1.5" /> Envio Automático por E-mail
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handlePrint}
-              disabled={loadingReport || !reportData}
-            >
-              <Printer className="h-4 w-4 mr-1.5" /> Exportar PDF (ABNT)
-            </Button>
-            <Button
-              size="sm"
-              onClick={loadReport}
-              disabled={loadingReport || !companyId}
-              className="bg-primary hover:bg-primary/90 text-primary-foreground"
-            >
-              <RefreshCw className={`h-4 w-4 mr-1.5 ${loadingReport ? 'animate-spin' : ''}`} />
-              Gerar Relatório
-            </Button>
-
-            {/* Botão de Liberação para o Portal do Cliente */}
-            <Button
-              size="sm"
-              onClick={handleToggleReleaseToClient}
-              disabled={loadingReport || !reportData || releasingLoading}
-              variant={clientReportRecord?.released_to_client ? 'outline' : 'default'}
-              className={
-                clientReportRecord?.released_to_client
-                  ? 'border-emerald-600 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/40'
-                  : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm'
-              }
-              title={
-                clientReportRecord?.released_to_client
-                  ? 'Clique para recolher o relatório de volta para rascunho/interno'
-                  : 'Libera o relatório mensal consolidado para visualização no Portal do Cliente'
-              }
-            >
-              {clientReportRecord?.released_to_client ? (
-                <>
-                  <CheckCircle2 className="h-4 w-4 mr-1.5 text-emerald-600" />
-                  Liberado ao Cliente (Revogar)
-                </>
-              ) : (
-                <>
-                  <Globe className="h-4 w-4 mr-1.5" />
-                  Liberar ao Cliente
-                </>
-              )}
-            </Button>
-          </div>
-        </div>
-
-        {/* Faixa de Status de Liberação */}
-        {clientReportRecord?.released_to_client && (
-          <div className="bg-emerald-500/10 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300 rounded-lg p-3 text-xs flex items-center justify-between gap-2">
+      {/* Barra de Filtros e Controles no Topo (Oculto na Impressão e no modo impressão) */}
+      {!printMode && (
+        <div className="print:hidden space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-2">
-              <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
-              <span>
-                Este relatório de <strong>{formatMonthLabel(monthKey)}</strong> está{' '}
-                <strong>LIBERADO</strong> e visível no Portal do Cliente.
-              </span>
+              <div>
+                <h1 className="text-xl font-bold flex items-center gap-2 text-foreground">
+                  <FileText className="h-5 w-5 text-amber-600 dark:text-amber-400" /> Relatório
+                  Mensal do Cliente
+                </h1>
+                <p className="text-xs text-muted-foreground">
+                  Extração gráfica mensal com consolidação de acordos, setores, solicitantes e
+                  ativos (Normas ABNT).
+                </p>
+              </div>
             </div>
-            {clientReportRecord.released_at && (
-              <span className="text-[11px] text-muted-foreground font-mono">
-                Liberado em: {new Date(clientReportRecord.released_at).toLocaleDateString('pt-BR')}
-              </span>
-            )}
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setScheduleDialogOpen(true)}
+                disabled={!companyId}
+                className="border-amber-600 text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/40"
+              >
+                <Mail className="h-4 w-4 mr-1.5" /> Envio Automático por E-mail
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handlePrint}
+                disabled={loadingReport || !reportData}
+              >
+                <Printer className="h-4 w-4 mr-1.5" /> Exportar PDF (ABNT)
+              </Button>
+              <Button
+                size="sm"
+                onClick={loadReport}
+                disabled={loadingReport || !companyId}
+                className="bg-primary hover:bg-primary/90 text-primary-foreground"
+              >
+                <RefreshCw className={`h-4 w-4 mr-1.5 ${loadingReport ? 'animate-spin' : ''}`} />
+                Gerar Relatório
+              </Button>
+
+              {/* Botão de Liberação para o Portal do Cliente */}
+              <Button
+                size="sm"
+                onClick={handleToggleReleaseToClient}
+                disabled={loadingReport || !reportData || releasingLoading}
+                variant={clientReportRecord?.released_to_client ? 'outline' : 'default'}
+                className={
+                  clientReportRecord?.released_to_client
+                    ? 'border-emerald-600 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/40'
+                    : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm'
+                }
+                title={
+                  clientReportRecord?.released_to_client
+                    ? 'Clique para recolher o relatório de volta para rascunho/interno'
+                    : 'Libera o relatório mensal consolidado para visualização no Portal do Cliente'
+                }
+              >
+                {clientReportRecord?.released_to_client ? (
+                  <>
+                    <CheckCircle2 className="h-4 w-4 mr-1.5 text-emerald-600" />
+                    Liberado ao Cliente (Revogar)
+                  </>
+                ) : (
+                  <>
+                    <Globe className="h-4 w-4 mr-1.5" />
+                    Liberar ao Cliente
+                  </>
+                )}
+              </Button>
+            </div>
           </div>
-        )}
 
-        {/* Card de Filtros */}
-        <Card className="shadow-xs">
-          <CardContent className="p-4">
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 items-end">
-              {/* Cliente */}
-              <div className="space-y-1.5">
-                <Label className="text-xs font-semibold flex items-center gap-1.5">
-                  <Building2 className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" /> Cliente /
-                  Empresa
-                </Label>
-                <Select
-                  value={companyId}
-                  onValueChange={setCompanyId}
-                  disabled={loadingCompanies || companies.length === 0}
-                >
-                  <SelectTrigger className="h-9">
-                    <SelectValue placeholder="Selecione um cliente" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {companies.map((c) => (
-                      <SelectItem key={c.id} value={c.id}>
-                        {c.trade_name || c.legal_name} ({c.code || 'S/C'})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+          {/* Faixa de Status de Liberação */}
+          {clientReportRecord?.released_to_client && (
+            <div className="bg-emerald-500/10 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300 rounded-lg p-3 text-xs flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
+                <span>
+                  Este relatório de <strong>{formatMonthLabel(monthKey)}</strong> está{' '}
+                  <strong>LIBERADO</strong> e visível no Portal do Cliente.
+                </span>
               </div>
-
-              {/* Mês de Referência */}
-              <div className="space-y-1.5">
-                <Label className="text-xs font-semibold flex items-center gap-1.5">
-                  <Calendar className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" /> Mês de
-                  Referência
-                </Label>
-                <div className="flex items-center gap-1">
-                  <Button
-                    size="icon"
-                    variant="outline"
-                    className="h-9 w-9 shrink-0"
-                    onClick={() => setMonthKey((k) => shiftMonth(k, -1))}
-                    title="Mês anterior"
-                  >
-                    <ChevronLeft className="h-4 w-4" />
-                  </Button>
-                  <div className="h-9 flex-1 flex items-center justify-center border rounded-md px-2 text-xs font-semibold bg-muted/20">
-                    {formatMonthLabel(monthKey)}
-                  </div>
-                  <Button
-                    size="icon"
-                    variant="outline"
-                    className="h-9 w-9 shrink-0"
-                    onClick={() => setMonthKey((k) => shiftMonth(k, 1))}
-                    title="Próximo mês"
-                  >
-                    <ChevronRight className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-
-              {/* Status do Contrato */}
-              <div className="space-y-1.5">
-                <Label className="text-xs text-muted-foreground">Contrato Vinculado</Label>
-                <div className="h-9 flex items-center px-3 border rounded-md text-xs bg-muted/10 truncate font-mono">
-                  {reportData?.contract
-                    ? `${reportData.contract.number} (${reportData.contract.type || 'Padrão'})`
-                    : 'Nenhum contrato ativo'}
-                </div>
-              </div>
-
-              {/* Botão Atalho */}
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-9 w-full text-xs"
-                  onClick={() => setMonthKey(currentMonthKey())}
-                >
-                  Mês Atual
-                </Button>
-              </div>
+              {clientReportRecord.released_at && (
+                <span className="text-[11px] text-muted-foreground font-mono">
+                  Liberado em:{' '}
+                  {new Date(clientReportRecord.released_at).toLocaleDateString('pt-BR')}
+                </span>
+              )}
             </div>
-          </CardContent>
-        </Card>
-      </div>
+          )}
+
+          {/* Card de Filtros */}
+          <Card className="shadow-xs">
+            <CardContent className="p-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 items-end">
+                {/* Cliente */}
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-semibold flex items-center gap-1.5">
+                    <Building2 className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" /> Cliente
+                    / Empresa
+                  </Label>
+                  <Select
+                    value={companyId}
+                    onValueChange={setCompanyId}
+                    disabled={loadingCompanies || companies.length === 0}
+                  >
+                    <SelectTrigger className="h-9">
+                      <SelectValue placeholder="Selecione um cliente" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {companies.map((c) => (
+                        <SelectItem key={c.id} value={c.id}>
+                          {c.trade_name || c.legal_name} ({c.code || 'S/C'})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Mês de Referência */}
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-semibold flex items-center gap-1.5">
+                    <Calendar className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" /> Mês de
+                    Referência
+                  </Label>
+                  <div className="flex items-center gap-1">
+                    <Button
+                      size="icon"
+                      variant="outline"
+                      className="h-9 w-9 shrink-0"
+                      onClick={() => setMonthKey((k) => shiftMonth(k, -1))}
+                      title="Mês anterior"
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                    </Button>
+                    <div className="h-9 flex-1 flex items-center justify-center border rounded-md px-2 text-xs font-semibold bg-muted/20">
+                      {formatMonthLabel(monthKey)}
+                    </div>
+                    <Button
+                      size="icon"
+                      variant="outline"
+                      className="h-9 w-9 shrink-0"
+                      onClick={() => setMonthKey((k) => shiftMonth(k, 1))}
+                      title="Próximo mês"
+                    >
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Status do Contrato */}
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-muted-foreground">Contrato Vinculado</Label>
+                  <div className="h-9 flex items-center px-3 border rounded-md text-xs bg-muted/10 truncate font-mono">
+                    {reportData?.contract
+                      ? `${reportData.contract.number} (${reportData.contract.type || 'Padrão'})`
+                      : 'Nenhum contrato ativo'}
+                  </div>
+                </div>
+
+                {/* Botão Atalho */}
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-9 w-full text-xs"
+                    onClick={() => setMonthKey(currentMonthKey())}
+                  >
+                    Mês Atual
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       {/* Conteúdo do Relatório */}
       {loadingReport ? (
@@ -2128,7 +2271,7 @@ export default function MonthlyClientReportPage() {
       )}
 
       {/* Diálogo de Envio Automático por E-mail */}
-      {companyId && (
+      {companyId && !printMode && (
         <MonthlyReportScheduleDialog
           open={scheduleDialogOpen}
           onOpenChange={setScheduleDialogOpen}

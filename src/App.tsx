@@ -202,6 +202,18 @@ const App = () => (
                 }
               />
 
+              {/* Rota de IMPRESSÃO dedicada do Relatório Mensal do Cliente — fora do shell
+                  (sem sidebar, cabeçalho, toasts ou cards externos): o relatório é o único
+                  conteúdo do body, em fluxo normal de página, para o navegador paginar o
+                  PDF corretamente. Mesma permissão do relatório (extensão de impressão). */}
+              <Route
+                path="/reports/monthly-client/impressao"
+                element={
+                  <ProtectedRoute requiredModule="reports" requiredItem="rep_monthly_client">
+                    <MonthlyClientReportPage printMode />
+                  </ProtectedRoute>
+                }
+              />
               {/* Rota de relatório de chamados (protegida por permissão) */}
               <Route
                 path="/relatorios/tickets"
