@@ -1,11 +1,10 @@
 /**
  * Modelo "rico" do Relatório Mensal do Cliente — fonte única para o PDF
- * vetorial (cards de KPI + especificações de gráficos) e para o DOCX
- * (cards de KPI como tabelas destacadas).
+ * vetorial (cards de KPI + especificações de gráficos).
  *
  * Derivado DIRETAMENTE de MonthlyClientReportData (mesma fonte de dados da
- * tela e do portal), garantindo zero divergência de números entre PDF, DOCX
- * e visualização.
+ * tela e do portal), garantindo zero divergência de números entre PDF,
+ * visualização na tela e Portal do Cliente.
  */
 
 import { formatHours } from '@/lib/duration'
@@ -19,45 +18,102 @@ const nf = (v: any, digits = 1): string => {
   return isFinite(n) ? n.toFixed(digits).replace('.', ',') : '0'
 }
 
+/** Variação percentual "atual vs. anterior" com sinal, em pt-BR. */
+const varPct = (current: number, previous: number): number | null => {
+  if (!isFinite(previous) || previous <= 0) return null
+  return ((current - previous) / previous) * 100
+}
+
+/** Rótulo curto de variação: "+12,5% vs. mês anterior" / "estável" / "—". */
+const varLabel = (current: number, previous: number, unit = ''): string => {
+  const v = varPct(current, previous)
+  if (v === null) return 'sem comparativo'
+  if (Math.abs(v) < 0.05) return 'estável vs. mês anterior'
+  const sign = v > 0 ? '+' : '−'
+  return `${sign}${nf(Math.abs(v))}%${unit ? ' ' + unit : ''} vs. mês anterior`
+}
+
 export interface MonthlyKpiCard {
   label: string
   value: string
   sub: string
 }
 
-/** Cards do Resumo Executivo (franquia, consumo, saldo, chamados do mês). */
+/**
+ * Cards de KPI do Sumário Executivo — cada card com número grande e
+ * variação/percentual comparativo em relação ao mês anterior.
+ */
 export function buildMonthlyKpiCards(reportData: unknown): MonthlyKpiCard[] {
   const d = (reportData || {}) as AnyRec
   const totC = qty(d.totalContractedHours)
   const totU = qty(d.totalUsedHours)
   const totB = qty(d.totalBalanceHours)
   const totP = qty(d.totalUtilizationPercent)
-  if (totC === 0 && totU === 0) return []
-
-  const cards: MonthlyKpiCard[] = [
-    { label: 'FRANQUIA CONTRATADA', value: formatHours(totC), sub: 'horas do contrato no mês' },
-    {
-      label: 'HORAS UTILIZADAS',
-      value: formatHours(totU),
-      sub: totC > 0 ? `${nf(totP)}% da franquia` : 'consumo apurado',
-    },
-    {
-      label: 'SALDO CONTRATUAL',
-      value: `${totB < 0 ? '−' : ''}${formatHours(Math.abs(totB))}`,
-      sub: totB < 0 ? 'consumo excedente à franquia' : 'disponível no mês',
-    },
-  ]
 
   const comparison = (d.comparison || {}) as AnyRec
   const items: AnyRec[] = Array.isArray(comparison.items) ? comparison.items : []
-  const ref = items.find((i) => i.isReferenceMonth) || items[items.length - 1]
+  const refIdx = items.findIndex((i) => i.isReferenceMonth)
+  const ref = refIdx >= 0 ? items[refIdx] : items.length > 0 ? items[items.length - 1] : null
+  const prev =
+    refIdx > 0 ? items[refIdx - 1] : refIdx < 0 && items.length > 1 ? items[items.length - 2] : null
+
+  const abertos = ref ? qty(ref.chamadosAbertos) : 0
+  const resolvidos = ref ? qty(ref.chamadosResolvidos) : 0
+  const pendentes = Math.max(0, abertos - resolvidos)
+  const taxaRes = abertos > 0 ? (resolvidos / abertos) * 100 : 0
+  const mediaAtual = abertos > 0 ? totU / abertos : 0
+  const prevAbertos = prev ? qty(prev.chamadosAbertos) : 0
+  const prevHoras = prev ? qty(prev.horasUtilizadasDecimal) : 0
+  const prevMedia = prevAbertos > 0 ? prevHoras / prevAbertos : 0
+
+  const cards: MonthlyKpiCard[] = []
+
   if (ref) {
     cards.push({
       label: 'CHAMADOS NO MÊS',
-      value: String(qty(ref.chamadosAbertos)),
-      sub: `${qty(ref.chamadosResolvidos)} resolvido(s) no período`,
+      value: String(abertos),
+      sub: varLabel(abertos, prevAbertos),
+    })
+    cards.push({
+      label: 'RESOLVIDOS',
+      value: String(resolvidos),
+      sub:
+        abertos > 0
+          ? `${nf(taxaRes)}% de resolução · ${varLabel(resolvidos, prev ? qty(prev.chamadosResolvidos) : 0)}`
+          : 'sem aberturas no período',
+    })
+    cards.push({
+      label: 'EM ABERTO',
+      value: String(pendentes),
+      sub: `cálculo: ${abertos} − ${resolvidos} resolvidos`,
     })
   }
+
+  if (totC > 0 || totU > 0) {
+    cards.push({
+      label: 'HORAS UTILIZADAS',
+      value: formatHours(totU),
+      sub:
+        totC > 0
+          ? `${nf(totP)}% da franquia · ${varLabel(totU, prevHoras)}`
+          : 'consumo apurado no mês',
+    })
+    if (totC > 0) {
+      cards.push({
+        label: 'SALDO CONTRATUAL',
+        value: `${totB < 0 ? '−' : ''}${formatHours(Math.abs(totB))}`,
+        sub: totB < 0 ? 'consumo excedente à franquia' : 'disponível no mês',
+      })
+    }
+    if (abertos > 0) {
+      cards.push({
+        label: 'TEMPO MÉDIO/CHAMADO',
+        value: formatHours(mediaAtual),
+        sub: varLabel(mediaAtual, prevMedia),
+      })
+    }
+  }
+
   return cards
 }
 
@@ -135,7 +191,7 @@ export function buildMonthlyChartSpecs(reportData: unknown): Record<number, Mont
     }
   }
 
-  // 3 — Horas por solicitante
+  // 3 — Horas por solicitante (top solicitantes)
   const requesters: AnyRec[] = (d.requesters || [])
     .filter((r) => qty(r.usedHours) > 0)
     .sort((a, b) => qty(b.usedHours) - qty(a.usedHours))

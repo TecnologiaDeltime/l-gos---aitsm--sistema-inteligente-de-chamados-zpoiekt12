@@ -115,7 +115,7 @@ export function renderBrandCover(doc: any, lines: CoverLine[], contentW: number)
 /* Cards de KPI                                                        */
 /* ------------------------------------------------------------------ */
 
-export const KPI_ROW_HEADING = 'RESUMO EXECUTIVO DO PERÍODO'
+export const KPI_ROW_HEADING = 'INDICADORES-CHAVE DO PERÍODO (VS. MÊS ANTERIOR)'
 export const KPI_ROW_HEIGHT = 27 // mm por card (linha única de cards)
 export const KPI_ROW_TOTAL = 12 + KPI_ROW_HEIGHT // cabeçalho + cards
 
