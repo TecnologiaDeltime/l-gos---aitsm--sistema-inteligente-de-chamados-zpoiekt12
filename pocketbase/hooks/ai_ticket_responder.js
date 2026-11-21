@@ -214,6 +214,70 @@ routerAdd('POST', '/backend/v1/ai/ticket-draft', (e) => {
       } catch (_) {}
     }
 
+    // Fontes de aprendizado da KB (kb_sources com status 'Pronto': PDFs e soluções de fechamento)
+    if (settings.include_kb) {
+      try {
+        const categoryId = ticket.getString('category')
+        var catName = ''
+        if (categoryId) {
+          try {
+            catName = e.app.findRecordById('categories', categoryId).getString('name')
+          } catch (_) {}
+        }
+
+        // Seleção por categoria textual (closure guarda o nome da categoria) + fallback pelas mais recentes
+        var kbSources = []
+        if (catName) {
+          try {
+            kbSources = e.app.findRecordsByFilter(
+              'kb_sources',
+              'status = "Pronto" && (category ~ "' + catName + '" || category = "")',
+              '-processed_at',
+              4,
+              0,
+            )
+          } catch (_) {}
+        }
+        if (kbSources.length < 2) {
+          try {
+            kbSources = e.app.findRecordsByFilter(
+              'kb_sources',
+              'status = "Pronto"',
+              '-processed_at',
+              4,
+              0,
+            )
+          } catch (_) {}
+        }
+
+        if (kbSources.length > 0) {
+          promptText +=
+            'Fontes de Aprendizado da Base de Conhecimento (soluções que já funcionaram e manuais — use como referência cirúrgica):\n'
+          for (var ks = 0; ks < kbSources.length; ks++) {
+            const src = kbSources[ks]
+            const srcType =
+              src.getString('source_type') === 'pdf' ? 'Documento' : 'Solução aplicada'
+            const srcTicket = src.getString('ticket_number')
+              ? ' (chamado #' + src.getString('ticket_number') + ')'
+              : ''
+            const srcSummary = (src.getString('summary') || '').replace(/\s+/g, ' ').trim()
+            const srcSnippet =
+              srcSummary.length > 420 ? srcSummary.substring(0, 420) + '...' : srcSummary
+            promptText +=
+              '* [' +
+              srcType +
+              srcTicket +
+              '] ' +
+              src.getString('name') +
+              ': ' +
+              (srcSnippet || 'conteúdo disponível na base') +
+              '\n'
+          }
+          promptText += '\n'
+        }
+      } catch (_) {}
+    }
+
     if (settings.system_instructions) {
       promptText +=
         'Instruções Adicionais da Organização:\n' + settings.system_instructions + '\n\n'
@@ -728,6 +792,70 @@ onRecordAfterCreateSuccess((e) => {
           promptText += 'Base de Conhecimento Relevante:\n'
           for (let j = 0; j < articles.length; j++) {
             promptText += '* ' + articles[j].getString('title') + '\n'
+          }
+          promptText += '\n'
+        }
+      } catch (_) {}
+    }
+
+    // Fontes de aprendizado da KB (kb_sources com status 'Pronto': PDFs e soluções de fechamento)
+    if (settings.include_kb) {
+      try {
+        const categoryId = ticket.getString('category')
+        var catName = ''
+        if (categoryId) {
+          try {
+            catName = e.app.findRecordById('categories', categoryId).getString('name')
+          } catch (_) {}
+        }
+
+        // Seleção por categoria textual (closure guarda o nome da categoria) + fallback pelas mais recentes
+        var kbSources = []
+        if (catName) {
+          try {
+            kbSources = e.app.findRecordsByFilter(
+              'kb_sources',
+              'status = "Pronto" && (category ~ "' + catName + '" || category = "")',
+              '-processed_at',
+              4,
+              0,
+            )
+          } catch (_) {}
+        }
+        if (kbSources.length < 2) {
+          try {
+            kbSources = e.app.findRecordsByFilter(
+              'kb_sources',
+              'status = "Pronto"',
+              '-processed_at',
+              4,
+              0,
+            )
+          } catch (_) {}
+        }
+
+        if (kbSources.length > 0) {
+          promptText +=
+            'Fontes de Aprendizado da Base de Conhecimento (soluções que já funcionaram e manuais — use como referência cirúrgica):\n'
+          for (var ks = 0; ks < kbSources.length; ks++) {
+            const src = kbSources[ks]
+            const srcType =
+              src.getString('source_type') === 'pdf' ? 'Documento' : 'Solução aplicada'
+            const srcTicket = src.getString('ticket_number')
+              ? ' (chamado #' + src.getString('ticket_number') + ')'
+              : ''
+            const srcSummary = (src.getString('summary') || '').replace(/\s+/g, ' ').trim()
+            const srcSnippet =
+              srcSummary.length > 420 ? srcSummary.substring(0, 420) + '...' : srcSummary
+            promptText +=
+              '* [' +
+              srcType +
+              srcTicket +
+              '] ' +
+              src.getString('name') +
+              ': ' +
+              (srcSnippet || 'conteúdo disponível na base') +
+              '\n'
           }
           promptText += '\n'
         }

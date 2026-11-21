@@ -25,18 +25,36 @@ routerAdd(
 
     try {
       const info = e.requestInfo()
-      const body = info.body || {}
-      const files = info.files || []
+      const body = (info && info.body) || {}
 
-      let fileKey = ''
-      for (var k in files) {
-        fileKey = k
-        break
+      // API correta do PocketBase JSVM: requestInfo() NÃO expõe files.
+      // Upload multipart lê-se com e.findUploadedFiles('campo') / e.request.formFile('campo').
+      var fh = null
+      try {
+        const uploaded = e.findUploadedFiles('file')
+        if (uploaded && uploaded.length > 0) fh = uploaded[0]
+      } catch (fErr1) {
+        try {
+          const pair = e.request.formFile('file')
+          if (pair && pair.length > 0) fh = pair[0]
+        } catch (fErr2) {}
       }
-      if (!fileKey) return e.badRequestError('Nenhum arquivo enviado.')
+      if (!fh) return e.badRequestError('Nenhum arquivo enviado (campo "file").')
 
-      const fh = files[fileKey]
-      const name = String(body.name || fh.name || 'Fonte PDF').trim() || 'Fonte PDF'
+      var originalName = ''
+      try {
+        const pair = e.request.formFile('file')
+        if (pair && pair.length > 1 && pair[1] && pair[1].Filename) {
+          originalName = String(pair[1].Filename)
+        }
+      } catch (nErr) {}
+      if (!originalName && fh && fh.name) {
+        try {
+          originalName = String(fh.name)
+        } catch (_) {}
+      }
+
+      const name = String(body.name || originalName || 'Fonte PDF').trim() || 'Fonte PDF'
 
       const col = $app.findCollectionByNameOrId('kb_sources')
       const rec = new Record(col)

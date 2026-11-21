@@ -625,6 +625,13 @@ const BASE_SYSTEM_MODULES: GranularModuleDefinition[] = [
           'Monitoramento algorítmico e sugestões de IA para artigos desatualizados, incompletos ou ineficazes',
         path: '/knowledge-base?tab=curation',
       },
+      {
+        key: 'knowledge_sources',
+        label: 'Fontes de Aprendizado da KB (IA)',
+        description:
+          'Upload de PDFs e fontes aprendidas no fechamento de chamados que alimentam as sugestões cirúrgicas da IA',
+        path: '/knowledge-base?tab=sources',
+      },
     ],
   },
   {

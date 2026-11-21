@@ -12,10 +12,12 @@ import {
   X,
   Sparkles,
   RefreshCw,
+  GraduationCap,
 } from 'lucide-react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { DraftsReviewPanel } from '@/components/knowledge/DraftsReviewPanel'
 import { KnowledgeCurationPanel } from '@/components/knowledge/KnowledgeCurationPanel'
+import { KbSourcesPanel } from '@/components/knowledge/KbSourcesPanel'
 import { usePermissions } from '@/hooks/use-permissions'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
@@ -253,6 +255,15 @@ export default function KnowledgeBase() {
               Cura e Atualização de Dados (IA)
             </TabsTrigger>
           )}
+          {permissions.canAccessItem('knowledge', 'knowledge_sources') && (
+            <TabsTrigger
+              value="sources"
+              className="text-xs flex items-center gap-1.5 data-[state=active]:bg-background data-[state=active]:text-amber-500 font-medium"
+            >
+              <GraduationCap className="h-3.5 w-3.5 text-amber-500" />
+              Fontes de Aprendizado (IA)
+            </TabsTrigger>
+          )}
         </TabsList>
 
         <TabsContent value="drafts">
@@ -261,6 +272,10 @@ export default function KnowledgeBase() {
 
         <TabsContent value="curation">
           <KnowledgeCurationPanel onApplied={loadData} canEdit={canEditKnowledge} />
+        </TabsContent>
+
+        <TabsContent value="sources">
+          <KbSourcesPanel canEdit={canEditKnowledge} onChanged={loadData} />
         </TabsContent>
 
         <TabsContent value="articles" className="space-y-6">
