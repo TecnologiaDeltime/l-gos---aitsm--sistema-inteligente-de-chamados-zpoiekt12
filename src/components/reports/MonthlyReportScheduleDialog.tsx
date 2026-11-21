@@ -27,6 +27,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Textarea } from '@/components/ui/textarea'
 import { useToast } from '@/hooks/use-toast'
 import { getErrorMessage } from '@/lib/pocketbase/errors'
+import { ClientResponseError } from 'pocketbase'
 import { getClientContacts, type ClientContactRecord } from '@/services/client-contacts'
 import {
   getMonthlyReportScheduleForCompany,
@@ -196,6 +197,13 @@ export function MonthlyReportScheduleDialog({
       setActiveTab('history')
     } catch (err) {
       const message = getErrorMessage(err)
+      // O backend informa o estágio da falha (init/recipients/attachment/send/…)
+      // no campo `stage` do JSON de erro — exibir em vez de erro genérico.
+      let stage = ''
+      if (err instanceof ClientResponseError) {
+        const stageVal = (err.response as Record<string, unknown> | undefined)?.stage
+        if (typeof stageVal === 'string') stage = stageVal
+      }
       if (message.toLowerCase().includes('destinatário')) {
         toast({
           title: 'Nenhum destinatário configurado',
@@ -204,8 +212,17 @@ export function MonthlyReportScheduleDialog({
           variant: 'destructive',
         })
       } else {
+        const stageLabels: Record<string, string> = {
+          init: 'inicialização',
+          recipients: 'resolução de destinatários',
+          attachment: 'geração do anexo HTML',
+          send: 'envio SMTP',
+          audit_log: 'gravação da auditoria',
+        }
         toast({
-          title: 'Falha no envio do relatório',
+          title: stage
+            ? `Falha no disparo (estágio: ${stageLabels[stage] || stage})`
+            : 'Falha no envio do relatório',
           description: message,
           variant: 'destructive',
         })

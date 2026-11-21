@@ -702,9 +702,19 @@ cronAdd('monthly_client_report_cron', '0 6 * * *', function () {
         .replace(/[^a-zA-Z0-9]+/g, '-')
         .replace(/^-+|-+$/g, '')
       var attachmentName = 'Relatorio-Mensal-' + safeName + '-' + prevMonthKey + '.html'
-      var attachmentBytes = null
+      // Anexo: mapa { nome: io.Reader } (exigência do mailer Go). Recria o reader
+      // a cada destinatário? Nao: io.Reader e consumido no primeiro envio.
+      // fileFromBytes guarda os bytes; abrimos um reader fresco por destinatario.
+      var attachmentReaderFactory = null
       try {
-        attachmentBytes = strToBytes(htmlContent)
+        if (typeof $filesystem !== 'undefined' && $filesystem.fileFromBytes) {
+          var attFileCron = $filesystem.fileFromBytes(htmlContent, attachmentName)
+          attachmentReaderFactory = function () {
+            return attFileCron.reader.open()
+          }
+        } else {
+          throw new Error('$filesystem.fileFromBytes indisponivel no JSVM')
+        }
       } catch (attErrCron) {
         $app
           .logger()
@@ -713,7 +723,7 @@ cronAdd('monthly_client_report_cron', '0 6 * * *', function () {
             'error',
             attErrCron.message,
           )
-        attachmentBytes = null
+        attachmentReaderFactory = null
       }
 
       var sendErrors = []
@@ -727,8 +737,9 @@ cronAdd('monthly_client_report_cron', '0 6 * * *', function () {
         message.subject = subject
         message.html = emailHtml
         message.text = emailText
-        if (attachmentBytes) {
-          message.attachments = [{ filename: attachmentName, content: attachmentBytes }]
+        if (attachmentReaderFactory) {
+          message.attachments = {}
+          message.attachments[attachmentName] = attachmentReaderFactory()
         }
 
         try {
@@ -1470,10 +1481,21 @@ routerAdd(
         .replace(/[^a-zA-Z0-9]+/g, '-')
         .replace(/^-+|-+$/g, '')
       var attachmentName = 'Relatorio-Mensal-' + safeName + '-' + monthKey + '.html'
-      var attachmentBytes = null
+      // O mailer do PocketBase exige attachments como mapa { nome: io.Reader } —
+      // um array de objetos { filename, content } falha na conversão Go
+      // ("could not convert map value [object Object] to map[string]io.Reader").
+      // io.Reader e consumido no primeiro envio: factory abre um reader fresco
+      // por destinatario.
+      var attachmentReaderFactory = null
       try {
-        attachmentBytes = typeof strToBytes === 'function' ? strToBytes(htmlContent) : null
-        if (!attachmentBytes) throw new Error('strToBytes indisponivel no JSVM')
+        if (typeof $filesystem !== 'undefined' && $filesystem.fileFromBytes) {
+          var attFile = $filesystem.fileFromBytes(htmlContent, attachmentName)
+          attachmentReaderFactory = function () {
+            return attFile.reader.open()
+          }
+        } else {
+          throw new Error('$filesystem.fileFromBytes indisponivel no JSVM')
+        }
       } catch (attErr) {
         $app
           .logger()
@@ -1482,7 +1504,7 @@ routerAdd(
             'error',
             attErr.message,
           )
-        attachmentBytes = null
+        attachmentReaderFactory = null
       }
 
       var sendErrors = []
@@ -1495,8 +1517,9 @@ routerAdd(
         message.subject = subject
         message.html = emailHtml
         message.text = emailText
-        if (attachmentBytes) {
-          message.attachments = [{ filename: attachmentName, content: attachmentBytes }]
+        if (attachmentReaderFactory) {
+          message.attachments = {}
+          message.attachments[attachmentName] = attachmentReaderFactory()
         }
 
         try {
@@ -1528,7 +1551,11 @@ routerAdd(
       } catch (_) {}
 
       if (!isSuccess && recipients.length === sendErrors.length) {
-        return e.json(500, { error: 'Falha no envio de e-mail para: ' + sendErrors.join(', ') })
+        return e.json(500, {
+          error: 'Falha no envio do e-mail (stage=' + stage + '): ' + sendErrors.join(', '),
+          stage: stage,
+          failed_recipients: sendErrors,
+        })
       }
 
       return e.json(200, {
@@ -1555,7 +1582,14 @@ routerAdd(
         logRecErr.set('triggered_by', 'manual')
         $app.save(logRecErr)
       } catch (_) {}
-      return e.json(500, { error: errMsg || 'Erro ao processar envio do relatório.', stage: stage })
+      return e.json(500, {
+        error:
+          'Falha no disparo do relatório (estágio ' +
+          stage +
+          '): ' +
+          (errMsg || 'erro desconhecido'),
+        stage: stage,
+      })
     }
   },
   $apis.requireAuth(),

@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo, useCallback } from 'react'
+import React, { useEffect, useState, useMemo, useCallback } from 'react'
 import { useSearchParams, Link } from 'react-router-dom'
 import {
   FileText,
@@ -234,28 +234,48 @@ export default function MonthlyClientReportPage({
     }
   }, [companyId, monthKey, loadReport])
 
-  // Abre a ROTA DE IMPRESSÃO DEDICADA em nova janela: fora do shell, o relatório
-  // é o único conteúdo do body em fluxo normal — o navegador pagina o PDF sem
-  // folhas em branco. A janela dedicada se auto-imprime e se fecha sozinha.
-  const handlePrint = useCallback(() => {
-    if (printMode) {
-      window.print()
-      return
-    }
-    const params = new URLSearchParams()
-    if (companyId) params.set('company', companyId)
-    if (monthKey) params.set('month', monthKey)
-    const url = `/reports/monthly-client/impressao?${params.toString()}`
-    const win = window.open(url, '_blank', 'width=1024,height=768')
-    if (!win) {
+  // Exportar PDF (ABNT): gera e BAIXA o arquivo .pdf diretamente na máquina —
+  // sem diálogo de impressão do navegador (window.print), que produzia PDFs
+  // em branco mesmo na rota dedicada (v0.0.486/0.0.489). A captura usa a
+  // própria árvore ABNT já renderizada em tela, seção por seção, com os
+  // gráficos de impressão em px fixos (PrintChartContainer) — e o jsPDF
+  // fatia por altura real de página A4, sem folhas em branco.
+  const [exportingPdf, setExportingPdf] = useState(false)
+  const reportRootRef = React.useRef<HTMLDivElement | null>(null)
+  const handleExportPdf = useCallback(async () => {
+    if (!reportData || exportingPdf) return
+    setExportingPdf(true)
+    try {
+      const { exportMonthlyClientPdf } = await import('@/lib/export-monthly-client-pdf')
+      const fileName = await exportMonthlyClientPdf({
+        rootElement: reportRootRef.current,
+        reportData,
+        monthKey,
+        onProgress: (stage) => {
+          if (stage === 'capture') {
+            toast({ title: 'Gerando PDF...', description: 'Capturando seções do relatório.' })
+          }
+        },
+      })
       toast({
-        title: 'Não foi possível abrir a janela de impressão',
-        description:
-          'O navegador bloqueou a popup. Permita popups para este site e tente novamente.',
+        title: 'PDF baixado com sucesso',
+        description: `O arquivo ${fileName} foi salvo na pasta de downloads.`,
+      })
+    } catch (err: any) {
+      toast({
+        title: 'Falha ao exportar PDF',
+        description: err?.message || 'Erro inesperado na geração do arquivo.',
         variant: 'destructive',
       })
+    } finally {
+      setExportingPdf(false)
     }
-  }, [companyId, monthKey, printMode, toast])
+  }, [reportData, monthKey, exportingPdf, toast])
+
+  // Janela dedicada (/reports/monthly-client/impressao): botão manual de imprimir.
+  const handlePrint = useCallback(() => {
+    window.print()
+  }, [])
 
   // Auto-print + fechamento automático SOMENTE na rota dedicada, depois que o
   // relatório terminou de carregar (gráficos pré-renderizados no DOM).
@@ -455,10 +475,23 @@ export default function MonthlyClientReportPage({
             <Button
               variant="outline"
               size="sm"
+              onClick={handleExportPdf}
+              disabled={loadingReport || !reportData || exportingPdf}
+            >
+              {exportingPdf ? (
+                <RefreshCw className="h-4 w-4 mr-1.5 animate-spin" />
+              ) : (
+                <Printer className="h-4 w-4 mr-1.5" />
+              )}
+              {exportingPdf ? 'Gerando PDF…' : 'Baixar PDF'}
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
               onClick={handlePrint}
               disabled={loadingReport || !reportData}
             >
-              <Printer className="h-4 w-4 mr-1.5" /> Imprimir / Salvar PDF
+              <Printer className="h-4 w-4 mr-1.5" /> Imprimir
             </Button>
             <Button variant="ghost" size="sm" onClick={() => window.close()}>
               Fechar
@@ -784,10 +817,15 @@ export default function MonthlyClientReportPage({
               <Button
                 variant="outline"
                 size="sm"
-                onClick={handlePrint}
-                disabled={loadingReport || !reportData}
+                onClick={handleExportPdf}
+                disabled={loadingReport || !reportData || exportingPdf}
               >
-                <Printer className="h-4 w-4 mr-1.5" /> Exportar PDF (ABNT)
+                {exportingPdf ? (
+                  <RefreshCw className="h-4 w-4 mr-1.5 animate-spin" />
+                ) : (
+                  <Printer className="h-4 w-4 mr-1.5" />
+                )}
+                {exportingPdf ? 'Gerando PDF…' : 'Exportar PDF (ABNT)'}
               </Button>
               <Button
                 size="sm"
@@ -967,7 +1005,7 @@ export default function MonthlyClientReportPage({
           </CardContent>
         </Card>
       ) : (
-        <div className="abnt-report-root space-y-8 print:space-y-0">
+        <div ref={reportRootRef} className="abnt-report-root space-y-8 print:space-y-0">
           {/* ============================================================== */}
           {/* CAPA DO RELATÓRIO (Normas ABNT NBR 10719 / 14724)            */}
           {/* ============================================================== */}
