@@ -236,24 +236,24 @@ export default function MonthlyClientReportPage({
 
   // Exportar PDF (ABNT): gera e BAIXA o arquivo .pdf diretamente na máquina —
   // sem diálogo de impressão do navegador (window.print), que produzia PDFs
-  // em branco mesmo na rota dedicada (v0.0.486/0.0.489). A captura usa a
-  // própria árvore ABNT já renderizada em tela, seção por seção, com os
-  // gráficos de impressão em px fixos (PrintChartContainer) — e o jsPDF
-  // fatia por altura real de página A4, sem folhas em branco.
+  // em branco mesmo na rota dedicada (v0.0.486/0.0.489). Desde a v0.0.492 o
+  // PDF é 100% TEXTUAL (a pedido do cliente: "não utilize gráficos, faça um
+  // PDF textual"): todo gráfico é reescrito como texto ABNT com cálculos,
+  // percentuais e tendências; tabelas viram tabelas vetoriais nativas. Sem
+  // rasterização (html2canvas) — o conteúdo paginado naturalmente pelo motor
+  // de texto, sem nenhum corte de conteúdo.
   const [exportingPdf, setExportingPdf] = useState(false)
-  const reportRootRef = React.useRef<HTMLDivElement | null>(null)
   const handleExportPdf = useCallback(async () => {
     if (!reportData || exportingPdf) return
     setExportingPdf(true)
     try {
-      const { exportMonthlyClientPdf } = await import('@/lib/export-monthly-client-pdf')
-      const fileName = await exportMonthlyClientPdf({
-        rootElement: reportRootRef.current,
+      const { exportMonthlyClientTextPdf } = await import('@/lib/monthly-client-pdf-text')
+      const fileName = await exportMonthlyClientTextPdf({
         reportData,
         monthKey,
         onProgress: (stage) => {
-          if (stage === 'capture') {
-            toast({ title: 'Gerando PDF...', description: 'Capturando seções do relatório.' })
+          if (stage === 'compose') {
+            toast({ title: 'Gerando PDF...', description: 'Compondo as páginas do relatório.' })
           }
         },
       })
