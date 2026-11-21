@@ -846,7 +846,8 @@ routerAdd(
       } catch (_) {}
 
       var recipients = []
-      if (sched && sched.getBool('use_focal_points')) {
+      var useFocalPoints = sched ? sched.getBool('use_focal_points') : recipients.length === 0
+      if (useFocalPoints) {
         try {
           var contacts = $app.findRecordsByFilter(
             'client_contacts',
@@ -897,7 +898,11 @@ routerAdd(
           logRec.set('triggered_by', 'manual')
           $app.save(logRec)
         } catch (_) {}
-        return e.json(400, { error: 'Nenhum destinatário definido para envio do relatório.' })
+        return e.json(422, {
+          error:
+            'Nenhum destinatário definido. Cadastre um contato como Ponto Focal no cliente, preencha os destinatários do agendamento ou informe e-mails adicionais no disparo.',
+          code: 'no_recipients',
+        })
       }
 
       var parts = monthKey.split('-')
@@ -1378,7 +1383,7 @@ routerAdd(
         $app.save(logRec3)
       } catch (_) {}
 
-      if (!isSuccess) {
+      if (!isSuccess && recipients.length === sendErrors.length) {
         return e.json(500, { error: 'Falha no envio de e-mail para: ' + sendErrors.join(', ') })
       }
 
@@ -1387,6 +1392,7 @@ routerAdd(
         company: companyName,
         month: monthKey,
         recipients: recipients,
+        failed_recipients: sendErrors,
       })
     } catch (err) {
       $app.logger().error('monthly_client_report send endpoint error', 'error', err.message)

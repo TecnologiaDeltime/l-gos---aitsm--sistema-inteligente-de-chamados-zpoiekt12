@@ -93,7 +93,13 @@ export const sendMonthlyReportNow = async (
   companyId: string,
   monthKey: string,
   extraEmails: string[] = [],
-): Promise<{ success: boolean; company: string; month: string; recipients: string[] }> => {
+): Promise<{
+  success: boolean
+  company: string
+  month: string
+  recipients: string[]
+  failed_recipients?: string[]
+}> => {
   return await pb.send('/backend/v1/reports/monthly-client/send', {
     method: 'POST',
     body: {

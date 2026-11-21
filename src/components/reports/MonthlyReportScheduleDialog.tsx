@@ -173,20 +173,43 @@ export function MonthlyReportScheduleDialog({
     setSendingNow(true)
     try {
       const result = await sendMonthlyReportNow(companyId, sendNowMonth, extras)
-      toast({
-        title: 'Relatório enviado com sucesso!',
-        description: `Disparado para ${result.recipients.length} destinatário(s) no padrão ABNT.`,
-      })
+      const failedRecipients = Array.isArray(result.failed_recipients)
+        ? result.failed_recipients.filter(Boolean)
+        : []
+      if (failedRecipients.length > 0) {
+        toast({
+          title: 'Relatório enviado com ressalvas',
+          description: `Enviado para ${result.recipients.length - failedRecipients.length} de ${
+            result.recipients.length
+          } destinatário(s). Falhas: ${failedRecipients.join(' | ')}`,
+          variant: 'destructive',
+        })
+      } else {
+        toast({
+          title: 'Relatório enviado com sucesso!',
+          description: `Disparado para ${result.recipients.length} destinatário(s) no padrão ABNT.`,
+        })
+      }
       // Recarrega logs
       const updatedLogs = await getMonthlyReportLogsForCompany(companyId, 30)
       setLogs(updatedLogs)
       setActiveTab('history')
     } catch (err) {
-      toast({
-        title: 'Falha no envio do relatório',
-        description: getErrorMessage(err),
-        variant: 'destructive',
-      })
+      const message = getErrorMessage(err)
+      if (message.toLowerCase().includes('destinatário')) {
+        toast({
+          title: 'Nenhum destinatário configurado',
+          description:
+            'Cadastre um contato como Ponto Focal no cadastro do cliente (Clientes → Contatos), preencha os destinatários do agendamento na aba Configuração, ou informe e-mails adicionais no campo de disparo.',
+          variant: 'destructive',
+        })
+      } else {
+        toast({
+          title: 'Falha no envio do relatório',
+          description: message,
+          variant: 'destructive',
+        })
+      }
     } finally {
       setSendingNow(false)
     }
