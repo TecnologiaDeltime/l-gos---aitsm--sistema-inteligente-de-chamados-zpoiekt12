@@ -76,10 +76,12 @@ function para(text: string): HTMLElement {
 
 function section(title: string, intro: string): HTMLElement {
   const sec = el('section', 'abnt-section')
-  const head = el('div', 'abnt-avoid-break')
-  head.appendChild(el('h3', 'abnt-section-title', title))
-  head.appendChild(para(intro))
-  sec.appendChild(head)
+  // Título e intro como filhos DIRETOS da section: o extrator de blocos do
+  // PDF (monthly-client-pdf-writer.extractBlocks) reconhece h3.abnt-section-
+  // title e p.abnt-paragraph apenas nesse nível — embrulhá-los em um div
+  // abnt-avoid-break faz o extrator DESCARTAR título e introdução.
+  sec.appendChild(el('h3', 'abnt-section-title', title))
+  sec.appendChild(para(intro))
   return sec
 }
 
