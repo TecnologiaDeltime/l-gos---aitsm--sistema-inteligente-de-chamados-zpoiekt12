@@ -29,6 +29,7 @@ import {
   buildMonthlyChartSpecs,
   type MonthlyChartSpec,
 } from '@/lib/monthly-client-rich-doc'
+import { extractBlocks, type Block } from '@/lib/monthly-client-pdf-blocks'
 import { drawMonthlyChart, chartBlockMetrics } from '@/lib/monthly-client-pdf-charts'
 import {
   renderBrandCover,
@@ -58,110 +59,32 @@ const AMBER = '#D97706'
 const GRAPHITE = '#17181C'
 
 /* ------------------------------------------------------------------ */
-/* Blocos extraídos do DOM textual                                     */
+/* Normalização de texto para as fontes padrão do jsPDF (WinAnsi)      */
 /* ------------------------------------------------------------------ */
 
-type Block =
-  | { type: 'cover'; lines: CoverLine[] }
-  | { type: 'h2'; text: string }
-  | { type: 'h3'; text: string }
-  | { type: 'para'; text: string }
-  | { type: 'note'; text: string }
-  | {
-      type: 'table'
-      caption: string
-      headers: string[]
-      rows: string[][]
-      source: string
+/** jsPDF (fontes padrão, WinAnsi) não possui o glifo U+2212 (−). */
+const winAnsi = (s: string): string => (s || '').replace(/\u2212/g, '-')
+
+/** Aplica a normalização a todos os textos dos blocos ANTES da medição —
+ * assim o que é medido (splitTextToSize/getTextWidth) é exatamente o que
+ * será desenhado. */
+function sanitizeBlocks(blocks: Block[]): Block[] {
+  return blocks.map((b): Block => {
+    switch (b.type) {
+      case 'cover':
+        return { ...b, lines: b.lines.map((l) => ({ ...l, text: winAnsi(l.text) })) }
+      case 'table':
+        return {
+          ...b,
+          caption: winAnsi(b.caption),
+          headers: b.headers.map(winAnsi),
+          rows: b.rows.map((r) => r.map(winAnsi)),
+          source: winAnsi(b.source),
+        }
+      default:
+        return { ...b, text: winAnsi(b.text) }
     }
-
-function hasClass(el: Element, cls: string): boolean {
-  return el.classList.contains(cls)
-}
-
-function directText(wrap: Element, selector: string): string {
-  const node = wrap.querySelector(selector)
-  return node ? (node.textContent || '').trim() : ''
-}
-
-function parseAvoidBreak(wrap: Element): Block | null {
-  const caption = directText(wrap, ':scope > p.abnt-caption-top')
-  const table = wrap.querySelector(':scope > table.abnt-table')
-  const source = directText(wrap, ':scope > p.abnt-source-bottom')
-  const h4 = wrap.querySelector(':scope > h4')
-  if (h4) return { type: 'h3', text: (h4.textContent || '').trim() }
-  if (table) {
-    const headers = Array.from(table.querySelectorAll('thead th')).map((th) =>
-      (th.textContent || '').trim(),
-    )
-    const rows = Array.from(table.querySelectorAll('tbody tr')).map((tr) =>
-      Array.from(tr.querySelectorAll('td')).map((td) => (td.textContent || '').trim()),
-    )
-    return { type: 'table', caption, headers, rows, source }
-  }
-  if (caption) return { type: 'note', text: caption }
-  return null
-}
-
-function extractBlocks(container: HTMLElement): Block[] {
-  const out: Block[] = []
-  const walk = (parent: Element) => {
-    Array.from(parent.children).forEach((child) => {
-      if (child.tagName === 'STYLE') return
-      if (hasClass(child, 'abnt-cover')) {
-        const lines: CoverLine[] = []
-        Array.from(child.querySelectorAll('p')).forEach((p) => {
-          const text = (p.textContent || '').trim()
-          if (!text) return
-          const kind = hasClass(p, 'abnt-cover-header')
-            ? 'header'
-            : hasClass(p, 'abnt-cover-title')
-              ? 'title'
-              : hasClass(p, 'abnt-cover-subtitle')
-                ? 'subtitle'
-                : hasClass(p, 'abnt-cover-footer')
-                  ? 'footer'
-                  : 'sub'
-          lines.push({ text, kind })
-        })
-        out.push({ type: 'cover', lines })
-        return
-      }
-      if (hasClass(child, 'abnt-section')) {
-        Array.from(child.children).forEach((secChild) => {
-          if (hasClass(secChild, 'abnt-section-title') && secChild.tagName === 'H3') {
-            out.push({ type: 'h2', text: (secChild.textContent || '').trim() })
-            return
-          }
-          if (hasClass(secChild, 'abnt-paragraph')) {
-            const text = (secChild.textContent || '').trim()
-            if (text) out.push({ type: 'para', text })
-            return
-          }
-          if (hasClass(secChild, 'abnt-avoid-break')) {
-            const block = parseAvoidBreak(secChild)
-            if (block) out.push(block)
-            return
-          }
-          walk(secChild)
-        })
-        return
-      }
-      if (hasClass(child, 'abnt-avoid-break')) {
-        const block = parseAvoidBreak(child)
-        if (block) out.push(block)
-        return
-      }
-      if (hasClass(child, 'abnt-paragraph')) {
-        const text = (child.textContent || '').trim()
-        if (text) out.push({ type: 'para', text })
-        return
-      }
-      walk(child)
-    })
-  }
-  walk(container)
-  return out
+  })
 }
 
 /* ------------------------------------------------------------------ */
@@ -260,6 +183,41 @@ function setFont(doc: any, style: PlacedLine['style'], size: number) {
   doc.setFontSize(size)
 }
 
+/**
+ * Quebra de linha com largura POR LINHA: a 1ª linha mede com o recuo ABNT e
+ * as seguintes com a largura TOTAL da mancha. O splitTextToSize não suporta
+ * larguras variáveis dentro do mesmo parágrafo, então a quebra é feita
+ * palavra a palavra com getTextWidth — cada linha nasce com a largura exata
+ * em que será desenhada (era aqui que o texto "saía da formatação": todas
+ * as linhas eram medidas/desenhadas com a largura da 1ª linha).
+ */
+function wrapMeasured(
+  doc: any,
+  text: string,
+  firstW: number,
+  restW: number,
+  size: number,
+  style: PlacedLine['style'],
+): string[] {
+  setFont(doc, style, size)
+  const words = String(text).split(/\s+/).filter(Boolean)
+  const lines: string[] = []
+  let cur = ''
+  let w = firstW
+  for (const word of words) {
+    const cand = cur ? `${cur} ${word}` : word
+    if (!cur || doc.getTextWidth(cand) <= w) {
+      cur = cand
+    } else {
+      lines.push(cur)
+      cur = word
+      w = restW
+    }
+  }
+  if (cur) lines.push(cur)
+  return lines
+}
+
 /** Quebra de linha MEDIDA de verdade com a fonte/largura exatas do desenho. */
 function measureLines(
   doc: any,
@@ -317,8 +275,11 @@ function layout(
         const lines = measureLines(doc, block.text.toUpperCase(), CONTENT_W, size, 'bold')
         const h = lines.length * lineH(size)
         const gapAfter = block.type === 'h2' ? H2_GAP_AFTER : H3_GAP_AFTER
-        // Título nunca órfão: exige espaço para título + ~3 linhas de texto.
-        if (h + gapAfter + 3 * lineH(BODY_SIZE) > remaining()) pushPage()
+        // Título nunca órfão: antes dos cards de KPI (primeira seção), exige
+        // espaço para título + faixa de indicadores; depois, para título +
+        // ~3 linhas de texto.
+        const orphanNeed = h + gapAfter + (kpiPlaced ? 3 * lineH(BODY_SIZE) : KPI_ROW_TOTAL)
+        if (orphanNeed > remaining()) pushPage()
         const placed: PlacedLine[] = lines.map((text, i) => ({
           text,
           x: M_LEFT,
@@ -354,8 +315,12 @@ function layout(
         const isNote = block.type === 'note'
         const size = isNote ? BODY_SIZE - 1 : BODY_SIZE
         const style: PlacedLine['style'] = isNote ? 'italic' : 'normal'
-        const bodyW = CONTENT_W - (isNote ? 0 : INDENT)
-        const lines = measureLines(doc, block.text, bodyW, size, style)
+        // ABNT: 1ª linha com recuo de 1,25 cm; as demais ocupam a largura
+        // TOTAL da mancha. Cada linha é medida com a largura em que será
+        // desenhada — justificando até a margem direita de verdade.
+        const firstW = isNote ? CONTENT_W : CONTENT_W - INDENT
+        const restW = CONTENT_W
+        const lines = wrapMeasured(doc, block.text, firstW, restW, size, style)
         const lh = lineH(size)
         // Cards de KPI (Sumário Executivo) na primeira página de conteúdo:
         // bloco atômico — se não couber, abre página nova antes.
@@ -387,16 +352,20 @@ function layout(
             continue
           }
           const chunk = lines.slice(idx, idx + take)
-          const isFirst = idx === 0 && !isNote
-          const placed: PlacedLine[] = chunk.map((text, i) => ({
-            text,
-            x: isFirst && i === 0 ? M_LEFT + INDENT : M_LEFT,
-            size,
-            style,
-            justify: !isNote,
-            width: isFirst && i === 0 ? bodyW : CONTENT_W - (isNote ? 0 : INDENT),
-          }))
           const isLast = idx + take >= lines.length
+          const placed: PlacedLine[] = chunk.map((text, i) => {
+            const isFirstLine = idx === 0 && i === 0 && !isNote
+            return {
+              text,
+              x: isFirstLine ? M_LEFT + INDENT : M_LEFT,
+              size,
+              style,
+              // Justifica todas as linhas MENOS a última do parágrafo inteiro
+              // (uma linha curta justificada seria esticada até a margem).
+              justify: !isNote && !(isLast && i === chunk.length - 1),
+              width: isFirstLine ? firstW : restW,
+            }
+          })
           pushParaPart({
             lines: placed,
             height: chunk.length * lh,
@@ -741,7 +710,7 @@ export async function exportMonthlyClientTextPdf(
   container.style.top = '0'
   document.body.appendChild(container)
   try {
-    const blocks = extractBlocks(container)
+    const blocks = sanitizeBlocks(extractBlocks(container))
     if (blocks.length === 0) {
       throw new Error('Nenhum conteúdo textual disponível para exportar.')
     }

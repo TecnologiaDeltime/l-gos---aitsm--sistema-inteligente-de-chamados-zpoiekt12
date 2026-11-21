@@ -151,29 +151,35 @@ export function renderKpiCards(
     setFill(doc, AMBER)
     doc.roundedRect(cx + 2.2, cy + 2.6, 1.1, KPI_ROW_HEIGHT - 5.2, 0.5, 0.5, 'F')
 
-    // Rótulo
+    const textW = cardW - 7
+
+    // Rótulo — no máx. 2 linhas, faixa própria no topo do card.
     font(doc, 'bold', 5.6)
     setTextColor(doc, AMBER)
-    doc
-      .splitTextToSize(card.label, cardW - 7)
-      .forEach((t: string, li: number) => doc.text(t, cx + 5, cy + 5.2 + li * 2.6))
+    const labelLines = doc.splitTextToSize(card.label, textW).slice(0, 2) as string[]
+    labelLines.forEach((t, li) => doc.text(t, cx + 5, cy + 5.2 + li * 2.6))
 
-    // Número grande
-    font(doc, 'bold', 14)
+    // Número grande — SHRINK-TO-FIT: reduz a fonte até caber em UMA linha
+    // (nunca quebra nem invade a faixa do subtítulo).
+    let valueSize = 14
+    font(doc, 'bold', valueSize)
+    while (valueSize > 8 && doc.getTextWidth(card.value) > textW) {
+      valueSize -= 0.5
+      font(doc, 'bold', valueSize)
+    }
     setTextColor(doc, DARK)
-    let vy = cy + 14.5
-    doc
-      .splitTextToSize(card.value, cardW - 7)
-      .forEach((t: string, vi: number) => doc.text(t, cx + 5, vy + vi * 6))
+    const valueY = cy + 15
+    doc.text(card.value, cx + 5, valueY)
 
-    // Subtítulo
+    // Subtítulo — faixa PRÓPRIA logo abaixo do número (fluxo vertical,
+    // sem ancoragem ao fundo que colidia com valores altos/longos).
     font(doc, 'normal', 5.4)
     setTextColor(doc, GRAY)
+    const subY = valueY + 3.6
     doc
-      .splitTextToSize(card.sub, cardW - 7)
+      .splitTextToSize(card.sub, textW)
       .slice(0, 2)
-      .forEach((t: string, si: number) => doc.text(t, cx + 5, KPI_ROW_HEIGHT + cy - 4.2 + si * 2.4))
+      .forEach((t: string, si: number) => doc.text(t, cx + 5, subY + si * 2.4))
   })
-
   return cy + KPI_ROW_HEIGHT
 }
