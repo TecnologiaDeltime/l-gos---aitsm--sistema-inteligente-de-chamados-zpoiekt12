@@ -87,6 +87,44 @@ function sanitizeBlocks(blocks: Block[]): Block[] {
   })
 }
 
+/** Normalização WinAnsi para specs de gráfico (desenho direto no jsPDF). */
+function sanitizeChartSpecs(specs: Record<number, MonthlyChartSpec>) {
+  const out: Record<number, MonthlyChartSpec> = {}
+  Object.entries(specs).forEach(([k, spec]) => {
+    const clean: MonthlyChartSpec = {
+      ...spec,
+      caption: winAnsi(spec.caption),
+      source: winAnsi(spec.source),
+    } as MonthlyChartSpec
+    if ('seriesA' in spec) {
+      ;(clean as any).seriesA = winAnsi(spec.seriesA)
+      ;(clean as any).seriesB = winAnsi(spec.seriesB)
+    }
+    if ('seriesHours' in spec) {
+      ;(clean as any).seriesHours = winAnsi(spec.seriesHours)
+      ;(clean as any).seriesTickets = winAnsi(spec.seriesTickets)
+    }
+    if ('centerLabel' in spec) {
+      ;(clean as any).centerLabel = winAnsi(spec.centerLabel)
+      ;(clean as any).centerSub = winAnsi(spec.centerSub)
+    }
+    if ('categories' in spec) {
+      ;(clean as any).categories = spec.categories.map((c) => ({
+        ...c,
+        label: winAnsi(c.label),
+      }))
+    }
+    if ('items' in spec) {
+      ;(clean as any).items = spec.items.map((i) => ({ ...i, label: winAnsi(i.label) }))
+    }
+    if ('points' in spec) {
+      ;(clean as any).points = spec.points.map((p) => ({ ...p, label: winAnsi(p.label) }))
+    }
+    out[Number(k)] = clean
+  })
+  return out
+}
+
 /* ------------------------------------------------------------------ */
 /* Métricas e constantes de layout                                     */
 /* ------------------------------------------------------------------ */
@@ -133,11 +171,16 @@ interface PlacedPara {
   gapAfter: number
 }
 
+interface PlacedCell {
+  lines: string[]
+  size: number
+}
+
 interface PlacedTable {
   caption: string | null
-  headers: string[][]
+  headers: PlacedCell[]
   headerH: number
-  rows: string[][][]
+  rows: PlacedCell[][]
   rowHeights: number[]
   colWidths: number[]
   source: string | null
@@ -169,8 +212,12 @@ interface Page {
 /* Utilidades de medida (fonte do próprio PDF)                         */
 /* ------------------------------------------------------------------ */
 
-function setFont(doc: any, style: PlacedLine['style'], size: number) {
-  const font = style === 'bold' || style === 'bolditalic' ? 'times' : 'times'
+function setFont(
+  doc: any,
+  style: PlacedLine['style'],
+  size: number,
+  family: 'times' | 'helvetica' = 'times',
+) {
   const variant =
     style === 'bold'
       ? 'bold'
@@ -179,7 +226,7 @@ function setFont(doc: any, style: PlacedLine['style'], size: number) {
         : style === 'bolditalic'
           ? 'bolditalic'
           : 'normal'
-  doc.setFont(font, variant)
+  doc.setFont(family, variant)
   doc.setFontSize(size)
 }
 
@@ -225,9 +272,20 @@ function measureLines(
   widthMm: number,
   size: number,
   style: PlacedLine['style'],
+  family: 'times' | 'helvetica' = 'times',
 ): string[] {
-  setFont(doc, style, size)
+  setFont(doc, style, size, family)
   return doc.splitTextToSize(text, widthMm) as string[]
+}
+
+/** Reduz o texto até caber na largura (mm) com a fonte corrente (última
+ * defesa: palavra única mais larga que a célula — ex. e-mails longos —
+ * nunca invade a coluna vizinha). */
+function fitCell(doc: any, text: string, maxW: number): string {
+  let t = text || ''
+  if (doc.getTextWidth(t) <= maxW) return t
+  while (t.length > 1 && doc.getTextWidth(t + '…') > maxW) t = t.slice(0, -1)
+  return t + '…'
 }
 
 function lineH(sizePt: number): number {
@@ -278,7 +336,8 @@ function layout(
         // Título nunca órfão: antes dos cards de KPI (primeira seção), exige
         // espaço para título + faixa de indicadores; depois, para título +
         // ~3 linhas de texto.
-        const orphanNeed = h + gapAfter + (kpiPlaced ? 3 * lineH(BODY_SIZE) : KPI_ROW_TOTAL)
+        const kpiNeed = kpiCards.length > 0 && !kpiPlaced ? KPI_ROW_TOTAL : 3 * lineH(BODY_SIZE)
+        const orphanNeed = h + gapAfter + kpiNeed
         if (orphanNeed > remaining()) pushPage()
         const placed: PlacedLine[] = lines.map((text, i) => ({
           text,
@@ -323,15 +382,18 @@ function layout(
         const lines = wrapMeasured(doc, block.text, firstW, restW, size, style)
         const lh = lineH(size)
         // Cards de KPI (Sumário Executivo) na primeira página de conteúdo:
-        // bloco atômico — se não couber, abre página nova antes.
+        // bloco atômico — se não couber, abre página nova antes. Sem cards
+        // (relatório sem dados), a faixa não é desenhada.
         if (!kpiPlaced) {
-          if (KPI_ROW_TOTAL > remaining()) pushPage()
-          current.push({
-            kind: 'kpi',
-            kpi: { cards: kpiCards, height: KPI_ROW_TOTAL },
-            advance: KPI_ROW_TOTAL + KPI_GAP_AFTER,
-          })
-          y += KPI_ROW_TOTAL + KPI_GAP_AFTER
+          if (kpiCards.length > 0) {
+            if (KPI_ROW_TOTAL > remaining()) pushPage()
+            current.push({
+              kind: 'kpi',
+              kpi: { cards: kpiCards, height: KPI_ROW_TOTAL },
+              advance: KPI_ROW_TOTAL + KPI_GAP_AFTER,
+            })
+            y += KPI_ROW_TOTAL + KPI_GAP_AFTER
+          }
           kpiPlaced = true
         }
         if (lines.length === 0) return
@@ -346,7 +408,15 @@ function layout(
           // Controle de viúvas/órfãs: nunca deixar 1 linha isolada numa
           // página quando há mais linhas vindas; nunca levar menos de 2.
           const rest = lines.length - idx - take
-          if (rest === 1 && take > 2) take -= 1
+          if (rest === 1) {
+            if (take >= 3) take -= 1
+            else {
+              // Só caberiam 2 linhas aqui e sobraria 1 órfã: leva o resto
+              // inteiro para a página seguinte.
+              pushPage()
+              continue
+            }
+          }
           if (take < 2 && lines.length - idx > 2) {
             pushPage()
             continue
@@ -379,8 +449,11 @@ function layout(
       }
       case 'table': {
         const { caption, headers, rows, source } = block
-        // Larguras proporcionais ao maior conteúdo de cada coluna (medidas com a fonte da tabela).
-        setFont(doc, 'normal', TABLE_SIZE)
+        // Larguras proporcionais ao maior conteúdo de cada coluna. As medidas
+        // usam a MESMA fonte do desenho (helvetica — Times é mais estreita e
+        // faria o texto medido invadir a coluna vizinha ao ser desenhado).
+        doc.setFont('helvetica', 'normal')
+        doc.setFontSize(TABLE_SIZE)
         const weights = headers.map((h, c) => {
           let w = Math.max(4, doc.getTextWidth(h || '—'))
           rows.forEach((r) => {
@@ -398,9 +471,16 @@ function layout(
           for (let c = 0; c < colWidths.length; c++) colWidths[c] *= k
         }
 
-        const cellLines = (text: string, width: number) =>
-          measureLines(doc, text || '—', width - 3, TABLE_SIZE, 'normal')
-        const headerCells = headers.map((h, c) => cellLines(h, colWidths[c]))
+        // Cada linha medida passa por fitCell: palavra única mais larga que a
+        // célula (ex. e-mails longos) é truncada com reticências em vez de
+        // invadir a coluna vizinha.
+        const cellLines = (text: string, width: number, style: PlacedLine['style'] = 'normal') => {
+          const inner = width - 3
+          return measureLines(doc, text || '—', inner, TABLE_SIZE, style, 'helvetica').map((l) =>
+            fitCell(doc, l, inner),
+          )
+        }
+        const headerCells = headers.map((h, c) => cellLines(h, colWidths[c], 'bold'))
         const headerH = Math.max(...headerCells.map((l) => l.length)) * lineH(TABLE_SIZE) + 2.5
 
         const bodyRows = rows.length > 0 ? rows : [headers.map(() => '—')]
@@ -435,7 +515,6 @@ function layout(
             Math.min(rowHeights[g.start] ?? 0, remaining())
           if (need > remaining()) pushPage()
 
-          const sliceRows = bodyRows.slice(g.start, g.end)
           const sliceCells = dataCells.slice(g.start, g.end)
           const sliceHeights = rowHeights.slice(g.start, g.end)
           const height =
@@ -447,9 +526,9 @@ function layout(
             kind: 'table',
             table: {
               caption: caption && gi === 0 ? caption : null,
-              headers: headerCells,
+              headers: headerCells.map((lines) => ({ lines, size: TABLE_SIZE })),
               headerH,
-              rows: sliceCells,
+              rows: sliceCells.map((row) => row.map((lines) => ({ lines, size: TABLE_SIZE }))),
               rowHeights: sliceHeights,
               colWidths,
               source: source && gi === groups.length - 1 ? source : null,
@@ -489,11 +568,11 @@ function renderTable(doc: any, table: PlacedTable, yTop: number): number {
   doc.setDrawColor(217, 119, 6)
   doc.rect(M_LEFT, headerBoxTop, CONTENT_W, table.headerH - 1, 'FD')
   let x = M_LEFT
-  table.headers.forEach((cellLines, c) => {
+  table.headers.forEach((cell, c) => {
     doc.setFont('helvetica', 'bold')
     doc.setFontSize(TABLE_SIZE)
     doc.setTextColor(252, 211, 77)
-    cellLines.forEach((t, i) => {
+    cell.lines.forEach((t, i) => {
       doc.text(t, x + 1.5, y + i * lineH(TABLE_SIZE))
     })
     x += table.colWidths[c]
@@ -511,11 +590,11 @@ function renderTable(doc: any, table: PlacedTable, yTop: number): number {
     doc.setLineWidth(0.2)
     doc.line(M_LEFT, rowTop, M_LEFT + CONTENT_W, rowTop)
     let cx = M_LEFT
-    cells.forEach((cellLines, c) => {
+    cells.forEach((cell, c) => {
       doc.setFont('helvetica', 'normal')
       doc.setFontSize(TABLE_SIZE)
       doc.setTextColor(31, 33, 38)
-      cellLines.forEach((t, i) => {
+      cell.lines.forEach((t, i) => {
         doc.text(t, cx + 1.5, y + i * lineH(TABLE_SIZE))
       })
       cx += table.colWidths[c]
@@ -716,8 +795,16 @@ export async function exportMonthlyClientTextPdf(
     }
 
     // 2. Modelo rico: cards de KPI + specs de gráficos vetoriais.
-    const kpiCards = buildMonthlyKpiCards(reportData)
-    const charts = buildMonthlyChartSpecs(reportData)
+    //    KPIs e gráficos são desenhados DIRETAMENTE (sem passar por
+    //    sanitizeBlocks), então recebem aqui a MESMA normalização WinAnsi —
+    //    varLabel/saldo emitem "−" (U+2212), glifo inexistente nas fontes
+    //    padrão do jsPDF, que corrompia o texto desenhado.
+    const kpiCards = buildMonthlyKpiCards(reportData).map((c) => ({
+      label: winAnsi(c.label),
+      value: winAnsi(c.value),
+      sub: winAnsi(c.sub),
+    }))
+    const charts = sanitizeChartSpecs(buildMonthlyChartSpecs(reportData))
 
     // 3. Layout/paginação em A4 (mede com a própria fonte do PDF).
     const doc = new JsPdfCtor({ orientation: 'portrait', unit: 'mm', format: 'a4', compress: true })
