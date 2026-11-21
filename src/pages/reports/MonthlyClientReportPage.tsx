@@ -364,6 +364,44 @@ export default function MonthlyClientReportPage() {
             display: none !important;
           }
 
+          /* ISOLAMENTO TOTAL DO RELATÓRIO NA IMPRESSÃO (correção do "PDF em branco,
+             só o rodapé"): contêineres do app-shell com altura fixa (h-screen),
+             overflow oculto, flex e posicionamento clipam/some o fluxo impresso.
+             Aqui neutralizamos TODOS os ancestrais fora da árvore do relatório e
+             revelamos somente .abnt-report-root, posicionado no topo da folha. */
+          html, body, #root {
+            height: auto !important;
+            max-height: none !important;
+            min-height: 0 !important;
+            overflow: visible !important;
+            position: static !important;
+            display: block !important;
+          }
+
+          /* Ancestrais e vizinhos do relatório: sem clip, sem posição, invisíveis.
+             (visibility preserva os elementos fora da árvore do relatório sem
+             gerar páginas extras — o conteúdo visível continua fluindo normal.) */
+          body *:not(.abnt-report-root):not(.abnt-report-root *) {
+            position: static !important;
+            overflow: visible !important;
+            visibility: hidden !important;
+          }
+
+          /* A árvore do relatório inteira fica visível e ancorada no topo */
+          .abnt-report-root,
+          .abnt-report-root * {
+            visibility: visible !important;
+          }
+
+          .abnt-report-root {
+            position: absolute !important;
+            left: 0 !important;
+            top: 0 !important;
+            width: 100% !important;
+            margin: 0 !important;
+            padding: 0 !important;
+          }
+
           /* Container do relatório */
           .abnt-report-root {
             width: 100% !important;
