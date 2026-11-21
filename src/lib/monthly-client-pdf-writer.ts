@@ -1,27 +1,26 @@
 /**
- * Escritor de PDF RICO (vetorial) do Relatório Mensal do Cliente.
+ * MOTOR DE LAYOUT — PDF RICO do Relatório Mensal do Cliente (LÓGOS AITSM).
  *
- * A pedido do cliente ("preciso entregar um relatório mensal rico e bonito
- * ao cliente"), o PDF agora traz: capa escura da marca (grafite #17181C com
- * acentos âmbar #FCD34D/#D97706), linha de cards de KPI e GRÁFICOS VETORIAIS
- * desenhados com primitivas do jsPDF (barras, barras horizontais, rosca e
- * área/linha) — NUNCA rasterização (sem html2canvas/canvas), imune aos bugs
- * históricos de captura (rótulos piscando, achatamento, corte de imagem).
+ * Conserta o bug reportado ("as escritas invadindo as imagens, ou saindo das
+ * imagens, texto sem formatação") com um layout DETERMINÍSTICO:
  *
- * O texto explicativo COM CÁLCULOS (buildMonthlyClientTextDom) é PRESERVADO
- * integralmente, como apoio sob cada gráfico/seção: a repaginação é de
- * apresentação, não de conteúdo.
- *
- * Paginação (zero corte de conteúdo) — MÁQUINA MANTIDA da v0.0.491/0.0.493:
- *  - margens ABNT (sup/dir 20 mm, inf 20 mm, esq 30 mm);
- *  - parágrafos justificados, quebrados apenas ENTRE linhas (nunca no meio
- *    de uma linha; controle de viúvas/órfãs com mínimo de 2 linhas);
- *  - tabelas quebradas apenas ENTRE linhas, repetindo o cabeçalho;
- *  - gráficos e cards como blocos atômicos: movem inteiros para a página
- *    seguinte quando não couberem (nunca cortados ao meio);
- *  - título de seção nunca fica órfão no fim da página;
- *  - capa em página própria; cabeçalho/rodapé vetoriais com paginação
- *    "Página X de Y" em todas as páginas (numeração iniciada após a capa).
+ *  1. Fonte única de verdade de medidas: cada PageItem carrega `advance` —
+ *     o espaço exato (mm) que o item ocupa. O render usa SEMPRE `advance`
+ *     para avançar o cursor; quem calcula `advance` é o mesmo layout que
+ *     decide o que cabe na página. Nunca mais há divergência layout×render.
+ *  2. Gráficos em blocos atômicos exclusivos: cada item de gráfico ocupa uma
+ *     faixa própria (título → plot → rótulos → fonte), com `chartHeight`
+ *     calculado pelas MESMAS constantes do desenho (drawMonthlyChart).
+ *  3. Quebra de linha MEDIDA de verdade (doc.splitTextToSize com a fonte e
+ *     a largura exatas em que a linha será desenhada).
+ *  4. Justificação correta: o parágrafo é emitido de UMA VEZ com
+ *     align:'justify' + maxWidth — jsPDF justifica todas as linhas menos a
+ *     última (desenhar linha a linha tornava cada linha a "última" e o
+ *     texto saía alinhado à esquerda, sem formatação).
+ *  5. Paginação por blocos indivisíveis mantida (v0.0.491): parágrafos
+ *     atravessam páginas apenas ENTRE linhas com mínimo de 2 linhas de cada
+ *     lado; tabelas apenas ENTRE linhas de dados, repetindo o cabeçalho;
+ *     títulos nunca órfãos; páginas vazias descartadas.
  */
 
 import { buildMonthlyClientTextDom } from '@/lib/monthly-client-pdf-text'
@@ -30,7 +29,7 @@ import {
   buildMonthlyChartSpecs,
   type MonthlyChartSpec,
 } from '@/lib/monthly-client-rich-doc'
-import { chartHeight, drawMonthlyChart } from '@/lib/monthly-client-pdf-charts'
+import { drawMonthlyChart, chartBlockMetrics } from '@/lib/monthly-client-pdf-charts'
 import {
   renderBrandCover,
   renderKpiCards,
@@ -59,7 +58,7 @@ const AMBER = '#D97706'
 const GRAPHITE = '#17181C'
 
 /* ------------------------------------------------------------------ */
-/* Modelo de blocos extraído do DOM textual                            */
+/* Blocos extraídos do DOM textual                                     */
 /* ------------------------------------------------------------------ */
 
 type Block =
@@ -166,7 +165,7 @@ function extractBlocks(container: HTMLElement): Block[] {
 }
 
 /* ------------------------------------------------------------------ */
-/* Layout                                                              */
+/* Métricas e constantes de layout                                     */
 /* ------------------------------------------------------------------ */
 
 // A4 com margens ABNT NBR 14724: esquerda 30 mm; superior/direita/inferior 20 mm.
@@ -187,6 +186,14 @@ const H3_SIZE = 12
 
 const PT_TO_MM = 25.4 / 72
 
+const INDENT = 12.7 // recuo de 1,25 cm da primeira linha do parágrafo (ABNT)
+const H2_GAP_AFTER = 3 // mm após título de seção
+const H3_GAP_AFTER = 2.5 // mm após subtítulo
+const PARA_GAP = 4 // mm após o bloco de parágrafo
+const KPI_GAP_AFTER = 4 // mm após a faixa de KPI
+const CHART_GAP_AFTER = 4 // mm após o bloco de gráfico
+const TABLE_GAP_AFTER = 4 // mm após o bloco de tabela
+
 interface PlacedLine {
   text: string
   x: number
@@ -194,7 +201,13 @@ interface PlacedLine {
   style: 'normal' | 'bold' | 'italic' | 'bolditalic'
   justify: boolean
   width: number // largura disponível para justificar
-  gapAfterMm: number
+}
+
+/** Linhas do mesmo parágrafo que caem na MESMA página: um "parágrafo-partes". */
+interface PlacedPara {
+  lines: PlacedLine[]
+  height: number
+  gapAfter: number
 }
 
 interface PlacedTable {
@@ -219,15 +232,19 @@ interface PlacedChart {
 }
 
 type PageItem =
-  | { kind: 'lines'; lines: PlacedLine[]; height: number }
-  | { kind: 'table'; table: PlacedTable }
-  | { kind: 'kpi'; kpi: PlacedKpi }
-  | { kind: 'chart'; chart: PlacedChart }
+  | { kind: 'para'; paras: PlacedPara[]; advance: number } // soma exata de heights+gaps internos
+  | { kind: 'table'; table: PlacedTable; advance: number }
+  | { kind: 'kpi'; kpi: PlacedKpi; advance: number }
+  | { kind: 'chart'; chart: PlacedChart; advance: number }
 
 interface Page {
   isCover: boolean
   items: PageItem[]
 }
+
+/* ------------------------------------------------------------------ */
+/* Utilidades de medida (fonte do próprio PDF)                         */
+/* ------------------------------------------------------------------ */
 
 function setFont(doc: any, style: PlacedLine['style'], size: number) {
   const font = style === 'bold' || style === 'bolditalic' ? 'times' : 'times'
@@ -243,8 +260,15 @@ function setFont(doc: any, style: PlacedLine['style'], size: number) {
   doc.setFontSize(size)
 }
 
-function measureLines(doc: any, text: string, widthMm: number, size: number): string[] {
-  setFont(doc, 'normal', size)
+/** Quebra de linha MEDIDA de verdade com a fonte/largura exatas do desenho. */
+function measureLines(
+  doc: any,
+  text: string,
+  widthMm: number,
+  size: number,
+  style: PlacedLine['style'],
+): string[] {
+  setFont(doc, style, size)
   return doc.splitTextToSize(text, widthMm) as string[]
 }
 
@@ -252,12 +276,10 @@ function lineH(sizePt: number): number {
   return sizePt * PT_TO_MM * 1.5
 }
 
-/**
- * Converte os blocos em páginas. Cada bloco é colocado respeitando o
- * espaço restante; parágrafos podem atravessar páginas apenas ENTRE
- * linhas (mínimo 2 linhas de cada lado quando possível); tabelas
- * atravessam apenas ENTRE linhas de dados, repetindo o cabeçalho.
- */
+/* ------------------------------------------------------------------ */
+/* Layout — coloca blocos em páginas; cada item sabe o seu `advance`   */
+/* ------------------------------------------------------------------ */
+
 function layout(
   doc: any,
   blocks: Block[],
@@ -276,7 +298,10 @@ function layout(
   }
 
   const remaining = () => CONTENT_BOTTOM - y
-  const gapBlocks = 4 // mm entre blocos
+
+  const pushParaPart = (p: PlacedPara) => {
+    current.push({ kind: 'para', paras: [p], advance: p.height + p.gapAfter })
+  }
 
   blocks.forEach((block) => {
     switch (block.type) {
@@ -289,10 +314,11 @@ function layout(
       case 'h2':
       case 'h3': {
         const size = block.type === 'h2' ? H2_SIZE : H3_SIZE
-        const lines = measureLines(doc, block.text.toUpperCase(), CONTENT_W, size)
-        const h = lines.length * lineH(size) + 2
+        const lines = measureLines(doc, block.text.toUpperCase(), CONTENT_W, size, 'bold')
+        const h = lines.length * lineH(size)
+        const gapAfter = block.type === 'h2' ? H2_GAP_AFTER : H3_GAP_AFTER
         // Título nunca órfão: exige espaço para título + ~3 linhas de texto.
-        if (h + 3 * lineH(BODY_SIZE) > remaining()) pushPage()
+        if (h + gapAfter + 3 * lineH(BODY_SIZE) > remaining()) pushPage()
         const placed: PlacedLine[] = lines.map((text, i) => ({
           text,
           x: M_LEFT,
@@ -300,20 +326,25 @@ function layout(
           style: 'bold',
           justify: false,
           width: CONTENT_W,
-          gapAfterMm: i === lines.length - 1 ? 3 : 0,
         }))
-        current.push({ kind: 'lines', lines: placed, height: h })
-        y += h
-        // Gráfico vetorial da seção "N." — bloco ATÔMICO logo após o título:
-        // se não couber no restante da página, move inteiro para a próxima.
+        // Um "para" de uma linha só, sem justify, com gap próprio.
+        pushParaPart({ lines: placed, height: h, gapAfter })
+        y += h + gapAfter
+        // Gráfico vetorial da seção "N." — bloco ATÔMICO exclusivo logo após
+        // o título: se não couber no restante da página, move INTEIRO para a
+        // próxima (nunca sobrepõe nada, nunca é cortado).
         const m = /^(\d+)\s*\./.exec(block.text.trim())
         if (m) {
           const spec = charts[Number(m[1])]
           if (spec) {
-            const ch = chartHeight(spec)
+            const ch = chartBlockMetrics(spec).totalHeight
             if (ch > remaining()) pushPage()
-            current.push({ kind: 'chart', chart: { spec, height: ch } })
-            y += ch + 2
+            current.push({
+              kind: 'chart',
+              chart: { spec, height: ch },
+              advance: ch + CHART_GAP_AFTER,
+            })
+            y += ch + CHART_GAP_AFTER
           }
         }
         return
@@ -323,16 +354,22 @@ function layout(
         const isNote = block.type === 'note'
         const size = isNote ? BODY_SIZE - 1 : BODY_SIZE
         const style: PlacedLine['style'] = isNote ? 'italic' : 'normal'
-        const lines = measureLines(doc, block.text, CONTENT_W - (isNote ? 0 : 12.7), size)
+        const bodyW = CONTENT_W - (isNote ? 0 : INDENT)
+        const lines = measureLines(doc, block.text, bodyW, size, style)
         const lh = lineH(size)
-        // Cards de KPI (Resumo Executivo) na primeira página de conteúdo:
+        // Cards de KPI (Sumário Executivo) na primeira página de conteúdo:
         // bloco atômico — se não couber, abre página nova antes.
         if (!kpiPlaced) {
           if (KPI_ROW_TOTAL > remaining()) pushPage()
-          current.push({ kind: 'kpi', kpi: { cards: kpiCards, height: KPI_ROW_TOTAL } })
-          y += KPI_ROW_TOTAL + 2
+          current.push({
+            kind: 'kpi',
+            kpi: { cards: kpiCards, height: KPI_ROW_TOTAL },
+            advance: KPI_ROW_TOTAL + KPI_GAP_AFTER,
+          })
+          y += KPI_ROW_TOTAL + KPI_GAP_AFTER
           kpiPlaced = true
         }
+        if (lines.length === 0) return
         let idx = 0
         while (idx < lines.length) {
           const avail = Math.floor(remaining() / lh)
@@ -341,8 +378,8 @@ function layout(
             continue
           }
           let take = Math.min(avail, lines.length - idx)
-          // Controle de viúvas/órfãs: se sobrar 1 linha para a próxima
-          // página, antecipa (ou empurra) para manter >=2 de cada lado.
+          // Controle de viúvas/órfãs: nunca deixar 1 linha isolada numa
+          // página quando há mais linhas vindas; nunca levar menos de 2.
           const rest = lines.length - idx - take
           if (rest === 1 && take > 2) take -= 1
           if (take < 2 && lines.length - idx > 2) {
@@ -350,18 +387,22 @@ function layout(
             continue
           }
           const chunk = lines.slice(idx, idx + take)
+          const isFirst = idx === 0 && !isNote
           const placed: PlacedLine[] = chunk.map((text, i) => ({
             text,
-            x: idx === 0 && i === 0 && !isNote ? M_LEFT + 12.7 : M_LEFT,
+            x: isFirst && i === 0 ? M_LEFT + INDENT : M_LEFT,
             size,
             style,
             justify: !isNote,
-            width: CONTENT_W - (idx === 0 && i === 0 && !isNote ? 12.7 : 0),
-            gapAfterMm: idx + take >= lines.length ? gapBlocks : 0,
+            width: isFirst && i === 0 ? bodyW : CONTENT_W - (isNote ? 0 : INDENT),
           }))
-          const height = chunk.length * lh
-          current.push({ kind: 'lines', lines: placed, height })
-          y += height
+          const isLast = idx + take >= lines.length
+          pushParaPart({
+            lines: placed,
+            height: chunk.length * lh,
+            gapAfter: isLast ? PARA_GAP : 0,
+          })
+          y += chunk.length * lh + (isLast ? PARA_GAP : 0)
           idx += take
           if (idx < lines.length) pushPage()
         }
@@ -369,20 +410,27 @@ function layout(
       }
       case 'table': {
         const { caption, headers, rows, source } = block
-        // Larguras proporcionais ao maior conteúdo de cada coluna.
+        // Larguras proporcionais ao maior conteúdo de cada coluna (medidas com a fonte da tabela).
         setFont(doc, 'normal', TABLE_SIZE)
         const weights = headers.map((h, c) => {
-          let w = Math.max(4, (h || '').length)
+          let w = Math.max(4, doc.getTextWidth(h || '—'))
           rows.forEach((r) => {
-            w = Math.max(w, ((r[c] || '') as string).length)
+            w = Math.max(w, doc.getTextWidth((r[c] || '—') as string))
           })
-          return Math.min(w, 60)
+          return w
         })
-        const sum = weights.reduce((a, b) => a + b, 0)
-        const colWidths = weights.map((w) => Math.max(18, (CONTENT_W * w) / sum))
+        const sum = weights.reduce((a, b) => a + b, 0) || 1
+        const minW = Math.min(24, CONTENT_W / 2)
+        const colWidths = weights.map((w) => Math.max(minW, (CONTENT_W * w) / sum))
+        // Garante que a soma não exceda a largura útil (normaliza se exceder).
+        const wSum = colWidths.reduce((a, b) => a + b, 0)
+        if (wSum > CONTENT_W) {
+          const k = CONTENT_W / wSum
+          for (let c = 0; c < colWidths.length; c++) colWidths[c] *= k
+        }
 
         const cellLines = (text: string, width: number) =>
-          measureLines(doc, text || '—', width - 3, TABLE_SIZE)
+          measureLines(doc, text || '—', width - 3, TABLE_SIZE, 'normal')
         const headerCells = headers.map((h, c) => cellLines(h, colWidths[c]))
         const headerH = Math.max(...headerCells.map((l) => l.length)) * lineH(TABLE_SIZE) + 2.5
 
@@ -438,8 +486,9 @@ function layout(
               source: source && gi === groups.length - 1 ? source : null,
               height,
             },
+            advance: height + TABLE_GAP_AFTER,
           })
-          y += height + 2
+          y += height + TABLE_GAP_AFTER
         })
         return
       }
@@ -447,12 +496,13 @@ function layout(
   })
 
   pushPage()
-  // Remove páginas vazias acidentais (exceto a capa).
-  return pages.filter((p, i) => i === 0 || p.isCover || p.items.length > 0)
+  // Remove páginas vazias acidentais (a capa é a primeira; páginas de
+  // conteúdo sem itens — em branco — nunca entram no PDF final).
+  return pages.filter((p) => p.isCover || p.items.length > 0)
 }
 
 /* ------------------------------------------------------------------ */
-/* Render                                                              */
+/* Render — consome os MESMOS avanços calculados no layout             */
 /* ------------------------------------------------------------------ */
 
 function renderTable(doc: any, table: PlacedTable, yTop: number): number {
@@ -464,10 +514,11 @@ function renderTable(doc: any, table: PlacedTable, yTop: number): number {
     doc.text(table.caption, M_LEFT, y)
     y += lineH(TABLE_SIZE) + 1
   }
-  // Cabeçalho da marca (grafite com texto branco)
+  // Cabeçalho da marca (grafite com texto âmbar-claro)
+  const headerBoxTop = y - lineH(TABLE_SIZE) + 1.5
   doc.setFillColor(23, 24, 28)
   doc.setDrawColor(217, 119, 6)
-  doc.rect(M_LEFT, y - lineH(TABLE_SIZE) + 1.5, CONTENT_W, headerBoxH(table.headerH), 'FD')
+  doc.rect(M_LEFT, headerBoxTop, CONTENT_W, table.headerH - 1, 'FD')
   let x = M_LEFT
   table.headers.forEach((cellLines, c) => {
     doc.setFont('helvetica', 'bold')
@@ -482,13 +533,14 @@ function renderTable(doc: any, table: PlacedTable, yTop: number): number {
   // Linhas com zebra âmbar-claro
   table.rows.forEach((cells, r) => {
     const rh = table.rowHeights[r]
+    const rowTop = y - lineH(TABLE_SIZE) + 1.5
     if (r % 2 === 1) {
       doc.setFillColor(253, 246, 234)
-      doc.rect(M_LEFT, y - lineH(TABLE_SIZE) + 1.5, CONTENT_W, rh, 'F')
+      doc.rect(M_LEFT, rowTop, CONTENT_W, rh, 'F')
     }
     doc.setDrawColor(217, 119, 6)
     doc.setLineWidth(0.2)
-    doc.line(M_LEFT, y - lineH(TABLE_SIZE) + 1.5, M_LEFT + CONTENT_W, y - lineH(TABLE_SIZE) + 1.5)
+    doc.line(M_LEFT, rowTop, M_LEFT + CONTENT_W, rowTop)
     let cx = M_LEFT
     cells.forEach((cellLines, c) => {
       doc.setFont('helvetica', 'normal')
@@ -502,22 +554,14 @@ function renderTable(doc: any, table: PlacedTable, yTop: number): number {
     y += rh
   })
   doc.line(M_LEFT, y - lineH(TABLE_SIZE) + 1.5, M_LEFT + CONTENT_W, y - lineH(TABLE_SIZE) + 1.5)
-  // Colunas verticais
+  // Colunas verticais (da primeira linha ao fechamento)
   let vx = M_LEFT
-  doc.line(
-    vx,
-    yTop + (table.caption ? lineH(TABLE_SIZE) + 1 : 0) - lineH(TABLE_SIZE) + 1.5,
-    vx,
-    y - lineH(TABLE_SIZE) + 1.5,
-  )
+  const tableTop = yTop + (table.caption ? lineH(TABLE_SIZE) + 1 : 0) - lineH(TABLE_SIZE) + 1.5
+  const tableBottom = y - lineH(TABLE_SIZE) + 1.5
+  doc.line(vx, tableTop, vx, tableBottom)
   table.colWidths.forEach((w) => {
     vx += w
-    doc.line(
-      vx,
-      yTop + (table.caption ? lineH(TABLE_SIZE) + 1 : 0) - lineH(TABLE_SIZE) + 1.5,
-      vx,
-      y - lineH(TABLE_SIZE) + 1.5,
-    )
+    doc.line(vx, tableTop, vx, tableBottom)
   })
   if (table.source) {
     doc.setFont('helvetica', 'italic')
@@ -529,30 +573,45 @@ function renderTable(doc: any, table: PlacedTable, yTop: number): number {
   return y
 }
 
-function headerBoxH(headerH: number): number {
-  return headerH - 1
+/** Desenha os parágrafos de UMA página com jsPDF justify de verdade. */
+function renderPara(doc: any, p: PlacedPara, yTop: number): number {
+  let y = yTop
+  p.lines.forEach((ln, i) => {
+    setFont(doc, ln.style, ln.size)
+    if (ln.justify) {
+      // Última linha do parágrafo-partes NÃO se justifica (senão o jsPDF
+      // estica uma linha curta até a margem). Todas as anteriores são
+      // justificadas com maxWidth — é isso que alinha as duas margens.
+      const isLastLine = i === p.lines.length - 1
+      doc.text(ln.text, ln.x, y, {
+        align: isLastLine ? 'left' : 'justify',
+        maxWidth: ln.width,
+      })
+    } else {
+      doc.text(ln.text, ln.x, y)
+    }
+    y += lineH(ln.size)
+  })
+  return y + p.gapAfter
 }
 
 function renderPageItems(doc: any, page: Page) {
   let y = M_TOP + HEADER_H
   page.items.forEach((item) => {
-    if (item.kind === 'lines') {
-      item.lines.forEach((ln) => {
-        setFont(doc, ln.style, ln.size)
-        if (ln.justify) {
-          doc.text(ln.text, ln.x, y, { align: 'justify', maxWidth: ln.width })
-        } else {
-          doc.text(ln.text, ln.x, y)
-        }
-        y += lineH(ln.size) + (ln.gapAfterMm || 0)
+    if (item.kind === 'para') {
+      item.paras.forEach((p) => {
+        y = renderPara(doc, p, y)
       })
     } else if (item.kind === 'table') {
-      y = renderTable(doc, item.table, y) + 2
+      y = renderTable(doc, item.table, y) + TABLE_GAP_AFTER
     } else if (item.kind === 'kpi') {
-      y = renderKpiCards(doc, item.kpi.cards, M_LEFT, y, CONTENT_W) + 2
+      y = renderKpiCards(doc, item.kpi.cards, M_LEFT, y, CONTENT_W) + KPI_GAP_AFTER
     } else if (item.kind === 'chart') {
-      // Gráfico vetorial atômico (blocos de layout garantem que não corta).
-      y = drawMonthlyChart(doc, item.chart.spec, M_LEFT, y, CONTENT_W) + 2
+      // Gráfico vetorial atômico: desenho e `advance` usam as MESMAS
+      // constantes de chartBlockMetrics — faixa exclusiva do gráfico.
+      const ch = chartBlockMetrics(item.chart.spec).totalHeight
+      drawMonthlyChart(doc, item.chart.spec, M_LEFT, y, CONTENT_W)
+      y += ch + CHART_GAP_AFTER
     }
   })
 }
@@ -563,8 +622,9 @@ function renderChrome(
   totalPages: number,
   companyLabel: string,
   periodLabel: string,
+  isCover: boolean,
 ) {
-  if (pageIndex === 0) {
+  if (isCover) {
     // Rodapé discreto na capa escura
     doc.setFont('helvetica', 'normal')
     doc.setFontSize(8)
@@ -719,7 +779,7 @@ export async function exportMonthlyClientTextPdf(
       } else {
         renderPageItems(doc, page)
       }
-      renderChrome(doc, i, totalPages, companyLabel, periodLabel)
+      renderChrome(doc, i, totalPages, companyLabel, periodLabel, page.isCover)
     })
 
     // 4. Download
@@ -731,3 +791,5 @@ export async function exportMonthlyClientTextPdf(
     container.remove()
   }
 }
+
+export { AMBER, GRAPHITE }

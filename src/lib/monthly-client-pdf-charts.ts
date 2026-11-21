@@ -10,7 +10,13 @@
  * grafite #17181C. Nenhuma cor azul.
  *
  * Cada especificação vem de buildMonthlyChartSpecs (monthly-client-rich-doc),
- * garantindo os mesmos números da tela, do PDF textual e do DOCX.
+ * garantindo os mesmos números da tela, do PDF textual e do Portal.
+ *
+ * CONTRATO DE LAYOUT: o escritor (monthly-client-pdf-writer) reserva para o
+ * gráfico EXATAMENTE `chartBlockMetrics(spec).totalHeight` mm e desenha com
+ * `drawMonthlyChart`, que consome as MESMAS constantes (CAP_H, legendas,
+ * plot, rótulos, fonte). Título, legendas, rótulos e fonte ficam DENTRO
+ * dessa faixa — nenhuma escrita invade outra área nem sai do gráfico.
  */
 
 import type { MonthlyChartSpec } from '@/lib/monthly-client-rich-doc'
@@ -42,18 +48,35 @@ const nf = (v: number, d = 1): string => (isFinite(v) ? v.toFixed(d).replace('.'
 const fmtHours = (v: number): string => `${nf(v)} h`
 const fmtInt = (v: number): string => String(Math.round(v))
 
-/** Altura total (mm) do bloco do gráfico: legenda + plot + rótulos + fonte. */
+/** Alturas internas compartilhadas por métrica e desenho (mesma origem). */
+const CAP_H = 7 // legenda (Figura N) + respiro
+const SRC_H = 5 // linha de fonte + respiro
+const PLOT_H = 52 // altura do plot (barras/área)
+const XLABEL_H = 8 // faixa dos rótulos do eixo X
+const LEGEND_H = 4.5 // faixa de legendas de série (bars/area)
+const ROW_H = 7.5 // hbars: altura de cada linha
+const DONUT_BODY_H = 52 // área do donut + legenda lateral
+
+/** Métricas do bloco do gráfico — FONTE ÚNICA para layout e desenho. */
+export function chartBlockMetrics(spec: MonthlyChartSpec): {
+  totalHeight: number
+  captionH: number
+} {
+  const captionH = CAP_H
+  const bodyH =
+    spec.kind === 'bars'
+      ? LEGEND_H + PLOT_H + XLABEL_H
+      : spec.kind === 'area'
+        ? LEGEND_H + PLOT_H + XLABEL_H
+        : spec.kind === 'hbars'
+          ? spec.items.length * ROW_H
+          : DONUT_BODY_H
+  return { totalHeight: captionH + bodyH + SRC_H, captionH }
+}
+
+/** Compat: altura total (mm) do bloco do gráfico. */
 export function chartHeight(spec: MonthlyChartSpec): number {
-  switch (spec.kind) {
-    case 'bars':
-      return 86
-    case 'hbars':
-      return 9 + spec.items.length * 7.5 + 12
-    case 'donut':
-      return 72
-    case 'area':
-      return 84
-  }
+  return chartBlockMetrics(spec).totalHeight
 }
 
 function setFill(doc: any, c: RGB) {
@@ -147,7 +170,11 @@ function drawPolyline(doc: any, pts: [number, number][], color: RGB, width: numb
   }
 }
 
-/** Desenha o gráfico a partir de (x, yTop) com a largura dada. Retorna o novo y. */
+/**
+ * Desenha o gráfico a partir de (x, yTop) com a largura dada. Retorna o novo
+ * y = yTop + chartBlockMetrics(spec).totalHeight. Todo texto emitido aqui
+ * está dentro da faixa [yTop, retorno) — o escritor reserva essa faixa.
+ */
 export function drawMonthlyChart(
   doc: any,
   spec: MonthlyChartSpec,
@@ -155,20 +182,18 @@ export function drawMonthlyChart(
   yTop: number,
   width: number,
 ): number {
+  const { totalHeight } = chartBlockMetrics(spec)
+  const plotX = x + 14
+  const plotW = width - 16
+
   caption(doc, spec, x, yTop + 1)
 
   if (spec.kind === 'bars') {
-    const capH = 7
-    const plotH = 52
-    const labelH = 8
-    const srcH = 5
-    const plotX = x + 14
-    const plotW = width - 16
-    const baseY = yTop + capH + plotH
+    const baseY = yTop + CAP_H + LEGEND_H + PLOT_H
     const maxV = Math.max(1, ...spec.categories.flatMap((c) => [c.a, c.b])) * 1.15
 
     for (let k = 0; k <= 4; k++) {
-      const gy = baseY - (plotH * k) / 4
+      const gy = baseY - (PLOT_H * k) / 4
       setStroke(doc, GRID)
       doc.setLineWidth(0.15)
       doc.line(plotX, gy, plotX + plotW, gy)
@@ -177,18 +202,18 @@ export function drawMonthlyChart(
       doc.text(fmtHours((maxV * k) / 4), plotX - 1.5, gy + 1, { align: 'right' })
     }
 
-    // Legenda (duas séries)
+    // Legenda das duas séries (dentro da faixa LEGEND_H)
     let lx = plotX
-    lx = legendEntry(doc, lx, yTop + capH + 4.5, SLATE, spec.seriesA)
-    legendEntry(doc, lx, yTop + capH + 4.5, AMBER, spec.seriesB)
+    lx = legendEntry(doc, lx, yTop + CAP_H + 2.8, SLATE, spec.seriesA)
+    legendEntry(doc, lx, yTop + CAP_H + 2.8, AMBER, spec.seriesB)
 
     const n = spec.categories.length
     const gw = plotW / Math.max(1, n)
     const barW = Math.min(9, gw * 0.3)
     spec.categories.forEach((cat, i) => {
       const cx0 = plotX + i * gw + (gw - 2 * barW - 2) / 2
-      const hA = (cat.a / maxV) * plotH
-      const hB = (cat.b / maxV) * plotH
+      const hA = (cat.a / maxV) * PLOT_H
+      const hB = (cat.b / maxV) * PLOT_H
       setFill(doc, SLATE)
       doc.rect(cx0, baseY - hA, barW, hA, 'F')
       setFill(doc, AMBER)
@@ -208,22 +233,14 @@ export function drawMonthlyChart(
     setStroke(doc, SLATE)
     doc.setLineWidth(0.3)
     doc.line(plotX, baseY, plotX + plotW, baseY)
-
-    source(doc, spec, x, baseY + labelH + 2)
-    return baseY + labelH + srcH
-  }
-
-  if (spec.kind === 'hbars') {
-    const capH = 7
-    const rowH = 7.5
-    const srcH = 5
+  } else if (spec.kind === 'hbars') {
     const labelW = Math.min(48, width * 0.32)
     const trackX = x + labelW + 3
     const trackW = width - labelW - 18
     const maxV = Math.max(1, ...spec.items.map((i) => i.value))
 
     spec.items.forEach((item, i) => {
-      const y = yTop + capH + i * rowH + 3
+      const y = yTop + CAP_H + i * ROW_H + 3.6
       font(doc, 'normal', 7)
       setTextColor(doc, DARK)
       doc.text(fitText(doc, item.label, labelW), x, y)
@@ -238,17 +255,9 @@ export function drawMonthlyChart(
       setTextColor(doc, DARK)
       doc.text(fmtHours(item.value), x + width, y, { align: 'right' })
     })
-
-    const endY = yTop + capH + spec.items.length * rowH + 4
-    source(doc, spec, x, endY)
-    return endY + srcH
-  }
-
-  if (spec.kind === 'donut') {
-    const capH = 7
-    const srcH = 5
+  } else if (spec.kind === 'donut') {
     const cx = x + 30
-    const cy = yTop + capH + 26
+    const cy = yTop + CAP_H + 26
     const r = 21
     const total = spec.items.reduce((a, b) => a + b.value, 0) || 1
 
@@ -268,7 +277,7 @@ export function drawMonthlyChart(
     setTextColor(doc, GRAY)
     doc.text(fitText(doc, spec.centerSub, 24), cx, cy + 4.5, { align: 'center' })
 
-    let ly = yTop + capH + 8
+    let ly = yTop + CAP_H + 8
     spec.items.forEach((item, i) => {
       setFill(doc, PALETTE[i % PALETTE.length])
       doc.rect(x + 62, ly - 2.2, 2.6, 2.6, 'F')
@@ -282,68 +291,60 @@ export function drawMonthlyChart(
       })
       ly += 7
     })
+  } else {
+    // kind === 'area': evolução de horas (área) e chamados (linha)
+    const baseY = yTop + CAP_H + LEGEND_H + PLOT_H
+    const n = spec.points.length
+    const maxH = Math.max(1, ...spec.points.map((p) => p.hours)) * 1.15
+    const maxT = Math.max(1, ...spec.points.map((p) => p.tickets)) * 1.15
 
-    source(doc, spec, x, yTop + capH + 52)
-    return yTop + capH + 52 + srcH
-  }
+    for (let k = 0; k <= 4; k++) {
+      const gy = baseY - (PLOT_H * k) / 4
+      setStroke(doc, GRID)
+      doc.setLineWidth(0.15)
+      doc.line(plotX, gy, plotX + plotW, gy)
+      font(doc, 'normal', 6.5)
+      setTextColor(doc, GRAY)
+      doc.text(fmtHours((maxH * k) / 4), plotX - 1.5, gy + 1, { align: 'right' })
+    }
 
-  // kind === 'area': evolução de horas (área) e chamados (linha)
-  const capH = 7
-  const plotH = 50
-  const labelH = 8
-  const srcH = 5
-  const plotX = x + 14
-  const plotW = width - 16
-  const baseY = yTop + capH + plotH
-  const n = spec.points.length
-  const maxH = Math.max(1, ...spec.points.map((p) => p.hours)) * 1.15
-  const maxT = Math.max(1, ...spec.points.map((p) => p.tickets)) * 1.15
+    let lx = plotX
+    lx = legendEntry(doc, lx, yTop + CAP_H + 2.8, AMBER, spec.seriesHours)
+    legendEntry(doc, lx, yTop + CAP_H + 2.8, DARK, spec.seriesTickets)
 
-  for (let k = 0; k <= 4; k++) {
-    const gy = baseY - (plotH * k) / 4
-    setStroke(doc, GRID)
-    doc.setLineWidth(0.15)
-    doc.line(plotX, gy, plotX + plotW, gy)
+    const px = (i: number) => (n > 1 ? plotX + (plotW * i) / (n - 1) : plotX + plotW / 2)
+    const hourPts = spec.points.map(
+      (p, i) => [px(i), baseY - (p.hours / maxH) * PLOT_H] as [number, number],
+    )
+    const ticketPts = spec.points.map(
+      (p, i) => [px(i), baseY - (p.tickets / maxT) * PLOT_H] as [number, number],
+    )
+
+    const areaPts: [number, number][] = [
+      [hourPts[0][0], baseY],
+      ...hourPts,
+      [hourPts[n - 1][0], baseY],
+    ]
+    fillPolygon(doc, areaPts, AMBER_PALE)
+    drawPolyline(doc, hourPts, AMBER, 0.7)
+    drawPolyline(doc, ticketPts, DARK, 0.6)
+    ticketPts.forEach(([tx, ty]) => {
+      setFill(doc, DARK)
+      doc.circle(tx, ty, 0.8, 'F')
+    })
+
     font(doc, 'normal', 6.5)
-    setTextColor(doc, GRAY)
-    doc.text(fmtHours((maxH * k) / 4), plotX - 1.5, gy + 1, { align: 'right' })
+    setTextColor(doc, DARK)
+    spec.points.forEach((p, i) => {
+      doc.text(p.label, px(i), baseY + 4.5, { align: 'center' })
+    })
+
+    setStroke(doc, SLATE)
+    doc.setLineWidth(0.3)
+    doc.line(plotX, baseY, plotX + plotW, baseY)
   }
 
-  let lx = plotX
-  lx = legendEntry(doc, lx, yTop + capH + 4.5, AMBER, spec.seriesHours)
-  legendEntry(doc, lx, yTop + capH + 4.5, DARK, spec.seriesTickets)
-
-  const px = (i: number) => (n > 1 ? plotX + (plotW * i) / (n - 1) : plotX + plotW / 2)
-  const hourPts = spec.points.map(
-    (p, i) => [px(i), baseY - (p.hours / maxH) * plotH] as [number, number],
-  )
-  const ticketPts = spec.points.map(
-    (p, i) => [px(i), baseY - (p.tickets / maxT) * plotH] as [number, number],
-  )
-
-  const areaPts: [number, number][] = [
-    [hourPts[0][0], baseY],
-    ...hourPts,
-    [hourPts[n - 1][0], baseY],
-  ]
-  fillPolygon(doc, areaPts, AMBER_PALE)
-  drawPolyline(doc, hourPts, AMBER, 0.7)
-  drawPolyline(doc, ticketPts, DARK, 0.6)
-  ticketPts.forEach(([tx, ty]) => {
-    setFill(doc, DARK)
-    doc.circle(tx, ty, 0.8, 'F')
-  })
-
-  font(doc, 'normal', 6.5)
-  setTextColor(doc, DARK)
-  spec.points.forEach((p, i) => {
-    doc.text(p.label, px(i), baseY + 4.5, { align: 'center' })
-  })
-
-  setStroke(doc, SLATE)
-  doc.setLineWidth(0.3)
-  doc.line(plotX, baseY, plotX + plotW, baseY)
-
-  source(doc, spec, x, baseY + labelH + 2)
-  return baseY + labelH + srcH
+  // Fonte — sempre a última linha do bloco (dentro da faixa reservada).
+  source(doc, spec, x, yTop + totalHeight - SRC_H + 3)
+  return yTop + totalHeight
 }

@@ -1,14 +1,12 @@
 /**
- * Documento TEXTUAL (ABNT) do Relatório Mensal do Cliente.
+ * ROTEIRO DE TEXTO — Relatório Mensal do Cliente (LÓGOS AITSM).
  *
- * Refeito para leitura da DIRETORIA: narrativa profissional e impecável,
- * com Sumário Executivo na abertura (o mês inteiro explicado em texto
- * corrido), análise escrita em cada seção com os cálculos explícitos
- * (percentuais, médias, variações vs. mês anterior, tendência por metades)
- * e fechamento com recomendações.
+ * Redação de nível consultivo (PT-BR), reescrita integralmente: frases
+ * curtas, voz direta, zero redundância — sem perder NENHUM número ou
+ * cálculo explícito (a diretoria quer "bastante números").
  *
- * Estrutura consumida pelo escritor de PDF vetorial
- * (src/lib/monthly-client-pdf-writer.ts), que pagina bloco a bloco.
+ * A estrutura em blocos é a MESMA consumida pelo escritor de PDF vetorial
+ * (src/lib/monthly-client-pdf-blocks.ts → extractBlocks do DOM) e pela capa.
  */
 
 import { formatHours } from '@/lib/duration'
@@ -51,7 +49,7 @@ const varPct = (current: number, previous: number): number | null => {
   return ((current - previous) / previous) * 100
 }
 
-/** "+12,5%" / "−8,3%" / null quando não há base de comparação. */
+/** "+12,5%" / "−8,3%" / "estável" / null quando não há base de comparação. */
 const varSigned = (current: number, previous: number): string | null => {
   const v = varPct(current, previous)
   if (v === null) return null
@@ -77,17 +75,16 @@ function para(text: string): HTMLElement {
 function section(title: string, intro: string): HTMLElement {
   const sec = el('section', 'abnt-section')
   // Título e intro como filhos DIRETOS da section: o extrator de blocos do
-  // PDF (monthly-client-pdf-writer.extractBlocks) reconhece h3.abnt-section-
-  // title e p.abnt-paragraph apenas nesse nível — embrulhá-los em um div
-  // abnt-avoid-break faz o extrator DESCARTAR título e introdução.
+  // PDF reconhece h3.abnt-section-title e p.abnt-paragraph apenas nesse
+  // nível — embrulhá-los em um div abnt-avoid-break faria o extrator
+  // DESCARTAR título e introdução.
   sec.appendChild(el('h3', 'abnt-section-title', title))
   sec.appendChild(para(intro))
   return sec
 }
 
 /**
- * Tabela ABNT com legenda acima e fonte abaixo. Quebrada em partes de até
- * `chunkSize` linhas para nunca exceder a página útil (nenhum corte).
+ * Tabela ABNT com legenda acima e fonte abaixo (os "Quadros" do relatório).
  */
 function tableBlocks(
   caption: string,
@@ -220,7 +217,7 @@ export function buildMonthlyClientTextDom(reportData: unknown, monthKey: string)
   )
   container.appendChild(cover)
 
-  /* -------- dados consolidados para o SUMÁRIO EXECUTIVO -------- */
+  /* -------- dados consolidados -------- */
   const agreements = d.agreements || []
   const totC = qty(d.totalContractedHours)
   const totU = qty(d.totalUsedHours)
@@ -262,45 +259,44 @@ export function buildMonthlyClientTextDom(reportData: unknown, monthKey: string)
   /* ---------------- SUMÁRIO EXECUTIVO (narrativo) ---------------- */
   const exec = section(
     'Sumário Executivo',
-    'Este sumário apresenta, de forma consolidada, o desempenho do atendimento técnico ' +
-      `prestado à ${companyName} no período de ${period}. A leitura desta seção permite à ` +
-      'diretoria compreender o mês completo: volumes, consumo contratual, pontos de ' +
-      'concentração de demanda e recomendações — os detalhamentos por dimensão seguem nas ' +
-      'seções numeradas, com os cálculos explicitados.',
+    `O atendimento técnico prestado à ${companyName} é aqui apresentado de forma consolidada. ` +
+      `Em poucas páginas, a diretoria encontra o essencial do período de ${period}: os ` +
+      `indicadores-chave com variação frente ao mês anterior, a origem da demanda por setor, ` +
+      `solicitante e atividade, a movimentação do parque de ativos e a evolução dos últimos ` +
+      'seis meses. Cada seção traz os cálculos explícitos — a leitura independe do sistema.',
   )
   container.appendChild(exec)
 
   const execParts: string[] = []
   execParts.push(
-    `No período, foram registrados ${abertos} chamado(s) e consumidas ${formatHours(totU)} ` +
-      `de horas técnicas` +
+    `O mês registrou ${abertos} chamado(s) e ${formatHours(totU)} de horas técnicas consumidas` +
       (totC > 0
-        ? `, o que corresponde a ${nf(totP)}% da franquia contratada de ${formatHours(totC)}`
+        ? `, volume equivalente a ${nf(totP)}% da franquia contratada de ${formatHours(totC)}`
         : '') +
-      `. A produtividade média da equipe foi de ${formatHours(mediaAtual)} por chamado ` +
+      `. A média por atendimento ficou em ${formatHours(mediaAtual)} ` +
       `(${formatHours(totU)} ÷ ${abertos} chamados)` +
-      (varMedia ? `, variação de ${varMedia} em relação ao mês anterior` : '') +
+      (varMedia ? ` — ${varMedia} ante o mês anterior` : '') +
       '.',
   )
   execParts.push(
-    `Do total aberto, ${resolvidos} chamado(s) foram resolvidos — taxa de resolução de ` +
+    `Desse volume, ${resolvidos} chamado(s) foram encerrados — taxa de resolução de ` +
       `${nf(taxaRes)}% (${resolvidos} ÷ ${abertos} × 100)` +
       (varResolvidos ? `, ${varResolvidos} vs. mês anterior` : '') +
-      `. Permanecem em aberto ${pendentes} chamado(s) no fechamento do período ` +
-      `(cálculo: ${abertos} abertos − ${resolvidos} resolvidos)` +
+      `. Encerrado o período, ${pendentes} chamado(s) permanecia(m) em aberto ` +
+      `(${abertos} abertos − ${resolvidos} resolvidos)` +
       (totB < 0
-        ? `. O saldo contratual fechou negativo em ${fmtSignedHours(totB)}, indicando consumo excedente à franquia`
+        ? `. O saldo contratual fechou em ${fmtSignedHours(totB)}: o consumo superou a franquia do mês`
         : totC > 0
-          ? `. O saldo contratual permanece positivo em ${fmtSignedHours(totB)}, disponível para as demandas do próximo ciclo`
+          ? `. O saldo contratual permaneceu positivo em ${fmtSignedHours(totB)}, disponível para o próximo ciclo`
           : '') +
       '.',
   )
   if (prevAbertos > 0) {
     execParts.push(
-      `Em comparação ao mês anterior (${prev?.label ?? 'período anterior'}), o volume de ` +
-        `aberturas passou de ${prevAbertos} para ${abertos} chamado(s)` +
+      `Frente a ${prev?.label ?? 'período anterior'}: as aberturas passaram de ${prevAbertos} ` +
+        `para ${abertos} chamado(s)` +
         (varAbertos ? ` (${varAbertos})` : '') +
-        `, e o consumo de horas de ${formatHours(prevHoras)} para ${formatHours(totU)}` +
+        `, e o consumo de horas, de ${formatHours(prevHoras)} para ${formatHours(totU)}` +
         (varHoras ? ` (${varHoras})` : '') +
         '.',
     )
@@ -310,24 +306,25 @@ export function buildMonthlyClientTextDom(reportData: unknown, monthKey: string)
     const top3 = sectorsSorted.slice(0, 3)
     const top3Pct = top3.reduce((acc, s) => acc + qty(s.percentTotal), 0)
     execParts.push(
-      `O setor ${top.name} concentrou a maior demanda: ${qty(top.ticketCount)} chamado(s) e ` +
+      `A demanda concentrou-se em ${top.name}: ${qty(top.ticketCount)} chamado(s) e ` +
         `${hrs(top.usedHours)} (${nf(qty(top.percentTotal))}% do esforço total). Os três ` +
-        `departamentos mais demandados (${top3.map((s) => s.name).join(', ')}) responderam ` +
+        `departamentos de maior volume (${top3.map((s) => s.name).join(', ')}) responderam ` +
         `juntos por ${nf(top3Pct)}% do esforço técnico do mês.`,
     )
   }
   if (requesters.length > 0) {
     const topReq = requesters[0]
     execParts.push(
-      `O principal solicitante foi ${topReq.name}, com ${qty(topReq.ticketCount)} chamado(s) e ` +
-        `${hrs(topReq.usedHours)} (${nf(qty(topReq.percentTotal))}% do total de horas). A ` +
-        `atividade mais requisitada foi ${activities[0]?.name ?? '—'}, com ` +
-        `${qty(activities[0]?.ticketCount)} chamado(s) e ${hrs(activities[0]?.usedHours)}.`,
+      `No recorte individual, o principal solicitante foi ${topReq.name}, com ` +
+        `${qty(topReq.ticketCount)} chamado(s) e ${hrs(topReq.usedHours)} ` +
+        `(${nf(qty(topReq.percentTotal))}% do total de horas). A atividade mais requisitada foi ` +
+        `${activities[0]?.name ?? '—'}, com ${qty(activities[0]?.ticketCount)} chamado(s) e ` +
+        `${hrs(activities[0]?.usedHours)}.`,
     )
   }
   execParts.push(
-    `No parque de ativos, o mês registrou ${entered} entrada(s) e ${exited} saída(s) ` +
-      `(variação líquida de ${delta >= 0 ? '+' : '−'}${Math.abs(delta)} ativo(s)), com ` +
+    `No parque de ativos, o período registrou ${entered} entrada(s) e ${exited} saída(s) — ` +
+      `variação líquida de ${delta >= 0 ? '+' : '−'}${Math.abs(delta)} ativo(s) —, com ` +
       `${active} equipamento(s) em operação sobre base de ${totalScope} cadastrado(s) no CMDB.`,
   )
   execParts.forEach((t) => exec.appendChild(para(t)))
@@ -335,11 +332,11 @@ export function buildMonthlyClientTextDom(reportData: unknown, monthKey: string)
   /* ---------------- SEÇÃO 1: HORAS POR ACORDO ---------------- */
   const sec1 = section(
     '1. Horas por Acordo de Atendimento',
-    'Esta seção compara as horas contratadas na distribuição formal do acordo de atendimento ' +
+    `O contrato da ${companyName} distribui a franquia de horas por níveis de atendimento ` +
       '(Nível 1, Nível 2, Nível 3, Consultoria, Backoffice, Administrativo e acordos ' +
-      'personalizados) com as horas efetivamente utilizadas pela equipe técnica no mês de ' +
-      `${period}. O percentual de utilização de cada nível é obtido pela divisão das horas ` +
-      'utilizadas pelas horas contratadas, multiplicada por cem.',
+      `personalizados). Esta seção compara, para o mês de ${period}, o que foi contratado em ` +
+      'cada nível com o que foi efetivamente consumido — a utilização de cada nível resulta ' +
+      'da divisão das horas utilizadas pelas horas contratadas, multiplicada por cem.',
   )
   container.appendChild(sec1)
 
@@ -350,15 +347,15 @@ export function buildMonthlyClientTextDom(reportData: unknown, monthKey: string)
   } else {
     sec1.appendChild(
       para(
-        `No período de referência (${period}), a franquia total contratada foi de ` +
-          `${formatHours(totC)} e o consumo apurado foi de ${formatHours(totU)}, o que ` +
-          `corresponde a ${nf(totP)}% da franquia contratada ` +
+        `No período de referência (${period}), a franquia total contratada somou ` +
+          `${formatHours(totC)} e o consumo apurado alcançou ${formatHours(totU)} — ` +
+          `${nf(totP)}% da franquia contratada ` +
           `(${formatHours(totU)} ÷ ${formatHours(totC)} × 100)` +
           (varHoras
             ? `, variação de ${varHoras} sobre o mês anterior (${formatHours(prevHoras)})`
             : '') +
           `. O saldo contratual do mês é de ` +
-          `${fmtSignedHours(totB)}${totB < 0 ? ', indicando consumo excedente à franquia' : ', disponível para as demandas do período'}.`,
+          `${fmtSignedHours(totB)}${totB < 0 ? ' — consumo excedente à franquia' : ', disponível para as demandas do período'}.`,
       ),
     )
     const detail = agreements
@@ -380,11 +377,9 @@ export function buildMonthlyClientTextDom(reportData: unknown, monthKey: string)
     if (over.length > 0) {
       sec1.appendChild(
         para(
-          `Destacaram-se por consumo mais elevado da franquia: ` +
-            over
-              .map((ag) => `${ag.name} (${nf(qty(ag.percentUsed))}% da franquia consumida)`)
-              .join(', ') +
-            '. Recomenda-se monitoramento próximo desses níveis para evitar consumo excedente no próximo ciclo.',
+          `Consumo elevado da franquia — acima de 80% — em: ` +
+            over.map((ag) => `${ag.name} (${nf(qty(ag.percentUsed))}% consumida)`).join(', ') +
+            '. Esses níveis exigem monitoramento próximo para evitar consumo excedente no próximo ciclo.',
         ),
       )
     }
@@ -414,9 +409,10 @@ export function buildMonthlyClientTextDom(reportData: unknown, monthKey: string)
   /* ---------------- SEÇÃO 2: SETORES ---------------- */
   const sec2 = section(
     '2. Horas Utilizadas por Setor',
-    'Esta seção demonstra a distribuição da carga de suporte técnico entre as diferentes áreas ' +
-      'e departamentos da organização no período apurado, identificando os setores com maior ' +
-      'consumo de esforço técnico e volume de chamados.',
+    'A distribuição da carga de suporte entre as áreas da organização revela onde o esforço ' +
+      'técnico se concentra. Esta seção detalha, por departamento, o volume de chamados e as ' +
+      'horas consumidas no período — a base para decisões de capacitação, processo e ' +
+      'dimensionamento de equipes.',
   )
   container.appendChild(sec2)
   if (sectors.length === 0) {
@@ -468,9 +464,9 @@ export function buildMonthlyClientTextDom(reportData: unknown, monthKey: string)
   /* ---------------- SEÇÃO 3: SOLICITANTES ---------------- */
   const sec3 = section(
     '3. Horas Utilizadas por Usuário Solicitante',
-    'Esta seção identifica os colaboradores que mais demandaram suporte no mês, permitindo ' +
-      'avaliar necessidades de capacitação individual, substituição de equipamentos com ' +
-      'incidentes recorrentes ou apoio a projetos específicos.',
+    'O perfil de quem solicita apoio orienta ações pontuais: capacitação individual, ' +
+      'substituição de equipamentos com incidentes recorrentes ou acompanhamento de projetos ' +
+      'específicos. Esta seção identifica os colaboradores de maior demanda no mês.',
   )
   container.appendChild(sec3)
   if (requesters.length === 0) {
@@ -510,9 +506,9 @@ export function buildMonthlyClientTextDom(reportData: unknown, monthKey: string)
   /* ---------------- SEÇÃO 4: ATIVIDADES ---------------- */
   const sec4 = section(
     '4. Atividades Mais Requisitadas no Mês',
-    'Esta seção mapeia os tipos de serviços e incidentes mais frequentes do catálogo de ' +
-      'atividades de TIC, classificando o volume de aberturas e o tempo dedicado à resolução ' +
-      'de cada natureza de demanda técnica.',
+    'O catálogo de atividades de TIC classifica cada natureza de demanda — serviço ou ' +
+      'incidente. Esta seção mapeia os tipos mais frequentes do período, com o volume de ' +
+      'aberturas e o tempo técnico dedicado à resolução de cada um.',
   )
   container.appendChild(sec4)
   if (activities.length === 0) {
@@ -551,8 +547,8 @@ export function buildMonthlyClientTextDom(reportData: unknown, monthKey: string)
   /* ---------------- SEÇÃO 5: ESTUDO / DIAGNÓSTICO ---------------- */
   const sec5 = section(
     '5. Estudo e Diagnóstico: Onde Mais se Requer Atendimento Técnico',
-    'Esta seção consolida a análise técnica do período, apontando os pontos de concentração ' +
-      'de demanda e as recomendações de melhoria contínua do serviço.',
+    'Esta seção consolida o diagnóstico do período: os pontos de concentração de demanda e as ' +
+      'recomendações de melhoria contínua elaboradas pela equipe técnica.',
   )
   container.appendChild(sec5)
   const analysisText = String(study.analysisText ?? '').trim()
@@ -602,9 +598,9 @@ export function buildMonthlyClientTextDom(reportData: unknown, monthKey: string)
   /* ---------------- SEÇÃO 6: ATIVOS ---------------- */
   const sec6 = section(
     '6. Movimentação de Ativos no Período (Entradas e Saídas)',
-    'Esta seção registra o fluxo de equipamentos computacionais (desktops, notebooks, tablets ' +
-      'e celulares) integrados ao parque da empresa e os desativados, descartados ou ' +
-      'encaminhados para manutenção durante o período de referência.',
+    'O controle do parque computacional acompanha cada equipamento do CMDB: desktops, ' +
+      'notebooks, tablets e celulares incorporados ao ambiente — e os desativados, descartados ' +
+      'ou encaminhados à manutenção. Esta seção registra o movimento do período.',
   )
   container.appendChild(sec6)
   sec6.appendChild(
@@ -671,10 +667,9 @@ export function buildMonthlyClientTextDom(reportData: unknown, monthKey: string)
   const items: AnyRec[] = cmpItems
   const sec7 = section(
     '7. Comparativo com Meses Anteriores',
-    'Esta seção apresenta a análise evolutiva do consumo de horas técnicas e do fluxo de ' +
-      'abertura e resolução de chamados ao longo dos últimos seis meses, permitindo ' +
-      'diagnosticar a tendência de demanda, a estabilidade das operações e os períodos de ' +
-      'pico técnico da organização.',
+    'A série dos últimos seis meses mostra para onde a demanda caminha: tendência de consumo, ' +
+      'estabilidade operacional e períodos de pico. Esta seção compara mês a mês o fluxo de ' +
+      'chamados e o consumo de horas técnicas.',
   )
   container.appendChild(sec7)
   const summaryText = String(comparison.summaryText ?? '').trim()
@@ -757,8 +752,8 @@ export function buildMonthlyClientTextDom(reportData: unknown, monthKey: string)
   /* ---------------- FECHAMENTO ---------------- */
   const closing = section(
     'Considerações Finais e Recomendações',
-    'Esta seção encerra o relatório com a leitura executiva do período e os encaminhamentos ' +
-      'propostos pela equipe técnica para o próximo ciclo de atendimento.',
+    'Encerramos com a leitura executiva do período e os encaminhamentos propostos pela equipe ' +
+      'técnica para o próximo ciclo de atendimento.',
   )
   container.appendChild(closing)
   closing.appendChild(
