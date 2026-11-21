@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo, useCallback } from 'react'
+import React, { useEffect, useRef, useState, useMemo, useCallback } from 'react'
 import { useSearchParams, Link } from 'react-router-dom'
 import {
   FileText,
@@ -148,6 +148,7 @@ export default function MonthlyClientReportPage({
   const { toast } = useToast()
   const { designSettings } = useTheme()
   const [searchParams, setSearchParams] = useSearchParams()
+  const reportRootRef = useRef<HTMLDivElement | null>(null)
 
   const initialCompany = searchParams.get('company') || ''
   const initialMonth = searchParams.get('month') || currentMonthKey()
@@ -247,7 +248,7 @@ export default function MonthlyClientReportPage({
     if (!reportData || exportingPdf) return
     setExportingPdf(true)
     try {
-      const { exportMonthlyClientTextPdf } = await import('@/lib/monthly-client-pdf-text')
+      const { exportMonthlyClientTextPdf } = await import('@/lib/monthly-client-pdf-writer')
       const fileName = await exportMonthlyClientTextPdf({
         reportData,
         monthKey,
