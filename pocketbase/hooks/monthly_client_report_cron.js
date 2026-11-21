@@ -1,7 +1,105 @@
 // pocketbase/hooks/monthly_client_report_cron.js
-// Cron job diário para envio automático do relatório mensal por e-mail no padrão ABNT
+// Cron job diário para envio automático do relatório mensal por e-mail.
+// Corpo do e-mail: template único no tema oficial (grafite #17181C + âmbar #FCD34D/#D97706),
+// com aviso de anexo + botão para o Portal do Cliente — SEM tabelas de dados crus.
+// O conteúdo completo (ABNT) segue como anexo HTML via message.attachments + strToBytes
+// (PDF server-side é inviável no JSVM; padrão de scheduled_report_sender.js).
 
 cronAdd('monthly_client_report_cron', '0 6 * * *', function () {
+  // Helpers autocontidos: Goja (JSVM) NÃO compartilha globais com callbacks —
+  // cada callback declara suas próprias cópias (padrão de scheduled_report_sender.js).
+  function strToBytes(str) {
+    var bytes = []
+    for (var i = 0; i < str.length; i++) {
+      var c = str.charCodeAt(i)
+      if (c < 128) {
+        bytes.push(c)
+      } else if (c < 2048) {
+        bytes.push(192 | (c >> 6))
+        bytes.push(128 | (c & 63))
+      } else if (c < 55296 || c >= 57344) {
+        bytes.push(224 | (c >> 12))
+        bytes.push(128 | ((c >> 6) & 63))
+        bytes.push(128 | (c & 63))
+      } else {
+        i++
+        var c2 = str.charCodeAt(i)
+        var cp = 0x10000 + ((c & 0x3ff) << 10) + (c2 & 0x3ff)
+        bytes.push(240 | (cp >> 18))
+        bytes.push(128 | ((cp >> 12) & 63))
+        bytes.push(128 | ((cp >> 6) & 63))
+        bytes.push(128 | (cp & 63))
+      }
+    }
+    return bytes
+  }
+
+  function getPortalUrl() {
+    return (
+      $os.getenv('PUBLIC_URL') ||
+      $os.getenv('APP_URL') ||
+      'https://logos-aitsm.goskip.app/portal/login'
+    )
+  }
+
+  // Template único do corpo do e-mail (tema grafite + âmbar, sem dados crus).
+  function buildMonthlyReportEmailHtml(companyName, monthLabel, portalUrl) {
+    return (
+      '<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">' +
+      '<title>Relatório Mensal de Serviços</title></head>' +
+      '<body style="margin:0; padding:0; background-color:#F4F1EC; font-family: Arial, Helvetica, sans-serif;">' +
+      '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#F4F1EC; padding:24px 12px;">' +
+      '<tr><td align="center">' +
+      '<table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="max-width:600px; width:100%; background-color:#FFFFFF; border-radius:12px; overflow:hidden; border:1px solid #E5E1DA;">' +
+      // Cabeçalho grafite
+      '<tr><td style="background-color:#17181C; padding:32px 40px; text-align:center;">' +
+      '<div style="font-size:13px; font-weight:bold; letter-spacing:2px; color:#FCD34D; text-transform:uppercase;">LÓGOS AITSM</div>' +
+      '<div style="font-size:22px; font-weight:bold; color:#FFFFFF; margin-top:8px;">Relatório Mensal de Serviços</div>' +
+      '<div style="width:48px; height:3px; background-color:#D97706; margin:14px auto 0 auto;"></div>' +
+      '</td></tr>' +
+      // Corpo
+      '<tr><td style="padding:36px 40px; text-align:center;">' +
+      '<p style="margin:0 0 6px 0; font-size:15px; color:#17181C;">Relatório de serviços referente ao período</p>' +
+      '<p style="margin:0 0 22px 0; font-size:20px; font-weight:bold; color:#D97706;">' +
+      companyName +
+      ' &mdash; ' +
+      monthLabel +
+      '</p>' +
+      '<p style="margin:0 0 26px 0; font-size:14px; line-height:1.6; color:#52525B;">' +
+      'O <strong>Relatório Mensal está disponível em anexo</strong> (documento HTML completo, no padrão ABNT) ' +
+      'e também no <strong>Portal do Cliente</strong>, onde você acompanha chamados, aprovações, ativos e horas.' +
+      '</p>' +
+      // Botão portal
+      '<table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" style="margin:0 auto 26px auto;">' +
+      '<tr><td style="background-color:#D97706; border-radius:8px;">' +
+      '<a href="' +
+      portalUrl +
+      '" target="_blank" style="display:inline-block; padding:14px 32px; font-size:15px; font-weight:bold; color:#17181C; text-decoration:none; border-radius:8px;">Acessar o Portal do Cliente &rarr;</a>' +
+      '</td></tr></table>' +
+      '<p style="margin:0; font-size:12px; color:#71717A;">Qualquer dúvida, fale com o ponto focal designado da sua equipe.</p>' +
+      '</td></tr>' +
+      // Rodapé
+      '<tr><td style="background-color:#F7F5F1; padding:20px 40px; text-align:center; border-top:1px solid #E5E1DA;">' +
+      '<p style="margin:0; font-size:11px; color:#71717A;">E-mail automático enviado pelo Lógos AITSM &mdash; Gestão de TI e Operações.</p>' +
+      '</td></tr>' +
+      '</table></td></tr></table></body></html>'
+    )
+  }
+
+  // Texto alternativo (clientes sem suporte a HTML)
+  function buildMonthlyReportEmailText(companyName, monthLabel, portalUrl) {
+    return (
+      'Relatório Mensal de Serviços — ' +
+      companyName +
+      ' — ' +
+      monthLabel +
+      '\n\n' +
+      'O Relatório Mensal está disponível em anexo (documento HTML completo, no padrão ABNT) ' +
+      'e também no Portal do Cliente: ' +
+      portalUrl
+    )
+  }
+
   var now = new Date()
   var currentDay = now.getDate()
 
@@ -311,7 +409,7 @@ cronAdd('monthly_client_report_cron', '0 6 * * *', function () {
         if (cIso >= startIso && cIso <= endIso) ticketsInPeriod.push(tickets[tIdx])
       }
 
-      // Monta HTML inline
+      // Monta HTML inline (anexo, padrão ABNT)
       var sectorsArr = Object.keys(sectorMinutes)
         .map(function (k) {
           return {
@@ -537,7 +635,20 @@ cronAdd('monthly_client_report_cron', '0 6 * * *', function () {
         'Relatório gerado automaticamente pelo Lógos AITSM.' +
         '</p></div></body></html>'
 
-      // Envia via mailClient ou serviço unificado do sistema
+      // Corpo do e-mail: template único (tema grafite/âmbar, sem dados crus)
+      var portalUrl = getPortalUrl()
+      var emailHtml = buildMonthlyReportEmailHtml(companyName, monthLabel, portalUrl)
+      var emailText = buildMonthlyReportEmailText(companyName, monthLabel, portalUrl)
+
+      // Anexo HTML completo (padrão ABNT), nome sanitizado
+      var safeName = String(companyName)
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-zA-Z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '')
+      var attachmentName = 'Relatorio-Mensal-' + safeName + '-' + prevMonthKey + '.html'
+      var attachmentBytes = strToBytes(htmlContent)
+
       var sendErrors = []
 
       for (var rIdx = 0; rIdx < recipients.length; rIdx++) {
@@ -546,13 +657,9 @@ cronAdd('monthly_client_report_cron', '0 6 * * *', function () {
         message.from = { address: 'noreply@logositsm.com.br', name: 'Lógos AITSM' }
         message.to = [{ address: targetEmail }]
         message.subject = subject
-        message.html = htmlContent
-        message.text =
-          'Relatório Mensal de Serviços referente a ' +
-          monthLabel +
-          ' para ' +
-          companyName +
-          '.\nConsulte o e-mail em formato HTML para visualizar o documento completo no padrão ABNT.'
+        message.html = emailHtml
+        message.text = emailText
+        message.attachments = [{ filename: attachmentName, content: attachmentBytes }]
 
         try {
           if (globalThis.sendSystemMailMessage) {
@@ -611,6 +718,100 @@ routerAdd(
   'POST',
   '/backend/v1/reports/monthly-client/send',
   function (e) {
+    // Helpers autocontidos: Goja (JSVM) NÃO compartilha globais com callbacks —
+    // cada callback declara suas próprias cópias (padrão de scheduled_report_sender.js).
+    function strToBytes(str) {
+      var bytes = []
+      for (var i = 0; i < str.length; i++) {
+        var c = str.charCodeAt(i)
+        if (c < 128) {
+          bytes.push(c)
+        } else if (c < 2048) {
+          bytes.push(192 | (c >> 6))
+          bytes.push(128 | (c & 63))
+        } else if (c < 55296 || c >= 57344) {
+          bytes.push(224 | (c >> 12))
+          bytes.push(128 | ((c >> 6) & 63))
+          bytes.push(128 | (c & 63))
+        } else {
+          i++
+          var c2 = str.charCodeAt(i)
+          var cp = 0x10000 + ((c & 0x3ff) << 10) + (c2 & 0x3ff)
+          bytes.push(240 | (cp >> 18))
+          bytes.push(128 | ((cp >> 12) & 63))
+          bytes.push(128 | ((cp >> 6) & 63))
+          bytes.push(128 | (cp & 63))
+        }
+      }
+      return bytes
+    }
+
+    function getPortalUrl() {
+      return (
+        $os.getenv('PUBLIC_URL') ||
+        $os.getenv('APP_URL') ||
+        'https://logos-aitsm.goskip.app/portal/login'
+      )
+    }
+
+    // Template único do corpo do e-mail (tema grafite + âmbar, sem dados crus).
+    function buildMonthlyReportEmailHtml(companyName, monthLabel, portalUrl) {
+      return (
+        '<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">' +
+        '<title>Relatório Mensal de Serviços</title></head>' +
+        '<body style="margin:0; padding:0; background-color:#F4F1EC; font-family: Arial, Helvetica, sans-serif;">' +
+        '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#F4F1EC; padding:24px 12px;">' +
+        '<tr><td align="center">' +
+        '<table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="max-width:600px; width:100%; background-color:#FFFFFF; border-radius:12px; overflow:hidden; border:1px solid #E5E1DA;">' +
+        // Cabeçalho grafite
+        '<tr><td style="background-color:#17181C; padding:32px 40px; text-align:center;">' +
+        '<div style="font-size:13px; font-weight:bold; letter-spacing:2px; color:#FCD34D; text-transform:uppercase;">LÓGOS AITSM</div>' +
+        '<div style="font-size:22px; font-weight:bold; color:#FFFFFF; margin-top:8px;">Relatório Mensal de Serviços</div>' +
+        '<div style="width:48px; height:3px; background-color:#D97706; margin:14px auto 0 auto;"></div>' +
+        '</td></tr>' +
+        // Corpo
+        '<tr><td style="padding:36px 40px; text-align:center;">' +
+        '<p style="margin:0 0 6px 0; font-size:15px; color:#17181C;">Relatório de serviços referente ao período</p>' +
+        '<p style="margin:0 0 22px 0; font-size:20px; font-weight:bold; color:#D97706;">' +
+        companyName +
+        ' &mdash; ' +
+        monthLabel +
+        '</p>' +
+        '<p style="margin:0 0 26px 0; font-size:14px; line-height:1.6; color:#52525B;">' +
+        'O <strong>Relatório Mensal está disponível em anexo</strong> (documento HTML completo, no padrão ABNT) ' +
+        'e também no <strong>Portal do Cliente</strong>, onde você acompanha chamados, aprovações, ativos e horas.' +
+        '</p>' +
+        // Botão portal
+        '<table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" style="margin:0 auto 26px auto;">' +
+        '<tr><td style="background-color:#D97706; border-radius:8px;">' +
+        '<a href="' +
+        portalUrl +
+        '" target="_blank" style="display:inline-block; padding:14px 32px; font-size:15px; font-weight:bold; color:#17181C; text-decoration:none; border-radius:8px;">Acessar o Portal do Cliente &rarr;</a>' +
+        '</td></tr></table>' +
+        '<p style="margin:0; font-size:12px; color:#71717A;">Qualquer dúvida, fale com o ponto focal designado da sua equipe.</p>' +
+        '</td></tr>' +
+        // Rodapé
+        '<tr><td style="background-color:#F7F5F1; padding:20px 40px; text-align:center; border-top:1px solid #E5E1DA;">' +
+        '<p style="margin:0; font-size:11px; color:#71717A;">E-mail automático enviado pelo Lógos AITSM &mdash; Gestão de TI e Operações.</p>' +
+        '</td></tr>' +
+        '</table></td></tr></table></body></html>'
+      )
+    }
+
+    // Texto alternativo (clientes sem suporte a HTML)
+    function buildMonthlyReportEmailText(companyName, monthLabel, portalUrl) {
+      return (
+        'Relatório Mensal de Serviços — ' +
+        companyName +
+        ' — ' +
+        monthLabel +
+        '\n\n' +
+        'O Relatório Mensal está disponível em anexo (documento HTML completo, no padrão ABNT) ' +
+        'e também no Portal do Cliente: ' +
+        portalUrl
+      )
+    }
+
     try {
       var body = e.requestInfo().body || {}
       var companyId = body.company_id || ''
@@ -1123,6 +1324,20 @@ routerAdd(
         'Relatório gerado automaticamente pelo Lógos AITSM.' +
         '</p></div></body></html>'
 
+      // Corpo do e-mail: template único (tema grafite/âmbar, sem dados crus)
+      var portalUrl = getPortalUrl()
+      var emailHtml = buildMonthlyReportEmailHtml(companyName, monthLabel, portalUrl)
+      var emailText = buildMonthlyReportEmailText(companyName, monthLabel, portalUrl)
+
+      // Anexo HTML completo (padrão ABNT), nome sanitizado
+      var safeName = String(companyName)
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-zA-Z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '')
+      var attachmentName = 'Relatorio-Mensal-' + safeName + '-' + monthKey + '.html'
+      var attachmentBytes = strToBytes(htmlContent)
+
       var sendErrors = []
 
       for (var rIdx = 0; rIdx < recipients.length; rIdx++) {
@@ -1131,13 +1346,9 @@ routerAdd(
         message.from = { address: 'noreply@logositsm.com.br', name: 'Lógos AITSM' }
         message.to = [{ address: targetEmail }]
         message.subject = subject
-        message.html = htmlContent
-        message.text =
-          'Relatório Mensal de Serviços referente a ' +
-          monthLabel +
-          ' para ' +
-          companyName +
-          '.\nConsulte o e-mail em formato HTML para visualizar o documento completo no padrão ABNT.'
+        message.html = emailHtml
+        message.text = emailText
+        message.attachments = [{ filename: attachmentName, content: attachmentBytes }]
 
         try {
           if (globalThis.sendSystemMailMessage) {

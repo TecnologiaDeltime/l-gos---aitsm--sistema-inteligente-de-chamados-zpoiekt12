@@ -1008,7 +1008,6 @@ export default function MonthlyClientReportPage() {
                       radius={[4, 4, 0, 0]}
                     >
                       <LabelList
-                        isAnimationActive={false}
                         dataKey="Contratado"
                         position="top"
                         formatter={formatHoursLabel}
@@ -1023,7 +1022,6 @@ export default function MonthlyClientReportPage() {
                       radius={[4, 4, 0, 0]}
                     >
                       <LabelList
-                        isAnimationActive={false}
                         dataKey="Utilizado"
                         position="top"
                         formatter={formatHoursLabel}
@@ -1193,7 +1191,6 @@ export default function MonthlyClientReportPage() {
                           radius={[0, 4, 4, 0]}
                         >
                           <LabelList
-                            isAnimationActive={false}
                             dataKey="Horas"
                             position="right"
                             formatter={formatHoursLabel}
@@ -1325,7 +1322,6 @@ export default function MonthlyClientReportPage() {
                           radius={[4, 4, 0, 0]}
                         >
                           <LabelList
-                            isAnimationActive={false}
                             dataKey="Horas"
                             position="top"
                             formatter={formatHoursLabel}
@@ -1454,7 +1450,6 @@ export default function MonthlyClientReportPage() {
                           radius={[4, 4, 0, 0]}
                         >
                           <LabelList
-                            isAnimationActive={false}
                             dataKey="Chamados"
                             position="top"
                             formatter={formatCountLabel}
@@ -1469,7 +1464,6 @@ export default function MonthlyClientReportPage() {
                           radius={[4, 4, 0, 0]}
                         >
                           <LabelList
-                            isAnimationActive={false}
                             dataKey="Horas"
                             position="top"
                             formatter={formatHoursLabel}
@@ -1716,7 +1710,6 @@ export default function MonthlyClientReportPage() {
                         radius={[4, 4, 0, 0]}
                       >
                         <LabelList
-                          isAnimationActive={false}
                           dataKey="total"
                           position="top"
                           formatter={formatCountLabel}
@@ -1731,7 +1724,6 @@ export default function MonthlyClientReportPage() {
                         radius={[4, 4, 0, 0]}
                       >
                         <LabelList
-                          isAnimationActive={false}
                           dataKey="entered"
                           position="top"
                           formatter={formatCountLabel}
@@ -1746,7 +1738,6 @@ export default function MonthlyClientReportPage() {
                         radius={[4, 4, 0, 0]}
                       >
                         <LabelList
-                          isAnimationActive={false}
                           dataKey="exited"
                           position="top"
                           formatter={formatCountLabel}
@@ -1968,7 +1959,6 @@ export default function MonthlyClientReportPage() {
                           activeDot={{ r: 6 }}
                         >
                           <LabelList
-                            isAnimationActive={false}
                             dataKey="Horas Utilizadas"
                             position="top"
                             offset={10}
