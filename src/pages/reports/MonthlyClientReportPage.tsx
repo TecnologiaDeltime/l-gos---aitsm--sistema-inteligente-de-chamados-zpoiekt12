@@ -550,7 +550,6 @@ export default function MonthlyClientReportPage() {
 
           .abnt-header-print {
             display: flex !important;
->>>>>>>
             justify-content: space-between;
             align-items: center;
             border-bottom: 1pt solid #000000;

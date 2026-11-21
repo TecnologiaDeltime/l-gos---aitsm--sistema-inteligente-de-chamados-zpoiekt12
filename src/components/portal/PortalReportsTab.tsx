@@ -26,6 +26,7 @@ import {
 import { formatDateTime } from '@/lib/date-format'
 import { formatHours } from '@/lib/duration'
 import { ClientMonthlyReportRecord, evaluateMonthlyReport } from '@/services/client-monthly-reports'
+import PortalReportDataSections from '@/components/portal/PortalReportDataSections'
 import { Textarea } from '@/components/ui/textarea'
 import { useToast } from '@/hooks/use-toast'
 import { Star, ThumbsUp } from 'lucide-react'
@@ -569,6 +570,9 @@ export default function PortalReportsTab({
                       </ul>
                     </div>
                   )}
+
+                  {/* Seções fiéis ao PDF (acordos, solicitantes, ativos, comparativo 6 meses) */}
+                  <PortalReportDataSections data={viewingReport.report_data} />
                 </div>
               ) : (
                 <div className="p-6 text-center text-muted-foreground border rounded-lg bg-muted/10">
