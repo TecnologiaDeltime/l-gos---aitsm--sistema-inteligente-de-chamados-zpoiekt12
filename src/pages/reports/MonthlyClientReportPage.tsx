@@ -364,11 +364,13 @@ export default function MonthlyClientReportPage() {
             display: none !important;
           }
 
-          /* ISOLAMENTO TOTAL DO RELATÓRIO NA IMPRESSÃO (correção do "PDF em branco,
-             só o rodapé"): contêineres do app-shell com altura fixa (h-screen),
-             overflow oculto, flex e posicionamento clipam/some o fluxo impresso.
-             Aqui neutralizamos TODOS os ancestrais fora da árvore do relatório e
-             revelamos somente .abnt-report-root, posicionado no topo da folha. */
+          /* ISOLAMENTO DO RELATÓRIO NA IMPRESSÃO (correção do "PDF em branco,
+             só o rodapé"): o relatório permanece NO FLUXO (position: static) —
+             caixa absoluta não é fragmentada/paginada pelo Chromium e os
+             break-before das seções não se aplicam a ela. Aqui neutralizamos
+             apenas os contêineres do shell (html/body/#root e os wrappers
+             flex/ancestrais do relatório) e removemos do fluxo, via display:none,
+             só os blocos externos conhecidos (header, nav, aside, print:hidden). */
           html, body, #root {
             height: auto !important;
             max-height: none !important;
@@ -376,28 +378,38 @@ export default function MonthlyClientReportPage() {
             overflow: visible !important;
             position: static !important;
             display: block !important;
+            background: #ffffff !important;
           }
 
-          /* Ancestrais e vizinhos do relatório: sem clip, sem posição, invisíveis.
-             (visibility preserva os elementos fora da árvore do relatório sem
-             gerar páginas extras — o conteúdo visível continua fluindo normal.) */
-          body *:not(.abnt-report-root):not(.abnt-report-root *) {
+          /* Ancestrais do relatório (wrappers flex do Layout): viram blocos
+             neutros, sem flex/altura fixa/overflow que clipe o fluxo impresso */
+          #root div:has(.abnt-report-root) {
+            display: block !important;
             position: static !important;
             overflow: visible !important;
-            visibility: hidden !important;
+            height: auto !important;
+            min-height: 0 !important;
+            max-height: none !important;
+            width: auto !important;
+            max-width: none !important;
+            margin: 0 !important;
+            padding: 0 !important;
           }
 
-          /* A árvore do relatório inteira fica visível e ancorada no topo */
-          .abnt-report-root,
-          .abnt-report-root * {
-            visibility: visible !important;
+          main {
+            display: block !important;
+            position: static !important;
+            overflow: visible !important;
+            height: auto !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            max-width: none !important;
           }
 
           .abnt-report-root {
-            position: absolute !important;
-            left: 0 !important;
-            top: 0 !important;
+            position: static !important;
             width: 100% !important;
+            max-width: 100% !important;
             margin: 0 !important;
             padding: 0 !important;
           }
@@ -576,14 +588,18 @@ export default function MonthlyClientReportPage() {
             overflow: visible !important;
           }
 
-          .print-chart-outer svg text,
-          .print-chart-outer svg tspan {
-            fill: #000000 !important;
-          }
+          /* Rótulos de dados (LabelList): preservar a cor âmbar do tema no print
+             (não forçar fill preto em svg text/tspan) */
 
           .print-chart-outer svg .recharts-cartesian-axis-line,
           .print-chart-outer svg .recharts-cartesian-axis-tick-line {
             stroke: #333333 !important;
+          }
+
+          /* Overlays de nível de app (toasts, popovers, drawers) montados fora
+             do relatório: fora do fluxo na impressão */
+          body > div:not(#root) {
+            display: none !important;
           }
 
           .abnt-header-print {
@@ -985,12 +1001,14 @@ export default function MonthlyClientReportPage() {
                     />
                     <Legend wrapperStyle={{ fontSize: 11, paddingTop: 4 }} />
                     <Bar
+                      isAnimationActive={false}
                       dataKey="Contratado"
                       fill="#d97706"
                       name="Horas Contratadas"
                       radius={[4, 4, 0, 0]}
                     >
                       <LabelList
+                        isAnimationActive={false}
                         dataKey="Contratado"
                         position="top"
                         formatter={formatHoursLabel}
@@ -998,12 +1016,14 @@ export default function MonthlyClientReportPage() {
                       />
                     </Bar>
                     <Bar
+                      isAnimationActive={false}
                       dataKey="Utilizado"
                       fill="#10b981"
                       name="Horas Utilizadas"
                       radius={[4, 4, 0, 0]}
                     >
                       <LabelList
+                        isAnimationActive={false}
                         dataKey="Utilizado"
                         position="top"
                         formatter={formatHoursLabel}
@@ -1166,12 +1186,14 @@ export default function MonthlyClientReportPage() {
                         />
                         <Legend wrapperStyle={{ fontSize: 11 }} />
                         <Bar
+                          isAnimationActive={false}
                           dataKey="Horas"
                           fill="#d97706"
                           name="Horas Consumidas"
                           radius={[0, 4, 4, 0]}
                         >
                           <LabelList
+                            isAnimationActive={false}
                             dataKey="Horas"
                             position="right"
                             formatter={formatHoursLabel}
@@ -1296,12 +1318,14 @@ export default function MonthlyClientReportPage() {
                         />
                         <Legend wrapperStyle={{ fontSize: 11, paddingTop: 4 }} />
                         <Bar
+                          isAnimationActive={false}
                           dataKey="Horas"
                           fill="#d97706"
                           name="Horas Utilizadas"
                           radius={[4, 4, 0, 0]}
                         >
                           <LabelList
+                            isAnimationActive={false}
                             dataKey="Horas"
                             position="top"
                             formatter={formatHoursLabel}
@@ -1423,12 +1447,14 @@ export default function MonthlyClientReportPage() {
                         />
                         <Legend wrapperStyle={{ fontSize: 11, paddingTop: 4 }} />
                         <Bar
+                          isAnimationActive={false}
                           dataKey="Chamados"
                           fill="#d97706"
                           name="Qtd. Chamados"
                           radius={[4, 4, 0, 0]}
                         >
                           <LabelList
+                            isAnimationActive={false}
                             dataKey="Chamados"
                             position="top"
                             formatter={formatCountLabel}
@@ -1436,12 +1462,14 @@ export default function MonthlyClientReportPage() {
                           />
                         </Bar>
                         <Bar
+                          isAnimationActive={false}
                           dataKey="Horas"
                           fill="#f59e0b"
                           name="Horas Dedicadas"
                           radius={[4, 4, 0, 0]}
                         >
                           <LabelList
+                            isAnimationActive={false}
                             dataKey="Horas"
                             position="top"
                             formatter={formatHoursLabel}
@@ -1681,12 +1709,14 @@ export default function MonthlyClientReportPage() {
                       />
                       <Legend wrapperStyle={{ fontSize: 11, paddingTop: 4 }} />
                       <Bar
+                        isAnimationActive={false}
                         dataKey="total"
                         fill="#d97706"
                         name="Total de Ativos"
                         radius={[4, 4, 0, 0]}
                       >
                         <LabelList
+                          isAnimationActive={false}
                           dataKey="total"
                           position="top"
                           formatter={formatCountLabel}
@@ -1694,12 +1724,14 @@ export default function MonthlyClientReportPage() {
                         />
                       </Bar>
                       <Bar
+                        isAnimationActive={false}
                         dataKey="entered"
                         fill="#10b981"
                         name="Entradas (Mês)"
                         radius={[4, 4, 0, 0]}
                       >
                         <LabelList
+                          isAnimationActive={false}
                           dataKey="entered"
                           position="top"
                           formatter={formatCountLabel}
@@ -1707,12 +1739,14 @@ export default function MonthlyClientReportPage() {
                         />
                       </Bar>
                       <Bar
+                        isAnimationActive={false}
                         dataKey="exited"
                         fill="#ef4444"
                         name="Saídas (Mês)"
                         radius={[4, 4, 0, 0]}
                       >
                         <LabelList
+                          isAnimationActive={false}
                           dataKey="exited"
                           position="top"
                           formatter={formatCountLabel}
@@ -1922,6 +1956,7 @@ export default function MonthlyClientReportPage() {
                         />
                         <Legend wrapperStyle={{ fontSize: 11, paddingTop: 4 }} />
                         <Area
+                          isAnimationActive={false}
                           type="monotone"
                           dataKey="Horas Utilizadas"
                           stroke="#d97706"
@@ -1933,6 +1968,7 @@ export default function MonthlyClientReportPage() {
                           activeDot={{ r: 6 }}
                         >
                           <LabelList
+                            isAnimationActive={false}
                             dataKey="Horas Utilizadas"
                             position="top"
                             offset={10}
