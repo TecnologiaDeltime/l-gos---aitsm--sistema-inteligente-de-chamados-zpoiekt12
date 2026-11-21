@@ -235,14 +235,13 @@ export default function MonthlyClientReportPage({
     }
   }, [companyId, monthKey, loadReport])
 
-  // Exportar PDF (ABNT): gera e BAIXA o arquivo .pdf diretamente na máquina —
+  // Exportar PDF: gera e BAIXA o arquivo .pdf diretamente na máquina —
   // sem diálogo de impressão do navegador (window.print), que produzia PDFs
-  // em branco mesmo na rota dedicada (v0.0.486/0.0.489). Desde a v0.0.492 o
-  // PDF é 100% TEXTUAL (a pedido do cliente: "não utilize gráficos, faça um
-  // PDF textual"): todo gráfico é reescrito como texto ABNT com cálculos,
-  // percentuais e tendências; tabelas viram tabelas vetoriais nativas. Sem
-  // rasterização (html2canvas) — o conteúdo paginado naturalmente pelo motor
-  // de texto, sem nenhum corte de conteúdo.
+  // em branco mesmo na rota dedicada (v0.0.486/0.0.489). Desde a v0.0.496 o
+  // PDF é RICO: capa da marca, cards de KPI e gráficos VETORIAIS (jsPDF —
+  // sem rasterização/html2canvas), com o texto explicativo e cálculos do
+  // motor textual (buildMonthlyClientTextDom) mantido integralmente como
+  // apoio sob cada gráfico/seção. O download direto permanece igual.
   const [exportingPdf, setExportingPdf] = useState(false)
   const handleExportPdf = useCallback(async () => {
     if (!reportData || exportingPdf) return
@@ -273,9 +272,9 @@ export default function MonthlyClientReportPage({
     }
   }, [reportData, monthKey, exportingPdf, toast])
 
-  // Exportação em DOCX (Word) EDITÁVEL — mesmo conteúdo textual do PDF ABNT
-  // (mesma fonte de dados/cálculos), gerado no navegador com a lib "docx":
-  // texto corrido editável e tabelas REAIS do Word, download direto via blob.
+  // Exportação em DOCX (Word) EDITÁVEL — mesma identidade visual do PDF rico
+  // (capa sombreada, cards de KPI, tabelas zebra, gráficos como barras em
+  // célula sombreada — nativo e editável), download direto via blob.
   const [exportingDocx, setExportingDocx] = useState(false)
   const handleExportDocx = useCallback(async () => {
     if (!reportData || exportingDocx) return
@@ -862,7 +861,7 @@ export default function MonthlyClientReportPage({
                 ) : (
                   <Printer className="h-4 w-4 mr-1.5" />
                 )}
-                {exportingPdf ? 'Gerando PDF…' : 'Exportar PDF (ABNT)'}
+                {exportingPdf ? 'Gerando PDF…' : 'Exportar PDF'}
               </Button>
               <Button
                 variant="outline"

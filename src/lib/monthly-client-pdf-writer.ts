@@ -1,25 +1,43 @@
 /**
- * Escritor de PDF 100% VETORIAL do Relatório Mensal do Cliente (ABNT).
+ * Escritor de PDF RICO (vetorial) do Relatório Mensal do Cliente.
  *
- * A pedido do cliente ("não utilize gráficos, faça um PDF textual"), o PDF
- * NÃO contém nenhum gráfico nem rasterização (sem html2canvas/canvas): o
- * documento é construído como TEXTO e TABELAS nativos do jsPDF, a partir do
- * mesmo MonthlyClientReportData exibido na tela e no Portal do Cliente —
- * fidelidade garantida por usar a mesma fonte de dados.
+ * A pedido do cliente ("preciso entregar um relatório mensal rico e bonito
+ * ao cliente"), o PDF agora traz: capa escura da marca (grafite #17181C com
+ * acentos âmbar #FCD34D/#D97706), linha de cards de KPI e GRÁFICOS VETORIAIS
+ * desenhados com primitivas do jsPDF (barras, barras horizontais, rosca e
+ * área/linha) — NUNCA rasterização (sem html2canvas/canvas), imune aos bugs
+ * históricos de captura (rótulos piscando, achatamento, corte de imagem).
  *
- * Paginação (zero corte de conteúdo):
+ * O texto explicativo COM CÁLCULOS (buildMonthlyClientTextDom) é PRESERVADO
+ * integralmente, como apoio sob cada gráfico/seção: a repaginação é de
+ * apresentação, não de conteúdo.
+ *
+ * Paginação (zero corte de conteúdo) — MÁQUINA MANTIDA da v0.0.491/0.0.493:
  *  - margens ABNT (sup/dir 20 mm, inf 20 mm, esq 30 mm);
  *  - parágrafos justificados, quebrados apenas ENTRE linhas (nunca no meio
  *    de uma linha; controle de viúvas/órfãs com mínimo de 2 linhas);
  *  - tabelas quebradas apenas ENTRE linhas, repetindo o cabeçalho;
- *  - legenda de quadro nunca fica sozinha: exige legenda + cabeçalho + ao
- *    menos 1 linha de dados na mesma página;
+ *  - gráficos e cards como blocos atômicos: movem inteiros para a página
+ *    seguinte quando não couberem (nunca cortados ao meio);
  *  - título de seção nunca fica órfão no fim da página;
  *  - capa em página própria; cabeçalho/rodapé vetoriais com paginação
  *    "Página X de Y" em todas as páginas (numeração iniciada após a capa).
  */
 
 import { buildMonthlyClientTextDom } from '@/lib/monthly-client-pdf-text'
+import {
+  buildMonthlyKpiCards,
+  buildMonthlyChartSpecs,
+  type MonthlyChartSpec,
+} from '@/lib/monthly-client-rich-doc'
+import { chartHeight, drawMonthlyChart } from '@/lib/monthly-client-pdf-charts'
+import {
+  renderBrandCover,
+  renderKpiCards,
+  KPI_ROW_TOTAL,
+  type CoverLine,
+  type KpiCardData,
+} from '@/lib/monthly-client-pdf-brand'
 
 const CDN_JSPDF = 'https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js'
 
@@ -43,8 +61,6 @@ const GRAPHITE = '#17181C'
 /* ------------------------------------------------------------------ */
 /* Modelo de blocos extraído do DOM textual                            */
 /* ------------------------------------------------------------------ */
-
-type CoverLine = { text: string; kind: 'header' | 'title' | 'subtitle' | 'sub' | 'footer' }
 
 type Block =
   | { type: 'cover'; lines: CoverLine[] }
@@ -192,9 +208,21 @@ interface PlacedTable {
   height: number
 }
 
+interface PlacedKpi {
+  cards: KpiCardData[]
+  height: number
+}
+
+interface PlacedChart {
+  spec: MonthlyChartSpec
+  height: number
+}
+
 type PageItem =
   | { kind: 'lines'; lines: PlacedLine[]; height: number }
   | { kind: 'table'; table: PlacedTable }
+  | { kind: 'kpi'; kpi: PlacedKpi }
+  | { kind: 'chart'; chart: PlacedChart }
 
 interface Page {
   isCover: boolean
@@ -224,35 +252,22 @@ function lineH(sizePt: number): number {
   return sizePt * PT_TO_MM * 1.5
 }
 
-function buildCover(lines: CoverLine[]): Page {
-  return { isCover: true, items: [] }
-}
-
-function coverLineStyle(kind: CoverLine['kind']): { size: number; style: PlacedLine['style'] } {
-  switch (kind) {
-    case 'header':
-      return { size: 14, style: 'bold' }
-    case 'title':
-      return { size: 16, style: 'bold' }
-    case 'subtitle':
-      return { size: 14, style: 'bold' }
-    case 'footer':
-      return { size: 11, style: 'normal' }
-    default:
-      return { size: 12, style: 'normal' }
-  }
-}
-
 /**
  * Converte os blocos em páginas. Cada bloco é colocado respeitando o
  * espaço restante; parágrafos podem atravessar páginas apenas ENTRE
  * linhas (mínimo 2 linhas de cada lado quando possível); tabelas
  * atravessam apenas ENTRE linhas de dados, repetindo o cabeçalho.
  */
-function layout(doc: any, blocks: Block[]): Page[] {
+function layout(
+  doc: any,
+  blocks: Block[],
+  kpiCards: KpiCardData[],
+  charts: Record<number, MonthlyChartSpec>,
+): Page[] {
   const pages: Page[] = []
   let current: PageItem[] = []
   let y = M_TOP + HEADER_H
+  let kpiPlaced = false
 
   const pushPage = (isCover = false) => {
     pages.push({ isCover, items: current })
@@ -267,7 +282,8 @@ function layout(doc: any, blocks: Block[]): Page[] {
     switch (block.type) {
       case 'cover': {
         pushPage()
-        pages.push(buildCover(block.lines))
+        pages.push({ isCover: true, items: [] })
+        kpiPlaced = false
         return
       }
       case 'h2':
@@ -288,6 +304,18 @@ function layout(doc: any, blocks: Block[]): Page[] {
         }))
         current.push({ kind: 'lines', lines: placed, height: h })
         y += h
+        // Gráfico vetorial da seção "N." — bloco ATÔMICO logo após o título:
+        // se não couber no restante da página, move inteiro para a próxima.
+        const m = /^(\d+)\s*\./.exec(block.text.trim())
+        if (m) {
+          const spec = charts[Number(m[1])]
+          if (spec) {
+            const ch = chartHeight(spec)
+            if (ch > remaining()) pushPage()
+            current.push({ kind: 'chart', chart: { spec, height: ch } })
+            y += ch + 2
+          }
+        }
         return
       }
       case 'para':
@@ -297,6 +325,14 @@ function layout(doc: any, blocks: Block[]): Page[] {
         const style: PlacedLine['style'] = isNote ? 'italic' : 'normal'
         const lines = measureLines(doc, block.text, CONTENT_W - (isNote ? 0 : 12.7), size)
         const lh = lineH(size)
+        // Cards de KPI (Resumo Executivo) na primeira página de conteúdo:
+        // bloco atômico — se não couber, abre página nova antes.
+        if (!kpiPlaced) {
+          if (KPI_ROW_TOTAL > remaining()) pushPage()
+          current.push({ kind: 'kpi', kpi: { cards: kpiCards, height: KPI_ROW_TOTAL } })
+          y += KPI_ROW_TOTAL + 2
+          kpiPlaced = true
+        }
         let idx = 0
         while (idx < lines.length) {
           const avail = Math.floor(remaining() / lh)
@@ -419,55 +455,45 @@ function layout(doc: any, blocks: Block[]): Page[] {
 /* Render                                                              */
 /* ------------------------------------------------------------------ */
 
-function renderCover(doc: any, lines: CoverLine[]) {
-  let y = 60
-  lines.forEach((line) => {
-    const { size, style } = coverLineStyle(line.kind)
-    setFont(doc, style, size)
-    const spacing =
-      line.kind === 'title' ? 16 : line.kind === 'subtitle' ? 10 : line.kind === 'header' ? 10 : 6
-    const split = doc.splitTextToSize(line.text, CONTENT_W) as string[]
-    split.forEach((t, i) => {
-      doc.text(t, PAGE_W / 2, y + i * lineH(size), { align: 'center' })
-    })
-    y += split.length * lineH(size) + spacing
-    if (line.kind === 'header') y += 60 // título desce (ABNT: terço superior)
-    if (line.kind === 'footer') {
-      y = PAGE_H - M_BOTTOM - 10 // cidade/UF ancorada no pé da capa
-      doc.setFontSize(11)
-    }
-  })
-}
-
 function renderTable(doc: any, table: PlacedTable, yTop: number): number {
   let y = yTop
   if (table.caption) {
-    setFont(doc, 'bold', TABLE_SIZE)
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(TABLE_SIZE - 0.5)
+    doc.setTextColor(23, 24, 28)
     doc.text(table.caption, M_LEFT, y)
     y += lineH(TABLE_SIZE) + 1
   }
-  // Cabeçalho
-  doc.setFillColor(238, 238, 238)
-  doc.setDrawColor(85, 85, 85)
+  // Cabeçalho da marca (grafite com texto branco)
+  doc.setFillColor(23, 24, 28)
+  doc.setDrawColor(217, 119, 6)
   doc.rect(M_LEFT, y - lineH(TABLE_SIZE) + 1.5, CONTENT_W, headerBoxH(table.headerH), 'FD')
   let x = M_LEFT
   table.headers.forEach((cellLines, c) => {
-    setFont(doc, 'bold', TABLE_SIZE)
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(TABLE_SIZE)
+    doc.setTextColor(252, 211, 77)
     cellLines.forEach((t, i) => {
       doc.text(t, x + 1.5, y + i * lineH(TABLE_SIZE))
     })
     x += table.colWidths[c]
   })
   y += table.headerH
-  // Linhas
+  // Linhas com zebra âmbar-claro
   table.rows.forEach((cells, r) => {
     const rh = table.rowHeights[r]
-    doc.setDrawColor(85, 85, 85)
+    if (r % 2 === 1) {
+      doc.setFillColor(253, 246, 234)
+      doc.rect(M_LEFT, y - lineH(TABLE_SIZE) + 1.5, CONTENT_W, rh, 'F')
+    }
+    doc.setDrawColor(217, 119, 6)
     doc.setLineWidth(0.2)
     doc.line(M_LEFT, y - lineH(TABLE_SIZE) + 1.5, M_LEFT + CONTENT_W, y - lineH(TABLE_SIZE) + 1.5)
     let cx = M_LEFT
     cells.forEach((cellLines, c) => {
-      setFont(doc, 'normal', TABLE_SIZE)
+      doc.setFont('helvetica', 'normal')
+      doc.setFontSize(TABLE_SIZE)
+      doc.setTextColor(31, 33, 38)
       cellLines.forEach((t, i) => {
         doc.text(t, cx + 1.5, y + i * lineH(TABLE_SIZE))
       })
@@ -494,7 +520,9 @@ function renderTable(doc: any, table: PlacedTable, yTop: number): number {
     )
   })
   if (table.source) {
-    setFont(doc, 'italic', TABLE_SIZE - 1)
+    doc.setFont('helvetica', 'italic')
+    doc.setFontSize(TABLE_SIZE - 1)
+    doc.setTextColor(107, 114, 128)
     doc.text(table.source, M_LEFT, y + 1)
     y += 6
   }
@@ -518,8 +546,13 @@ function renderPageItems(doc: any, page: Page) {
         }
         y += lineH(ln.size) + (ln.gapAfterMm || 0)
       })
-    } else {
+    } else if (item.kind === 'table') {
       y = renderTable(doc, item.table, y) + 2
+    } else if (item.kind === 'kpi') {
+      y = renderKpiCards(doc, item.kpi.cards, M_LEFT, y, CONTENT_W) + 2
+    } else if (item.kind === 'chart') {
+      // Gráfico vetorial atômico (blocos de layout garantem que não corta).
+      y = drawMonthlyChart(doc, item.chart.spec, M_LEFT, y, CONTENT_W) + 2
     }
   })
 }
@@ -532,32 +565,30 @@ function renderChrome(
   periodLabel: string,
 ) {
   if (pageIndex === 0) {
-    // Rodapé discreto na capa
-    doc.setFont('times', 'normal')
-    doc.setFontSize(9)
-    doc.setTextColor(90)
-    doc.text('Documento gerado por LÓGOS AITSM', PAGE_W / 2, PAGE_H - M_BOTTOM + 6, {
-      align: 'center',
-    })
+    // Rodapé discreto na capa escura
+    doc.setFont('helvetica', 'normal')
+    doc.setFontSize(8)
+    doc.setTextColor(156, 163, 175)
+    doc.text('Documento gerado por LÓGOS AITSM', PAGE_W / 2, PAGE_H - 6, { align: 'center' })
     return
   }
   // Cabeçalho
-  doc.setFont('times', 'bold')
+  doc.setFont('helvetica', 'bold')
   doc.setFontSize(8)
-  doc.setTextColor(AMBER)
+  doc.setTextColor(217, 119, 6)
   doc.text('RELATÓRIO MENSAL DE ATENDIMENTO', M_LEFT, M_TOP + 3)
-  doc.setFont('times', 'normal')
-  doc.setTextColor(GRAPHITE)
+  doc.setFont('helvetica', 'normal')
+  doc.setTextColor(23, 24, 28)
   doc.setFontSize(7.5)
   const right = [companyLabel, periodLabel].filter(Boolean).join(' — ')
   if (right) doc.text(right, PAGE_W - M_RIGHT, M_TOP + 3, { align: 'right' })
-  doc.setDrawColor(AMBER)
+  doc.setDrawColor(252, 211, 77)
   doc.setLineWidth(0.4)
   doc.line(M_LEFT, M_TOP + 5.5, PAGE_W - M_RIGHT, M_TOP + 5.5)
   // Rodapé
-  doc.setFont('times', 'normal')
+  doc.setFont('helvetica', 'normal')
   doc.setFontSize(8)
-  doc.setTextColor(90)
+  doc.setTextColor(107, 114, 128)
   doc.text('Documento gerado por LÓGOS AITSM', M_LEFT, PAGE_H - M_BOTTOM + 6)
   doc.text(`Página ${pageIndex + 1} de ${totalPages}`, PAGE_W - M_RIGHT, PAGE_H - M_BOTTOM + 6, {
     align: 'right',
@@ -655,9 +686,13 @@ export async function exportMonthlyClientTextPdf(
       throw new Error('Nenhum conteúdo textual disponível para exportar.')
     }
 
-    // 2. Layout/paginação em A4 (mede com a própria fonte do PDF).
+    // 2. Modelo rico: cards de KPI + specs de gráficos vetoriais.
+    const kpiCards = buildMonthlyKpiCards(reportData)
+    const charts = buildMonthlyChartSpecs(reportData)
+
+    // 3. Layout/paginação em A4 (mede com a própria fonte do PDF).
     const doc = new JsPdfCtor({ orientation: 'portrait', unit: 'mm', format: 'a4', compress: true })
-    const pages = layout(doc, blocks)
+    const pages = layout(doc, blocks, kpiCards, charts)
     if (pages.length === 0) throw new Error('Falha ao montar as páginas do PDF.')
 
     const d = (reportData || {}) as {
@@ -669,7 +704,7 @@ export async function exportMonthlyClientTextPdf(
 
     doc.setProperties({
       title: `Relatório Mensal — ${companyLabel || 'Cliente'} (${periodLabel})`,
-      subject: 'Relatório Mensal de Atendimento Técnico (ABNT, textual)',
+      subject: 'Relatório Mensal de Atendimento Técnico (rico, vetorial)',
       creator: 'LÓGOS AITSM',
     })
 
@@ -680,14 +715,14 @@ export async function exportMonthlyClientTextPdf(
         const cover = blocks.find((b) => b.type === 'cover') as
           | { type: 'cover'; lines: CoverLine[] }
           | undefined
-        if (cover) renderCover(doc, cover.lines)
+        if (cover) renderBrandCover(doc, cover.lines, CONTENT_W)
       } else {
         renderPageItems(doc, page)
       }
       renderChrome(doc, i, totalPages, companyLabel, periodLabel)
     })
 
-    // 3. Download
+    // 4. Download
     onProgress?.('download')
     const fileName = `relatorio-mensal-${slugify(companyLabel || 'cliente')}-${monthKey}.pdf`
     doc.save(fileName)
