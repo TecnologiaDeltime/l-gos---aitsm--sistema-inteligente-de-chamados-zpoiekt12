@@ -23,15 +23,21 @@ interface PrintChartContainerProps {
  * Resolve definitivamente os dois problemas clássicos do Recharts ao gerar PDF via window.print():
  * 1) ResponsiveContainer recalcula largura/altura durante a renderização do Chromium para impressão,
  *    frequentemente avaliando clientWidth/clientHeight como 0 ou NaN. Isso faz com que alguns gráficos
- *    desapareçam totalmente ou tenham seus eixos/LabelList colapsados.
+ *    desapareçam totalmente ("PDF em branco") ou tenham seus eixos/LabelList colapsados ("achatados").
  * 2) Os gráficos renderizados na tela para viewport de 1200px+ são recortados nas margens A4 estreitas.
  *
  * Estratégia de alta fidelidade:
  * - Na tela (print:hidden): usa ResponsiveContainer nativo com width="100%" e height={screenHeight}.
- * - Na impressão (hidden print:block): clona o elemento de gráfico com dimensões exatas de largura e
- *   altura em pixels (targetWidth x targetHeight) SEM ResponsiveContainer intermediário. Isso garante
- *   que o Recharts calcule as escalas SVG, eixos, barras e rótulos (LabelList) com precisão milimétrica,
- *   sem depender de medições assíncronas de DOM na fila de impressão.
+ * - Na impressão (hidden print:block): clona o elemento de gráfico com dimensões EXPLÍCITAS de largura
+ *   e altura em pixels (targetWidth x targetHeight) SEM ResponsiveContainer intermediário, com escala
+ *   px→mm garantida via CSS (pt fixo) no container. Isso garante que o Recharts calcule as escalas SVG,
+ *   eixos, barras e rótulos (LabelList) com precisão milimétrica, sem depender de medições assíncronas
+ *   de DOM na fila de impressão.
+ *
+ * Correção do "PDF em branco": a versão de impressão é clonada e RENDERIZADA o tempo todo no DOM
+ * (não só durante a fila de impressão), dentro de um wrapper com largura fixa em px e
+ * `position:absolute; left:-9999px` na tela. Assim o Recharts já calculou escalas e eixos antes do
+ * Chromium serializar a página para impressão — nada depende de ResizeObserver durante o print.
  */
 export function PrintChartContainer({
   children,
@@ -73,15 +79,15 @@ export function PrintChartContainer({
           {children}
         </ResponsiveContainer>
       </div>
-
-      {/* 2. Versão de IMPRESSÃO: Dimensões fixas sem ResponsiveContainer, 100% à prova de falhas de print */}
+      {/* 2. Versão de IMPRESSÃO: pré-renderizada permanentemente no DOM com dimensões fixas.
+          Na tela fica fora da área visível (sem custo visual); no print entra no fluxo.
+          Duas instâncias do mesmo gráfico (mesma `data`) — nenhuma medição assíncrona ocorre. */}
       <div
-        className="hidden print:flex print:items-center print:justify-center print-chart-inner mx-auto overflow-hidden"
+        aria-hidden
+        className="print-chart-print-stage"
         style={{
           width: targetPrintWidth,
-          maxWidth: '100%',
           height: printHeight,
-          minHeight: printHeight,
         }}
       >
         {chartForPrint}

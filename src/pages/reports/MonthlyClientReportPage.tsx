@@ -517,8 +517,40 @@ export default function MonthlyClientReportPage() {
             overflow: visible !important;
           }
 
+          /* PrintChartContainer: na impressão só existe a versão de dimensões
+             fixas (px). O wrapper de tela some e o stage entra no fluxo, com a
+             largura preservada — nada depende de medição assíncrona durante o
+             print, evitando PDF em branco e gráficos achatados/cortados. */
+          .print-chart-outer {
+            display: flex !important;
+            flex-direction: column !important;
+            align-items: center !important;
+            justify-content: center !important;
+            width: 100% !important;
+            max-width: 100% !important;
+            overflow: visible !important;
+          }
+
+          .print-chart-outer .print-chart-print-stage {
+            position: static !important;
+            left: auto !important;
+            top: auto !important;
+            overflow: visible !important;
+          }
+
+          .print-chart-outer svg text,
+          .print-chart-outer svg tspan {
+            fill: #000000 !important;
+          }
+
+          .print-chart-outer svg .recharts-cartesian-axis-line,
+          .print-chart-outer svg .recharts-cartesian-axis-tick-line {
+            stroke: #333333 !important;
+          }
+
           .abnt-header-print {
             display: flex !important;
+>>>>>>>
             justify-content: space-between;
             align-items: center;
             border-bottom: 1pt solid #000000;

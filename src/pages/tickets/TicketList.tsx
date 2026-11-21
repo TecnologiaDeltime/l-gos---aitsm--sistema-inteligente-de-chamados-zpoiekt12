@@ -83,6 +83,30 @@ const TICKET_PRIORITIES = ['Crítica', 'Alta', 'Média', 'Baixa'] as const
 
 const CLOSED_STATUSES = ['Encerrado', 'Cancelado']
 
+/** Cartões de contagem por criticidade exibidos acima da barra de filtros. */
+const PRIORITY_CARDS: { label: string; className: string }[] = [
+  {
+    label: 'Crítica',
+    className:
+      'border-red-300 bg-red-50 text-red-800 dark:border-red-500/40 dark:bg-red-500/10 dark:text-red-300',
+  },
+  {
+    label: 'Alta',
+    className:
+      'border-amber-300 bg-amber-50 text-amber-800 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-300',
+  },
+  {
+    label: 'Média',
+    className:
+      'border-yellow-300 bg-yellow-50 text-yellow-800 dark:border-yellow-500/40 dark:bg-yellow-500/10 dark:text-yellow-300',
+  },
+  {
+    label: 'Baixa',
+    className:
+      'border-slate-300 bg-slate-50 text-slate-700 dark:border-slate-500/40 dark:bg-slate-500/10 dark:text-slate-300',
+  },
+]
+
 /** Chaves de ordenação disponíveis na tabela. */
 type SortKey =
   | 'number'
@@ -389,6 +413,30 @@ export default function TicketList() {
     }
   }, [view, sorted, selectedTicketId])
 
+  // Contagem por criticidade: aplica todos os filtros exceto o próprio filtro de
+  // prioridade, para que os 4 cartões mostrem o total de cada criticidade de forma
+  // estável (mesmo quando uma delas está selecionada no filtro).
+  const priorityCounts = useMemo(() => {
+    const counts: Record<string, number> = { Crítica: 0, Alta: 0, Média: 0, Baixa: 0 }
+    const base = tickets.filter((t) => {
+      const ms =
+        t.title.toLowerCase().includes(search.toLowerCase()) ||
+        t.number.toLowerCase().includes(search.toLowerCase()) ||
+        t.requester_name.toLowerCase().includes(search.toLowerCase())
+      const mSt =
+        statusFilter === 'all' ? !CLOSED_STATUSES.includes(t.status) : t.status === statusFilter
+      const mAnalist = analistaFilter === 'all' || t.assigned_to === analistaFilter
+      const mClient = clienteFilter === 'all' || t.company === clienteFilter
+      return ms && mSt && mAnalist && mClient
+    })
+    for (const t of base) {
+      const key = t.priority || 'Média'
+      if (key in counts) counts[key]++
+      else counts[key] = 1
+    }
+    return counts
+  }, [tickets, search, statusFilter, analistaFilter, clienteFilter])
+
   const allFilteredSelected = sorted.length > 0 && sorted.every((t) => selectedIds.has(t.id))
   const someFilteredSelected = sorted.some((t) => selectedIds.has(t.id)) && !allFilteredSelected
 
@@ -425,6 +473,38 @@ export default function TicketList() {
 
   return (
     <div className="space-y-4">
+      {/* Contagem total de chamados por criticidade (respeita os filtros ativos) */}
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+        {PRIORITY_CARDS.map((card) => {
+          const count = priorityCounts[card.label] ?? 0
+          const active = prioridadeFilter === card.label
+          return (
+            <button
+              key={card.label}
+              type="button"
+              onClick={() => setPrioridadeFilter(active ? 'all' : card.label)}
+              title={
+                active
+                  ? `Clique para limpar o filtro de criticidade ${card.label}`
+                  : `Clique para filtrar apenas chamados de criticidade ${card.label}`
+              }
+              className={cn(
+                'flex items-center gap-3 rounded-lg border px-3 py-2.5 text-left transition-colors',
+                card.className,
+                active && 'ring-2 ring-primary ring-offset-1 ring-offset-background',
+              )}
+            >
+              <span className="text-2xl font-bold leading-none tabular-nums">{count}</span>
+              <span className="flex flex-col leading-tight">
+                <span className="text-[11px] font-semibold uppercase tracking-wide">
+                  {card.label}
+                </span>
+                <span className="text-[10px] opacity-80">chamado(s) na lista</span>
+              </span>
+            </button>
+          )
+        })}
+      </div>
       <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
         <div className="flex flex-1 flex-wrap items-center gap-2">
           <div className="relative min-w-[200px] flex-1 max-w-md">

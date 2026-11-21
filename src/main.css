@@ -303,3 +303,53 @@
 .email-html-iframe marquee {
   overflow-x: hidden !important;
 }
+
+/* ------------------------------------------------------------------ */
+/* PrintChartContainer: dupla instância dos gráficos do relatório      */
+/* mensal (tela responsiva + impressão com dimensões fixas). A versão  */
+/* de impressão vive sempre no DOM, fora da área visível na tela; no   */
+/* print ela entra no fluxo em px fixos (sem ResizeObserver/medição    */
+/* assíncrona durante a fila de impressão — evita PDF em branco e      */
+/* gráficos achatados/cortados).                                       */
+/* ------------------------------------------------------------------ */
+.print-chart-print-stage {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+@media print {
+  /* O wrapper externo do gráfico ocupa a largura da página no print */
+  .print-chart-outer {
+    overflow: visible !important;
+  }
+
+  /* A versão de impressão (dimensões fixas em px) entra no fluxo */
+  .print-chart-print-stage {
+    position: static !important;
+    left: auto !important;
+    top: auto !important;
+    width: auto !important;
+    height: auto !important;
+    overflow: visible !important;
+    pointer-events: auto !important;
+  }
+
+  .print-chart-print-stage svg {
+    display: block;
+    overflow: visible;
+  }
+
+  .print-chart-portrait .print-chart-print-stage {
+    max-width: 100%;
+  }
+
+  /* Gráficos da seção em paisagem: escala px->mm garantida pelo @page */
+  .print-chart-landscape .print-chart-print-stage {
+    max-width: 100%;
+  }
+}
