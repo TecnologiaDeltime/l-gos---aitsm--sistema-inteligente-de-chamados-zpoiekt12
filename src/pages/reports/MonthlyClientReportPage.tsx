@@ -272,42 +272,6 @@ export default function MonthlyClientReportPage({
     }
   }, [reportData, monthKey, exportingPdf, toast])
 
-  // Exportação em DOCX (Word) EDITÁVEL — mesma identidade visual do PDF rico
-  // (capa sombreada, cards de KPI, tabelas zebra, gráficos como barras em
-  // célula sombreada — nativo e editável), download direto via blob.
-  const [exportingDocx, setExportingDocx] = useState(false)
-  const handleExportDocx = useCallback(async () => {
-    if (!reportData || exportingDocx) return
-    setExportingDocx(true)
-    try {
-      const { exportMonthlyClientDocx } = await import('@/lib/monthly-client-docx-writer')
-      const fileName = await exportMonthlyClientDocx({
-        reportData,
-        monthKey,
-        onProgress: (stage) => {
-          if (stage === 'compose') {
-            toast({
-              title: 'Gerando DOCX...',
-              description: 'Compondo o documento editável do relatório.',
-            })
-          }
-        },
-      })
-      toast({
-        title: 'DOCX baixado com sucesso',
-        description: `O arquivo ${fileName} foi salvo na pasta de downloads.`,
-      })
-    } catch (err: any) {
-      toast({
-        title: 'Falha ao exportar DOCX',
-        description: err?.message || 'Erro inesperado na geração do arquivo.',
-        variant: 'destructive',
-      })
-    } finally {
-      setExportingDocx(false)
-    }
-  }, [reportData, monthKey, exportingDocx, toast])
-
   // Janela dedicada (/reports/monthly-client/impressao): botão manual de imprimir.
   const handlePrint = useCallback(() => {
     window.print()
@@ -862,20 +826,6 @@ export default function MonthlyClientReportPage({
                   <Printer className="h-4 w-4 mr-1.5" />
                 )}
                 {exportingPdf ? 'Gerando PDF…' : 'Exportar PDF'}
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleExportDocx}
-                disabled={loadingReport || !reportData || exportingDocx}
-                title="Baixa o relatório em Word (.docx) editável — mesmo conteúdo do PDF, com tabelas editáveis"
-              >
-                {exportingDocx ? (
-                  <RefreshCw className="h-4 w-4 mr-1.5 animate-spin" />
-                ) : (
-                  <FileText className="h-4 w-4 mr-1.5" />
-                )}
-                {exportingDocx ? 'Gerando DOCX…' : 'Exportar DOCX'}
               </Button>
               <Button
                 size="sm"
