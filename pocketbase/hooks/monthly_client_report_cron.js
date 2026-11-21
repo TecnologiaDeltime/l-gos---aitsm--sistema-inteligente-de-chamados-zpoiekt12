@@ -228,6 +228,7 @@ cronAdd('monthly_client_report_cron', '0 6 * * *', function () {
       ]
       var monthLabel = monthNames[month - 1] + ' de ' + year
       var subject = 'Relatório Mensal de Serviços – ' + companyName + ' – ' + monthLabel
+      stage = 'data'
 
       var startDate = new Date(Date.UTC(year, month - 1, 1, 0, 0, 0))
       var nextMonthDate = new Date(Date.UTC(year, month, 1, 0, 0, 0))
@@ -453,6 +454,7 @@ cronAdd('monthly_client_report_cron', '0 6 * * *', function () {
       var topSector = sectorsArr.length > 0 ? sectorsArr[0] : null
       var topActivity = activitiesArr.length > 0 ? activitiesArr[0] : null
 
+      stage = 'html'
       var htmlContent =
         '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Relatório Mensal</title>' +
         '<style>' +
@@ -640,16 +642,82 @@ cronAdd('monthly_client_report_cron', '0 6 * * *', function () {
       var emailHtml = buildMonthlyReportEmailHtml(companyName, monthLabel, portalUrl)
       var emailText = buildMonthlyReportEmailText(companyName, monthLabel, portalUrl)
 
-      // Anexo HTML completo (padrão ABNT), nome sanitizado
+      // Anexo HTML completo (padrão ABNT), nome sanitizado.
+      // JSVM (Goja) NÃO suporta String.prototype.normalize — chamada direta
+      // derruba o fluxo com exceção. Mapa manual de acentos.
+      var _accentsCron = {
+        á: 'a',
+        à: 'a',
+        ã: 'a',
+        â: 'a',
+        ä: 'a',
+        Á: 'A',
+        À: 'A',
+        Ã: 'A',
+        Â: 'A',
+        Ä: 'A',
+        é: 'e',
+        ê: 'e',
+        è: 'e',
+        ë: 'e',
+        É: 'E',
+        Ê: 'E',
+        È: 'E',
+        Ë: 'E',
+        í: 'i',
+        î: 'i',
+        ì: 'i',
+        ï: 'i',
+        Í: 'I',
+        Î: 'I',
+        Ì: 'I',
+        Ï: 'I',
+        ó: 'o',
+        õ: 'o',
+        ô: 'o',
+        ò: 'o',
+        ö: 'o',
+        Ó: 'O',
+        Õ: 'O',
+        Ô: 'O',
+        Ò: 'O',
+        Ö: 'O',
+        ú: 'u',
+        û: 'u',
+        ù: 'u',
+        ü: 'u',
+        Ú: 'U',
+        Û: 'U',
+        Ù: 'U',
+        Ü: 'U',
+        ç: 'c',
+        Ç: 'C',
+        ñ: 'n',
+        Ñ: 'N',
+      }
       var safeName = String(companyName)
-        .normalize('NFD')
-        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[áàãâäÁÀÃÂÄéêèëÉÊÈËíîìïÍÎÌÏóõôòöÓÕÔÒÖúûùüÚÛÙÜçÇñÑ]/g, function (ch) {
+          return _accentsCron[ch] || ch
+        })
         .replace(/[^a-zA-Z0-9]+/g, '-')
         .replace(/^-+|-+$/g, '')
       var attachmentName = 'Relatorio-Mensal-' + safeName + '-' + prevMonthKey + '.html'
-      var attachmentBytes = strToBytes(htmlContent)
+      var attachmentBytes = null
+      try {
+        attachmentBytes = strToBytes(htmlContent)
+      } catch (attErrCron) {
+        $app
+          .logger()
+          .warn(
+            'monthly report cron: attachment build failed, sending without attachment',
+            'error',
+            attErrCron.message,
+          )
+        attachmentBytes = null
+      }
 
       var sendErrors = []
+      stage = 'send'
 
       for (var rIdx = 0; rIdx < recipients.length; rIdx++) {
         var targetEmail = recipients[rIdx]
@@ -659,7 +727,9 @@ cronAdd('monthly_client_report_cron', '0 6 * * *', function () {
         message.subject = subject
         message.html = emailHtml
         message.text = emailText
-        message.attachments = [{ filename: attachmentName, content: attachmentBytes }]
+        if (attachmentBytes) {
+          message.attachments = [{ filename: attachmentName, content: attachmentBytes }]
+        }
 
         try {
           if (globalThis.sendSystemMailMessage) {
@@ -675,6 +745,7 @@ cronAdd('monthly_client_report_cron', '0 6 * * *', function () {
 
       var isSuccess = sendErrors.length === 0
       var recipientsJoined = recipients.join(', ')
+      stage = 'audit_log'
 
       if (isSuccess) {
         sched.set('last_sent_at', new Date().toISOString())
@@ -817,6 +888,8 @@ routerAdd(
       var companyId = body.company_id || ''
       var monthKey = body.month_key || ''
       var extraEmails = body.extra_emails || []
+      var stage = 'init'
+      var recipients = []
 
       if (!companyId || !monthKey) {
         return e.json(400, { error: 'company_id e month_key são obrigatórios.' })
@@ -845,8 +918,8 @@ routerAdd(
         if (scheds && scheds.length > 0) sched = scheds[0]
       } catch (_) {}
 
-      var recipients = []
-      var useFocalPoints = sched ? sched.getBool('use_focal_points') : recipients.length === 0
+      var useFocalPoints = sched ? sched.getBool('use_focal_points') : true
+      stage = 'recipients'
       if (useFocalPoints) {
         try {
           var contacts = $app.findRecordsByFilter(
@@ -1334,14 +1407,83 @@ routerAdd(
       var emailHtml = buildMonthlyReportEmailHtml(companyName, monthLabel, portalUrl)
       var emailText = buildMonthlyReportEmailText(companyName, monthLabel, portalUrl)
 
-      // Anexo HTML completo (padrão ABNT), nome sanitizado
+      // Anexo HTML completo (padrão ABNT), nome sanitizado.
+      // Se a montagem do anexo falhar (ex.: conversão de bytes), o disparo
+      // CONTINUA sem anexo — nunca derruba o envio com 500.
+      // JSVM (Goja) NÃO suporta String.prototype.normalize — usar mapa manual de
+      // acentos. Chamada direta a .normalize derruba o endpoint com 500.
+      stage = 'attachment'
+      var _accents = {
+        á: 'a',
+        à: 'a',
+        ã: 'a',
+        â: 'a',
+        ä: 'a',
+        Á: 'A',
+        À: 'A',
+        Ã: 'A',
+        Â: 'A',
+        Ä: 'A',
+        é: 'e',
+        ê: 'e',
+        è: 'e',
+        ë: 'e',
+        É: 'E',
+        Ê: 'E',
+        È: 'E',
+        Ë: 'E',
+        í: 'i',
+        î: 'i',
+        ì: 'i',
+        ï: 'i',
+        Í: 'I',
+        Î: 'I',
+        Ì: 'I',
+        Ï: 'I',
+        ó: 'o',
+        õ: 'o',
+        ô: 'o',
+        ò: 'o',
+        ö: 'o',
+        Ó: 'O',
+        Õ: 'O',
+        Ô: 'O',
+        Ò: 'O',
+        Ö: 'O',
+        ú: 'u',
+        û: 'u',
+        ù: 'u',
+        ü: 'u',
+        Ú: 'U',
+        Û: 'U',
+        Ù: 'U',
+        Ü: 'U',
+        ç: 'c',
+        Ç: 'C',
+        ñ: 'n',
+        Ñ: 'N',
+      }
       var safeName = String(companyName)
-        .normalize('NFD')
-        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[áàãâäÁÀÃÂÄéêèëÉÊÈËíîìïÍÎÌÏóõôòöÓÕÔÒÖúûùüÚÛÙÜçÇñÑ]/g, function (ch) {
+          return _accents[ch] || ch
+        })
         .replace(/[^a-zA-Z0-9]+/g, '-')
         .replace(/^-+|-+$/g, '')
       var attachmentName = 'Relatorio-Mensal-' + safeName + '-' + monthKey + '.html'
-      var attachmentBytes = strToBytes(htmlContent)
+      var attachmentBytes = null
+      try {
+        attachmentBytes = typeof strToBytes === 'function' ? strToBytes(htmlContent) : null
+        if (!attachmentBytes) throw new Error('strToBytes indisponivel no JSVM')
+      } catch (attErr) {
+        $app
+          .logger()
+          .warn(
+            'monthly report send: attachment build failed, sending without attachment',
+            'error',
+            attErr.message,
+          )
+        attachmentBytes = null
+      }
 
       var sendErrors = []
 
@@ -1353,7 +1495,9 @@ routerAdd(
         message.subject = subject
         message.html = emailHtml
         message.text = emailText
-        message.attachments = [{ filename: attachmentName, content: attachmentBytes }]
+        if (attachmentBytes) {
+          message.attachments = [{ filename: attachmentName, content: attachmentBytes }]
+        }
 
         try {
           if (globalThis.sendSystemMailMessage) {
@@ -1395,8 +1539,23 @@ routerAdd(
         failed_recipients: sendErrors,
       })
     } catch (err) {
-      $app.logger().error('monthly_client_report send endpoint error', 'error', err.message)
-      return e.json(500, { error: err.message || 'Erro ao processar envio do relatório.' })
+      var errMsg = (err && err.message) || String(err)
+      $app
+        .logger()
+        .error('monthly_client_report send endpoint error', 'error', errMsg, 'stage', stage)
+      try {
+        var logsColErr = $app.findCollectionByNameOrId('monthly_report_send_logs')
+        var logRecErr = new Record(logsColErr)
+        logRecErr.set('company', companyId)
+        logRecErr.set('report_month', monthKey)
+        logRecErr.set('recipients', recipients ? recipients.join(', ') : '')
+        logRecErr.set('status', 'falha')
+        logRecErr.set('error_message', 'stage=' + stage + ' - ' + errMsg)
+        logRecErr.set('sent_at', new Date().toISOString())
+        logRecErr.set('triggered_by', 'manual')
+        $app.save(logRecErr)
+      } catch (_) {}
+      return e.json(500, { error: errMsg || 'Erro ao processar envio do relatório.', stage: stage })
     }
   },
   $apis.requireAuth(),
