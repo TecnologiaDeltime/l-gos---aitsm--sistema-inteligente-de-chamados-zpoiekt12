@@ -1,7 +1,7 @@
 /**
  * Elementos de IDENTIDADE VISUAL da marca no PDF do Relatório Mensal:
- * capa escura (grafite #17181C com acentos âmbar #FCD34D/#D97706) e cards
- * de KPI. Desenho 100% vetorial via primitivas jsPDF — sem rasterização.
+ * capa BRANCA (textos em grafite #17181C e acentos âmbar #FCD34D/#D97706) e
+ * cards de KPI. Desenho 100% vetorial via primitivas jsPDF — sem rasterização.
  */
 
 export type CoverLine = { text: string; kind: 'header' | 'title' | 'subtitle' | 'sub' | 'footer' }
@@ -21,7 +21,6 @@ const AMBER_PALE: RGB = [254, 243, 226]
 const INK: RGB = [31, 33, 38]
 const GRAY: RGB = [107, 114, 128]
 const WHITE: RGB = [255, 255, 255]
-const COVER_MUTED: RGB = [156, 163, 175]
 
 function setFill(doc: any, c: RGB) {
   doc.setFillColor(c[0], c[1], c[2])
@@ -42,8 +41,8 @@ function font(doc: any, style: 'normal' | 'bold' | 'italic', size: number) {
 /* ------------------------------------------------------------------ */
 
 export function renderBrandCover(doc: any, lines: CoverLine[], contentW: number) {
-  // Fundo grafite integral (sangria até as bordas da página).
-  setFill(doc, DARK)
+  // Fundo BRANCO integral (sangria até as bordas da página).
+  setFill(doc, WHITE)
   doc.rect(0, 0, 210, 297, 'F')
 
   // Faixa de acento âmbar no topo e filete na base.
@@ -58,7 +57,7 @@ export function renderBrandCover(doc: any, lines: CoverLine[], contentW: number)
   let y = 52
   by('header').forEach((line) => {
     font(doc, 'bold', 10)
-    setTextColor(doc, AMBER_LIGHT)
+    setTextColor(doc, AMBER)
     doc
       .splitTextToSize(line.text.toUpperCase(), contentW)
       .forEach((t: string, i: number) => doc.text(t, 105, y + i * 5.5, { align: 'center' }))
@@ -72,7 +71,7 @@ export function renderBrandCover(doc: any, lines: CoverLine[], contentW: number)
   let ty = 128
   by('title').forEach((line) => {
     font(doc, 'bold', 21)
-    setTextColor(doc, WHITE)
+    setTextColor(doc, DARK)
     doc
       .splitTextToSize(line.text, contentW)
       .forEach((t: string, i: number) => doc.text(t, 105, ty + i * 10, { align: 'center' }))
@@ -83,7 +82,7 @@ export function renderBrandCover(doc: any, lines: CoverLine[], contentW: number)
   let sy = ty + 6
   by('subtitle').forEach((line) => {
     font(doc, 'bold', 13)
-    setTextColor(doc, AMBER_LIGHT)
+    setTextColor(doc, AMBER)
     doc
       .splitTextToSize(line.text, contentW)
       .forEach((t: string, i: number) => doc.text(t, 105, sy + i * 6.5, { align: 'center' }))
@@ -91,7 +90,7 @@ export function renderBrandCover(doc: any, lines: CoverLine[], contentW: number)
   })
   by('sub').forEach((line) => {
     font(doc, 'normal', 10.5)
-    setTextColor(doc, COVER_MUTED)
+    setTextColor(doc, GRAY)
     doc
       .splitTextToSize(line.text, contentW)
       .forEach((t: string, i: number) => doc.text(t, 105, sy + i * 5.5, { align: 'center' }))
@@ -105,7 +104,7 @@ export function renderBrandCover(doc: any, lines: CoverLine[], contentW: number)
     .reverse()
     .forEach((line) => {
       font(doc, 'normal', 10)
-      setTextColor(doc, COVER_MUTED)
+      setTextColor(doc, GRAY)
       doc.text(line.text, 105, fy, { align: 'center' })
       fy -= 6
     })
