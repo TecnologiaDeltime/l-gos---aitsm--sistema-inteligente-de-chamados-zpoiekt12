@@ -3,10 +3,16 @@
  *
  * Estratégia (v0.0.491): capturar a própria árvore ABNT já renderizada em tela
  * (.abnt-report-root) com html2canvas-pro — que rasteriza SVG (Recharts),
- * imagens e cores modernas (oklch do Tailwind v4) — seção por seção, e montar
- * um PDF A4 paginado com jsPDF. Seções mais altas que uma página são fatiadas
- * verticalmente em recortes exatos (canvas intermediário por recorte) — nunca
- * reduzidas nem deixadas em folhas em branco.
+ * imagens e cores modernas (oklch do Tailwind v4) — capturando BLOCO a BLOCO
+ * (cada .abnt-avoid-break: legenda + gráfico/tabela + fonte; cada parágrafo)
+ * e montar um PDF A4 paginado com jsPDF.
+ *
+ * REGRA DE OURO da paginação (correção do "gráficos e escritas cortados"):
+ * a quebra de página acontece apenas ENTRE blocos atômicos — um gráfico,
+ * tabela ou parágrafo NUNCA é dividido no meio. Bloco que não cabe no
+ * restante da página vai inteiro para a página seguinte; bloco mais alto que
+ * a página útil é ESCALADO para caber (nunca achatado abaixo de 55% — nesse
+ * caso, e só nesse caso, o bloco de fallback é fatiado).
  *
  * Sem window.print, sem diálogo de impressão. O tema é temporariamente forçado
  * para CLARO durante a captura (o tema escuro padrão produziria um PDF
@@ -34,6 +40,9 @@ export interface ExportMonthlyClientPdfOptions {
 // Paleta oficial (âmbar/grafite, zero azul)
 const AMBER = '#D97706'
 const GRAPHITE = '#17181C'
+
+/** Escala mínima aceita antes de partir para o fatiamento de emergência. */
+const MIN_SCALE = 0.55
 
 declare global {
   interface Window {
@@ -107,6 +116,60 @@ interface SectionCanvas {
   canvas: HTMLCanvasElement
   widthPx: number
   heightPx: number
+  /** true quando a captura veio da raiz/seção sem blocos ABNT reconhecidos. */
+  isFallback?: boolean
+}
+
+/**
+ * Coleta os BLOCOS ATÔMICOS de uma seção — a menor unidade de paginação.
+ * Regras:
+ *  - um `abnt-avoid-break` (legenda + gráfico + fonte; legenda + tabela + fonte)
+ *    é UM bloco: nunca dividido no meio;
+ *  - um parágrafo (abnt-paragraph ou <p> com texto) é um bloco;
+ *  - um bloco declarado dentro de outro bloco conta só na instância mais
+ *    externa;
+ *  - containers "neutros" (space-y-4/space-y-6 usados como fragmento de vários
+ *    blocos) são atravessados um nível;
+ *  - qualquer outro filho direto visível da seção vira um bloco próprio.
+ */
+function collectAtomicBlocks(section: HTMLElement): HTMLElement[] {
+  const visible = (el: HTMLElement) => el.offsetParent !== null
+  if (!visible(section)) return []
+
+  const out: HTMLElement[] = []
+  const walk = (parent: HTMLElement, nested: boolean) => {
+    Array.from(parent.children).forEach((child) => {
+      const el = child as HTMLElement
+      if (!visible(el)) return
+      const isAvoid = el.classList.contains('abnt-avoid-break')
+      const isParagraph = el.classList.contains('abnt-paragraph')
+      const isTextBlock =
+        !isAvoid && !isParagraph && el.tagName === 'P' && (el.textContent || '').trim().length > 0
+      if (isAvoid || isParagraph || isTextBlock) {
+        if (!nested) out.push(el)
+        return
+      }
+      const isNeutralFragment =
+        !isAvoid &&
+        el.tagName !== 'TABLE' &&
+        el.tagName !== 'P' &&
+        (el.classList.contains('space-y-4') || el.classList.contains('space-y-6')) &&
+        el.children.length > 1
+      if (isNeutralFragment && !nested) {
+        walk(el, true)
+        return
+      }
+      if (!nested) out.push(el)
+    })
+  }
+  walk(section, false)
+
+  if (out.length <= 1) {
+    // Seção pequena (ou sem marcadores ABNT): captura cai na própria seção
+    // (fallback — pode ser fatiada se for maior que a página útil).
+    return [section]
+  }
+  return out
 }
 
 function sliceToDataUrl(src: HTMLCanvasElement, sy: number, sh: number): string | null {
@@ -180,8 +243,8 @@ export async function exportMonthlyClientPdf(
   const headerHmm = 12
   const footerHmm = 8
   const usableHmm = contentHmm - headerHmm - footerHmm
-  const sectionGapMm = 6
-  const scale = 2
+  const blockGapMm = 6
+  const captureScale = 2
 
   onProgress?.('capture')
   await waitForRender(rootElement)
@@ -194,41 +257,51 @@ export async function exportMonthlyClientPdf(
   try {
     await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)))
 
-    // Captura seção por seção (filhos diretos visíveis da raiz ABNT): evita o
-    // canvas gigante único, que estoura o limite de altura do Chromium em
-    // relatórios longos e saía em branco.
+    // Captura BLOCO a BLOCO (não mais seções inteiras): cada .abnt-avoid-break
+    // (legenda + gráfico + fonte; legenda + tabela + fonte) e cada parágrafo é
+    // uma captura independente — assim a paginação pode quebrar só entre eles.
     const sections = Array.from(rootElement.children).filter(
       (child) => (child as HTMLElement).offsetParent !== null,
     ) as HTMLElement[]
     if (sections.length === 0) sections.push(rootElement)
 
-    const sectionCanvases: SectionCanvas[] = []
+    const blockCanvases: SectionCanvas[] = []
     for (const section of sections) {
-      const canvas = await html2canvas(section, {
-        scale,
-        useCORS: true,
-        allowTaint: false,
-        backgroundColor: '#ffffff',
-        logging: false,
-        windowWidth: Math.max(section.scrollWidth, rootElement.scrollWidth),
-        windowHeight: section.scrollHeight,
-      })
-      if (!canvas || !canvas.width || !canvas.height) continue
-      sectionCanvases.push({ canvas, widthPx: canvas.width, heightPx: canvas.height })
+      const blocks = collectAtomicBlocks(section)
+      const isFallbackBlock = blocks.length === 1 && blocks[0] === section
+      for (const block of blocks) {
+        const target = isFallbackBlock ? block : block
+        const canvas = await html2canvas(target, {
+          scale: captureScale,
+          useCORS: true,
+          allowTaint: false,
+          backgroundColor: '#ffffff',
+          logging: false,
+          windowWidth: Math.max(target.scrollWidth, rootElement.scrollWidth),
+          windowHeight: target.scrollHeight,
+        }).catch(() => null)
+        if (!canvas || !canvas.width || !canvas.height) continue
+        blockCanvases.push({
+          canvas,
+          widthPx: canvas.width,
+          heightPx: canvas.height,
+          isFallback: isFallbackBlock,
+        })
+      }
     }
-    if (sectionCanvases.length === 0) {
-      throw new Error('Falha ao capturar o conteúdo do relatório (nenhuma seção capturada).')
+    if (blockCanvases.length === 0) {
+      throw new Error('Falha ao capturar o conteúdo do relatório (nenhum bloco capturado).')
     }
 
     onProgress?.('compose')
     // Plano de páginas: cada página é uma lista de recortes
-    // { canvasFonte, sy, sh (px), yMm (posição na página) }. Seções mais altas
-    // que uma página são fatiadas verticalmente — sem folhas em branco.
+    // { canvasFonte, sy, sh (px), yMm (posição na página), escala }.
     interface Slice {
       src: HTMLCanvasElement
       syPx: number
       shPx: number
       yMm: number
+      scale: number
     }
     const pages: Slice[][] = []
     let current: Slice[] = []
@@ -240,31 +313,78 @@ export async function exportMonthlyClientPdf(
       cursorMm = 0
     }
 
-    for (const sec of sectionCanvases) {
-      const mmPerPx = contentWmm / sec.widthPx
-      let remainingHmm = sec.heightPx * mmPerPx
-      let syPx = 0
+    for (const sec of blockCanvases) {
+      const blockHmm = (sec.heightPx * contentWmm) / sec.widthPx
+      const spaceMm = usableHmm - cursorMm
+      const isFallback = sec.isFallback === true
 
-      while (remainingHmm > 0.5) {
-        const spaceMm = usableHmm - cursorMm
-        if (spaceMm <= 0.5) {
+      // 1. O bloco cabe no restante da página atual → coloca ali. Com pouco
+      // espaço restante, exige uma folga para não colar no rodapé.
+      if (blockHmm <= spaceMm - (spaceMm > 25 ? 0 : 4)) {
+        current.push({
+          src: sec.canvas,
+          syPx: 0,
+          shPx: sec.heightPx,
+          yMm: marginMm + headerHmm + cursorMm,
+          scale: 1,
+        })
+        cursorMm += blockHmm
+      } else if (blockHmm <= usableHmm) {
+        // 2. Cabe numa página INTEIRA, mas não no restante → página nova.
+        pushPage()
+        current.push({
+          src: sec.canvas,
+          syPx: 0,
+          shPx: sec.heightPx,
+          yMm: marginMm + headerHmm,
+          scale: 1,
+        })
+        cursorMm = blockHmm
+      } else {
+        // 3. Mais alto que a página útil → ESCALA para caber (nunca fatia um
+        // bloco marcado como atômico; só o fallback de emergência é fatiado).
+        const fitScale = usableHmm / blockHmm
+        if (!isFallback || fitScale >= MIN_SCALE) {
           pushPage()
-          continue
-        }
-        const drawHmm = Math.min(remainingHmm, spaceMm)
-        const drawPx = Math.floor(drawHmm / mmPerPx)
-        if (drawPx < 1) break
-        current.push({ src: sec.canvas, syPx, shPx: drawPx, yMm: marginMm + headerHmm + cursorMm })
-        syPx += drawPx
-        remainingHmm -= drawPx * mmPerPx
-        cursorMm += drawPx * mmPerPx
-        if (remainingHmm > 0.5) {
-          // A seção continua na próxima página.
-          pushPage()
+          current.push({
+            src: sec.canvas,
+            syPx: 0,
+            shPx: sec.heightPx,
+            yMm: marginMm + headerHmm + Math.max(0, (usableHmm - blockHmm * fitScale) / 2),
+            scale: fitScale,
+          })
+          cursorMm = usableHmm
+        } else {
+          // Fallback de emergência (bloco excepcional, sem marcador ABNT, mais
+          // alto que 2 páginas): fatia — mesmo comportamento da v0.0.490.
+          const mmPerPx = contentWmm / sec.widthPx
+          let syPx = 0
+          let remainingHmm = blockHmm
+          while (remainingHmm > 0.5) {
+            const space = usableHmm - cursorMm
+            if (space <= 0.5) {
+              pushPage()
+              continue
+            }
+            const drawHmm = Math.min(remainingHmm, space)
+            const drawPx = Math.max(1, Math.floor(drawHmm / mmPerPx))
+            current.push({
+              src: sec.canvas,
+              syPx,
+              shPx: drawPx,
+              yMm: marginMm + headerHmm + cursorMm,
+              scale: 1,
+            })
+            syPx += drawPx
+            remainingHmm -= drawPx * mmPerPx
+            cursorMm += drawPx * mmPerPx
+            if (remainingHmm > 0.5) pushPage()
+          }
         }
       }
-      // Respiro entre seções.
-      cursorMm += sectionGapMm
+
+      // Respiro ENTRE blocos (nunca depois do último da página).
+      cursorMm += blockGapMm
       if (cursorMm >= usableHmm - 0.5) pushPage()
     }
     pushPage()
@@ -304,16 +424,13 @@ export async function exportMonthlyClientPdf(
       for (const slice of slices) {
         const dataUrl = sliceToDataUrl(slice.src, slice.syPx, slice.shPx)
         if (!dataUrl) continue
-        pdf.addImage(
-          dataUrl,
-          'JPEG',
-          marginMm,
-          slice.yMm,
-          contentWmm,
-          slice.shPx * (contentWmm / slice.src.width),
-          undefined,
-          'FAST',
-        )
+        // Largura/altura já com a escala do bloco aplicada (escala < 1 só
+        // acontece quando o bloco é mais alto que a página útil): a imagem
+        // mantém a proporção (sem achatamento) e fica CENTRALIZADA.
+        const drawHmm = slice.shPx * (contentWmm / slice.src.width) * slice.scale
+        const drawWmm = contentWmm * slice.scale
+        const xMm = marginMm + (contentWmm - drawWmm) / 2
+        pdf.addImage(dataUrl, 'JPEG', xMm, slice.yMm, drawWmm, drawHmm, undefined, 'FAST')
       }
 
       // Rodapé vetorial.
@@ -329,8 +446,8 @@ export async function exportMonthlyClientPdf(
       )
     })
 
-    // Libera os canvases de seção da memória.
-    sectionCanvases.forEach((sec) => {
+    // Libera os canvases de bloco da memória.
+    blockCanvases.forEach((sec) => {
       sec.canvas.width = 0
       sec.canvas.height = 0
     })
