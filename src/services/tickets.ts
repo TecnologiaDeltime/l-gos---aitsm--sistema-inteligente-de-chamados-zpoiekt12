@@ -227,6 +227,32 @@ export const stopOperatorWorkCycle = (id: string) =>
     message?: string
   }>(`/backend/v1/tickets/${id}/stop-work-cycle`, { method: 'POST' })
 
+// Pausa do CICLO DE TRABALHO: motivo próprio (lista de WorkCyclePauseDialog).
+// NÃO interfere no SLA — só contabilização das horas do operador.
+export const pauseOperatorWorkCycle = (id: string, reason: string, description = '') =>
+  pb.send<{
+    success: boolean
+    paused: boolean
+    reason: string
+    elapsed_seconds: number
+    operator_worked_seconds: number
+    work_hours: number
+  }>(`/backend/v1/tickets/${id}/pause-work-cycle`, {
+    method: 'POST',
+    body: JSON.stringify({ reason, description }),
+    headers: { 'Content-Type': 'application/json' },
+  })
+
+export const resumeOperatorWorkCycle = (id: string) =>
+  pb.send<{
+    success: boolean
+    paused: boolean
+    operator_cycle_start: string
+    operator_cycle_user: string
+    operator_worked_seconds: number
+    work_hours: number
+  }>(`/backend/v1/tickets/${id}/resume-work-cycle`, { method: 'POST' })
+
 export const addAccompanimentHours = (
   id: string,
   data: {

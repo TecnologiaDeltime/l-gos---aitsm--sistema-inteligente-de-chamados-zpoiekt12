@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-21T17:43:01.034Z",
+  "generatedAt": "2026-11-22T16:47:04.988Z",
   "collections": [
     {
       "name": "users",
@@ -13555,6 +13555,73 @@
         "CREATE INDEX idx_kb_sources_type ON kb_sources (source_type)",
         "CREATE INDEX idx_kb_sources_status ON kb_sources (status)",
         "CREATE INDEX idx_kb_sources_ticket ON kb_sources (ticket)"
+      ]
+    },
+    {
+      "name": "operator_work_cycle_pauses",
+      "type": "base",
+      "apiRules": {
+        "list": "",
+        "view": "",
+        "create": "",
+        "update": "",
+        "delete": ""
+      },
+      "fields": [
+        {
+          "name": "ticket",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "tickets"
+        },
+        {
+          "name": "operator",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "reason",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "description",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "paused_at",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "resumed_at",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "worked_seconds_in_cycle",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "paused_minutes",
+          "type": "number",
+          "required": false,
+          "system": false
+        }
+      ],
+      "indexes": [
+        "CREATE INDEX idx_wcp_ticket ON operator_work_cycle_pauses (ticket)",
+        "CREATE INDEX idx_wcp_operator ON operator_work_cycle_pauses (operator)"
       ]
     }
   ]

@@ -28,6 +28,7 @@ import {
   FileIcon,
   UploadCloud,
 } from 'lucide-react'
+import { WorkCyclePauseDialog } from '@/components/WorkCyclePauseDialog'
 import { ChildTicketDialog, checkPendingChildren } from '@/components/ChildTicketDialog'
 import { PendingChildrenAlert } from '@/components/PendingChildrenAlert'
 import { AssociateTicketsDialog } from '@/components/AssociateTicketsDialog'
@@ -74,6 +75,8 @@ import {
   resumeTicketSla,
   startOperatorWorkCycle,
   stopOperatorWorkCycle,
+  pauseOperatorWorkCycle,
+  resumeOperatorWorkCycle,
   getSlaPauses,
   getTicketHistory,
   TicketRecord,
@@ -653,6 +656,48 @@ export default function TicketDetail({
     } catch (err) {
       toast({
         title: 'Erro ao iniciar ciclo de trabalho',
+        description: getErrorMessage(err),
+        variant: 'destructive',
+      })
+    } finally {
+      setCycleActionLoading(false)
+    }
+  }
+
+  // Pausa do CICLO DE TRABALHO: motivo EXCLUSIVO (WorkCyclePauseDialog) e zero
+  // efeito sobre o SLA — o SLA só é pausado/retomado pelo botão "Pausar SLA".
+  const handleConfirmWorkCyclePause = async (reason: string, description: string) => {
+    if (!id) return
+    await pauseOperatorWorkCycle(id, reason, description)
+    loadData()
+    toast({
+      title: '⏸ Ciclo de trabalho pausado',
+      description: `Motivo: ${reason}. Horas do operador contabilizadas — SLA não afetado.`,
+    })
+  }
+
+  const handleResumeWorkCycle = async () => {
+    if (!id) return
+    if (ticket?.approval_hold || ticket?.status === 'Aguardando Aprovação') {
+      toast({
+        title: 'Ação bloqueada',
+        description:
+          'Aguardando aprovação do cliente — o ciclo de trabalho não pode ser manipulado.',
+        variant: 'destructive',
+      })
+      return
+    }
+    setCycleActionLoading(true)
+    try {
+      await resumeOperatorWorkCycle(id)
+      loadData()
+      toast({
+        title: '▶ Ciclo de trabalho retomado',
+        description: 'Horas do operador voltando a acumular — SLA não afetado.',
+      })
+    } catch (err) {
+      toast({
+        title: 'Erro ao retomar ciclo de trabalho',
         description: getErrorMessage(err),
         variant: 'destructive',
       })

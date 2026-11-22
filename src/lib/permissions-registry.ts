@@ -201,6 +201,13 @@ const BASE_SYSTEM_MODULES: GranularModuleDefinition[] = [
         path: '/tickets',
       },
       {
+        key: 'tickets_work_cycle_pause',
+        label: 'Pausa do Ciclo de Trabalho',
+        description:
+          'Pausar e retomar o ciclo de trabalho do operador no chamado com motivo próprio (Almoço, Reunião interna, Treinamento etc.), para contabilização de horas — sem interferir no SLA (que só é pausado pelo botão Pausar SLA)',
+        path: '/tickets',
+      },
+      {
         key: 'admin_accompaniment_hours_edit',
         label: 'Editar/Excluir Horas de Acompanhamento',
         description:

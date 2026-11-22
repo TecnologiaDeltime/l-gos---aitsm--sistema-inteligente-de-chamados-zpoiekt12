@@ -798,6 +798,199 @@ routerAdd(
   $apis.requireAuth(),
 )
 
+// Endpoint para PAUSAR o Ciclo de Trabalho do operador.
+// IMPORTANTE: a pausa do ciclo de trabalho NÃO interfere no SLA em hipótese
+// alguma — não toca em sla_paused, sla_pauses, sla_status, prazos ou totais de
+// pausa de SLA. Serve APENAS para contabilização das horas de trabalho.
+routerAdd(
+  'POST',
+  '/backend/v1/tickets/{id}/pause-work-cycle',
+  (e) => {
+    var id = e.request.pathValue('id')
+    var userId = e.auth ? e.auth.id : ''
+    if (!userId) return e.unauthorizedError('auth required')
+
+    var data = e.requestInfo().body || {}
+    var reason = data.reason ? String(data.reason).trim() : ''
+    var description = data.description ? String(data.description).trim() : ''
+
+    if (!reason) {
+      return e.json(400, { error: 'Motivo da pausa do ciclo de trabalho é obrigatório' })
+    }
+    if (reason === 'Outro' && (!description || description.length < 3)) {
+      return e.json(400, { error: 'Descrição obrigatória quando o motivo é "Outro"' })
+    }
+
+    var ticket = $app.findRecordById('tickets', id)
+    var cycleStartStr = ticket.getString('operator_cycle_start')
+    if (!cycleStartStr) {
+      return e.json(400, { error: 'Nenhum ciclo de trabalho ativo para pausar' })
+    }
+
+    var now = new Date()
+    var nowIso = now.toISOString()
+    var cycleStartTime = new Date(cycleStartStr).getTime()
+    var elapsedSec = Math.max(1, Math.round((now.getTime() - cycleStartTime) / 1000))
+
+    // Acumula o trecho decorrido nas horas trabalhadas do operador
+    var currentWorkedSec = ticket.getInt('operator_worked_seconds') || 0
+    var newWorkedSec = currentWorkedSec + elapsedSec
+    ticket.set('operator_worked_seconds', newWorkedSec)
+    ticket.set('work_hours', Number((newWorkedSec / 3600).toFixed(4)))
+    // Fecha o ciclo aberto — relógio do ciclo para aqui; SLA intocado
+    ticket.set('operator_cycle_start', '')
+    ticket.set('operator_cycle_user', '')
+
+    $app.save(ticket)
+
+    var ch = Math.floor(elapsedSec / 3600)
+    var cm = Math.floor((elapsedSec % 3600) / 60)
+    var cs = elapsedSec % 60
+    var cycleTimeFormatted =
+      String(ch).padStart(2, '0') +
+      ':' +
+      String(cm).padStart(2, '0') +
+      ':' +
+      String(cs).padStart(2, '0')
+
+    // Registro próprio de pausa do ciclo (independente de sla_pauses)
+    try {
+      var wcpCol = $app.findCollectionByNameOrId('operator_work_cycle_pauses')
+      var wcpRec = new Record(wcpCol)
+      wcpRec.set('ticket', id)
+      wcpRec.set('operator', userId)
+      wcpRec.set('reason', reason)
+      wcpRec.set('description', description)
+      wcpRec.set('paused_at', nowIso)
+      wcpRec.set('worked_seconds_in_cycle', elapsedSec)
+      $app.save(wcpRec)
+    } catch (wcpErr) {
+      $app.logger().error('pause-work-cycle: cycle pause record failed', 'error', wcpErr.message)
+    }
+
+    // Auditoria em ticket_history (ação própria, sem tocar SLA)
+    try {
+      var histColW = $app.findCollectionByNameOrId('ticket_history')
+      var histW = new Record(histColW)
+      histW.set('ticket', id)
+      histW.set('user', userId)
+      histW.set('action', 'Pausar Ciclo de Trabalho')
+      histW.set('field', 'operator_cycle_start')
+      histW.set('old_value', 'Em curso')
+      histW.set(
+        'new_value',
+        'Pausado — Motivo: ' +
+          reason +
+          (description ? ' — ' + description : '') +
+          '. Trecho contabilizado: ' +
+          cycleTimeFormatted +
+          '. Horas Trabalhadas acumuladas: ' +
+          newWorkedSec +
+          's. SLA não afetado.',
+      )
+      $app.save(histW)
+    } catch (hErrW) {
+      $app.logger().error('pause-work-cycle: history logging failed', 'error', hErrW.message)
+    }
+
+    return e.json(200, {
+      success: true,
+      paused: true,
+      reason: reason,
+      elapsed_seconds: elapsedSec,
+      operator_worked_seconds: newWorkedSec,
+      work_hours: ticket.getFloat('work_hours') || 0,
+    })
+  },
+  $apis.requireAuth(),
+)
+
+// Endpoint para RETOMAR o Ciclo de Trabalho do operador.
+// Também NÃO interfere no SLA: apenas reabre o ciclo de contagem de horas.
+routerAdd(
+  'POST',
+  '/backend/v1/tickets/{id}/resume-work-cycle',
+  (e) => {
+    var id = e.request.pathValue('id')
+    var userId = e.auth ? e.auth.id : ''
+    if (!userId) return e.unauthorizedError('auth required')
+
+    var ticket = $app.findRecordById('tickets', id)
+    if (ticket.getString('operator_cycle_start')) {
+      return e.json(200, {
+        success: true,
+        message: 'Ciclo de trabalho já em andamento',
+        operator_cycle_start: ticket.getString('operator_cycle_start'),
+        operator_worked_seconds: ticket.getInt('operator_worked_seconds') || 0,
+      })
+    }
+
+    var status = ticket.getString('status')
+    if (status === 'Resolvido' || status === 'Encerrado' || status === 'Cancelado') {
+      return e.json(400, { error: 'Não é possível retomar ciclo em chamado finalizado' })
+    }
+
+    var now = new Date().toISOString()
+    ticket.set('operator_cycle_start', now)
+    ticket.set('operator_cycle_user', userId)
+
+    // Fecha a última pausa de ciclo aberta (registra duração da pausa)
+    try {
+      var openWcp = $app.findRecordsByFilter(
+        'operator_work_cycle_pauses',
+        'ticket = "' + id + '" && resumed_at = ""',
+        '-created',
+        1,
+        0,
+      )
+      if (openWcp.length > 0) {
+        var wcpRec2 = openWcp[0]
+        var pausedAtStr = wcpRec2.getString('paused_at')
+        var pauseMinutes = 0
+        if (pausedAtStr) {
+          var diffMs = new Date(now).getTime() - new Date(pausedAtStr).getTime()
+          pauseMinutes = Math.max(0, Math.round(diffMs / 60000))
+        }
+        wcpRec2.set('resumed_at', now)
+        wcpRec2.set('paused_minutes', pauseMinutes)
+        $app.save(wcpRec2)
+      }
+    } catch (wcpErr2) {
+      $app.logger().error('resume-work-cycle: close pause record failed', 'error', wcpErr2.message)
+    }
+
+    $app.save(ticket)
+
+    // Auditoria em ticket_history
+    try {
+      var histColR = $app.findCollectionByNameOrId('ticket_history')
+      var histR = new Record(histColR)
+      histR.set('ticket', id)
+      histR.set('user', userId)
+      histR.set('action', 'Retomar Ciclo de Trabalho')
+      histR.set('field', 'operator_cycle_start')
+      histR.set('old_value', 'Pausado')
+      histR.set(
+        'new_value',
+        'Retomado em ' + now + '. Contagem de horas do operador reativada. SLA não afetado.',
+      )
+      $app.save(histR)
+    } catch (hErrR) {
+      $app.logger().error('resume-work-cycle: history logging failed', 'error', hErrR.message)
+    }
+
+    return e.json(200, {
+      success: true,
+      paused: false,
+      operator_cycle_start: now,
+      operator_cycle_user: userId,
+      operator_worked_seconds: ticket.getInt('operator_worked_seconds') || 0,
+      work_hours: ticket.getFloat('work_hours') || 0,
+    })
+  },
+  $apis.requireAuth(),
+)
+
 // Endpoint para registrar Horas de Acompanhamento
 routerAdd(
   'POST',
