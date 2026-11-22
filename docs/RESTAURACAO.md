@@ -4,6 +4,27 @@ Este documento registra oficialmente os **Pontos de Restauração (Restore Point
 
 ---
 
+## 0. Ponto de Restauração Solicitado — v0.0.503 (pendente de execução, 22/11/2026)
+
+- **Versão Base Homologada:** `0.0.503` (última versão ANTES da separação da Pausa de Ciclo do SLA).
+- **Commit Exato no GitHub:** `1479b1538a8ef6dc88a981e926fc5a4941a5b550` (tree `9f8bd47ae912bd74ec5ebc5bfa0a83e3d3802a27`, mensagem "v0.0.503", commit pai `814c80580dfe485d76fb6e0697e9c9f59b4258dc`, 21/11/2026 17:44 UTC).
+- **Repositório Conectado:** `TecnologiaDeltime/l-gos---aitsm--sistema-inteligente-de-chamados-zpoiekt12` (público; histórico navegável e intacto — o HEAD atual está 32 commits à frente, nenhum force-push é necessário).
+- **Estado da Restauração:** o usuário confirmou a perda das entregas v0.0.504 a v0.0.513 (separação Pausa de Ciclo × SLA, restauração visual das 4 telas, Fila de Tickets no formato do print). A execução do checkout ficou impedida nesta rodada pela ausência de git/checkout no workspace e de conector GitHub para leitura de blobs — a restauração NÃO foi reconstituída "de cabeça" por decisão de segurança (ver incidente v0.0.505–0.0.507).
+- **Comando de Restauração (executar em ambiente com git disponível ou com conector GitHub habilitado):**
+
+  ```bash
+  # Restaurar o conteúdo completo da v0.0.503 como um NOVO commit (sem force-push, sem apagar histórico):
+  git checkout 1479b1538a8ef6dc88a981e926fc5a4941a5b550 -- .
+  git add -A
+  git commit -m "restaura v0.0.503 (rollback do código ao estado anterior à separação Pausa de Ciclo × SLA)"
+  # Arquivos criados após a 0.0.503 e inexistentes nela devem ser removidos manualmente antes do add (git clean -fd ou remoção individual)
+  ```
+
+- **Migrações/Backend:** conforme a Seção 4, rollback cobre só código — não destruir coleções no banco; endpoints/coleções criados após a 0.0.503 e sem uso ficam inofensivos.
+- **Package.json:** protegido contra edição (preventAI) — a versão é incrementada automaticamente a cada commit, não editar.
+
+---
+
 ## 1. Ponto de Restauração Atual — `restore-point-0.0.353` / `restore-point-0.0.352` (Vigente)
 
 - **Identificador de Referência:** `restore-point-0.0.353` (equivalente ao snapshot estável homologado da v0.0.352)
