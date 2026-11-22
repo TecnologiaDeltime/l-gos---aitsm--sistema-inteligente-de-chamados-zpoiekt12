@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-22T23:03:57.607Z",
+  "generatedAt": "2026-11-22T23:15:01.966Z",
   "collections": [
     {
       "name": "users",
@@ -13644,7 +13644,7 @@
         {
           "name": "idx",
           "type": "number",
-          "required": true,
+          "required": false,
           "system": false
         },
         {
@@ -13656,7 +13656,7 @@
         {
           "name": "content",
           "type": "text",
-          "required": true,
+          "required": false,
           "system": false
         },
         {

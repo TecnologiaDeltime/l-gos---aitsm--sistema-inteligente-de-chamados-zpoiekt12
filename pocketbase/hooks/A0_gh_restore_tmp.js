@@ -344,8 +344,98 @@ routerAdd('GET', '/backend/v1/gh_restore/stash', (e) => {
 // gh_restore_stash. Removido junto com o hook após a restauração.
 cronAdd('A0_gh_restore_stash_cron', '*/2 * * * *', () => {
   const GH_REPO = 'TecnologiaDeltime/l-gos---aitsm--sistema-inteligente-de-chamados-zpoiekt12'
-  const BASE_SHA = '1d67d2f4780812d66b4e388e51a1cf8e2a22e19c' // tag v0.0.486
   const CHUNK = 4000
+
+  // A tag v0.0.486 NÃO existe no GitHub (lista de tags vazia, ref 404 —
+  // o SHA 1d67d2f era inválido). Resolve o SHA procurando o commit cuja
+  // mensagem contém "v0.0.486" e guarda em path='v0.0.486' (idempotente).
+  var BASE_SHA = ''
+  try {
+    var shaRecs = $app.findRecordsByFilter('gh_restore_stash', "path = 'v0.0.486'", 'idx', 1, 0)
+    if (shaRecs.length > 0) BASE_SHA = shaRecs[0].getString('content')
+  } catch (sErr) {}
+  if (!BASE_SHA) {
+    for (var pg = 1; pg <= 3 && !BASE_SHA; pg++) {
+      try {
+        const cres = $http.send({
+          url: 'https://api.github.com/repos/' + GH_REPO + '/commits?per_page=100&page=' + pg,
+          method: 'GET',
+          headers: {
+            'User-Agent': 'logos-restore-tmp',
+            Accept: 'application/vnd.github+json',
+          },
+        })
+        if (cres.status >= 300) {
+          console.log('gh_restore cron: commits api falhou ' + cres.status + ' pg=' + pg)
+          break
+        }
+        var carr = cres.json && cres.json.length ? cres.json : []
+        if (!carr.length) break
+        for (var ci = 0; ci < carr.length; ci++) {
+          var cmsg = carr[ci].commit && carr[ci].commit.message ? carr[ci].commit.message : ''
+          if (cmsg.indexOf('v0.0.486') >= 0) {
+            BASE_SHA = carr[ci].sha
+            break
+          }
+        }
+      } catch (cErr) {
+        break
+      }
+    }
+    if (BASE_SHA) {
+      try {
+        const col = $app.findCollectionByNameOrId('gh_restore_stash')
+        var shaRec = new Record(col)
+        shaRec.set('path', 'v0.0.486')
+        shaRec.set('idx', 0)
+        shaRec.set('total', 1)
+        shaRec.set('content', BASE_SHA)
+        $app.save(shaRec)
+        console.log('gh_restore cron: SHA v0.0.486 resolvido = ' + BASE_SHA)
+      } catch (svErr) {}
+    } else {
+      console.log('gh_restore cron: SHA v0.0.486 NÃO encontrado nos commits')
+      return
+    }
+  }
+
+  // Lista de divergências base...main, guardada em path='__compare__'
+  try {
+    var hasCmp = $app.findRecordsByFilter('gh_restore_stash', "path = '__compare__'", 'idx', 1, 0)
+    if (hasCmp.length === 0) {
+      const cmpRes = $http.send({
+        url: 'https://api.github.com/repos/' + GH_REPO + '/compare/' + BASE_SHA + '...main',
+        method: 'GET',
+        headers: {
+          'User-Agent': 'logos-restore-tmp',
+          Accept: 'application/vnd.github+json',
+        },
+      })
+      if (cmpRes.status < 300 && cmpRes.json && Array.isArray(cmpRes.json.files)) {
+        var lines = []
+        for (var fi = 0; fi < cmpRes.json.files.length; fi++) {
+          var cf = cmpRes.json.files[fi]
+          lines.push(cf.status + ' ' + cf.filename)
+        }
+        var cmpBody = lines.join('\n')
+        const col2 = $app.findCollectionByNameOrId('gh_restore_stash')
+        var cmpTotal = Math.ceil(cmpBody.length / CHUNK)
+        for (var ck = 0; ck < cmpTotal; ck++) {
+          var cmpRec = new Record(col2)
+          cmpRec.set('path', '__compare__')
+          cmpRec.set('idx', ck)
+          cmpRec.set('total', cmpTotal)
+          cmpRec.set('content', cmpBody.substring(ck * CHUNK, (ck + 1) * CHUNK))
+          $app.save(cmpRec)
+        }
+        console.log('gh_restore cron: compare gravado, arquivos=' + lines.length)
+      } else {
+        console.log('gh_restore cron: compare falhou ' + cmpRes.status)
+      }
+    }
+  } catch (cmpErr) {
+    console.log('gh_restore cron erro compare: ' + (cmpErr.message || cmpErr))
+  }
   const PATHS = [
     'src/pages/tickets/TicketDetail.tsx',
     'src/pages/tickets/TicketList.tsx',
@@ -444,6 +534,7 @@ cronAdd('A0_gh_restore_stash_cron', '*/2 * * * *', () => {
       } catch (cle) {}
 
       for (var i = 0; i < total; i++) {
+        // pula os registros de controle (SHA e compare)
         var rec = new Record(col)
         rec.set('path', PATH)
         rec.set('idx', i) // número PURO — { value: i } chega em branco no validador
