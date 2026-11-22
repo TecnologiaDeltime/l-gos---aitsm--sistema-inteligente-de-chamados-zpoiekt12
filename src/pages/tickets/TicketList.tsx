@@ -148,7 +148,8 @@ export default function TicketList() {
         const isClient = user?.role === 'cliente_solicitante' || user?.role === 'cliente_gestor'
         const filterParts: string[] = []
         if (isClient && user?.email) {
-          filterParts.push(`requester_email = "${user.email}"`)
+          // Aspas SIMPLES: o backend de produção rejeita filtros com aspas duplas (400).
+          filterParts.push(`requester_email = '${user.email}'`)
         }
         const filter = filterParts.length ? filterParts.join(' && ') : undefined
         const data = await getTicketsWithLastInteraction(filter, '-created')

@@ -79,7 +79,7 @@ export const CHILD_CLOSED_STATUSES = ['Resolvido', 'Cancelado', 'Encerrado']
 /** Busca todos os tickets filhos de um ticket pai. */
 export const getChildTickets = (parentId: string) =>
   pb.collection('tickets').getFullList<TicketRecord>({
-    filter: `parent_ticket_id = "${parentId}"`,
+    filter: `parent_ticket_id = '${parentId}'`,
     sort: 'created',
     expand: 'company,contract,assigned_to',
   })
@@ -117,7 +117,8 @@ export const getTicketsWithLastInteraction = async (
 
   for (let i = 0; i < tickets.length; i += batchSize) {
     const batch = tickets.slice(i, i + batchSize)
-    const ticketFilter = batch.map((t) => `ticket = "${t.id}"`).join(' || ')
+    // Aspas SIMPLES: o backend de produção rejeita filtros com aspas duplas (400).
+    const ticketFilter = batch.map((t) => `ticket = '${t.id}'`).join(' || ')
     try {
       const interactions = await pb
         .collection('ticket_interactions')
@@ -273,7 +274,8 @@ export const getOpenWorkCyclePause = (ticketId: string) =>
   pb
     .collection('operator_work_cycle_pauses')
     .getFullList<WorkCyclePauseRecord>({
-      filter: `ticket = "${ticketId}" && resumed_at = ""`,
+      // Aspas SIMPLES: filtro com aspas duplas (resumed_at = "") retorna 400 em produção.
+      filter: `ticket = '${ticketId}' && resumed_at = ''`,
       sort: '-created',
     })
     .then((list) => (list.length > 0 ? list[0] : null))
