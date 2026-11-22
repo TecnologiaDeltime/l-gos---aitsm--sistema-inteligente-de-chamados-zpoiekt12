@@ -13,6 +13,7 @@
  * - GET /backend/v1/gh_restore/batch?paths=a,b,c         -> vários arquivos de uma vez (texto puro)
  *
  * Regras da casa: lógica 100% inline nos callbacks (JSVM); slug com prefixo alfabético.
+ * Cron A0_gh_restore_stash_cron a cada 2 minutos: stashea TicketDetail.tsx sem HTTP externo.
  */
 
 // ---------- ROTA: GET /backend/v1/gh_restore/list ----------
@@ -196,7 +197,7 @@ routerAdd('GET', '/backend/v1/gh_restore/file64', (e) => {
 })
 
 // ---------- ROTA: GET /backend/v1/gh_restore/stash?path=<path> ----------
-// Busca o arquivo no commit base (v0.0.503) e o divide em fatias de ~12KB
+// Busca o arquivo no commit base (v0.0.503) e o divide em fatias de ~12KB (agora 4KB)
 // gravadas na collection temporária gh_restore_stash (idx 0..n-1) para leitura
 // posterior via db_query. Idempotente: limpa fatias antigas do mesmo path.
 routerAdd('GET', '/backend/v1/gh_restore/stash', (e) => {
@@ -327,115 +328,130 @@ routerAdd('GET', '/backend/v1/gh_restore/stash', (e) => {
 
 // ---------- CRON TEMPORÁRIO: stash automático a cada 2 min ----------
 // Dispara a mesma lógica do stash sem depender de requisição HTTP externa
-// (o orçamento de fetch do agente acabou). Grava fatias de TicketDetail.tsx
+// (o orçamento de fetch do agente acabou). Grava fatias dos arquivos de frontend
 // da v0.0.503 na collection gh_restore_stash. Removido junto com o hook.
 cronAdd('A0_gh_restore_stash_cron', '*/2 * * * *', () => {
   const GH_REPO = 'TecnologiaDeltime/l-gos---aitsm--sistema-inteligente-de-chamados-zpoiekt12'
   const BASE_SHA = '1479b1538a8ef6dc88a981e926fc5a4941a5b550'
-  const CHUNK = 12000
-  const PATH = 'src/pages/tickets/TicketDetail.tsx'
+  const CHUNK = 4000
+  const PATHS = [
+    'src/pages/tickets/TicketDetail.tsx',
+    'src/pages/tickets/TicketList.tsx',
+    'src/components/tickets/TicketSummaryPanel.tsx',
+    'src/components/KanbanBoard.tsx',
+    'src/components/KanbanCard.tsx',
+    'src/pages/tickets/TicketApprovalsPage.tsx',
+    'src/pages/tickets/ScheduledTickets.tsx',
+    'src/pages/tickets/RetainedTickets.tsx',
+    'src/components/SlaPauseDialog.tsx',
+    'src/components/WorkCyclePauseDialog.tsx',
+    'src/App.tsx',
+  ]
 
-  try {
-    // já stashed? não refaz (idempotência)
+  for (var pi = 0; pi < PATHS.length; pi++) {
+    var PATH = PATHS[pi]
     try {
-      var exists = $app.findRecordsByFilter('gh_restore_stash', 'path = {:p}', 'idx', 1, 0, {
-        p: PATH,
+      // já stashed? não refaz (idempotência)
+      try {
+        var exists = $app.findRecordsByFilter('gh_restore_stash', 'path = {:p}', 'idx', 1, 0, {
+          p: PATH,
+        })
+        if (exists.length > 0) continue
+      } catch (exErr) {}
+
+      const url = 'https://raw.githubusercontent.com/' + GH_REPO + '/' + BASE_SHA + '/' + PATH
+      const res = $http.send({
+        url: url,
+        method: 'GET',
+        headers: { 'User-Agent': 'logos-restore-tmp' },
       })
-      if (exists.length > 0) return
-    } catch (exErr) {}
-
-    const url = 'https://raw.githubusercontent.com/' + GH_REPO + '/' + BASE_SHA + '/' + PATH
-    const res = $http.send({
-      url: url,
-      method: 'GET',
-      headers: { 'User-Agent': 'logos-restore-tmp' },
-    })
-    if (res.status >= 300) {
-      console.log('gh_restore cron: falhou busca ' + res.status)
-      return
-    }
-
-    // utf8DecodeBytes — INLINE (a JSVM não expõe funções de top-level aos callbacks).
-    var uArr = []
-    try {
-      uArr = Array.prototype.slice.call(res.body)
-    } catch (sArr) {
-      uArr = []
-    }
-    var uOut = []
-    var uI = 0
-    while (uI < uArr.length) {
-      var uB = uArr[uI]
-      var uCp = 0
-      var uExtra = 0
-      if (uB < 0x80) {
-        uCp = uB
-      } else if ((uB & 0xe0) === 0xc0) {
-        uCp = uB & 0x1f
-        uExtra = 1
-      } else if ((uB & 0xf0) === 0xe0) {
-        uCp = uB & 0x0f
-        uExtra = 2
-      } else if ((uB & 0xf8) === 0xf0) {
-        uCp = uB & 0x07
-        uExtra = 3
-      } else {
-        uOut.push(0xfffd)
-        uI++
+      if (res.status >= 300) {
+        console.log('gh_restore cron: falhou busca ' + res.status + ' ' + PATH)
         continue
       }
-      uI++
-      var uOk = true
-      for (var uK = 0; uK < uExtra; uK++) {
-        if (uI >= uArr.length || (uArr[uI] & 0xc0) !== 0x80) {
-          uOk = false
-          break
+
+      // utf8DecodeBytes — INLINE (a JSVM não expõe funções de top-level aos callbacks).
+      var uArr = []
+      try {
+        uArr = Array.prototype.slice.call(res.body)
+      } catch (sArr) {
+        uArr = []
+      }
+      var uOut = []
+      var uI = 0
+      while (uI < uArr.length) {
+        var uB = uArr[uI]
+        var uCp = 0
+        var uExtra = 0
+        if (uB < 0x80) {
+          uCp = uB
+        } else if ((uB & 0xe0) === 0xc0) {
+          uCp = uB & 0x1f
+          uExtra = 1
+        } else if ((uB & 0xf0) === 0xe0) {
+          uCp = uB & 0x0f
+          uExtra = 2
+        } else if ((uB & 0xf8) === 0xf0) {
+          uCp = uB & 0x07
+          uExtra = 3
+        } else {
+          uOut.push(0xfffd)
+          uI++
+          continue
         }
-        uCp = (uCp << 6) | (uArr[uI] & 0x3f)
         uI++
+        var uOk = true
+        for (var uK = 0; uK < uExtra; uK++) {
+          if (uI >= uArr.length || (uArr[uI] & 0xc0) !== 0x80) {
+            uOk = false
+            break
+          }
+          uCp = (uCp << 6) | (uArr[uI] & 0x3f)
+          uI++
+        }
+        if (!uOk) {
+          uOut.push(0xfffd)
+          continue
+        }
+        if (uCp <= 0xffff) {
+          uOut.push(uCp)
+        } else {
+          uCp -= 0x10000
+          uOut.push(0xd800 + (uCp >> 10))
+          uOut.push(0xdc00 + (uCp & 0x3ff))
+        }
       }
-      if (!uOk) {
-        uOut.push(0xfffd)
-        continue
+      var body = ''
+      var uStep = 4096
+      for (var uJ = 0; uJ < uOut.length; uJ += uStep) {
+        body += String.fromCharCode.apply(null, uOut.slice(uJ, uJ + uStep))
       }
-      if (uCp <= 0xffff) {
-        uOut.push(uCp)
-      } else {
-        uCp -= 0x10000
-        uOut.push(0xd800 + (uCp >> 10))
-        uOut.push(0xdc00 + (uCp & 0x3ff))
+
+      const total = Math.ceil(body.length / CHUNK)
+      const col = $app.findCollectionByNameOrId('gh_restore_stash')
+
+      try {
+        var olds = $app.findRecordsByFilter('gh_restore_stash', 'path = {:p}', 'idx', 500, 0, {
+          p: PATH,
+        })
+        for (var d = 0; d < olds.length; d++) $app.delete(olds[d])
+      } catch (cle) {}
+
+      for (var i = 0; i < total; i++) {
+        var rec = new Record(col)
+        rec.set('path', PATH)
+        rec.set('idx', i)
+        rec.set('total', total)
+        rec.set('content', body.substring(i * CHUNK, (i + 1) * CHUNK))
+        $app.save(rec)
       }
+
+      console.log(
+        'gh_restore cron: stash ok path=' + PATH + ' bytes=' + body.length + ' chunks=' + total,
+      )
+    } catch (err) {
+      console.log('gh_restore cron erro: ' + (err.message || err) + ' path=' + PATH)
     }
-    var body = ''
-    var uStep = 4096
-    for (var uJ = 0; uJ < uOut.length; uJ += uStep) {
-      body += String.fromCharCode.apply(null, uOut.slice(uJ, uJ + uStep))
-    }
-
-    const total = Math.ceil(body.length / CHUNK)
-    const col = $app.findCollectionByNameOrId('gh_restore_stash')
-
-    try {
-      var olds = $app.findRecordsByFilter('gh_restore_stash', 'path = {:p}', 'idx', 500, 0, {
-        p: PATH,
-      })
-      for (var d = 0; d < olds.length; d++) $app.delete(olds[d])
-    } catch (cle) {}
-
-    for (var i = 0; i < total; i++) {
-      var rec = new Record(col)
-      rec.set('path', PATH)
-      rec.set('idx', i)
-      rec.set('total', total)
-      rec.set('content', body.substring(i * CHUNK, (i + 1) * CHUNK))
-      $app.save(rec)
-    }
-
-    console.log(
-      'gh_restore cron: stash ok path=' + PATH + ' bytes=' + body.length + ' chunks=' + total,
-    )
-  } catch (err) {
-    console.log('gh_restore cron erro: ' + (err.message || err))
   }
 })
 

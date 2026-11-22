@@ -381,3 +381,31 @@ export const getSlaPauses = (ticketId: string) =>
     sort: '-created',
     expand: 'paused_by,resumed_by',
   })
+
+// ---------- PONTE TEMPORÁRIA DE RESTAURAÇÃO (v0.0.503) ----------
+// Rotas servidas pelo hook temporário pocketbase/hooks/A0_gh_restore_tmp.js,
+// que busca conteúdo verbatim do commit 1479b15 (v0.0.503) no GitHub público.
+// Remover junto com o hook quando a restauração concluir.
+export const ghRestoreList = () =>
+  pb.send<{ total: number; files: { filename: string; status: string }[] }>(
+    '/backend/v1/gh_restore/list',
+    { method: 'GET' },
+  )
+
+export const ghRestoreFile = (path: string) =>
+  pb.send<{ path: string; encoding: string; content: string }>(
+    `/backend/v1/gh_restore/file?path=${encodeURIComponent(path)}`,
+    { method: 'GET' },
+  )
+
+export const ghRestoreStash = (path: string) =>
+  pb.send<{ path: string; bytes: number; chunks: number }>(
+    `/backend/v1/gh_restore/stash?path=${encodeURIComponent(path)}`,
+    { method: 'GET' },
+  )
+
+export const ghRestoreBatch = (paths: string[]) =>
+  pb.send<{ files: { path: string; size: number; content: string }[]; errors: any[] }>(
+    `/backend/v1/gh_restore/batch?paths=${encodeURIComponent(paths.join(','))}`,
+    { method: 'GET' },
+  )
