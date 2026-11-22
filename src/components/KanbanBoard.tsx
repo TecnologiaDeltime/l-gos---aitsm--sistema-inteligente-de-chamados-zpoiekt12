@@ -10,6 +10,8 @@ interface KanbanBoardProps {
   canEdit: boolean
   onStatusChange: (ticketId: string, newStatus: string, oldStatus: string) => Promise<void>
   hiddenColumns?: string[]
+  selectedTicketId?: string | null
+  onSelectTicket?: (ticketId: string) => void
 }
 
 function getStatusDisplayName(status: string): string {
@@ -22,6 +24,8 @@ export function KanbanBoard({
   canEdit = true,
   onStatusChange,
   hiddenColumns = [],
+  selectedTicketId,
+  onSelectTicket,
 }: KanbanBoardProps) {
   const isMobile = useIsMobile()
   const [draggingId, setDraggingId] = useState<string | null>(null)
@@ -167,6 +171,8 @@ export function KanbanBoard({
                     key={t.id}
                     ticket={t}
                     canEdit={canEdit}
+                    isSelected={selectedTicketId === t.id}
+                    onSelect={onSelectTicket}
                     isDragging={draggingId === t.id}
                     onDragStart={handleDragStart}
                     onDragEnd={() => {
