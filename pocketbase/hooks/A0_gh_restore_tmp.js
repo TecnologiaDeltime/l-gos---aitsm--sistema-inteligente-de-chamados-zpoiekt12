@@ -6,11 +6,23 @@
  * Serve conteúdo do histórico do GitHub público (fetch outbound) para
  * restaurar o código frontend verbatim no commit da tag v0.0.486.
  *
+ * COMMIT DE RESTAURAÇÃO = TAG v0.0.486.
+ *
  * Rotas (públicas, somente leitura — conteúdo vem de repositório PÚBLICO):
  * - GET /backend/v1/gh_restore/list                      -> compare base...head: lista de arquivos
  * - GET /backend/v1/gh_restore/file?path=<path>          -> raw do arquivo no commit base (texto puro)
  * - GET /backend/v1/gh_restore/file64?path=<path>        -> idem, content em base64 (binário-safe)
  * - GET /backend/v1/gh_restore/batch?paths=a,b,c         -> vários arquivos de uma vez (texto puro)
+ * - GET /backend/v1/gh_restore/stash?path=<path>         -> fatia e grava na collection gh_restore_stash
+ *
+ * TAG v0.0.486 resolve para o commit 1d67d2f4780812d66b4e388e51a1cf8e2a22e19c.
+ *
+ * LIÇÃO v0.0.520 (correção do bug "idx: cannot be blank"): gravar campo NUMÉRICO
+ * como objeto ({ value: i }) chega em branco no validador do PocketBase. SEMPRE
+ * usar número puro: rec.set('idx', i).
+ *
+ * REGRA: BASE_SHA aponta SEMPRE para a tag v0.0.486 (nunca para 0.0.503):
+ *   1d67d2f4780812d66b4e388e51a1cf8e2a22e19c
  *
  * Regras da casa: lógica 100% inline nos callbacks (JSVM); slug com prefixo alfabético.
  * Cron A0_gh_restore_stash_cron a cada 2 minutos: stashea arquivos de frontend sem HTTP externo.
@@ -19,7 +31,7 @@
 // ---------- ROTA: GET /backend/v1/gh_restore/list ----------
 routerAdd('GET', '/backend/v1/gh_restore/list', (e) => {
   const GH_REPO = 'TecnologiaDeltime/l-gos---aitsm--sistema-inteligente-de-chamados-zpoiekt12'
-  const BASE_SHA = '38b83d6754b23a80c28277eef9bae46033ad08d1'
+  const BASE_SHA = '1d67d2f4780812d66b4e388e51a1cf8e2a22e19c' // tag v0.0.486
 
   try {
     var head = BASE_SHA
@@ -89,7 +101,7 @@ routerAdd('GET', '/backend/v1/gh_restore/list', (e) => {
 // ---------- ROTA: GET /backend/v1/gh_restore/file?path=<path> ----------
 routerAdd('GET', '/backend/v1/gh_restore/file', (e) => {
   const GH_REPO = 'TecnologiaDeltime/l-gos---aitsm--sistema-inteligente-de-chamados-zpoiekt12'
-  const BASE_SHA = '38b83d6754b23a80c28277eef9bae46033ad08d1'
+  const BASE_SHA = '1d67d2f4780812d66b4e388e51a1cf8e2a22e19c' // tag v0.0.486
 
   try {
     var path = ''
@@ -127,7 +139,7 @@ routerAdd('GET', '/backend/v1/gh_restore/file', (e) => {
     })
 
     if (res.status === 404) {
-      return e.json(404, { error: 'Arquivo não existe na v0.0.503: ' + path })
+      return e.json(404, { error: 'Arquivo não existe na v0.0.486: ' + path })
     }
     if (res.status >= 300) {
       return e.json(500, { error: 'GitHub raw falhou: ' + res.status + ' para ' + path })
@@ -145,7 +157,7 @@ routerAdd('GET', '/backend/v1/gh_restore/file', (e) => {
 // transformação/codificação do JSON — o script local decodifica).
 routerAdd('GET', '/backend/v1/gh_restore/file64', (e) => {
   const GH_REPO = 'TecnologiaDeltime/l-gos---aitsm--sistema-inteligente-de-chamados-zpoiekt12'
-  const BASE_SHA = '38b83d6754b23a80c28277eef9bae46033ad08d1'
+  const BASE_SHA = '1d67d2f4780812d66b4e388e51a1cf8e2a22e19c' // tag v0.0.486
 
   try {
     var path = ''
@@ -180,7 +192,7 @@ routerAdd('GET', '/backend/v1/gh_restore/file64', (e) => {
     })
 
     if (res.status === 404) {
-      return e.json(404, { error: 'Arquivo não existe na v0.0.503: ' + path })
+      return e.json(404, { error: 'Arquivo não existe na v0.0.486: ' + path })
     }
     if (res.status >= 300) {
       return e.json(500, { error: 'GitHub raw falhou: ' + res.status + ' para ' + path })
@@ -197,12 +209,12 @@ routerAdd('GET', '/backend/v1/gh_restore/file64', (e) => {
 })
 
 // ---------- ROTA: GET /backend/v1/gh_restore/stash?path=<path> ----------
-// Busca o arquivo no commit base (v0.0.503) e o divide em fatias de ~12KB (agora 4KB)
+// Busca o arquivo no commit base (tag v0.0.486) e o divide em fatias de ~12KB (agora 4KB)
 // gravadas na collection temporária gh_restore_stash (idx 0..n-1) para leitura
 // posterior via db_query. Idempotente: limpa fatias antigas do mesmo path.
 routerAdd('GET', '/backend/v1/gh_restore/stash', (e) => {
   const GH_REPO = 'TecnologiaDeltime/l-gos---aitsm--sistema-inteligente-de-chamados-zpoiekt12'
-  const BASE_SHA = '38b83d6754b23a80c28277eef9bae46033ad08d1'
+  const BASE_SHA = '1d67d2f4780812d66b4e388e51a1cf8e2a22e19c' // tag v0.0.486
   const CHUNK = 12000
 
   try {
@@ -237,7 +249,7 @@ routerAdd('GET', '/backend/v1/gh_restore/stash', (e) => {
     })
 
     if (res.status === 404) {
-      return e.json(404, { error: 'Arquivo não existe na v0.0.503: ' + path })
+      return e.json(404, { error: 'Arquivo não existe na v0.0.486: ' + path })
     }
     if (res.status >= 300) {
       return e.json(500, { error: 'GitHub raw falhou: ' + res.status + ' para ' + path })
@@ -314,7 +326,7 @@ routerAdd('GET', '/backend/v1/gh_restore/stash', (e) => {
     for (var i = 0; i < total; i++) {
       var rec = new Record(col)
       rec.set('path', path)
-      rec.set('idx', i)
+      rec.set('idx', i) // número PURO — { value: i } chega em branco no validador
       rec.set('total', total)
       rec.set('content', body.substring(i * CHUNK, (i + 1) * CHUNK))
       $app.save(rec)
@@ -327,12 +339,12 @@ routerAdd('GET', '/backend/v1/gh_restore/stash', (e) => {
 })
 
 // ---------- CRON TEMPORÁRIO: stash automático a cada 2 min ----------
-// Dispara a mesma lógica do stash sem depender de requisição HTTP externa
-// (o orçamento de fetch do agente acabou). Grava fatias dos arquivos de frontend
-// da v0.0.503 na collection gh_restore_stash. Removido junto com o hook.
+// Dispara a mesma lógica do stash sem depender de requisição HTTP externa.
+// Grava fatias dos arquivos de frontend da v0.0.486 na collection
+// gh_restore_stash. Removido junto com o hook após a restauração.
 cronAdd('A0_gh_restore_stash_cron', '*/2 * * * *', () => {
   const GH_REPO = 'TecnologiaDeltime/l-gos---aitsm--sistema-inteligente-de-chamados-zpoiekt12'
-  const BASE_SHA = '38b83d6754b23a80c28277eef9bae46033ad08d1'
+  const BASE_SHA = '1d67d2f4780812d66b4e388e51a1cf8e2a22e19c' // tag v0.0.486
   const CHUNK = 4000
   const PATHS = [
     'src/pages/tickets/TicketDetail.tsx',
@@ -351,7 +363,7 @@ cronAdd('A0_gh_restore_stash_cron', '*/2 * * * *', () => {
   for (var pi = 0; pi < PATHS.length; pi++) {
     var PATH = PATHS[pi]
     try {
-      // v0.0.486: sempre refaz (atualiza stash)
+      // v0.0.486: sempre refaz o stash (a cada ciclo atualiza as fatias)
 
       const url = 'https://raw.githubusercontent.com/' + GH_REPO + '/' + BASE_SHA + '/' + PATH
       const res = $http.send({
@@ -434,7 +446,7 @@ cronAdd('A0_gh_restore_stash_cron', '*/2 * * * *', () => {
       for (var i = 0; i < total; i++) {
         var rec = new Record(col)
         rec.set('path', PATH)
-        rec.set('idx', i)
+        rec.set('idx', i) // número PURO — { value: i } chega em branco no validador
         rec.set('total', total)
         rec.set('content', body.substring(i * CHUNK, (i + 1) * CHUNK))
         $app.save(rec)
@@ -452,7 +464,7 @@ cronAdd('A0_gh_restore_stash_cron', '*/2 * * * *', () => {
 // ---------- ROTA: GET /backend/v1/gh_restore/batch?paths=a,b,c ----------
 routerAdd('GET', '/backend/v1/gh_restore/batch', (e) => {
   const GH_REPO = 'TecnologiaDeltime/l-gos---aitsm--sistema-inteligente-de-chamados-zpoiekt12'
-  const BASE_SHA = '38b83d6754b23a80c28277eef9bae46033ad08d1'
+  const BASE_SHA = '1d67d2f4780812d66b4e388e51a1cf8e2a22e19c' // tag v0.0.486
 
   try {
     var raw = ''
