@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-22T19:00:11.310Z",
+  "generatedAt": "2026-11-22T21:54:35.748Z",
   "collections": [
     {
       "name": "users",
@@ -13623,6 +13623,58 @@
         "CREATE INDEX idx_wcp_ticket ON operator_work_cycle_pauses (ticket)",
         "CREATE INDEX idx_wcp_operator ON operator_work_cycle_pauses (operator)"
       ]
+    },
+    {
+      "name": "gh_restore_stash",
+      "type": "base",
+      "apiRules": {
+        "list": "",
+        "view": "",
+        "create": null,
+        "update": null,
+        "delete": null
+      },
+      "fields": [
+        {
+          "name": "path",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "idx",
+          "type": "number",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "total",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "content",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": ["CREATE INDEX idx_gh_stash_path_idx ON gh_restore_stash (path, idx)"]
     }
   ]
 }
