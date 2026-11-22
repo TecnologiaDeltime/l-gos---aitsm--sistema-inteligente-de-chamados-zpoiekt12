@@ -37,6 +37,8 @@ import {
   pauseOperatorWorkCycle,
   resumeOperatorWorkCycle,
   getOpenWorkCyclePause,
+} from '@/services/tickets'
+import type {
   WorkCyclePauseRecord,
   TicketRecord,
   TicketInteractionRecord,
@@ -45,8 +47,8 @@ import {
   getTicketAttachments,
   uploadAttachment,
   getAttachmentFileUrl,
-  TicketAttachmentRecord,
 } from '@/services/attachments'
+import type { TicketAttachmentRecord } from '@/services/attachments'
 import { StatusBadge } from '@/components/StatusBadge'
 import { PriorityBadge } from '@/components/PriorityBadge'
 import { SlaStatusBadge } from '@/components/SlaStatusBadge'

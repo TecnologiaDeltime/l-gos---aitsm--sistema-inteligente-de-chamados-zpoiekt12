@@ -9,7 +9,8 @@ import {
   createScheduledTicket,
   updateScheduledTicket,
   deleteScheduledTicket,
-  ScheduledTicketRecord,
+  type ScheduledTicketRecord,
+  type RecurrenceType,
 } from '@/services/scheduled-tickets'
 import {
   Dialog,
@@ -48,7 +49,19 @@ const RECURRENCE_LABELS: Record<string, string> = {
   monthly: 'Mensal',
 }
 
-const EMPTY_FORM = {
+interface ScheduledTicketForm {
+  title: string
+  description: string
+  company: string
+  requester_name: string
+  requester_email: string
+  type: string
+  priority: string
+  scheduled_date: string
+  recurrence_type: RecurrenceType
+}
+
+const EMPTY_FORM: ScheduledTicketForm = {
   title: '',
   description: '',
   company: '',
@@ -68,7 +81,7 @@ export default function ScheduledTickets() {
   const [busy, setBusy] = useState(false)
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
-  const [form, setForm] = useState({ ...EMPTY_FORM })
+  const [form, setForm] = useState<ScheduledTicketForm>({ ...EMPTY_FORM })
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -301,7 +314,7 @@ export default function ScheduledTickets() {
                   <SelectContent>
                     {companies.map((c) => (
                       <SelectItem key={c.id} value={c.id}>
-                        {c.name}
+                        {c.trade_name || c.legal_name}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -367,7 +380,7 @@ export default function ScheduledTickets() {
                 <Label>Recorrência</Label>
                 <Select
                   value={form.recurrence_type}
-                  onValueChange={(v) => setForm({ ...form, recurrence_type: v })}
+                  onValueChange={(v) => setForm({ ...form, recurrence_type: v as RecurrenceType })}
                 >
                   <SelectTrigger>
                     <SelectValue />
