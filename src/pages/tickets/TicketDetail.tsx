@@ -196,6 +196,8 @@ export default function TicketDetail({
   const [showHourReview, setShowHourReview] = useState(false)
   const [showNoRecordsConfirm, setShowNoRecordsConfirm] = useState(false)
   const [showSlaPause, setShowSlaPause] = useState(false)
+  // Pausa do CICLO DE TRABALHO — diálogo próprio, separado do SlaPauseDialog.
+  const [showWorkCyclePause, setShowWorkCyclePause] = useState(false)
   const [showAccompaniment, setShowAccompaniment] = useState(false)
   const [cycleSeconds, setCycleSeconds] = useState(0)
   const [cycleActionLoading, setCycleActionLoading] = useState(false)
@@ -1813,42 +1815,81 @@ export default function TicketDetail({
                   <span className="hidden sm:inline">Play</span>
                 </button>
 
-                {/* Botão Pause (Amarelo) - Pausar SLA (aparece ao lado do play) */}
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (ticket.sla_paused) {
-                      handleResumeSla()
-                    } else {
-                      setShowSlaPause(true)
+                {/* Botão Pause (Amarelo) - Ciclo de Trabalho: abre o diálogo de motivo
+                    próprio (WorkCyclePauseDialog) e NÃO pausa o SLA. Retomar o ciclo
+                    também não toca no SLA — só reabre a contagem de horas do operador.
+                    Guardado pela permissão tickets_work_cycle_pause. */}
+                {perms.canAccessItem('tickets', 'tickets_work_cycle_pause') && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (isCycleActive) {
+                        handleResumeWorkCycle()
+                      } else {
+                        setShowWorkCyclePause(true)
+                      }
+                    }}
+                    disabled={
+                      cycleActionLoading ||
+                      !!ticket.approval_hold ||
+                      ticket.status === 'Aguardando Aprovação' ||
+                      ticket.status === 'Resolvido' ||
+                      ticket.status === 'Encerrado' ||
+                      ticket.status === 'Cancelado'
                     }
-                  }}
-                  disabled={
-                    cycleActionLoading ||
-                    !!ticket.approval_hold ||
-                    ticket.status === 'Aguardando Aprovação' ||
-                    ticket.status === 'Resolvido' ||
-                    ticket.status === 'Encerrado' ||
-                    ticket.status === 'Cancelado'
-                  }
-                  title={
-                    ticket.approval_hold || ticket.status === 'Aguardando Aprovação'
-                      ? 'Aguardando aprovação do cliente'
-                      : ticket.sla_paused
-                        ? 'SLA Pausado — clique para retomar'
-                        : 'Pausar SLA (⏸)'
-                  }
-                  className={`h-7 px-2.5 rounded-md inline-flex items-center gap-1 text-xs font-semibold transition-all shadow-xs ${
-                    ticket.sla_paused
-                      ? 'bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/40'
-                      : 'bg-amber-500 hover:bg-amber-600 active:scale-95 text-slate-950 font-bold disabled:opacity-40 disabled:cursor-not-allowed'
-                  }`}
-                >
-                  <Pause className="h-3.5 w-3.5 fill-current" />
-                  <span className="hidden sm:inline">
-                    {ticket.sla_paused ? 'Pausado' : 'Pause'}
-                  </span>
-                </button>
+                    title={
+                      ticket.approval_hold || ticket.status === 'Aguardando Aprovação'
+                        ? 'Aguardando aprovação do cliente'
+                        : isCycleActive
+                          ? 'Pausar ciclo de trabalho (horas do operador) — não afeta o SLA (⏸)'
+                          : 'Retomar ciclo de trabalho (horas do operador) — não afeta o SLA (▶)'
+                    }
+                    className={`h-7 px-2.5 rounded-md inline-flex items-center gap-1 text-xs font-semibold transition-all shadow-xs ${
+                      isCycleActive
+                        ? 'bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/40'
+                        : 'bg-amber-500 hover:bg-amber-600 active:scale-95 text-slate-950 font-bold disabled:opacity-40 disabled:cursor-not-allowed'
+              </div>
+            </div>
+=======
+                    <span className="hidden sm:inline">{isCycleActive ? 'Retomar' : 'Pause'}</span>
+                  </button>
+                )}
+              </div>
+            </div>
+=======
+=======
+              </div>
+            </div>
+
+            {/* Cronômetro em tempo real do ciclo de trabalho (HH:MM:SS) persistido no banco */}
+            <div className="flex items-center justify-between rounded-lg bg-muted/50 border border-border/60 px-3 py-1.5 text-xs">
+=======
+                    }`}
+                  >
+                    {isCycleActive ? (
+                      <Play className="h-3.5 w-3.5 fill-current" />
+                    ) : (
+                      <Pause className="h-3.5 w-3.5 fill-current" />
+                    )}
+                    <span className="hidden sm:inline">{isCycleActive ? 'Retomar' : 'Pause'}</span>
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Cronômetro em tempo real do ciclo de trabalho (HH:MM:SS) persistido no banco */}
+            <div className="flex items-center justify-between rounded-lg bg-muted/50 border border-border/60 px-3 py-1.5 text-xs">
+=======
+              </div>
+            </div>
+=======
+                    <span className="hidden sm:inline">{isCycleActive ? 'Retomar' : 'Pause'}</span>
+                  </button>
+                )}
+              </div>
+            </div>
+=======
+=======
               </div>
             </div>
 
