@@ -253,6 +253,31 @@ export const resumeOperatorWorkCycle = (id: string) =>
     work_hours: number
   }>(`/backend/v1/tickets/${id}/resume-work-cycle`, { method: 'POST' })
 
+export interface WorkCyclePauseRecord {
+  id: string
+  ticket: string
+  operator: string
+  reason: string
+  description?: string
+  paused_at?: string
+  resumed_at?: string
+  worked_seconds_in_cycle?: number
+  paused_minutes?: number
+  created: string
+  updated: string
+  expand?: any
+}
+
+/** Pausa de ciclo de trabalho EM ABERTO (resumed_at vazio) — indica ciclo pausado. */
+export const getOpenWorkCyclePause = (ticketId: string) =>
+  pb
+    .collection('operator_work_cycle_pauses')
+    .getFullList<WorkCyclePauseRecord>({
+      filter: `ticket = "${ticketId}" && resumed_at = ""`,
+      sort: '-created',
+    })
+    .then((list) => (list.length > 0 ? list[0] : null))
+
 export const addAccompanimentHours = (
   id: string,
   data: {
