@@ -1,10 +1,10 @@
 /// <reference path="../pb_data/types.d.ts" />
 
 /**
- * A0_gh_restore_tmp.js — HOOK TEMPORÁRIO (restauração v0.0.503).
+ * A0_gh_restore_tmp.js — HOOK TEMPORÁRIO (restauração v0.0.486).
  *
  * Serve conteúdo do histórico do GitHub público (fetch outbound) para
- * restaurar o código frontend verbatim no commit 1479b1538a8ef6dc88a981e926fc5a4941a5b550 (v0.0.503).
+ * restaurar o código frontend verbatim no commit da tag v0.0.486.
  *
  * Rotas (públicas, somente leitura — conteúdo vem de repositório PÚBLICO):
  * - GET /backend/v1/gh_restore/list                      -> compare base...head: lista de arquivos
@@ -13,13 +13,13 @@
  * - GET /backend/v1/gh_restore/batch?paths=a,b,c         -> vários arquivos de uma vez (texto puro)
  *
  * Regras da casa: lógica 100% inline nos callbacks (JSVM); slug com prefixo alfabético.
- * Cron A0_gh_restore_stash_cron a cada 2 minutos: stashea TicketDetail.tsx sem HTTP externo.
+ * Cron A0_gh_restore_stash_cron a cada 2 minutos: stashea arquivos de frontend sem HTTP externo.
  */
 
 // ---------- ROTA: GET /backend/v1/gh_restore/list ----------
 routerAdd('GET', '/backend/v1/gh_restore/list', (e) => {
   const GH_REPO = 'TecnologiaDeltime/l-gos---aitsm--sistema-inteligente-de-chamados-zpoiekt12'
-  const BASE_SHA = '1479b1538a8ef6dc88a981e926fc5a4941a5b550'
+  const BASE_SHA = '38b83d6754b23a80c28277eef9bae46033ad08d1'
 
   try {
     var head = BASE_SHA
@@ -89,7 +89,7 @@ routerAdd('GET', '/backend/v1/gh_restore/list', (e) => {
 // ---------- ROTA: GET /backend/v1/gh_restore/file?path=<path> ----------
 routerAdd('GET', '/backend/v1/gh_restore/file', (e) => {
   const GH_REPO = 'TecnologiaDeltime/l-gos---aitsm--sistema-inteligente-de-chamados-zpoiekt12'
-  const BASE_SHA = '1479b1538a8ef6dc88a981e926fc5a4941a5b550'
+  const BASE_SHA = '38b83d6754b23a80c28277eef9bae46033ad08d1'
 
   try {
     var path = ''
@@ -145,7 +145,7 @@ routerAdd('GET', '/backend/v1/gh_restore/file', (e) => {
 // transformação/codificação do JSON — o script local decodifica).
 routerAdd('GET', '/backend/v1/gh_restore/file64', (e) => {
   const GH_REPO = 'TecnologiaDeltime/l-gos---aitsm--sistema-inteligente-de-chamados-zpoiekt12'
-  const BASE_SHA = '1479b1538a8ef6dc88a981e926fc5a4941a5b550'
+  const BASE_SHA = '38b83d6754b23a80c28277eef9bae46033ad08d1'
 
   try {
     var path = ''
@@ -202,7 +202,7 @@ routerAdd('GET', '/backend/v1/gh_restore/file64', (e) => {
 // posterior via db_query. Idempotente: limpa fatias antigas do mesmo path.
 routerAdd('GET', '/backend/v1/gh_restore/stash', (e) => {
   const GH_REPO = 'TecnologiaDeltime/l-gos---aitsm--sistema-inteligente-de-chamados-zpoiekt12'
-  const BASE_SHA = '1479b1538a8ef6dc88a981e926fc5a4941a5b550'
+  const BASE_SHA = '38b83d6754b23a80c28277eef9bae46033ad08d1'
   const CHUNK = 12000
 
   try {
@@ -332,7 +332,7 @@ routerAdd('GET', '/backend/v1/gh_restore/stash', (e) => {
 // da v0.0.503 na collection gh_restore_stash. Removido junto com o hook.
 cronAdd('A0_gh_restore_stash_cron', '*/2 * * * *', () => {
   const GH_REPO = 'TecnologiaDeltime/l-gos---aitsm--sistema-inteligente-de-chamados-zpoiekt12'
-  const BASE_SHA = '1479b1538a8ef6dc88a981e926fc5a4941a5b550'
+  const BASE_SHA = '38b83d6754b23a80c28277eef9bae46033ad08d1'
   const CHUNK = 4000
   const PATHS = [
     'src/pages/tickets/TicketDetail.tsx',
@@ -351,13 +351,7 @@ cronAdd('A0_gh_restore_stash_cron', '*/2 * * * *', () => {
   for (var pi = 0; pi < PATHS.length; pi++) {
     var PATH = PATHS[pi]
     try {
-      // já stashed? não refaz (idempotência)
-      try {
-        var exists = $app.findRecordsByFilter('gh_restore_stash', 'path = {:p}', 'idx', 1, 0, {
-          p: PATH,
-        })
-        if (exists.length > 0) continue
-      } catch (exErr) {}
+      // v0.0.486: sempre refaz (atualiza stash)
 
       const url = 'https://raw.githubusercontent.com/' + GH_REPO + '/' + BASE_SHA + '/' + PATH
       const res = $http.send({
@@ -458,7 +452,7 @@ cronAdd('A0_gh_restore_stash_cron', '*/2 * * * *', () => {
 // ---------- ROTA: GET /backend/v1/gh_restore/batch?paths=a,b,c ----------
 routerAdd('GET', '/backend/v1/gh_restore/batch', (e) => {
   const GH_REPO = 'TecnologiaDeltime/l-gos---aitsm--sistema-inteligente-de-chamados-zpoiekt12'
-  const BASE_SHA = '1479b1538a8ef6dc88a981e926fc5a4941a5b550'
+  const BASE_SHA = '38b83d6754b23a80c28277eef9bae46033ad08d1'
 
   try {
     var raw = ''
