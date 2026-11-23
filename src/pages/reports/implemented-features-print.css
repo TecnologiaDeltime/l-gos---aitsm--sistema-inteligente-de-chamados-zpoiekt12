@@ -1,0 +1,185 @@
+/*
+ * Exportação PDF / impressão do Relatório de Funcionalidades Implantadas.
+ *
+ * Causa do PDF em branco: o sistema usa tema escuro único (Amber Alert) —
+ * --foreground quase branco, cards grafite. Navegadores não imprimem
+ * background por padrão, e todo o texto usava text-foreground (claro) e
+ * classes dark:* → "papel" branco + texto claro = páginas sem conteúdo.
+ *
+ * Solução: no @media print, as variáveis semânticas do tema são reescritas
+ * DENTRO do escopo .report-container (herdadas pelos descendentes) com os
+ * valores do Modo Claro Marrom & Branco — texto grafite sobre papel branco,
+ * sem azul — e as classes dark:* são neutralizadas. Tudo preso ao
+ * .report-container para não afetar nenhuma outra tela/exportação.
+ */
+
+@media print {
+  html,
+  body {
+    /* Apenas garante fluxo de paginação normal e papel branco */
+    background: #ffffff !important;
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    display: block !important;
+  }
+
+  @page {
+    margin: 12mm;
+  }
+
+  /* Tema de PAPEL escopado ao relatório: variáveis do Modo Claro
+     Marrom & Branco (texto grafite sobre branco) */
+  .report-container {
+    --background: 35 25% 98% !important;
+    --foreground: 24 50% 12% !important;
+    --card: 0 0% 100% !important;
+    --card-foreground: 24 50% 12% !important;
+    --popover: 0 0% 100% !important;
+    --popover-foreground: 24 50% 12% !important;
+    --secondary: 35 25% 92% !important;
+    --secondary-foreground: 24 50% 14% !important;
+    --muted: 35 20% 93% !important;
+    --muted-foreground: 24 20% 40% !important;
+    --border: 35 15% 86% !important;
+    --input: 35 15% 86% !important;
+    color-scheme: light !important;
+    background: #ffffff !important;
+    color: hsl(24 50% 12%) !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+  }
+
+  /* Cores exatas no papel (headings coloridos, badges, barras) */
+  .report-container,
+  .report-container * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Neutraliza classes dark:* do relatório — o print usa cores de papel */
+  .report-container .dark\:text-amber-400 {
+    color: #b45309 !important;
+  }
+  .report-container .dark\:bg-amber-950\/20 {
+    background-color: #fffbeb !important;
+  }
+  .report-container .dark\:bg-amber-950\/25 {
+    background-color: #fffbeb !important;
+  }
+  .report-container .dark\:bg-amber-950\/40 {
+    background-color: #fffbeb !important;
+  }
+  .report-container .dark\:bg-amber-500\/15 {
+    background-color: #fef3c7 !important;
+  }
+  .report-container .dark\:bg-amber-500\/10 {
+    background-color: #fef3c7 !important;
+  }
+  .report-container .dark\:border-amber-900 {
+    border-color: #fcd34d !important;
+  }
+  .report-container .dark\:border-amber-800 {
+    border-color: #fcd34d !important;
+  }
+  .report-container .dark\:border-amber-500\/30 {
+    border-color: #fcd34d !important;
+  }
+  .report-container .dark\:text-orange-400 {
+    color: #c2410c !important;
+  }
+  .report-container .dark\:bg-orange-950\/20 {
+    background-color: #fff7ed !important;
+  }
+  .report-container .dark\:border-orange-900 {
+    border-color: #fed7aa !important;
+  }
+  .report-container .dark\:text-rose-400 {
+    color: #be123c !important;
+  }
+  .report-container .dark\:bg-rose-950\/20 {
+    background-color: #fff1f2 !important;
+  }
+  .report-container .dark\:border-rose-900 {
+    border-color: #fecdd3 !important;
+  }
+  .report-container .dark\:text-emerald-400 {
+    color: #047857 !important;
+  }
+  .report-container .dark\:bg-emerald-950\/40 {
+    background-color: #ecfdf5 !important;
+  }
+  .report-container .dark\:bg-emerald-950\/60 {
+    background-color: #d1fae5 !important;
+  }
+  .report-container .dark\:bg-emerald-950\/20 {
+    background-color: #ecfdf5 !important;
+  }
+  .report-container .dark\:border-emerald-800 {
+    border-color: #6ee7b7 !important;
+  }
+  .report-container .dark\:border-emerald-900 {
+    border-color: #6ee7b7 !important;
+  }
+  .report-container .dark\:text-purple-400 {
+    color: #7e22ce !important;
+  }
+  .report-container .dark\:bg-purple-950\/20 {
+    background-color: #faf5ff !important;
+  }
+  .report-container .dark\:border-purple-900 {
+    border-color: #e9d5ff !important;
+  }
+  .report-container .dark\:text-slate-300 {
+    color: #334155 !important;
+  }
+  .report-container .dark\:bg-slate-900\/40 {
+    background-color: #f1f5f9 !important;
+  }
+  .report-container .dark\:border-slate-800 {
+    border-color: #cbd5e1 !important;
+  }
+  .report-container .dark\:bg-emerald-950 {
+    background-color: #ecfdf5 !important;
+  }
+  .report-container .dark\:bg-rose-950 {
+    background-color: #fff1f2 !important;
+  }
+  .report-container .dark\:bg-amber-950 {
+    background-color: #fffbeb !important;
+  }
+  .report-container .dark\:text-amber-300 {
+    color: #92400e !important;
+  }
+  .report-container .dark\:text-emerald-300 {
+    color: #065f46 !important;
+  }
+  .report-container .dark\:text-rose-300 {
+    color: #9f1239 !important;
+  }
+  .report-container .dark\:border-emerald-500\/30 {
+    border-color: #6ee7b7 !important;
+  }
+  .report-container .dark\:hover\:bg-accent:hover {
+    background-color: #f5f5f4 !important;
+  }
+
+  /* Nada do relatório pode nascer cortado por overflow herdado: os cards
+     usam overflow-hidden (cantos arredondados) — no papel, fluxo visível. */
+  .report-container * {
+    overflow: visible !important;
+  }
+
+  /* Cards inteiros não quebram no meio (cada categoria cabe num bloco) */
+  .report-container .print\:break-inside-avoid {
+    break-inside: avoid;
+  }
+
+  .report-container img {
+    max-height: 64px;
+  }
+}

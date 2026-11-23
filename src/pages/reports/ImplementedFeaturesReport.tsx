@@ -30,6 +30,10 @@ import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { exportToCsv } from '@/lib/export-utils'
 import { useTheme } from '@/hooks/use-theme'
+// Folha de impressão dedicada: neutraliza o tema escuro no @media print
+// (texto claro sobre papel branco gerava PDF em branco) e garante que a
+// área de impressão não fique presa em contêineres com overflow oculto.
+import '@/pages/reports/implemented-features-print.css'
 
 interface FeatureItem {
   id: string
@@ -1052,6 +1056,14 @@ export default function ImplementedFeaturesReport() {
   }, [filteredCategories])
 
   const handlePrint = () => {
+    const previousTitle = document.title
+    // Título nomeia o PDF sugerido pelo "Salvar como PDF" do navegador.
+    document.title = 'Relatório de Funcionalidades Implantadas - LÓGOS AITSM'
+    const restore = () => {
+      document.title = previousTitle
+      window.removeEventListener('afterprint', restore)
+    }
+    window.addEventListener('afterprint', restore)
     window.print()
   }
 

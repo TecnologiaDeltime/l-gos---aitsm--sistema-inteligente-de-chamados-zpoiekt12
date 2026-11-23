@@ -1,8 +1,17 @@
 /*
  * Exportação PDF da Apresentação Executiva (/apresentacao).
- * Na tela, o bloco #apresentacao-print fica oculto. Ao imprimir (window.print),
- * todo o restante da aplicação é ocultado e os 12 slides são impressos em
- * sequência, um por página A4 paisagem, cada um em caixa 16:9 reduzida para caber.
+ *
+ * Na tela, o bloco #apresentacao-print fica oculto e apenas o slide atual
+ * (elemento <main>) é mostrado. Ao imprimir:
+ *   - o <main> da tela é removido do fluxo (print:hidden no componente) —
+ *     antes ele ocupava a primeira página e empurrava/truncava os slides;
+ *   - o contêiner h-screen/overflow-hidden da tela vira fluxo normal
+ *     (print:h-auto print:overflow-visible no componente), para o navegador
+ *     paginar naturalmente;
+ *   - os 12 slides são impressos em sequência, um por página A4 paisagem,
+ *     cada um em caixa 16:9 de 1280×720 px reduzida por zoom para caber.
+ * Cores exatas (print-color-adjust) mantêm o tema Âmbar Alert oficial nos
+ * slides — sem isso o fundo grafite não sai e o texto claro desaparecia.
  */
 
 #apresentacao-print {
@@ -16,26 +25,20 @@
   }
 
   html,
-  body {
+  body,
+  #root {
     height: auto !important;
+    max-height: none !important;
     overflow: visible !important;
     background: #ffffff !important;
-  }
-
-  body * {
-    visibility: hidden !important;
-  }
-
-  #apresentacao-print,
-  #apresentacao-print * {
-    visibility: visible !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    display: block !important;
   }
 
   #apresentacao-print {
     display: block !important;
-    position: absolute;
-    left: 0;
-    top: 0;
+    position: static !important;
     width: 100%;
     margin: 0;
     padding: 0;
@@ -50,8 +53,9 @@
     zoom: 0.87;
     break-after: page;
     page-break-after: always;
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
+    break-inside: avoid;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
 
   #apresentacao-print .apresentacao-print-slide:last-child {
