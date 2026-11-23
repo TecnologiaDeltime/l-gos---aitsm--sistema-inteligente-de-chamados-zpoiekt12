@@ -40,7 +40,7 @@ import { getTicketsWithLastInteraction, updateTicket, TicketRecord } from '@/ser
 import { getUsers, UserItem } from '@/services/users'
 import { getCompanies, CompanyRecord } from '@/services/companies'
 import { KanbanBoard } from '@/components/KanbanBoard'
-import { TicketSummaryPanel } from '@/components/tickets/TicketSummaryPanel'
+import TicketDetail from '@/pages/tickets/TicketDetail'
 import { BatchDelegateDialog } from '@/components/BatchDelegateDialog'
 import { getHiddenColumns } from '@/lib/kanban-columns'
 import { splitTextWithHighlight, normalizeSearchText } from '@/lib/search-text'
@@ -657,10 +657,19 @@ export default function TicketList() {
           </CardContent>
         </Card>
       ) : view === 'split' ? (
-        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
+        <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(420px,2fr)]">
           <div className="min-w-0">{kanbanView}</div>
-          <div className="min-w-0">
-            <TicketSummaryPanel ticket={selectedTicket} onClose={() => setSelectedTicketId(null)} />
+          <div className="sticky top-4 max-h-[calc(100vh-2rem)] min-w-0 overflow-y-auto rounded-xl border bg-card p-4 shadow-sm">
+            {selectedTicket ? (
+              <TicketDetail variant="panel" ticketId={selectedTicket.id} key={selectedTicket.id} />
+            ) : (
+              <div className="flex h-64 flex-col items-center justify-center gap-2 text-center">
+                <Columns2 className="h-8 w-8 text-muted-foreground/50" />
+                <p className="text-sm font-medium text-muted-foreground">
+                  Selecione um chamado no Kanban para ver a ficha completa aqui.
+                </p>
+              </div>
+            )}
           </div>
         </div>
       ) : (

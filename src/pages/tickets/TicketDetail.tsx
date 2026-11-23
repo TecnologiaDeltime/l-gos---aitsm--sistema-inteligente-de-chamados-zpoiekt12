@@ -335,14 +335,10 @@ export default function TicketDetail({ variant = 'page', ticketId }: TicketDetai
     )
   }
 
-  const expanded: any = ticket.expand || {}
-  const assignedName = expanded.assigned_to?.name || 'Não atribuído'
-
   return (
     <div className="space-y-5">
       <TicketSheetHeader
         ticket={ticket}
-        assignedName={assignedName}
         variant={variant}
         onBack={() => navigate('/tickets')}
         cycleStarted={!!ticket.operator_cycle_start}
@@ -496,7 +492,6 @@ export default function TicketDetail({ variant = 'page', ticketId }: TicketDetai
         <TicketSheetRightColumn
           ticket={ticket}
           ticketId={id!}
-          assignedName={assignedName}
           actionLoading={actionLoading}
           canPauseWorkCycle={canPauseWorkCycle && !isClosed}
           canEditCategory={canEditCategory}

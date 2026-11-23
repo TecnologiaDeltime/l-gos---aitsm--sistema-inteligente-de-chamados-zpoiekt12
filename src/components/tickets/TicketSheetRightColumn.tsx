@@ -1,28 +1,24 @@
-import { useRef, useState, useEffect, useCallback } from 'react'
-import { Clock, Pause, PauseCircle, Play, PlusCircle, Square } from 'lucide-react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { useEffect, useState } from 'react'
+import { Building2, Clock, Pause, Play, PlusCircle, Phone, Square, UserRound } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
-import { StatusBadge } from '@/components/StatusBadge'
-import { PriorityBadge } from '@/components/PriorityBadge'
-import { SlaDetailBlock } from '@/components/SlaDetailBlock'
-import { SlaStatusBadge } from '@/components/SlaStatusBadge'
 import { TicketCategoryCard } from '@/components/tickets/TicketCategoryCard'
 import { TicketTriageHistoryCard } from '@/components/tickets/TicketTriageHistoryCard'
-import {
-  TicketSheetCard,
-  TicketSheetField,
-  TicketSheetRequesterCard,
-} from '@/components/tickets/TicketSheetCard'
+import { TicketSheetCard, TicketSheetField } from '@/components/tickets/TicketSheetCard'
 import type { TicketRecord, WorkCyclePauseRecord } from '@/services/tickets'
+import {
+  startOperatorWorkCycle,
+  resumeOperatorWorkCycle,
+  stopOperatorWorkCycle,
+  resumeTicketSla,
+} from '@/services/tickets'
 import { formatSeconds } from '@/lib/duration'
-import { computeSlaSolutionStatus } from '@/lib/sla-status'
 import { cn } from '@/lib/utils'
 
 interface TicketSheetRightColumnProps {
   ticket: TicketRecord
   ticketId: string
-  assignedName: string
+  actionLoading: boolean
   canPauseWorkCycle: boolean
   canEditCategory: boolean
   canViewTriageHistory: boolean
@@ -41,17 +37,16 @@ interface TicketSheetRightColumnProps {
   onReclassified: () => Promise<void> | void
 }
 
-const EMPTY_CATEGORY = { id: '', category: '', activity: '', priority: '' }
-
 /**
- * Coluna direita da Ficha do Chamado: Solicitante, Categoria/Atividade,
- * Triagem IA, Ciclo de Trabalho (play/pause) e Apuração de Horas — os mesmos
- * cards com mesmas alturas e cantos (simetria com a coluna principal).
+ * Coluna direita da Ficha do Chamado: Ciclo de Trabalho (Play/Pause acima do
+ * card, com campo fino "Tempo do Ciclo"), Solicitante (nome/telefone/setor/
+ * filial + perfil completo), Apuração de Horas (2 cartões), Categoria/
+ * Atividade e Triagem IA — mesma largura e cantos da coluna principal.
  */
 export function TicketSheetRightColumn({
   ticket,
   ticketId,
-  assignedName,
+  actionLoading,
   canPauseWorkCycle,
   canEditCategory,
   canViewTriageHistory,
@@ -69,56 +64,91 @@ export function TicketSheetRightColumn({
   onCategoryUpdated,
   onReclassified,
 }: TicketSheetRightColumnProps) {
-  const expanded: any = ticket.expand || {}
-  const busy = actionLoading || false
   const [catKey, setCatKey] = useState(0)
-  const categoryRef = useRef<{ save: () => Promise<boolean> } | null>(null)
 
   // remonta a TicketCategoryCard quando o chamado muda (troca de ficha)
   useEffect(() => {
     setCatKey((k) => k + 1)
   }, [ticket.id])
 
+  const requesterExpand = (ticket.expand as Record<string, any> | undefined)?.department
+  const unitExpand = (ticket.expand as Record<string, any> | undefined)?.unit
+
   return (
     <div className="space-y-5">
-      {/* Solicitante — perfil completo via requester_email */}
-      <TicketSheetRequesterCard ticket={ticket} onOpenProfile={onShowRequesterProfile} />
-
-      {/* Categoria / Atividade */}
-      {canEditCategory && (
-        <TicketSheetCard title="Categoria & Atividade" className="h-full" contentClassName="pt-1">
-          <TicketCategoryCard
-            key={catKey}
-            ref={categoryRef}
-            ticketId={ticket.id}
-            ticket={{
-              category: ticket.category,
-              activity: ticket.activity,
-              priority: ticket.priority,
-            }}
-            onSaved={onCategoryUpdated}
-          />
-        </TicketSheetCard>
+      {/* Ciclo de Trabalho — botões Play/Pause ACIMA do card */}
+      {canPauseWorkCycle && (
+        <div className="flex flex-wrap items-center gap-2">
+          {!ticket.operator_cycle_start && (
+            <Button
+              size="sm"
+              className="bg-emerald-600 text-white hover:bg-emerald-700"
+              onClick={() =>
+                onCycleAction(() => startOperatorWorkCycle(ticketId), 'Ciclo de trabalho iniciado')
+              }
+              disabled={actionLoading}
+            >
+              <Play className="mr-1 h-4 w-4" /> Iniciar
+            </Button>
+          )}
+          {ticket.operator_cycle_start && !cyclePaused && (
+            <Button
+              size="sm"
+              className="bg-amber-500 text-slate-900 hover:bg-amber-600"
+              onClick={onCyclePause}
+              disabled={actionLoading}
+            >
+              <Pause className="mr-1 h-4 w-4" /> Pausar
+            </Button>
+          )}
+          {cyclePaused && (
+            <Button
+              size="sm"
+              className="bg-emerald-600 text-white hover:bg-emerald-700"
+              onClick={() =>
+                onCycleAction(() => resumeOperatorWorkCycle(ticketId), 'Ciclo de trabalho retomado')
+              }
+              disabled={actionLoading}
+            >
+              <Play className="mr-1 h-4 w-4" /> Retomar
+            </Button>
+          )}
+          {ticket.operator_cycle_start && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() =>
+                onCycleAction(() => stopOperatorWorkCycle(ticketId), 'Ciclo de trabalho encerrado')
+              }
+              disabled={actionLoading}
+            >
+              <Square className="mr-1 h-4 w-4" /> Encerrar
+            </Button>
+          )}
+          {ticket.sla_paused && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => onSlaAction(() => resumeTicketSla(ticketId), 'SLA retomado')}
+              disabled={actionLoading}
+            >
+              <Play className="mr-1 h-4 w-4" /> Retomar SLA
+            </Button>
+          )}
+        </div>
       )}
 
-      {/* Triagem IA */}
-      {canViewTriageHistory && (
-        <TicketSheetCard title="Triagem IA" className="h-full" contentClassName="pt-1">
-          <TicketTriageHistoryCard ticketId={ticket.id} onReclassified={onReclassified} />
-        </TicketSheetCard>
-      )}
-
-      {/* Ciclo de Trabalho — Play/Pause/Stop + tempo do ciclo */}
+      {/* Card Ciclo de Trabalho — campo fino "Tempo do Ciclo" com cronômetro ao vivo */}
       <TicketSheetCard
         title="Ciclo de Trabalho"
         icon={<Clock className="h-3.5 w-3.5" />}
         contentClassName="space-y-2"
       >
-        <div className="flex items-center justify-between gap-2">
-          <span className="text-xs text-muted-foreground">Tempo do ciclo</span>
+        <div className="flex items-center justify-between gap-2 rounded-lg border bg-muted/40 px-3 py-1.5">
+          <span className="text-xs text-muted-foreground">Tempo do Ciclo</span>
           <span
             className={cn(
-              'font-mono text-lg font-bold tabular-nums',
+              'font-mono text-sm font-bold tabular-nums',
               cycleRunning && 'text-emerald-600 dark:text-emerald-400',
               cyclePaused && 'text-amber-600 dark:text-amber-400',
             )}
@@ -126,76 +156,68 @@ export function TicketSheetRightColumn({
             {formatSeconds(liveCycleSeconds)}
           </span>
         </div>
-        <Separator />
-        <div className="flex flex-wrap items-center gap-1.5">
-          {!ticket.operator_cycle_start && canPauseWorkCycle && (
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() =>
-                onCycleAction(startOperatorWorkCycle(ticketId), 'Ciclo de trabalho iniciado')
-              }
-              disabled={busy}
-            >
-              <Play className="mr-1 h-3.5 w-3.5" /> Iniciar
-            </Button>
-          )}
-          {ticket.operator_cycle_start && !cyclePaused && canPauseWorkCycle && (
-            <Button size="sm" variant="outline" onClick={onCyclePause} disabled={busy}>
-              <Pause className="mr-1 h-3.5 w-3.5" /> Pausar
-            </Button>
-          )}
-          {cyclePaused && canPauseWorkCycle && (
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() =>
-                onCycleAction(resumeOperatorWorkCycle(ticketId), 'Ciclo de trabalho retomado')
-              }
-              disabled={busy}
-            >
-              <Play className="mr-1 h-3.5 w-3.5" /> Retomar
-            </Button>
-          )}
-          {ticket.operator_cycle_start && canPauseWorkCycle && (
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() =>
-                onCycleAction(stopOperatorWorkCycle(ticketId), 'Ciclo de trabalho encerrado')
-              }
-              disabled={busy}
-            >
-              <Square className="mr-1 h-3.5 w-3.5" /> Encerrar
-            </Button>
-          )}
-          {cyclePaused && openCyclePause?.reason && (
-            <span className="text-[11px] text-muted-foreground">
-              Pausa em aberto: {openCyclePause.reason}
-            </span>
-          )}
-        </div>
+        {cyclePaused && openCyclePause?.reason && (
+          <p className="text-[11px] text-muted-foreground">
+            Pausa em aberto: {openCyclePause.reason}
+          </p>
+        )}
       </TicketSheetCard>
 
-      {/* Apuração de Horas */}
+      {/* Solicitante — nome, telefone, setor, filial + perfil completo */}
+      <TicketSheetCard
+        title="Solicitante"
+        icon={<UserRound className="h-3.5 w-3.5" />}
+        contentClassName="space-y-1"
+      >
+        <div className="mb-2 flex items-center justify-between gap-2">
+          <div className="min-w-0">
+            <p className="truncate text-sm font-semibold">
+              {ticket.requester_name || 'Não informado'}
+            </p>
+            <p className="truncate text-xs text-muted-foreground">
+              {ticket.requester_email || '—'}
+            </p>
+          </div>
+          <Button size="sm" variant="outline" onClick={onShowRequesterProfile} className="shrink-0">
+            Perfil
+          </Button>
+        </div>
+        <TicketSheetField icon={<Phone className="h-3 w-3" />} label="Telefone">
+          {ticket.requester_phone || '—'}
+        </TicketSheetField>
+        <TicketSheetField icon={<Building2 className="h-3 w-3" />} label="Setor">
+          {requesterExpand?.name || '—'}
+        </TicketSheetField>
+        <TicketSheetField icon={<Building2 className="h-3 w-3" />} label="Filial">
+          {unitExpand?.name || '—'}
+        </TicketSheetField>
+      </TicketSheetCard>
+
+      {/* Apuração de Horas — 2 cartões + lançamento de acompanhamento */}
       <TicketSheetCard
         title="Apuração de Horas"
         icon={<Clock className="h-3.5 w-3.5" />}
         contentClassName="space-y-3"
       >
-        <div className="flex items-center justify-between gap-2">
-          <span className="text-xs text-muted-foreground">Horas de log (franquia)</span>
-          <span className="font-mono text-sm font-bold tabular-nums">
-            {formatSeconds(ticket.accompaniment_seconds || 0)}
-          </span>
+        <div className="grid grid-cols-2 gap-2">
+          <div className="rounded-lg border border-amber-500/25 bg-amber-500/[0.07] px-3 py-2">
+            <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+              Horas Trabalhadas
+            </p>
+            <p className="font-mono text-sm font-bold tabular-nums text-amber-700 dark:text-amber-400">
+              {formatSeconds(liveCycleSeconds)}
+            </p>
+          </div>
+          <div className="rounded-lg border bg-slate-500/[0.06] px-3 py-2">
+            <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+              Horas de Log
+            </p>
+            <p className="font-mono text-sm font-bold tabular-nums">
+              {formatSeconds(ticket.accompaniment_seconds || 0)}
+            </p>
+          </div>
         </div>
         <Separator />
-        <div className="flex items-center justify-between gap-2">
-          <span className="text-xs text-muted-foreground">Horas do ciclo</span>
-          <span className="font-mono text-sm font-bold tabular-nums">
-            {formatSeconds(ticket.operator_worked_seconds || 0)}
-          </span>
-        </div>
         {canLaunchAccompaniment && !isClosed && (
           <Button size="sm" variant="outline" onClick={onShowAccompaniment}>
             <PlusCircle className="mr-1 h-3.5 w-3.5" /> Acompanhamento
@@ -203,34 +225,26 @@ export function TicketSheetRightColumn({
         )}
       </TicketSheetCard>
 
-      {/* SLA */}
-      <TicketSheetCard title="SLA" contentClassName="space-y-3">
-        <div className="flex flex-wrap items-center gap-2">
-          <SlaStatusBadge
-            type="response"
-            status={computeSlaResponseStatus(ticket)}
-            deadline={ticket.sla_response_deadline}
-            completedAt={ticket.sla_response_at || ticket.sla_response_start}
+      {/* Categoria / Atividade */}
+      {canEditCategory && (
+        <TicketSheetCard title="Categoria & Atividade" contentClassName="pt-1">
+          <TicketCategoryCard
+            key={catKey}
+            ticketId={ticket.id}
+            currentCategoryId={ticket.category}
+            currentSubcategoryId={ticket.subcategory}
+            canEdit={!isClosed}
+            onUpdated={onCategoryUpdated}
           />
-          <SlaStatusBadge
-            type="solution"
-            status={computeSlaSolutionStatus(ticket)}
-            deadline={ticket.sla_solution_deadline}
-            completedAt={ticket.sla_solution_at}
-          />
-          {ticket.sla_paused && (
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => onSlaAction(resumeTicketSla(ticketId), 'SLA retomado')}
-              disabled={busy}
-            >
-              <Play className="mr-1 h-3.5 w-3.5" /> Retomar SLA
-            </Button>
-          )}
-        </div>
-        <SlaDetailBlock ticket={ticket} />
-      </TicketSheetCard>
+        </TicketSheetCard>
+      )}
+
+      {/* Triagem IA */}
+      {canViewTriageHistory && (
+        <TicketSheetCard title="Triagem IA" contentClassName="pt-1">
+          <TicketTriageHistoryCard ticketId={ticket.id} onReclassified={onReclassified} />
+        </TicketSheetCard>
+      )}
     </div>
   )
 }
