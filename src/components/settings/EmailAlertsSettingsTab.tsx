@@ -150,9 +150,9 @@ export function EmailAlertsSettingsTab({ canEdit = true }: EmailAlertsSettingsTa
   const filteredSettings = useMemo(() => {
     return settings.filter((s) => {
       const matchSearch =
-        s.name.toLowerCase().includes(search.toLowerCase()) ||
-        s.alert_key.toLowerCase().includes(search.toLowerCase()) ||
-        s.description.toLowerCase().includes(search.toLowerCase())
+        (s.name || '').toLowerCase().includes(search.toLowerCase()) ||
+        (s.alert_key || '').toLowerCase().includes(search.toLowerCase()) ||
+        (s.description || '').toLowerCase().includes(search.toLowerCase())
       const matchCat = selectedCategory === 'all' || s.category === selectedCategory
       return matchSearch && matchCat
     })

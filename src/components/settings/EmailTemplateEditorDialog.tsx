@@ -234,6 +234,12 @@ export function EmailTemplateEditorDialog({
     }
   }
 
+  // O corpo do dialog acessa draft.* sem guardas (alert_key, name, template_layout...).
+  // Se o dialog abrir sem setting (draft null), a tela inteira quebra (white screen).
+  if (!draft) {
+    return null
+  }
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[92vh] flex flex-col p-0 overflow-hidden">
