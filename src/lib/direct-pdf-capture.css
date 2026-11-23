@@ -1,0 +1,147 @@
+/**
+ * Tema de CAPTURA para o download direto do Relatório de Funcionalidades
+ * (src/lib/direct-pdf-report.ts).
+ *
+ * O html2canvas NÃO avalia @media print — as regras de papel de
+ * implemented-features-print.css (que resolvem o "PDF em branco" do tema
+ * escuro) não se aplicam durante a captura. Elas são replicadas aqui sem o
+ * media query e escopadas à classe .report-capture, que o exportador adiciona
+ * temporariamente ao .report-container e remove ao final: nada muda na tela.
+ */
+
+.report-container.report-capture {
+  /* Variáveis do Modo Claro Marrom & Branco (texto grafite sobre branco) */
+  --background: 35 25% 98%;
+  --foreground: 24 50% 12%;
+  --card: 0 0% 100%;
+  --card-foreground: 24 50% 12%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 24 50% 12%;
+  --secondary: 35 25% 92%;
+  --secondary-foreground: 24 50% 14%;
+  --muted: 35 20% 93%;
+  --muted-foreground: 24 20% 40%;
+  --border: 35 15% 86%;
+  --input: 35 15% 86%;
+  color-scheme: light;
+  background: #ffffff;
+  color: hsl(24 50% 12%);
+}
+
+/* Nada pode nascer cortado por overflow herdado (cards overflow-hidden) */
+.report-container.report-capture * {
+  overflow: visible !important;
+}
+
+/* Elementos visíveis na tela mas ocultos no papel (botões de ação, barra de
+   filtros, avisos de busca) NÃO entram no PDF */
+.report-container.report-capture [class*='print:hidden'] {
+  display: none !important;
+}
+
+/* Neutraliza classes dark:* do relatório — o PDF usa cores de papel */
+.report-container.report-capture .dark\:text-amber-400 {
+  color: #b45309 !important;
+}
+.report-container.report-capture .dark\:bg-amber-950\/20 {
+  background-color: #fffbeb !important;
+}
+.report-container.report-capture .dark\:bg-amber-950\/25 {
+  background-color: #fffbeb !important;
+}
+.report-container.report-capture .dark\:bg-amber-950\/40 {
+  background-color: #fffbeb !important;
+}
+.report-container.report-capture .dark\:bg-amber-500\/15 {
+  background-color: #fef3c7 !important;
+}
+.report-container.report-capture .dark\:bg-amber-500\/10 {
+  background-color: #fef3c7 !important;
+}
+.report-container.report-capture .dark\:border-amber-900 {
+  border-color: #fcd34d !important;
+}
+.report-container.report-capture .dark\:border-amber-800 {
+  border-color: #fcd34d !important;
+}
+.report-container.report-capture .dark\:border-amber-500\/30 {
+  border-color: #fcd34d !important;
+}
+.report-container.report-capture .dark\:text-orange-400 {
+  color: #c2410c !important;
+}
+.report-container.report-capture .dark\:bg-orange-950\/20 {
+  background-color: #fff7ed !important;
+}
+.report-container.report-capture .dark\:border-orange-900 {
+  border-color: #fed7aa !important;
+}
+.report-container.report-capture .dark\:text-rose-400 {
+  color: #be123c !important;
+}
+.report-container.report-capture .dark\:bg-rose-950\/20 {
+  background-color: #fff1f2 !important;
+}
+.report-container.report-capture .dark\:border-rose-900 {
+  border-color: #fecdd3 !important;
+}
+.report-container.report-capture .dark\:text-emerald-400 {
+  color: #047857 !important;
+}
+.report-container.report-capture .dark\:bg-emerald-950\/40 {
+  background-color: #ecfdf5 !important;
+}
+.report-container.report-capture .dark\:bg-emerald-950\/60 {
+  background-color: #d1fae5 !important;
+}
+.report-container.report-capture .dark\:bg-emerald-950\/20 {
+  background-color: #ecfdf5 !important;
+}
+.report-container.report-capture .dark\:border-emerald-800 {
+  border-color: #6ee7b7 !important;
+}
+.report-container.report-capture .dark\:border-emerald-900 {
+  border-color: #6ee7b7 !important;
+}
+.report-container.report-capture .dark\:text-purple-400 {
+  color: #7e22ce !important;
+}
+.report-container.report-capture .dark\:bg-purple-950\/20 {
+  background-color: #faf5ff !important;
+}
+.report-container.report-capture .dark\:border-purple-900 {
+  border-color: #e9d5ff !important;
+}
+.report-container.report-capture .dark\:text-slate-300 {
+  color: #334155 !important;
+}
+.report-container.report-capture .dark\:bg-slate-900\/40 {
+  background-color: #f1f5f9 !important;
+}
+.report-container.report-capture .dark\:border-slate-800 {
+  border-color: #cbd5e1 !important;
+}
+.report-container.report-capture .dark\:bg-emerald-950 {
+  background-color: #ecfdf5 !important;
+}
+.report-container.report-capture .dark\:bg-rose-950 {
+  background-color: #fff1f2 !important;
+}
+.report-container.report-capture .dark\:bg-amber-950 {
+  background-color: #fffbeb !important;
+}
+.report-container.report-capture .dark\:text-amber-300 {
+  color: #92400e !important;
+}
+.report-container.report-capture .dark\:text-emerald-300 {
+  color: #065f46 !important;
+}
+.report-container.report-capture .dark\:text-rose-300 {
+  color: #9f1239 !important;
+}
+.report-container.report-capture .dark\:border-emerald-500\/30 {
+  border-color: #6ee7b7 !important;
+}
+.report-container.report-capture .dark\:hover\:bg-accent:hover {
+  background-color: #f5f5f4 !important;
+}

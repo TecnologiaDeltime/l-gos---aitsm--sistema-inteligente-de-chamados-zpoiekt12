@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react'
+import React, { useState, useMemo, useRef } from 'react'
 import {
   Ticket,
   Server,
@@ -30,6 +30,8 @@ import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { exportToCsv } from '@/lib/export-utils'
 import { useTheme } from '@/hooks/use-theme'
+import { useToast } from '@/hooks/use-toast'
+import { exportImplementedFeaturesPdf } from '@/lib/direct-pdf-report'
 // Folha de impressão dedicada: neutraliza o tema escuro no @media print
 // (texto claro sobre papel branco gerava PDF em branco) e garante que a
 // área de impressão não fique presa em contêineres com overflow oculto.
@@ -1020,6 +1022,9 @@ export default function ImplementedFeaturesReport() {
   const { designSettings } = useTheme()
   const [search, setSearch] = useState('')
   const [selectedCategory, setSelectedCategory] = useState<string>('all')
+  const [exporting, setExporting] = useState(false)
+  const { toast } = useToast()
+  const reportRef = useRef<HTMLDivElement>(null)
 
   const totalFeatures = useMemo(() => {
     return FEATURE_CATEGORIES.reduce((acc, cat) => acc + cat.items.length, 0)
@@ -1055,16 +1060,32 @@ export default function ImplementedFeaturesReport() {
     return filteredCategories.reduce((acc, cat) => acc + cat.items.length, 0)
   }, [filteredCategories])
 
-  const handlePrint = () => {
-    const previousTitle = document.title
-    // Título nomeia o PDF sugerido pelo "Salvar como PDF" do navegador.
-    document.title = 'Relatório de Funcionalidades Implantadas - LÓGOS AITSM'
-    const restore = () => {
-      document.title = previousTitle
-      window.removeEventListener('afterprint', restore)
+  // Download DIRETO do PDF (sem caixa de impressão do navegador): captura os
+  // blocos do relatório e monta um A4 retrato paginado, com tema de papel
+  // claro aplicado apenas durante a captura. A tela não muda.
+  const handlePrint = async () => {
+    if (exporting) return
+    setExporting(true)
+    toast({
+      title: 'Gerando PDF…',
+      description: 'Capturando o relatório de funcionalidades.',
+    })
+    try {
+      const fileName = await exportImplementedFeaturesPdf(reportRef.current)
+      toast({
+        title: 'Download iniciado',
+        description: `Arquivo ${fileName} gerado com sucesso.`,
+      })
+    } catch (err) {
+      console.error(err)
+      toast({
+        title: 'Falha ao gerar o PDF',
+        description: err instanceof Error ? err.message : 'Tente novamente.',
+        variant: 'destructive',
+      })
+    } finally {
+      setExporting(false)
     }
-    window.addEventListener('afterprint', restore)
-    window.print()
   }
 
   const handleExportCsv = () => {
@@ -1100,7 +1121,10 @@ export default function ImplementedFeaturesReport() {
   })
 
   return (
-    <div className="report-container max-w-7xl mx-auto space-y-6 print:m-0 print:p-0 print:max-w-none">
+    <div
+      ref={reportRef}
+      className="report-container max-w-7xl mx-auto space-y-6 print:m-0 print:p-0 print:max-w-none"
+    >
       {/* CABEÇALHO DO RELATÓRIO */}
       <div className="bg-card border border-border rounded-xl p-6 shadow-sm print:border-b-2 print:border-primary print:shadow-none print:rounded-none print:p-4">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -1146,12 +1170,13 @@ export default function ImplementedFeaturesReport() {
             </Button>
             <Button
               onClick={handlePrint}
+              disabled={exporting}
               variant="default"
               size="sm"
               className="gap-2 shadow-sm font-medium bg-primary hover:bg-primary/90 text-primary-foreground"
             >
               <Printer className="w-4 h-4" />
-              Exportar PDF / Imprimir
+              {exporting ? 'Gerando…' : 'Exportar PDF'}
             </Button>
           </div>
         </div>

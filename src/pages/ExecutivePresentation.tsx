@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   ChevronLeft,
   ChevronRight,
@@ -14,6 +14,8 @@ import { LogosLogoFull as LogosLogo } from '@/components/brand/LogosLogo'
 import { Button } from '@/components/ui/button'
 import { SlideShell } from './ExecutivePresentationSlidesShell'
 import './ExecutivePresentationPrint.css'
+import { useToast } from '@/hooks/use-toast'
+import { exportExecutivePresentationPdf } from '@/lib/direct-pdf-presentation'
 import {
   SlideProjects,
   SlideTransparencia,
@@ -325,19 +327,37 @@ function renderSlide(index: number): React.ReactNode {
 
 export default function ExecutivePresentation() {
   const [current, setCurrent] = useState(0)
+  const [exporting, setExporting] = useState(false)
+  const { toast } = useToast()
+  const printRootRef = useRef<HTMLDivElement>(null)
 
-  // Exporta como PDF via impressão do navegador ("Salvar como PDF").
-  // A folha @media print mostra todos os slides, um por página, em paisagem.
-  const exportPdf = useCallback(() => {
-    const previousTitle = document.title
-    document.title = 'Apresentação Executiva - LÓGOS AITSM'
-    const restore = () => {
-      document.title = previousTitle
-      window.removeEventListener('afterprint', restore)
+  // Download DIRETO do PDF (sem caixa de impressão do navegador): captura cada
+  // slide da versão de impressão (#apresentacao-print) e monta um A4 paisagem,
+  // um slide por página. A tela não muda.
+  const exportPdf = useCallback(async () => {
+    if (exporting) return
+    setExporting(true)
+    toast({
+      title: 'Gerando PDF…',
+      description: 'Capturando os slides da apresentação.',
+    })
+    try {
+      const fileName = await exportExecutivePresentationPdf(printRootRef.current)
+      toast({
+        title: 'Download iniciado',
+        description: `Arquivo ${fileName} gerado com sucesso.`,
+      })
+    } catch (err) {
+      console.error(err)
+      toast({
+        title: 'Falha ao gerar o PDF',
+        description: err instanceof Error ? err.message : 'Tente novamente.',
+        variant: 'destructive',
+      })
+    } finally {
+      setExporting(false)
     }
-    window.addEventListener('afterprint', restore)
-    window.print()
-  }, [])
+  }, [exporting, toast])
 
   const next = useCallback(() => setCurrent((c) => Math.min(c + 1, TOTAL_SLIDES - 1)), [])
   const prev = useCallback(() => setCurrent((c) => Math.max(c - 1, 0)), [])
@@ -392,10 +412,11 @@ export default function ExecutivePresentation() {
               variant="outline"
               size="sm"
               onClick={exportPdf}
-              aria-label="Exportar apresentação em PDF"
+              disabled={exporting}
+              aria-label="Exportar apresentação em PDF (download direto)"
             >
               <Download className="h-4 w-4" />
-              Exportar PDF
+              {exporting ? 'Gerando…' : 'Exportar PDF'}
             </Button>
             <Button
               variant="outline"
@@ -422,7 +443,7 @@ export default function ExecutivePresentation() {
 
       {/* Versão de impressão: todos os slides em sequência (oculta na tela;
           visível apenas no PDF via ExecutivePresentationPrint.css). */}
-      <div id="apresentacao-print" aria-hidden="true">
+      <div id="apresentacao-print" ref={printRootRef} aria-hidden="true">
         {Array.from({ length: TOTAL_SLIDES }, (_, i) => (
           <div key={i} className="apresentacao-print-slide bg-background text-foreground">
             {renderSlide(i)}
