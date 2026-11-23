@@ -92,6 +92,44 @@ export function parseDurationToMinutes(value: string | number | null | undefined
 }
 
 /**
+ * Máscara para inputs no formato 00:00 (horas:minutos), com dois-pontos
+ * travados: o usuário digita só dígitos (máx. 4) e o campo se reconstrói
+ * sozinho. Ex.: "0530" -> "05:30"; "45" -> "45" (ao sair, vira "45:00").
+ * O ':' nunca é digitável nem removível — digitar/colar ':' é ignorado.
+ */
+export function maskHHMMInput(raw: string): string {
+  const digits = (raw || '').replace(/\D/g, '').slice(0, 4)
+  if (!digits) return ''
+  if (digits.length <= 2) return digits
+  return `${digits.slice(0, 2)}:${digits.slice(2)}`
+}
+
+/**
+ * Normaliza uma entrada parcial de HH:MM ao perder o foco:
+ * "5" -> "05:00", "45" -> "45:00", "053" -> "05:30", "0530" -> "05:30".
+ * Vazio continua vazio.
+ */
+export function normalizeHHMMInput(raw: string): string {
+  const digits = (raw || '').replace(/\D/g, '').slice(0, 4)
+  if (!digits) return ''
+  return maskHHMMInput(digits.padEnd(4, '0'))
+}
+
+/**
+ * Converte um valor "HH:MM" (ou 1–4 dígitos, normalizados como HH:MM) em
+ * MINUTOS. Diferente de parseDurationToMinutes, que interpreta "00:45" como
+ * MM:SS — aqui "00:45" são 45 MINUTOS (horas:minutos).
+ * Retorna null quando vazio; minutos >= 60 caem em null (inválido).
+ */
+export function parseHHMMToMinutes(value: string | null | undefined): number | null {
+  const normalized = normalizeHHMMInput(value || '')
+  if (!normalized) return null
+  const [h, m] = normalized.split(':').map((p) => parseInt(p, 10))
+  if (Number.isNaN(h) || Number.isNaN(m) || m > 59) return null
+  return h * 60 + m
+}
+
+/**
  * Máscara leve para inputs de duração no formato 00:00:00: aceita apenas
  * dígitos (até 6) e reconstrói com dois pontos fixos.
  */

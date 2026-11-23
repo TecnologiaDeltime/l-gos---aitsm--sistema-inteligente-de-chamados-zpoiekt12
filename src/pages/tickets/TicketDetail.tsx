@@ -73,8 +73,10 @@ import { TicketCategoryCard } from '@/components/tickets/TicketCategoryCard'
 import { TicketTriageHistoryCard } from '@/components/tickets/TicketTriageHistoryCard'
 import { KbRecommendedBlock } from '@/components/tickets/KbRecommendedBlock'
 import { computeSlaSolutionStatus } from '@/lib/sla-status'
-import { formatSeconds, parseDurationToMinutes } from '@/lib/duration'
+import { formatSeconds, parseHHMMToMinutes } from '@/lib/duration'
+import { HHMMInput } from '@/components/ui/HHMMInput'
 import { getErrorMessage } from '@/lib/pocketbase/errors'
+import { cn } from '@/lib/utils'
 
 interface HistoryRecord {
   id: string
@@ -242,7 +244,7 @@ export default function TicketDetail() {
     if (!newInteraction.trim() || !user?.id) return
     setSendingInteraction(true)
     try {
-      const minutes = parseDurationToMinutes(newInteractionMinutes)
+      const minutes = parseHHMMToMinutes(newInteractionMinutes)
       if (minutes !== null) {
         // Interação com tempo = log de horas: debita a franquia do cliente e
         // soma nas horas do chamado (work_hours/accompaniment_seconds) via a
@@ -333,7 +335,9 @@ export default function TicketDetail() {
           </Button>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <span className="font-mono text-lg font-bold">{ticket.number || ticket.id}</span>
+          <span className="rounded-md bg-primary/10 px-2 py-0.5 font-mono text-sm font-semibold tracking-wide text-primary">
+            {ticket.number || ticket.id}
+          </span>
           <StatusBadge status={ticket.status} />
           <PriorityBadge priority={ticket.priority} />
           <SlaStatusBadge
@@ -348,7 +352,17 @@ export default function TicketDetail() {
             </Badge>
           )}
         </div>
-        <h1 className="text-xl font-semibold tracking-tight">{ticket.title}</h1>
+        <h1 className="font-serif text-3xl font-bold leading-tight tracking-tight text-foreground">
+          {ticket.title}
+        </h1>
+        <p className="text-sm text-muted-foreground">
+          <span className="font-medium text-foreground">Solicitante:</span> {ticket.requester_name}
+          <span className="mx-2 text-border">|</span>
+          <span className="font-medium text-foreground">Responsável:</span> {assignedName}
+          <span className="mx-2 text-border">|</span>
+          <span className="font-medium text-foreground">Aberto em:</span>{' '}
+          {new Date(ticket.created).toLocaleString('pt-BR')}
+        </p>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
@@ -360,7 +374,7 @@ export default function TicketDetail() {
           {/* Descrição */}
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-base">Descrição</CardTitle>
+              <CardTitle className="font-serif text-base tracking-tight">Descrição</CardTitle>
             </CardHeader>
             <CardContent>
               <p className="whitespace-pre-wrap text-sm text-muted-foreground">
@@ -501,13 +515,15 @@ export default function TicketDetail() {
                   />
                   <div className="flex flex-wrap items-center gap-2">
                     <div className="flex items-center gap-1.5">
-                      <Clock className="h-4 w-4 text-muted-foreground" />
-                      <Input
+                      <Clock className="h-4 w-4 shrink-0 text-muted-foreground" />
+                      <span className="whitespace-nowrap text-xs font-medium text-muted-foreground">
+                        Tempo (00:00)
+                      </span>
+                      <HHMMInput
                         value={newInteractionMinutes}
-                        onChange={(e) => setNewInteractionMinutes(e.target.value)}
-                        placeholder="Tempo (min)"
-                        className="w-28"
-                        inputMode="numeric"
+                        onChange={setNewInteractionMinutes}
+                        aria-label="Tempo da interação (horas e minutos)"
+                        className="w-24"
                       />
                     </div>
                     <Button
@@ -599,7 +615,7 @@ export default function TicketDetail() {
           {/* Total de Horas Lançadas no Chamado */}
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="flex items-center gap-2 text-base">
+              <CardTitle className="flex items-center gap-2 font-serif text-base tracking-tight">
                 <Timer className="h-4 w-4" /> Total de Horas Lançadas no Chamado
               </CardTitle>
             </CardHeader>
@@ -613,59 +629,68 @@ export default function TicketDetail() {
 
         {/* Coluna direita */}
         <div className="space-y-6">
-          {/* CICLO DE TRABALHO — topo da coluna direita, Play/Pause no canto sup. */}
+          {/* CICLO DE TRABALHO — topo da coluna direita; Play (verde) e Pause
+              (âmbar) ACIMA do card, no canto superior direito da coluna */}
+          {canPauseWorkCycle && !isClosed && (
+            <div className="flex justify-end">
+              <span className="flex items-center gap-1.5">
+                {cyclePaused ? (
+                  <Button
+                    size="icon"
+                    variant="outline"
+                    title="Retomar ciclo"
+                    aria-label="Retomar ciclo de trabalho"
+                    className="h-8 w-8 border-emerald-500/50 text-emerald-600 hover:bg-emerald-500/10 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300"
+                    onClick={handleResumeWorkCycle}
+                    disabled={actionLoading}
+                  >
+                    <Play className="h-4 w-4" />
+                  </Button>
+                ) : ticket.operator_cycle_start ? (
+                  <>
+                    <Button
+                      size="icon"
+                      variant="outline"
+                      title="Pausar ciclo"
+                      aria-label="Pausar ciclo de trabalho"
+                      className="h-8 w-8 border-amber-500/60 text-amber-600 hover:bg-amber-500/10 hover:text-amber-700 dark:text-amber-400 dark:hover:text-amber-300"
+                      onClick={() => setShowWorkCyclePause(true)}
+                      disabled={actionLoading}
+                    >
+                      <Pause className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      title="Encerrar ciclo"
+                      aria-label="Encerrar ciclo de trabalho"
+                      className="h-8 w-8 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                      onClick={handleStopWorkCycle}
+                      disabled={actionLoading}
+                    >
+                      <Square className="h-4 w-4" />
+                    </Button>
+                  </>
+                ) : (
+                  <Button
+                    size="icon"
+                    variant="outline"
+                    title="Iniciar ciclo"
+                    aria-label="Iniciar ciclo de trabalho"
+                    className="h-8 w-8 border-emerald-500/60 bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300"
+                    onClick={handleStartWorkCycle}
+                    disabled={actionLoading}
+                  >
+                    <Play className="h-4 w-4" />
+                  </Button>
+                )}
+              </span>
+            </div>
+          )}
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="flex items-center justify-between text-base">
-                <span className="flex items-center gap-2">
-                  <Clock className="h-4 w-4" /> Ciclo de Trabalho
-                </span>
-                {canPauseWorkCycle && !isClosed && (
-                  <span className="flex items-center gap-1">
-                    {cyclePaused ? (
-                      <Button
-                        size="icon"
-                        variant="outline"
-                        title="Retomar ciclo"
-                        onClick={handleResumeWorkCycle}
-                        disabled={actionLoading}
-                      >
-                        <Play className="h-4 w-4" />
-                      </Button>
-                    ) : ticket.operator_cycle_start ? (
-                      <>
-                        <Button
-                          size="icon"
-                          variant="outline"
-                          title="Pausar ciclo"
-                          onClick={() => setShowWorkCyclePause(true)}
-                          disabled={actionLoading}
-                        >
-                          <Pause className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          title="Encerrar ciclo"
-                          onClick={handleStopWorkCycle}
-                          disabled={actionLoading}
-                        >
-                          <Square className="h-4 w-4" />
-                        </Button>
-                      </>
-                    ) : (
-                      <Button
-                        size="icon"
-                        variant="outline"
-                        title="Iniciar ciclo"
-                        onClick={handleStartWorkCycle}
-                        disabled={actionLoading}
-                      >
-                        <Play className="h-4 w-4" />
-                      </Button>
-                    )}
-                  </span>
-                )}
+              <CardTitle className="flex items-center gap-2 font-serif text-base tracking-tight">
+                <Clock className="h-4 w-4" /> Ciclo de Trabalho
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
@@ -706,7 +731,7 @@ export default function TicketDetail() {
           {/* Solicitante */}
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-base">Solicitante</CardTitle>
+              <CardTitle className="font-serif text-base tracking-tight">Solicitante</CardTitle>
             </CardHeader>
             <CardContent className="space-y-2 text-sm">
               <div className="flex justify-between">
@@ -731,7 +756,7 @@ export default function TicketDetail() {
           {/* SLA */}
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-base">SLA</CardTitle>
+              <CardTitle className="font-serif text-base tracking-tight">SLA</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               <SlaDetailBlock
