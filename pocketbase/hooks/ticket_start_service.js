@@ -1008,6 +1008,15 @@ routerAdd(
     var billingStatus = data.billing_status ? String(data.billing_status) : 'Faturável'
     var isInternal = data.is_internal !== false // padrão interno se omitido, respeita boolean
 
+    // Retrocompetência (opcional, perfis com admin_accompaniment_hours_edit):
+    // grava o log com a data informada como created — assim o relatório mensal
+    // (que filtra por created) captura a correção no mês de competência.
+    var competencyDate = data.competency_date ? String(data.competency_date).trim() : ''
+    if (competencyDate && !/^\d{4}-\d{2}-\d{2}/.test(competencyDate)) {
+      return e.json(400, { error: 'Data de competência inválida (use AAAA-MM-DD)' })
+    }
+    if (competencyDate) competencyDate = competencyDate.substring(0, 10)
+
     if (!logContent) {
       return e.json(400, { error: 'O relato / log de acompanhamento é obrigatório' })
     }
@@ -1061,6 +1070,21 @@ routerAdd(
     interRec.set('hour_type', hourType)
     interRec.set('billing_status', billingStatus)
     $app.save(interRec)
+
+    // Retrocompetência: created é autodate e não aceita set() no record API —
+    // SQL direto (mesmo padrão da migration 0139). 12:00 UTC evita deslocar
+    // o dia por fuso.
+    if (competencyDate) {
+      try {
+        $app
+          .db()
+          .newQuery('UPDATE ticket_interactions SET created = {:created} WHERE id = {:id}')
+          .bind({ id: interRec.id, created: competencyDate + ' 12:00:00.000Z' })
+          .execute()
+      } catch (err) {
+        $app.logger().error('Error setting competency date on accompaniment', 'error', err.message)
+      }
+    }
 
     // Histórico de auditoria
     try {

@@ -23,6 +23,7 @@ interface TicketSheetRightColumnProps {
   canEditCategory: boolean
   canViewTriageHistory: boolean
   canLaunchAccompaniment: boolean
+  canEditHours?: boolean
   isClosed: boolean
   cyclePaused: boolean
   cycleRunning: boolean
@@ -33,6 +34,7 @@ interface TicketSheetRightColumnProps {
   onSlaAction: (fn: () => Promise<unknown>, successTitle: string) => Promise<void>
   onShowRequesterProfile: () => void
   onShowAccompaniment: () => void
+  onEditHours?: () => void
   onCategoryUpdated: () => Promise<void> | void
   onReclassified: () => Promise<void> | void
 }
@@ -51,6 +53,7 @@ export function TicketSheetRightColumn({
   canEditCategory,
   canViewTriageHistory,
   canLaunchAccompaniment,
+  canEditHours,
   isClosed,
   cyclePaused,
   cycleRunning,
@@ -61,6 +64,7 @@ export function TicketSheetRightColumn({
   onSlaAction,
   onShowRequesterProfile,
   onShowAccompaniment,
+  onEditHours,
   onCategoryUpdated,
   onReclassified,
 }: TicketSheetRightColumnProps) {
@@ -198,8 +202,10 @@ export function TicketSheetRightColumn({
         workedSeconds={liveCycleSeconds}
         loggedSeconds={ticket.accompaniment_seconds || 0}
         canLaunchAccompaniment={canLaunchAccompaniment}
+        canEditHours={canEditHours}
         isClosed={isClosed}
         onLaunchAccompaniment={onShowAccompaniment}
+        onEditHours={onEditHours}
       />
 
       {/* Categoria / Atividade */}

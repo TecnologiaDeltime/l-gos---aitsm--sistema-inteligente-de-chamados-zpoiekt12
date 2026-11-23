@@ -50,6 +50,7 @@ import { TicketAiReplyPanel } from '@/components/TicketAiReplyPanel'
 import { KbRecommendedBlock } from '@/components/tickets/KbRecommendedBlock'
 import { TicketRequesterProfileDialog } from '@/components/tickets/TicketRequesterProfileDialog'
 import { AccompanimentHoursDialog } from '@/components/tickets/AccompanimentHoursDialog'
+import { AccompanimentEditDialog } from '@/components/tickets/AccompanimentEditDialog'
 import { TicketSheetTabs, type HistoryRecord } from '@/components/tickets/TicketSheetTabs'
 import { TicketSheetRightColumn } from '@/components/tickets/TicketSheetRightColumn'
 import { TicketSheetHeader } from '@/components/tickets/TicketSheetHeader'
@@ -99,6 +100,7 @@ export default function TicketDetail({ variant = 'page', ticketId }: TicketDetai
   const [sendingApproval, setSendingApproval] = useState(false)
   const [showRequesterProfile, setShowRequesterProfile] = useState(false)
   const [showAccompaniment, setShowAccompaniment] = useState(false)
+  const [editInteraction, setEditInteraction] = useState<TicketInteractionRecord | null>(null)
 
   const [newInteraction, setNewInteraction] = useState('')
   const [newInteractionMinutes, setNewInteractionMinutes] = useState('')
@@ -111,6 +113,14 @@ export default function TicketDetail({ variant = 'page', ticketId }: TicketDetai
   const canSendManualApproval = canAccessItem('tickets', 'tickets_manual_approval_send')
   // Lançamento de acompanhamento (horas de log) — item do catálogo de permissões.
   const canLaunchAccompaniment = canAccessItem('tickets', 'admin_accompaniment_hours_edit')
+  // Correção de horas (edição retroativa de lançamentos) — mesma permissão.
+  const canEditHours = canAccessItem('tickets', 'admin_accompaniment_hours_edit')
+  // Último lançamento de log (origin != Cronômetro) editável pela correção de
+  // horas — a lista vem em ordem crescente de created, então procuramos do fim.
+  const lastLoggedInteraction =
+    [...interactions]
+      .reverse()
+      .find((i) => i.origin !== 'Cronômetro' && (i.duration_minutes || 0) > 0) || null
 
   const loadTicket = useCallback(async () => {
     if (!id) return
@@ -507,6 +517,8 @@ export default function TicketDetail({ variant = 'page', ticketId }: TicketDetai
           onSlaAction={runAction}
           onShowRequesterProfile={() => setShowRequesterProfile(true)}
           onShowAccompaniment={() => setShowAccompaniment(true)}
+          onEditHours={() => setEditInteraction(lastLoggedInteraction)}
+          canEditHours={canEditHours && !!lastLoggedInteraction}
           onCategoryUpdated={refreshTicket}
           onReclassified={refreshTicket}
         />
@@ -560,6 +572,26 @@ export default function TicketDetail({ variant = 'page', ticketId }: TicketDetai
         onOpenChange={setShowAccompaniment}
         ticketId={id!}
         ticketNumber={ticket.number}
+        canEditCompetency={canEditHours}
+        onSaved={refreshTicket}
+      />
+
+      {/* Correção de horas — edição retroativa de lançamento de log (admin/qualidade) */}
+      <AccompanimentEditDialog
+        open={!!editInteraction}
+        onOpenChange={(o) => {
+          if (!o) setEditInteraction(null)
+        }}
+        interaction={
+          editInteraction
+            ? {
+                id: editInteraction.id,
+                content: editInteraction.content,
+                duration_minutes: editInteraction.duration_minutes,
+                created: editInteraction.created,
+              }
+            : null
+        }
         onSaved={refreshTicket}
       />
 

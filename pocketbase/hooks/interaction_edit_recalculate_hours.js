@@ -84,12 +84,32 @@ routerAdd(
       })
     }
 
+    // Retrocompetência (opcional): grava a data informada como created do log
+    var newCompetencyDate = body.competency_date
+    if (
+      newCompetencyDate !== undefined &&
+      newCompetencyDate !== null &&
+      String(newCompetencyDate).trim() !== ''
+    ) {
+      newCompetencyDate = String(newCompetencyDate).trim()
+      if (!/^\d{4}-\d{2}-\d{2}/.test(newCompetencyDate)) {
+        return e.badRequestError('Data de competência inválida', {
+          competency_date: 'Use o formato AAAA-MM-DD',
+        })
+      }
+      newCompetencyDate = newCompetencyDate.substring(0, 10)
+    } else {
+      newCompetencyDate = ''
+    }
+
     var interaction
     try {
       interaction = $app.findRecordById('ticket_interactions', interactionId)
     } catch (_) {
       return e.notFoundError('Interação não encontrada')
     }
+
+    var oldCreated = interaction.getString('created')
 
     var oldDuration = interaction.getFloat('duration_minutes') || 0
     var oldHourType = interaction.getString('hour_type')
@@ -171,6 +191,75 @@ routerAdd(
     } catch (err) {
       $app.logger().error('Error saving edited interaction', 'error', err.message)
       return e.json(500, { error: 'Erro ao salvar interação' })
+    }
+
+    // Retrocompetência: created é autodate e não aceita set() no record API —
+    // SQL direto (mesmo padrão da migration 0139). 12:00 UTC evita virar dia
+    // anterior/posterior por fuso.
+    if (newCompetencyDate) {
+      try {
+        $app
+          .db()
+          .newQuery('UPDATE ticket_interactions SET created = {:created} WHERE id = {:id}')
+          .bind({ id: interaction.id, created: newCompetencyDate + ' 12:00:00.000Z' })
+          .execute()
+      } catch (err) {
+        $app.logger().error('Error setting competency date', 'error', err.message)
+      }
+    }
+
+    // Auditoria: quem editou, valores anterior e novo
+    try {
+      var auditCol = $app.findCollectionByNameOrId('audit_logs')
+      var audit = new Record(auditCol)
+      audit.set('user', authRecord.id)
+      audit.set('action', 'Edição de horas de acompanhamento')
+      audit.set('entity_type', 'ticket_interaction')
+      audit.set('entity_id', interaction.id)
+      audit.set(
+        'description',
+        'Edição de horas da interação ' +
+          interaction.id +
+          ' do chamado ' +
+          ticketId +
+          (newCompetencyDate ? ' com competência ' + newCompetencyDate : ''),
+      )
+      audit.set(
+        'old_values',
+        JSON.stringify({ duration_minutes: oldDuration, created: oldCreated }),
+      )
+      audit.set(
+        'new_values',
+        JSON.stringify({
+          duration_minutes: effectiveNewDuration,
+          created: newCompetencyDate || oldCreated,
+        }),
+      )
+      $app.save(audit)
+    } catch (err) {
+      $app.logger().error('Error recording hours edit audit', 'error', err.message)
+    }
+
+    // Histórico do chamado: registro legível na aba Histórico da ficha
+    if (ticketId) {
+      try {
+        var histCol = $app.findCollectionByNameOrId('ticket_history')
+        var hist = new Record(histCol)
+        hist.set('ticket', ticketId)
+        hist.set('user', authRecord.id)
+        hist.set('action', 'Edição de Horas de Acompanhamento')
+        hist.set('field', 'duration_minutes')
+        hist.set('old_value', (oldDuration / 60).toFixed(2) + 'h')
+        hist.set(
+          'new_value',
+          (effectiveNewDuration / 60).toFixed(2) +
+            'h' +
+            (newCompetencyDate ? ' · competência ' + newCompetencyDate : ''),
+        )
+        $app.save(hist)
+      } catch (err) {
+        $app.logger().error('Error recording hours edit history', 'error', err.message)
+      }
     }
 
     // Rastreabilidade: interação interna com hour_type 'Interna' (não debita franquia,

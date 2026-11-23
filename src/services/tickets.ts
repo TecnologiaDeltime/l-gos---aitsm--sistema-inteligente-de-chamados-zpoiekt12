@@ -289,6 +289,8 @@ export const addAccompanimentHours = (
     hour_type?: string
     billing_status?: string
     is_internal?: boolean
+    /** Data de competência retroativa (AAAA-MM-DD), p/ perfis com admin_accompaniment_hours_edit. */
+    competency_date?: string
   },
 ) =>
   pb.send<{

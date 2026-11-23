@@ -1,4 +1,4 @@
-import { Clock, History, PlusCircle } from 'lucide-react'
+import { Clock, History, Pencil, PlusCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { TicketSheetCard } from '@/components/tickets/TicketSheetCard'
 import { formatSeconds } from '@/lib/duration'
@@ -10,8 +10,11 @@ interface TicketHoursAuditCardProps {
   /** Segundos lançados via logs de acompanhamento ("Horas de Log"). */
   loggedSeconds: number
   canLaunchAccompaniment: boolean
+  /** Permite corrigir horas (perfis admin/qualidade com admin_accompaniment_hours_edit). */
+  canEditHours?: boolean
   isClosed: boolean
   onLaunchAccompaniment: () => void
+  onEditHours?: () => void
 }
 
 /**
@@ -25,8 +28,10 @@ export function TicketHoursAuditCard({
   workedSeconds,
   loggedSeconds,
   canLaunchAccompaniment,
+  canEditHours = false,
   isClosed,
   onLaunchAccompaniment,
+  onEditHours,
 }: TicketHoursAuditCardProps) {
   const hasHours = workedSeconds > 0 || loggedSeconds > 0
   const diffSeconds = workedSeconds - loggedSeconds
@@ -67,6 +72,18 @@ export function TicketHoursAuditCard({
           <p className="mt-1.5 font-mono text-lg font-bold leading-none tabular-nums">
             {formatSeconds(loggedSeconds)}
           </p>
+          {canEditHours && onEditHours && loggedSeconds > 0 && (
+            <Button
+              size="icon"
+              variant="ghost"
+              className="absolute right-1.5 top-1.5 h-6 w-6 text-muted-foreground opacity-0 transition-opacity hover:text-foreground group-hover:opacity-100"
+              title="Corrigir horas de log"
+              aria-label="Corrigir horas de log"
+              onClick={onEditHours}
+            >
+              <Pencil className="h-3 w-3" />
+            </Button>
+          )}
         </div>
       </div>
 

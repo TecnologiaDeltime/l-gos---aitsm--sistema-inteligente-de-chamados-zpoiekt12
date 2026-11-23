@@ -21,6 +21,8 @@ interface AccompanimentHoursDialogProps {
   onOpenChange: (open: boolean) => void
   ticketId: string
   ticketNumber?: string
+  /** Permite escolher data de competência retroativa (admin_accompaniment_hours_edit). */
+  canEditCompetency?: boolean
   onSaved?: () => void
 }
 
@@ -35,11 +37,13 @@ export function AccompanimentHoursDialog({
   onOpenChange,
   ticketId,
   ticketNumber,
+  canEditCompetency = false,
   onSaved,
 }: AccompanimentHoursDialogProps) {
   const { toast } = useToast()
   const [value, setValue] = useState('')
   const [description, setDescription] = useState('')
+  const [competencyDate, setCompetencyDate] = useState('')
   const [saving, setSaving] = useState(false)
 
   const minutes = parseHHMMToMinutes(value)
@@ -48,6 +52,7 @@ export function AccompanimentHoursDialog({
   const reset = () => {
     setValue('')
     setDescription('')
+    setCompetencyDate('')
   }
 
   const handleSave = async () => {
@@ -77,10 +82,14 @@ export function AccompanimentHoursDialog({
         duration_seconds: m * 60,
         hour_type: 'Contratada',
         billing_status: 'Faturável',
+        competency_date: canEditCompetency && competencyDate ? competencyDate : undefined,
       })
       toast({
         title: 'Acompanhamento lançado',
-        description: 'As horas foram registradas no log do chamado.',
+        description:
+          canEditCompetency && competencyDate
+            ? `Registro gravado com competência ${competencyDate}.`
+            : 'As horas foram registradas no log do chamado.',
       })
       reset()
       onOpenChange(false)
@@ -140,6 +149,23 @@ export function AccompanimentHoursDialog({
               </p>
             )}
           </div>
+
+          {canEditCompetency && (
+            <div className="space-y-2">
+              <Label htmlFor="accompaniment-competency">Data de competência</Label>
+              <input
+                id="accompaniment-competency"
+                type="date"
+                value={competencyDate}
+                onChange={(e) => setCompetencyDate(e.target.value)}
+                className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+              />
+              <p className="text-xs text-muted-foreground">
+                Campo opcional. A data informada passa a ser a competência do lançamento — útil para
+                registrar correções em meses anteriores.
+              </p>
+            </div>
+          )}
 
           <div className="space-y-2">
             <Label htmlFor="accompaniment-description">Descrição / Observação</Label>
