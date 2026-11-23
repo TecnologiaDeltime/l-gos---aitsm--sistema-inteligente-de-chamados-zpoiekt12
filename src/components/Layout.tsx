@@ -1403,7 +1403,7 @@ export default function Layout() {
   )
 
   return (
-    <div className="flex min-h-screen bg-background text-foreground selection:bg-primary/30 selection:text-primary">
+    <div className="flex min-h-screen bg-background text-foreground selection:bg-primary/30 selection:text-primary l-print-shell">
       {!isMobile && (
         <aside
           className={`sticky top-0 h-screen flex-shrink-0 border-r border-sidebar-border shadow-xl shadow-black/20 z-30 transition-all duration-300 ease-in-out ${

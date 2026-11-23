@@ -26,6 +26,22 @@
     display: block !important;
   }
 
+  /* Shell (sidebar + header, Layout.tsx) some no papel: o relatório é o único
+     conteúdo. Mesma marca usada pela folha da Apresentação Executiva. */
+  .l-print-shell,
+  .l-print-shell aside,
+  .l-print-shell header {
+    display: none !important;
+  }
+
+  /* Main do Layout solto no fluxo, sem padding, para paginação natural */
+  .l-print-shell > div:last-child > main {
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+    padding: 0 !important;
+  }
+
   @page {
     margin: 12mm;
   }

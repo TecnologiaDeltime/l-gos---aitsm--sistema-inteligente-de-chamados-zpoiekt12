@@ -14,6 +14,20 @@
  * slides — sem isso o fundo grafite não sai e o texto claro desaparecia.
  */
 
+/*
+ * Oculta o shell (sidebar + header) que envolve TODAS as rotas do sistema,
+ * inclusive /apresentacao e /reports/implemented-features.
+ * .l-print-shell marca os wrappers do Layout.tsx; #apresentacao-print e
+ * .report-container são os blocos de impressão das duas telas.
+ */
+@media print {
+  .l-print-shell,
+  .l-print-shell aside,
+  .l-print-shell header {
+    display: none !important;
+  }
+}
+
 #apresentacao-print {
   display: none;
 }
@@ -36,12 +50,24 @@
     display: block !important;
   }
 
+  .l-print-shell > div:last-child > main {
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+    padding: 0 !important;
+  }
+
   #apresentacao-print {
     display: block !important;
     position: static !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* O pai é flex: no papel vira fluxo em bloco com largura de página inteira */
+  #apresentacao-print > * {
     width: 100%;
-    margin: 0;
-    padding: 0;
   }
 
   #apresentacao-print .apresentacao-print-slide {

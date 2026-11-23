@@ -357,9 +357,9 @@ export default function ExecutivePresentation() {
   }, [next, prev])
 
   return (
-    <div className="flex h-screen w-full flex-col overflow-hidden bg-background text-foreground">
-      {/* Área do slide */}
-      <main className="relative flex-1" onClick={next}>
+    <div className="flex h-screen w-full flex-col overflow-hidden bg-background text-foreground print:h-auto print:overflow-visible">
+      {/* Área do slide — oculta na impressão: quem sai no PDF é #apresentacao-print */}
+      <main className="relative flex-1 print:hidden" onClick={next}>
         {/* Clique no corpo avança 1 slide; o rodapé faz stopPropagation
             para que os botões Anterior/Próximo não disparem next de novo. */}
         <div key={current} className="h-full w-full">
