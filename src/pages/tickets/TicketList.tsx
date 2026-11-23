@@ -310,9 +310,13 @@ export default function TicketList() {
     })
   }
 
+  // TELA DIVIDIDA: o registro do chamado selecionado vem de `tickets` (a base
+  // COMPLETA, não a filtrada). Antes usava filtered.find(...) — quando um filtro
+  // (ou exclusão em lote) escondia o chamado selecionado, o painel lateral
+  // desaparecia. Agora o painel persiste enquanto o chamado existir na base.
   const selectedTicket =
     view === 'split' && selectedTicketId
-      ? filtered.find((t) => t.id === selectedTicketId) || null
+      ? tickets.find((t) => t.id === selectedTicketId) || null
       : null
 
   const highlight = (text: string) =>

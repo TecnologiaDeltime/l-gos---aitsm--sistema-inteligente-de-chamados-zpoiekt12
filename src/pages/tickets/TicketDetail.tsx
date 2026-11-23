@@ -14,13 +14,20 @@ import {
   History,
   MessageSquare,
   Download,
-  User,
+  Users,
+  GitBranch,
+  Link2,
+  ClipboardCheck,
+  Pause,
+  Timer,
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Textarea } from '@/components/ui/textarea'
+import { Input } from '@/components/ui/input'
 import { Separator } from '@/components/ui/separator'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useAuth } from '@/hooks/use-auth'
 import { usePermissions } from '@/hooks/use-permissions'
 import { useToast } from '@/hooks/use-toast'
@@ -29,6 +36,7 @@ import {
   getTicketInteractions,
   getTicketHistory,
   createInteraction,
+  addAccompanimentHours,
   startService,
   pauseTicketSla,
   resumeTicketSla,
@@ -49,6 +57,7 @@ import {
   getAttachmentFileUrl,
 } from '@/services/attachments'
 import type { TicketAttachmentRecord } from '@/services/attachments'
+import { sendManualApproval } from '@/services/approvals'
 import { StatusBadge } from '@/components/StatusBadge'
 import { PriorityBadge } from '@/components/PriorityBadge'
 import { SlaStatusBadge } from '@/components/SlaStatusBadge'
@@ -56,10 +65,16 @@ import { SlaDetailBlock } from '@/components/SlaDetailBlock'
 import { SlaPauseDialog } from '@/components/SlaPauseDialog'
 import { WorkCyclePauseDialog } from '@/components/WorkCyclePauseDialog'
 import { ResolveTicketDialog } from '@/components/ResolveTicketDialog'
+import { DelegateDialog } from '@/components/DelegateDialog'
+import { ChildTicketDialog } from '@/components/ChildTicketDialog'
+import { AssociateTicketsDialog } from '@/components/AssociateTicketsDialog'
+import { TicketAiReplyPanel } from '@/components/TicketAiReplyPanel'
+import { TicketCategoryCard } from '@/components/tickets/TicketCategoryCard'
+import { TicketTriageHistoryCard } from '@/components/tickets/TicketTriageHistoryCard'
+import { KbRecommendedBlock } from '@/components/tickets/KbRecommendedBlock'
 import { computeSlaSolutionStatus } from '@/lib/sla-status'
-import { formatSeconds } from '@/lib/duration'
+import { formatSeconds, parseDurationToMinutes } from '@/lib/duration'
 import { getErrorMessage } from '@/lib/pocketbase/errors'
-import pb from '@/lib/pocketbase/client'
 
 interface HistoryRecord {
   id: string
@@ -89,17 +104,26 @@ export default function TicketDetail() {
   const [actionLoading, setActionLoading] = useState(false)
 
   // Diálogos: cada pausa tem seu PRÓPRIO estado e seu PRÓPRIO diálogo.
-  // - showSlaPause: pausa de SLA (botão "Pausar SLA", antes de Resolver)
+  // - showSlaPause: pausa de SLA (botão "Pausar SLA")
   // - showWorkCyclePause: pausa do ciclo de trabalho (só contabiliza horas do
   //   operador; NUNCA toca em campos de SLA)
   const [showSlaPause, setShowSlaPause] = useState(false)
   const [showWorkCyclePause, setShowWorkCyclePause] = useState(false)
   const [showResolve, setShowResolve] = useState(false)
+  const [showDelegate, setShowDelegate] = useState(false)
+  const [showChildTicket, setShowChildTicket] = useState(false)
+  const [showAssociate, setShowAssociate] = useState(false)
+  const [sendingApproval, setSendingApproval] = useState(false)
 
   const [newInteraction, setNewInteraction] = useState('')
+  const [newInteractionMinutes, setNewInteractionMinutes] = useState('')
   const [sendingInteraction, setSendingInteraction] = useState(false)
 
   const canPauseWorkCycle = canAccessItem('tickets', 'tickets_work_cycle_pause')
+  const canUseAiReply = canAccessItem('tickets', 'tickets_ai_reply')
+  const canViewTriageHistory = canAccessItem('tickets', 'tickets_triage_history')
+  const canEditCategory = canAccessItem('tickets', 'tickets_categoria_edit')
+  const canSendManualApproval = canAccessItem('tickets', 'tickets_manual_approval_send')
 
   const loadTicket = useCallback(async () => {
     if (!id) return
@@ -184,7 +208,7 @@ export default function TicketDetail() {
     await refreshTicket()
   }
 
-  // ---- Ações de SLA (botão "Pausar SLA", antes de Resolver) ----
+  // ---- Ações de SLA (botão "Pausar SLA") ----
   const handleResumeSla = () => runAction(() => resumeTicketSla(id!), 'SLA retomado')
   const handleConfirmSlaPause = async (reason: string, justification: string) => {
     await pauseTicketSla(id!, reason, justification)
@@ -194,19 +218,52 @@ export default function TicketDetail() {
 
   const handleStartService = () => runAction(() => startService(id!), 'Atendimento iniciado')
 
+  // ---- Envio manual para aprovação (rota /backend/v1/tickets/{id}/send-approval) ----
+  const handleSendApproval = async () => {
+    if (!id) return
+    setSendingApproval(true)
+    try {
+      await sendManualApproval(id)
+      toast({ title: 'Chamado enviado para aprovação' })
+      await loadTicket()
+    } catch (err) {
+      toast({
+        title: 'Erro ao enviar para aprovação',
+        description: getErrorMessage(err),
+        variant: 'destructive',
+      })
+    } finally {
+      setSendingApproval(false)
+    }
+  }
+
+  // ---- Interações com TEMPO (duration_minutes → horas de log do chamado) ----
   const handleSendInteraction = async () => {
     if (!newInteraction.trim() || !user?.id) return
     setSendingInteraction(true)
     try {
-      await createInteraction({
-        ticket: id!,
-        author: user.id,
-        type: 'Comentário',
-        content: newInteraction.trim(),
-        origin: 'interno',
-      })
+      const minutes = parseDurationToMinutes(newInteractionMinutes)
+      if (minutes !== null) {
+        // Interação com tempo = log de horas: debita a franquia do cliente e
+        // soma nas horas do chamado (work_hours/accompaniment_seconds) via a
+        // rota de acompanhamento (/backend/v1/tickets/{id}/accompaniment).
+        await addAccompanimentHours(id!, {
+          content: newInteraction.trim(),
+          duration_minutes: minutes,
+        })
+      } else {
+        await createInteraction({
+          ticket: id!,
+          author: user.id,
+          type: 'Comentário',
+          content: newInteraction.trim(),
+          origin: 'interno',
+        })
+      }
       setInteractions(await getTicketInteractions(id!))
+      await refreshTicket()
       setNewInteraction('')
+      setNewInteractionMinutes('')
       toast({ title: 'Interação registrada' })
     } catch (err) {
       toast({
@@ -217,6 +274,10 @@ export default function TicketDetail() {
     } finally {
       setSendingInteraction(false)
     }
+  }
+
+  const handleApplyAiDraft = (draftText: string) => {
+    setNewInteraction((prev) => (prev ? `${prev}\n\n${draftText}` : draftText))
   }
 
   const handleAttach = async (files: FileList | null) => {
@@ -290,104 +351,13 @@ export default function TicketDetail() {
         <h1 className="text-xl font-semibold tracking-tight">{ticket.title}</h1>
       </div>
 
-      {/* Barra de ações */}
-      <Card>
-        <CardContent className="flex flex-wrap items-center gap-2 py-3">
-          {ticket.status === 'Novo' && canAssignTicket && (
-            <Button size="sm" onClick={handleStartService} disabled={actionLoading}>
-              <Play className="mr-1 h-4 w-4" /> Iniciar Atendimento
-            </Button>
-          )}
-
-          {/* CICLO DE TRABALHO — guard tickets_work_cycle_pause; NÃO pausa SLA.
-              A pausa fecha operator_cycle_start no backend, então o estado de
-              pausa é detectado pela pausa EM ABERTO (openCyclePause) e tem
-              precedência sobre "Iniciar Ciclo". */}
-          {canPauseWorkCycle && !isClosed && (
-            <>
-              {cyclePaused ? (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={handleResumeWorkCycle}
-                  disabled={actionLoading}
-                >
-                  <Coffee className="mr-1 h-4 w-4" /> Retomar Ciclo
-                </Button>
-              ) : ticket.operator_cycle_start ? (
-                <>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => setShowWorkCyclePause(true)}
-                    disabled={actionLoading}
-                  >
-                    <Coffee className="mr-1 h-4 w-4 text-amber-500" /> Pausar Ciclo
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={handleStopWorkCycle}
-                    disabled={actionLoading}
-                  >
-                    <Square className="mr-1 h-4 w-4" /> Encerrar Ciclo
-                  </Button>
-                </>
-              ) : (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={handleStartWorkCycle}
-                  disabled={actionLoading}
-                >
-                  <Clock className="mr-1 h-4 w-4" /> Iniciar Ciclo
-                </Button>
-              )}
-            </>
-          )}
-
-          {/* SLA — botão Pausar SLA fica ANTES do botão Resolver */}
-          {!isClosed && (
-            <>
-              {ticket.sla_paused
-                ? canPauseSla && (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={handleResumeSla}
-                      disabled={actionLoading}
-                    >
-                      <Play className="mr-1 h-4 w-4" /> Retomar SLA
-                    </Button>
-                  )
-                : canPauseSla && (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => setShowSlaPause(true)}
-                      disabled={actionLoading}
-                    >
-                      <PauseCircle className="mr-1 h-4 w-4" /> Pausar SLA
-                    </Button>
-                  )}
-              {canResolveTicket && (
-                <Button
-                  size="sm"
-                  className="bg-emerald-600 hover:bg-emerald-700"
-                  onClick={() => setShowResolve(true)}
-                  disabled={actionLoading}
-                >
-                  <CheckCircle2 className="mr-1 h-4 w-4" /> Resolver
-                </Button>
-              )}
-            </>
-          )}
-        </CardContent>
-      </Card>
-
       <div className="grid gap-6 lg:grid-cols-3">
         {/* Coluna principal */}
         <div className="space-y-6 lg:col-span-2">
+          {/* Procedimentos Recomendados da KB — topo da ficha */}
+          <KbRecommendedBlock title={ticket.title} description={ticket.description} />
+
+          {/* Descrição */}
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-base">Descrição</CardTitle>
@@ -408,14 +378,96 @@ export default function TicketDetail() {
             </CardContent>
           </Card>
 
-          {/* Interações */}
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="flex items-center gap-2 text-base">
-                <MessageSquare className="h-4 w-4" /> Interações ({interactions.length})
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
+          {/* Barra de ações — 6 botões lado a lado, logo abaixo da descrição */}
+          <div className="flex flex-wrap items-center gap-2">
+            {ticket.status === 'Novo' && canAssignTicket && (
+              <Button size="sm" onClick={handleStartService} disabled={actionLoading}>
+                <Play className="mr-1 h-4 w-4" /> Iniciar Atendimento
+              </Button>
+            )}
+            {!isClosed && (
+              <>
+                {ticket.sla_paused
+                  ? canPauseSla && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={handleResumeSla}
+                        disabled={actionLoading}
+                      >
+                        <Play className="mr-1 h-4 w-4" /> Retomar SLA
+                      </Button>
+                    )
+                  : canPauseSla && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setShowSlaPause(true)}
+                        disabled={actionLoading}
+                      >
+                        <PauseCircle className="mr-1 h-4 w-4" /> Pausar SLA
+                      </Button>
+                    )}
+                {canResolveTicket && (
+                  <Button
+                    size="sm"
+                    className="bg-emerald-600 hover:bg-emerald-700"
+                    onClick={() => setShowResolve(true)}
+                    disabled={actionLoading}
+                  >
+                    <CheckCircle2 className="mr-1 h-4 w-4" /> Resolver
+                  </Button>
+                )}
+              </>
+            )}
+            {canAssignTicket && (
+              <Button size="sm" variant="outline" onClick={() => setShowDelegate(true)}>
+                <Users className="mr-1 h-4 w-4" /> Delegar
+              </Button>
+            )}
+            {canAssignTicket && (
+              <Button size="sm" variant="outline" onClick={() => setShowChildTicket(true)}>
+                <GitBranch className="mr-1 h-4 w-4" /> Abrir Ticket Filho
+              </Button>
+            )}
+            {canAssignTicket && (
+              <Button size="sm" variant="outline" onClick={() => setShowAssociate(true)}>
+                <Link2 className="mr-1 h-4 w-4" /> Associar Chamados
+              </Button>
+            )}
+            {canSendManualApproval && !isClosed && !ticket.approval_hold && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={handleSendApproval}
+                disabled={sendingApproval || actionLoading}
+              >
+                {sendingApproval ? (
+                  <Loader2 className="mr-1 h-4 w-4 animate-spin" />
+                ) : (
+                  <ClipboardCheck className="mr-1 h-4 w-4" />
+                )}
+                Enviar para Aprovação
+              </Button>
+            )}
+          </div>
+
+          {/* Interações / Histórico / Anexos — abas */}
+          <Tabs defaultValue="interactions">
+            <TabsList>
+              <TabsTrigger value="interactions">
+                <MessageSquare className="mr-1 h-4 w-4" /> Interações ({interactions.length})
+              </TabsTrigger>
+              <TabsTrigger value="history">
+                <History className="mr-1 h-4 w-4" /> Histórico
+              </TabsTrigger>
+              <TabsTrigger value="attachments">
+                <Paperclip className="mr-1 h-4 w-4" /> Anexos ({attachments.length})
+              </TabsTrigger>
+            </TabsList>
+
+            {/* Aba Interações — com campo de tempo por interação */}
+            <TabsContent value="interactions" className="space-y-3">
               {interactions.length === 0 && (
                 <p className="text-sm text-muted-foreground">Nenhuma interação registrada.</p>
               )}
@@ -425,8 +477,15 @@ export default function TicketDetail() {
                     <span className="font-medium text-foreground">
                       {it.expand?.author?.name || 'Sistema'}
                     </span>
-                    <span>
-                      {it.type} · {new Date(it.created).toLocaleString('pt-BR')}
+                    <span className="flex items-center gap-2">
+                      {typeof it.duration_minutes === 'number' && it.duration_minutes > 0 && (
+                        <Badge variant="outline" className="text-[10px]">
+                          {formatSeconds(it.duration_minutes * 60)} de trabalho
+                        </Badge>
+                      )}
+                      <span>
+                        {it.type} · {new Date(it.created).toLocaleString('pt-BR')}
+                      </span>
                     </span>
                   </div>
                   <p className="whitespace-pre-wrap text-sm">{it.content}</p>
@@ -440,31 +499,36 @@ export default function TicketDetail() {
                     rows={3}
                     placeholder="Registrar uma interação (comentário interno ou para o cliente)..."
                   />
-                  <Button
-                    size="sm"
-                    onClick={handleSendInteraction}
-                    disabled={sendingInteraction || !newInteraction.trim()}
-                  >
-                    {sendingInteraction ? (
-                      <Loader2 className="mr-1 h-4 w-4 animate-spin" />
-                    ) : (
-                      <Send className="mr-1 h-4 w-4" />
-                    )}
-                    Enviar Interação
-                  </Button>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <div className="flex items-center gap-1.5">
+                      <Clock className="h-4 w-4 text-muted-foreground" />
+                      <Input
+                        value={newInteractionMinutes}
+                        onChange={(e) => setNewInteractionMinutes(e.target.value)}
+                        placeholder="Tempo (min)"
+                        className="w-28"
+                        inputMode="numeric"
+                      />
+                    </div>
+                    <Button
+                      size="sm"
+                      onClick={handleSendInteraction}
+                      disabled={sendingInteraction || !newInteraction.trim()}
+                    >
+                      {sendingInteraction ? (
+                        <Loader2 className="mr-1 h-4 w-4 animate-spin" />
+                      ) : (
+                        <Send className="mr-1 h-4 w-4" />
+                      )}
+                      Enviar Interação
+                    </Button>
+                  </div>
                 </div>
               )}
-            </CardContent>
-          </Card>
+            </TabsContent>
 
-          {/* Histórico */}
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="flex items-center gap-2 text-base">
-                <History className="h-4 w-4" /> Histórico
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
+            {/* Aba Histórico */}
+            <TabsContent value="history" className="space-y-2">
               {history.length === 0 && (
                 <p className="text-sm text-muted-foreground">Nenhum evento registrado.</p>
               )}
@@ -488,12 +552,182 @@ export default function TicketDetail() {
                   </span>
                 </div>
               ))}
+            </TabsContent>
+
+            {/* Aba Anexos */}
+            <TabsContent value="attachments" className="space-y-2">
+              {attachments.length === 0 && (
+                <p className="text-sm text-muted-foreground">Nenhum anexo.</p>
+              )}
+              {attachments.map((a) => (
+                <a
+                  key={a.id}
+                  href={getAttachmentFileUrl(a)}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex items-center justify-between rounded border px-2 py-1.5 text-xs hover:bg-muted/50"
+                >
+                  <span className="truncate">{a.file_name || a.file}</span>
+                  <Download className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                </a>
+              ))}
+              {!isClosed && (
+                <label className="mt-2 block cursor-pointer text-xs text-primary hover:underline">
+                  <input
+                    type="file"
+                    multiple
+                    className="hidden"
+                    onChange={(e) => handleAttach(e.target.files)}
+                  />
+                  Anexar arquivo…
+                </label>
+              )}
+            </TabsContent>
+          </Tabs>
+
+          {/* Agente de Resposta IA */}
+          {canUseAiReply && (
+            <TicketAiReplyPanel
+              ticketId={id!}
+              ticketNumber={ticket.number}
+              requesterName={ticket.requester_name}
+              canEdit={!isClosed}
+              onApplyDraft={handleApplyAiDraft}
+            />
+          )}
+
+          {/* Total de Horas Lançadas no Chamado */}
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Timer className="h-4 w-4" /> Total de Horas Lançadas no Chamado
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <span className="font-mono text-2xl font-bold">
+                {formatSeconds(ticket.accompaniment_seconds || 0)}
+              </span>
             </CardContent>
           </Card>
         </div>
 
-        {/* Coluna lateral */}
+        {/* Coluna direita */}
         <div className="space-y-6">
+          {/* CICLO DE TRABALHO — topo da coluna direita, Play/Pause no canto sup. */}
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center justify-between text-base">
+                <span className="flex items-center gap-2">
+                  <Clock className="h-4 w-4" /> Ciclo de Trabalho
+                </span>
+                {canPauseWorkCycle && !isClosed && (
+                  <span className="flex items-center gap-1">
+                    {cyclePaused ? (
+                      <Button
+                        size="icon"
+                        variant="outline"
+                        title="Retomar ciclo"
+                        onClick={handleResumeWorkCycle}
+                        disabled={actionLoading}
+                      >
+                        <Play className="h-4 w-4" />
+                      </Button>
+                    ) : ticket.operator_cycle_start ? (
+                      <>
+                        <Button
+                          size="icon"
+                          variant="outline"
+                          title="Pausar ciclo"
+                          onClick={() => setShowWorkCyclePause(true)}
+                          disabled={actionLoading}
+                        >
+                          <Pause className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          title="Encerrar ciclo"
+                          onClick={handleStopWorkCycle}
+                          disabled={actionLoading}
+                        >
+                          <Square className="h-4 w-4" />
+                        </Button>
+                      </>
+                    ) : (
+                      <Button
+                        size="icon"
+                        variant="outline"
+                        title="Iniciar ciclo"
+                        onClick={handleStartWorkCycle}
+                        disabled={actionLoading}
+                      >
+                        <Play className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </span>
+                )}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div>
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                  Tempo do Ciclo
+                </p>
+                <p className="font-mono text-3xl font-bold">
+                  {formatSeconds(ticket.operator_worked_seconds || 0)}
+                </p>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Estado</span>
+                <span className="font-medium">
+                  {cyclePaused
+                    ? 'Pausado (não pausa o SLA)'
+                    : ticket.operator_cycle_start
+                      ? 'Em andamento'
+                      : 'Não iniciado'}
+                </span>
+              </div>
+              {cyclePaused && openCyclePause?.reason && (
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Motivo da pausa</span>
+                  <span className="font-medium">
+                    {openCyclePause.reason}
+                    {openCyclePause.description ? ` — ${openCyclePause.description}` : ''}
+                  </span>
+                </div>
+              )}
+              <p className="text-[11px] text-muted-foreground">
+                A pausa do ciclo serve apenas para contabilização das horas de trabalho do operador
+                — ela <strong>não pausa o SLA</strong>.
+              </p>
+            </CardContent>
+          </Card>
+
+          {/* Solicitante */}
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base">Solicitante</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2 text-sm">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Nome</span>
+                <span className="font-medium">{ticket.requester_name}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">E-mail</span>
+                <span>{ticket.requester_email || '—'}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Responsável</span>
+                <span>{assignedName}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Aberto em</span>
+                <span>{new Date(ticket.created).toLocaleString('pt-BR')}</span>
+              </div>
+            </CardContent>
+          </Card>
+
           {/* SLA */}
           <Card>
             <CardHeader className="pb-2">
@@ -529,121 +763,43 @@ export default function TicketDetail() {
             </CardContent>
           </Card>
 
-          {/* Ciclo de Trabalho — painel próprio, separado do SLA */}
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="flex items-center gap-2 text-base">
-                <User className="h-4 w-4" /> Ciclo de Trabalho do Operador
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2 text-sm">
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Estado</span>
-                <span className="font-medium">
-                  {cyclePaused
-                    ? 'Pausado (não pausa o SLA)'
-                    : ticket.operator_cycle_start
-                      ? 'Em andamento'
-                      : 'Não iniciado'}
-                </span>
-              </div>
-              {cyclePaused && openCyclePause?.reason && (
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Motivo da pausa</span>
-                  <span className="font-medium">
-                    {openCyclePause.reason}
-                    {openCyclePause.description ? ` — ${openCyclePause.description}` : ''}
-                  </span>
-                </div>
-              )}
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Horas trabalhadas</span>
-                <span className="font-mono font-medium">
-                  {formatSeconds(ticket.operator_worked_seconds || 0)}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Horas do chamado</span>
-                <span className="font-mono font-medium">
-                  {(ticket.work_hours || 0).toFixed(2)} h
-                </span>
-              </div>
-              <p className="pt-1 text-[11px] text-muted-foreground">
-                A pausa do ciclo de trabalho serve apenas para contabilização das horas de trabalho
-                do operador — ela <strong>não pausa o SLA</strong>.
+          {/* DOIS CARTÕES LADO A LADO — horas trabalhadas (âmbar claro) e horas de log (cinza claro) */}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="rounded-xl border border-amber-500/30 bg-amber-500/[0.06] p-3">
+              <p className="text-[11px] font-medium uppercase tracking-wide text-amber-700 dark:text-amber-400">
+                Horas Trabalhadas
               </p>
-            </CardContent>
-          </Card>
+              <p className="mt-1 font-mono text-lg font-bold text-amber-800 dark:text-amber-300">
+                {formatSeconds(ticket.operator_worked_seconds || 0)}
+              </p>
+            </div>
+            <div className="rounded-xl border bg-muted/40 p-3">
+              <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                Horas de Log do Chamado
+              </p>
+              <p className="mt-1 font-mono text-lg font-bold">
+                {formatSeconds(ticket.accompaniment_seconds || 0)}
+              </p>
+            </div>
+          </div>
 
-          {/* Detalhes */}
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base">Detalhes</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2 text-sm">
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Solicitante</span>
-                <span className="font-medium">{ticket.requester_name}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">E-mail</span>
-                <span>{ticket.requester_email || '—'}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Categoria</span>
-                <span>{categoryName}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Tipo</span>
-                <span>{ticket.type}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Responsável</span>
-                <span>{assignedName}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Aberto em</span>
-                <span>{new Date(ticket.created).toLocaleString('pt-BR')}</span>
-              </div>
-            </CardContent>
-          </Card>
+          {/* Categoria / Atividade */}
+          <TicketCategoryCard
+            ticketId={id!}
+            currentCategoryId={ticket.category}
+            currentSubcategoryId={ticket.subcategory}
+            canEdit={canEditCategory}
+            onUpdated={refreshTicket}
+          />
 
-          {/* Anexos */}
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="flex items-center gap-2 text-base">
-                <Paperclip className="h-4 w-4" /> Anexos ({attachments.length})
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              {attachments.length === 0 && (
-                <p className="text-sm text-muted-foreground">Nenhum anexo.</p>
-              )}
-              {attachments.map((a) => (
-                <a
-                  key={a.id}
-                  href={getAttachmentFileUrl(a)}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="flex items-center justify-between rounded border px-2 py-1.5 text-xs hover:bg-muted/50"
-                >
-                  <span className="truncate">{a.file_name || a.file}</span>
-                  <Download className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                </a>
-              ))}
-              {!isClosed && (
-                <label className="mt-2 block cursor-pointer text-xs text-primary hover:underline">
-                  <input
-                    type="file"
-                    multiple
-                    className="hidden"
-                    onChange={(e) => handleAttach(e.target.files)}
-                  />
-                  Anexar arquivo…
-                </label>
-              )}
-            </CardContent>
-          </Card>
+          {/* Triagem por IA */}
+          {canViewTriageHistory && (
+            <TicketTriageHistoryCard
+              ticketId={id!}
+              canReclassify={!isClosed}
+              onReclassified={refreshTicket}
+            />
+          )}
         </div>
       </div>
 
@@ -666,6 +822,27 @@ export default function TicketDetail() {
         open={showResolve}
         onOpenChange={setShowResolve}
         onResolved={loadTicket}
+      />
+
+      <DelegateDialog
+        ticketId={id!}
+        open={showDelegate}
+        onOpenChange={setShowDelegate}
+        onDelegated={loadTicket}
+      />
+
+      <ChildTicketDialog
+        parent={ticket}
+        open={showChildTicket}
+        onOpenChange={setShowChildTicket}
+        onCreated={loadTicket}
+      />
+
+      <AssociateTicketsDialog
+        ticket={ticket}
+        open={showAssociate}
+        onOpenChange={setShowAssociate}
+        onAssociated={loadTicket}
       />
     </div>
   )
