@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react'
-import { Building2, Clock, Pause, Play, PlusCircle, Phone, Square, UserRound } from 'lucide-react'
+import { Building2, Clock, Pause, Play, Phone, Square, UserRound } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Separator } from '@/components/ui/separator'
 import { TicketCategoryCard } from '@/components/tickets/TicketCategoryCard'
 import { TicketTriageHistoryCard } from '@/components/tickets/TicketTriageHistoryCard'
 import { TicketSheetCard, TicketSheetField } from '@/components/tickets/TicketSheetCard'
+import { TicketHoursAuditCard } from '@/components/tickets/TicketHoursAuditCard'
 import type { TicketRecord, WorkCyclePauseRecord } from '@/services/tickets'
 import {
   startOperatorWorkCycle,
@@ -193,37 +193,14 @@ export function TicketSheetRightColumn({
         </TicketSheetField>
       </TicketSheetCard>
 
-      {/* Apuração de Horas — 2 cartões + lançamento de acompanhamento */}
-      <TicketSheetCard
-        title="Apuração de Horas"
-        icon={<Clock className="h-3.5 w-3.5" />}
-        contentClassName="space-y-3"
-      >
-        <div className="grid grid-cols-2 gap-2">
-          <div className="rounded-lg border border-amber-500/25 bg-amber-500/[0.07] px-3 py-2">
-            <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-              Horas Trabalhadas
-            </p>
-            <p className="font-mono text-sm font-bold tabular-nums text-amber-700 dark:text-amber-400">
-              {formatSeconds(liveCycleSeconds)}
-            </p>
-          </div>
-          <div className="rounded-lg border bg-slate-500/[0.06] px-3 py-2">
-            <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-              Horas de Log
-            </p>
-            <p className="font-mono text-sm font-bold tabular-nums">
-              {formatSeconds(ticket.accompaniment_seconds || 0)}
-            </p>
-          </div>
-        </div>
-        <Separator />
-        {canLaunchAccompaniment && !isClosed && (
-          <Button size="sm" variant="outline" onClick={onShowAccompaniment}>
-            <PlusCircle className="mr-1 h-3.5 w-3.5" /> Acompanhamento
-          </Button>
-        )}
-      </TicketSheetCard>
+      {/* Apuração de Horas — visual refinado (2 cartões + resumo + lançamento) */}
+      <TicketHoursAuditCard
+        workedSeconds={liveCycleSeconds}
+        loggedSeconds={ticket.accompaniment_seconds || 0}
+        canLaunchAccompaniment={canLaunchAccompaniment}
+        isClosed={isClosed}
+        onLaunchAccompaniment={onShowAccompaniment}
+      />
 
       {/* Categoria / Atividade */}
       {canEditCategory && (
