@@ -1,9 +1,7 @@
 import { useEffect, useState, useCallback } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import {
-  ArrowLeft,
   Play,
-  Square,
   PauseCircle,
   CheckCircle2,
   Clock,
@@ -12,13 +10,9 @@ import {
   GitBranch,
   Link2,
   ClipboardCheck,
-  Pause,
-  PlusCircle,
-  UserRound,
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
 import { useAuth } from '@/hooks/use-auth'
 import { usePermissions } from '@/hooks/use-permissions'
@@ -46,10 +40,6 @@ import type {
 import { getTicketAttachments, uploadAttachment } from '@/services/attachments'
 import type { TicketAttachmentRecord } from '@/services/attachments'
 import { sendManualApproval } from '@/services/approvals'
-import { StatusBadge } from '@/components/StatusBadge'
-import { PriorityBadge } from '@/components/PriorityBadge'
-import { SlaStatusBadge } from '@/components/SlaStatusBadge'
-import { SlaDetailBlock } from '@/components/SlaDetailBlock'
 import { SlaPauseDialog } from '@/components/SlaPauseDialog'
 import { WorkCyclePauseDialog } from '@/components/WorkCyclePauseDialog'
 import { ResolveTicketDialog } from '@/components/ResolveTicketDialog'
@@ -57,24 +47,22 @@ import { DelegateDialog } from '@/components/DelegateDialog'
 import { ChildTicketDialog } from '@/components/ChildTicketDialog'
 import { AssociateTicketsDialog } from '@/components/AssociateTicketsDialog'
 import { TicketAiReplyPanel } from '@/components/TicketAiReplyPanel'
-import { TicketCategoryCard } from '@/components/tickets/TicketCategoryCard'
-import { TicketTriageHistoryCard } from '@/components/tickets/TicketTriageHistoryCard'
 import { KbRecommendedBlock } from '@/components/tickets/KbRecommendedBlock'
 import { TicketRequesterProfileDialog } from '@/components/tickets/TicketRequesterProfileDialog'
 import { AccompanimentHoursDialog } from '@/components/tickets/AccompanimentHoursDialog'
 import { TicketSheetTabs, type HistoryRecord } from '@/components/tickets/TicketSheetTabs'
 import { TicketSheetRightColumn } from '@/components/tickets/TicketSheetRightColumn'
 import { TicketSheetHeader } from '@/components/tickets/TicketSheetHeader'
-import { computeSlaSolutionStatus } from '@/lib/sla-status'
-import { parseHHMMToMinutes } from '@/lib/duration'
+import { parseHHMMToMinutes, formatSeconds } from '@/lib/duration'
 import { getErrorMessage } from '@/lib/pocketbase/errors'
-import { cn } from '@/lib/utils'
 
 const CLOSED_STATUSES = ['Resolvido', 'Encerrado', 'Cancelado']
 
 export interface TicketDetailProps {
   /** Página (padrão) ou painel lateral da Tela Dividida. */
   variant?: 'page' | 'panel'
+  /** Sobrepõe o :id da rota — usado pelo painel da Tela Dividida. */
+  ticketId?: string
 }
 
 /**
@@ -82,8 +70,9 @@ export interface TicketDetailProps {
  * e no painel direito da Tela Dividida (variant="panel", sem botão Voltar,
  * sem título gigante; rolagem independente no contêiner do painel).
  */
-export default function TicketDetail({ variant = 'page' }: TicketDetailProps) {
-  const { id } = useParams<{ id: string }>()
+export default function TicketDetail({ variant = 'page', ticketId }: TicketDetailProps) {
+  const routeParams = useParams<{ id: string }>()
+  const id = ticketId || routeParams.id
   const navigate = useNavigate()
   const { user } = useAuth()
   const { canAccessItem, canPauseSla, canResolveTicket, canAssignTicket } = usePermissions()
@@ -140,18 +129,23 @@ export default function TicketDetail({ variant = 'page' }: TicketDetailProps) {
       setHistory(hist as HistoryRecord[])
       setOpenCyclePause(wcp)
     } catch (err) {
-      toast({
-        title: 'Erro ao carregar chamado',
-        description: getErrorMessage(err),
-        variant: 'destructive',
-      })
+      setTicket(null)
+      if (variant === 'page') {
+        toast({
+          title: 'Erro ao carregar chamado',
+          description: getErrorMessage(err),
+          variant: 'destructive',
+        })
+      }
     } finally {
       setLoading(false)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id])
+  }, [id, variant])
 
   useEffect(() => {
+    setTicket(null)
+    setLoading(true)
     loadTicket()
   }, [loadTicket])
 
@@ -332,9 +326,11 @@ export default function TicketDetail({ variant = 'page' }: TicketDetailProps) {
     return (
       <div className="space-y-4 py-16 text-center">
         <p className="text-muted-foreground">Chamado não encontrado.</p>
-        <Button variant="outline" onClick={() => navigate('/tickets')}>
-          Voltar para a lista
-        </Button>
+        {variant === 'page' && (
+          <Button variant="outline" onClick={() => navigate('/tickets')}>
+            Voltar para a lista
+          </Button>
+        )}
       </div>
     )
   }
@@ -349,6 +345,13 @@ export default function TicketDetail({ variant = 'page' }: TicketDetailProps) {
         assignedName={assignedName}
         variant={variant}
         onBack={() => navigate('/tickets')}
+        cycleStarted={!!ticket.operator_cycle_start}
+        cyclePaused={cyclePaused}
+        actionLoading={actionLoading}
+        onStartWorkCycle={handleStartWorkCycle}
+        onPauseWorkCycle={() => setShowWorkCyclePause(true)}
+        onResumeWorkCycle={handleResumeWorkCycle}
+        onStopWorkCycle={handleStopWorkCycle}
       />
 
       <div className="grid gap-5 items-start lg:grid-cols-3">
@@ -478,7 +481,7 @@ export default function TicketDetail({ variant = 'page' }: TicketDetailProps) {
             />
           )}
 
-          {/* Total de Horas Lançadas — compacto, no rodapé da coluna principal */}
+          {/* Total de Horas Lançadas — faixa compacta âmbar no rodapé da coluna */}
           <div className="flex items-center justify-between rounded-xl border border-amber-500/30 bg-amber-500/[0.06] px-4 py-3">
             <span className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-400">
               <Clock className="h-4 w-4" /> Total de Horas Lançadas
@@ -491,9 +494,10 @@ export default function TicketDetail({ variant = 'page' }: TicketDetailProps) {
 
         {/* Coluna direita — 1/3 da ficha */}
         <TicketSheetRightColumn
-          ticketId={id!}
           ticket={ticket}
+          ticketId={id!}
           assignedName={assignedName}
+          actionLoading={actionLoading}
           canPauseWorkCycle={canPauseWorkCycle && !isClosed}
           canEditCategory={canEditCategory}
           canViewTriageHistory={canViewTriageHistory}
