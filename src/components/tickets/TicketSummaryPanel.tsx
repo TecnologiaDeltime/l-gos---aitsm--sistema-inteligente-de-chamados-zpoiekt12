@@ -14,6 +14,8 @@ import { Badge } from '@/components/ui/badge'
 import { StatusBadge } from '@/components/StatusBadge'
 import { PriorityBadge } from '@/components/PriorityBadge'
 import { SlaStatusBadge } from '@/components/SlaStatusBadge'
+import { SlaDetailBlock } from '@/components/SlaDetailBlock'
+import { TicketSlaEvolutionCard } from '@/components/tickets/TicketSlaEvolutionCard'
 import { TicketRecord } from '@/services/tickets'
 import {
   computeSlaResponseStatus,
@@ -131,6 +133,13 @@ export function TicketSummaryPanel({ ticket, onClose }: TicketSummaryPanelProps)
                 {formatDeadline(ticket.sla_response_deadline)}
               </span>
             </div>
+            <SlaDetailBlock
+              type="response"
+              status={computeSlaResponseStatus(ticket)}
+              deadline={ticket.sla_response_deadline}
+              completedAt={ticket.sla_response_at || ticket.sla_response_start}
+              createdAt={ticket.created}
+            />
             <div className="flex items-center justify-between gap-2">
               <SlaStatusBadge
                 type="solution"
@@ -142,6 +151,14 @@ export function TicketSummaryPanel({ ticket, onClose }: TicketSummaryPanelProps)
                 {formatDeadline(ticket.sla_solution_deadline)}
               </span>
             </div>
+            <SlaDetailBlock
+              type="solution"
+              status={computeSlaSolutionStatus(ticket)}
+              deadline={ticket.sla_solution_deadline}
+              completedAt={ticket.sla_solution_at}
+              createdAt={ticket.created}
+              totalPauseMinutes={ticket.sla_pause_total_minutes || 0}
+            />
           </div>
         </div>
 

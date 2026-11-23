@@ -5,6 +5,7 @@ import { TicketCategoryCard } from '@/components/tickets/TicketCategoryCard'
 import { TicketTriageHistoryCard } from '@/components/tickets/TicketTriageHistoryCard'
 import { TicketSheetCard, TicketSheetField } from '@/components/tickets/TicketSheetCard'
 import { TicketHoursAuditCard } from '@/components/tickets/TicketHoursAuditCard'
+import { TicketSlaEvolutionCard } from '@/components/tickets/TicketSlaEvolutionCard'
 import type { TicketRecord, WorkCyclePauseRecord } from '@/services/tickets'
 import {
   startOperatorWorkCycle,
@@ -80,6 +81,9 @@ export function TicketSheetRightColumn({
 
   return (
     <div className="space-y-5">
+      {/* Evolução do SLA — barras de progresso de Resposta e Solução (restaurado) */}
+      <TicketSlaEvolutionCard ticket={ticket} />
+
       {/* Ciclo de Trabalho — botões Play/Pause ACIMA do card */}
       {canPauseWorkCycle && (
         <div className="flex flex-wrap items-center gap-2">
