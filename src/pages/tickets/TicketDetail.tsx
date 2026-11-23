@@ -20,6 +20,8 @@ import {
   ClipboardCheck,
   Pause,
   Timer,
+  PlusCircle,
+  UserRound,
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -72,6 +74,8 @@ import { TicketAiReplyPanel } from '@/components/TicketAiReplyPanel'
 import { TicketCategoryCard } from '@/components/tickets/TicketCategoryCard'
 import { TicketTriageHistoryCard } from '@/components/tickets/TicketTriageHistoryCard'
 import { KbRecommendedBlock } from '@/components/tickets/KbRecommendedBlock'
+import { TicketRequesterProfileDialog } from '@/components/tickets/TicketRequesterProfileDialog'
+import { AccompanimentHoursDialog } from '@/components/tickets/AccompanimentHoursDialog'
 import { computeSlaSolutionStatus } from '@/lib/sla-status'
 import { formatSeconds, parseHHMMToMinutes } from '@/lib/duration'
 import { HHMMInput } from '@/components/ui/HHMMInput'
@@ -116,6 +120,8 @@ export default function TicketDetail() {
   const [showChildTicket, setShowChildTicket] = useState(false)
   const [showAssociate, setShowAssociate] = useState(false)
   const [sendingApproval, setSendingApproval] = useState(false)
+  const [showRequesterProfile, setShowRequesterProfile] = useState(false)
+  const [showAccompaniment, setShowAccompaniment] = useState(false)
 
   const [newInteraction, setNewInteraction] = useState('')
   const [newInteractionMinutes, setNewInteractionMinutes] = useState('')
@@ -126,6 +132,8 @@ export default function TicketDetail() {
   const canViewTriageHistory = canAccessItem('tickets', 'tickets_triage_history')
   const canEditCategory = canAccessItem('tickets', 'tickets_categoria_edit')
   const canSendManualApproval = canAccessItem('tickets', 'tickets_manual_approval_send')
+  // Lançamento de acompanhamento (horas de log) — item do catálogo de permissões.
+  const canLaunchAccompaniment = canAccessItem('tickets', 'admin_accompaniment_hours_edit')
 
   const loadTicket = useCallback(async () => {
     if (!id) return
@@ -179,6 +187,28 @@ export default function TicketDetail() {
   const cyclePaused = !!openCyclePause
 
   const isClosed = ticket ? CLOSED_STATUSES.includes(ticket.status) : false
+
+  // ---- CRONÔMETRO DO CICLO (Tempo do Ciclo) ----
+  // Enquanto o ciclo está EM ANDAMENTO (não pausado, operator_cycle_start
+  // preenchido), o acumulado do backend (operator_worked_seconds) ainda não
+  // inclui o segmento atual — somamos (agora − operator_cycle_start) ao vivo,
+  // com um tick por segundo. Quando pausado ou não iniciado, fica estático.
+  const cycleRunning = !cyclePaused && !!ticket?.operator_cycle_start
+  const [cycleNowMs, setCycleNowMs] = useState(Date.now())
+  useEffect(() => {
+    if (!cycleRunning) return
+    setCycleNowMs(Date.now())
+    const t = setInterval(() => setCycleNowMs(Date.now()), 1000)
+    return () => clearInterval(t)
+  }, [cycleRunning, ticket?.operator_cycle_start])
+  const liveCycleSeconds =
+    cycleRunning && ticket?.operator_cycle_start
+      ? (ticket.operator_worked_seconds || 0) +
+        Math.max(
+          0,
+          Math.floor((cycleNowMs - new Date(ticket.operator_cycle_start).getTime()) / 1000),
+        )
+      : ticket?.operator_worked_seconds || 0
 
   const runAction = async (fn: () => Promise<unknown>, successTitle: string) => {
     setActionLoading(true)
@@ -694,13 +724,20 @@ export default function TicketDetail() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              <div>
-                <p className="text-xs uppercase tracking-wide text-muted-foreground">
+              {/* Campo fino: rótulo à esquerda, cronômetro rodando a cada segundo à direita */}
+              <div className="flex items-center justify-between rounded-lg border bg-muted/30 px-3 py-2">
+                <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                   Tempo do Ciclo
-                </p>
-                <p className="font-mono text-3xl font-bold">
-                  {formatSeconds(ticket.operator_worked_seconds || 0)}
-                </p>
+                </span>
+                <span className="flex items-center gap-2 font-mono text-sm font-semibold tabular-nums text-foreground">
+                  {cycleRunning && (
+                    <span className="relative flex h-2 w-2">
+                      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-500 opacity-75" />
+                      <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
+                    </span>
+                  )}
+                  {formatSeconds(liveCycleSeconds)}
+                </span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Estado</span>
@@ -734,22 +771,43 @@ export default function TicketDetail() {
               <CardTitle className="font-serif text-base tracking-tight">Solicitante</CardTitle>
             </CardHeader>
             <CardContent className="space-y-2 text-sm">
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Nome</span>
-                <span className="font-medium">{ticket.requester_name}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">E-mail</span>
-                <span>{ticket.requester_email || '—'}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Responsável</span>
-                <span>{assignedName}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Aberto em</span>
-                <span>{new Date(ticket.created).toLocaleString('pt-BR')}</span>
-              </div>
+              {(
+                [
+                  { label: 'Nome', value: ticket.requester_name, strong: true },
+                  { label: 'Telefone', value: ticket.requester_phone || '' },
+                  { label: 'Setor', value: expanded.department?.name || '' },
+                  { label: 'Filial', value: expanded.unit?.name || '' },
+                  { label: 'E-mail', value: ticket.requester_email || '' },
+                  { label: 'Responsável', value: assignedName },
+                  {
+                    label: 'Aberto em',
+                    value: new Date(ticket.created).toLocaleString('pt-BR'),
+                  },
+                ] as { label: string; value: string; strong?: boolean }[]
+              )
+                .filter((row) => row.value && row.value.trim() !== '' && row.value !== '—')
+                .map((row) => (
+                  <div key={row.label} className="flex justify-between gap-2">
+                    <span className="shrink-0 text-muted-foreground">{row.label}</span>
+                    <span
+                      className={cn(
+                        'text-right',
+                        row.strong ? 'font-medium text-foreground' : undefined,
+                      )}
+                    >
+                      {row.value}
+                    </span>
+                  </div>
+                ))}
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full"
+                onClick={() => setShowRequesterProfile(true)}
+              >
+                <UserRound className="mr-1 h-4 w-4" /> Ver o perfil completo e o histórico do
+                solicitante
+              </Button>
             </CardContent>
           </Card>
 
@@ -788,23 +846,35 @@ export default function TicketDetail() {
             </CardContent>
           </Card>
 
-          {/* DOIS CARTÕES LADO A LADO — horas trabalhadas (âmbar claro) e horas de log (cinza claro) */}
-          <div className="grid grid-cols-2 gap-3">
-            <div className="rounded-xl border border-amber-500/30 bg-amber-500/[0.06] p-3">
-              <p className="text-[11px] font-medium uppercase tracking-wide text-amber-700 dark:text-amber-400">
-                Horas Trabalhadas
+          {/* APURAÇÃO DE HORAS — agrupa Horas Trabalhadas e Horas de Log, com lançamento de acompanhamento */}
+          <div className="rounded-xl border p-3">
+            <div className="mb-3 flex items-center justify-between gap-2">
+              <p className="font-serif text-base font-semibold tracking-tight text-foreground">
+                Apuração de Horas
               </p>
-              <p className="mt-1 font-mono text-lg font-bold text-amber-800 dark:text-amber-300">
-                {formatSeconds(ticket.operator_worked_seconds || 0)}
-              </p>
+              {canLaunchAccompaniment && !isClosed && (
+                <Button size="sm" variant="outline" onClick={() => setShowAccompaniment(true)}>
+                  <PlusCircle className="mr-1 h-4 w-4" /> Acompanhamento
+                </Button>
+              )}
             </div>
-            <div className="rounded-xl border bg-muted/40 p-3">
-              <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-                Horas de Log do Chamado
-              </p>
-              <p className="mt-1 font-mono text-lg font-bold">
-                {formatSeconds(ticket.accompaniment_seconds || 0)}
-              </p>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="rounded-xl border border-amber-500/30 bg-amber-500/[0.06] p-3">
+                <p className="text-[11px] font-medium uppercase tracking-wide text-amber-700 dark:text-amber-400">
+                  Horas Trabalhadas
+                </p>
+                <p className="mt-1 font-mono text-lg font-bold text-amber-800 dark:text-amber-300">
+                  {formatSeconds(ticket.operator_worked_seconds || 0)}
+                </p>
+              </div>
+              <div className="rounded-xl border bg-muted/40 p-3">
+                <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                  Horas de Log do Chamado
+                </p>
+                <p className="mt-1 font-mono text-lg font-bold">
+                  {formatSeconds(ticket.accompaniment_seconds || 0)}
+                </p>
+              </div>
             </div>
           </div>
 
@@ -868,6 +938,24 @@ export default function TicketDetail() {
         open={showAssociate}
         onOpenChange={setShowAssociate}
         onAssociated={loadTicket}
+      />
+
+      {/* Diálogo "+ Acompanhamento" — lança horas de log e recarrega a ficha ao salvar */}
+      <AccompanimentHoursDialog
+        open={showAccompaniment}
+        onOpenChange={setShowAccompaniment}
+        ticketId={id!}
+        ticketNumber={ticket.number}
+        onSaved={refreshTicket}
+      />
+
+      {/* Diálogo de perfil completo + histórico do solicitante */}
+      <TicketRequesterProfileDialog
+        open={showRequesterProfile}
+        onOpenChange={setShowRequesterProfile}
+        requesterEmail={ticket.requester_email}
+        fallbackName={ticket.requester_name}
+        currentTicketId={ticket.id}
       />
     </div>
   )

@@ -10,15 +10,14 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Skeleton } from '@/components/ui/skeleton'
-import { StatusBadge } from '@/components/StatusBadge'
 import { formatDateOnly } from '@/lib/date-format'
 import { Phone, Building2, Users, Mail } from 'lucide-react'
 
 interface RequesterUserProfileDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  /** id do usuário solicitante na collection users */
-  userId?: string
+  /** e-mail do solicitante (campo requester_email do chamado) */
+  requesterEmail?: string
   /** nome de exibição (fallback, caso o registro do usuário não seja encontrado) */
   fallbackName?: string
   /** id do chamado atual, para marcar "chamado atual" no histórico */
@@ -30,13 +29,10 @@ interface UserRecord {
   name: string
   email?: string
   phone?: string
-  sector?: string
-  department?: string
-  unit?: string
-  role?: string
   position?: string
-  avatar?: string
-  expand?: any
+  role?: string
+  unit?: string
+  expand?: { unit?: { name?: string } }
 }
 
 interface TicketRow {
@@ -57,14 +53,21 @@ const statusTone: Record<string, string> = {
 
 /**
  * Diálogo "Ver o perfil completo e o histórico do solicitante": dados
- * completos do perfil (nome, e-mail, telefone, setor, filial) + lista dos
+ * completos do perfil (nome, e-mail, telefone, cargo, filial) + lista dos
  * chamados que esse solicitante já abriu (número, título, status, data).
  * Abre sobreposto à ficha do chamado — nunca navega para fora dela.
+ *
+ * Os chamados são buscados por requester_email (o chamado não tem relação
+ * "requester" — apenas requester_name/requester_email/requester_phone).
+ * O registro em users é buscado pelo e-mail, mas é OPCIONAL: quando o
+ * solicitante é um usuário de cliente (que outros perfis não conseguem ver
+ * pela regra da collection), o diálogo ainda mostra o histórico e o nome
+ * vindo do chamado.
  */
 export function TicketRequesterProfileDialog({
   open,
   onOpenChange,
-  userId,
+  requesterEmail,
   fallbackName,
   currentTicketId,
 }: RequesterUserProfileDialogProps) {
@@ -74,25 +77,37 @@ export function TicketRequesterProfileDialog({
   const [error, setError] = useState('')
 
   useEffect(() => {
-    if (!open || !userId) return
+    if (!open || !requesterEmail) return
     let cancelled = false
     setLoading(true)
     setError('')
-    Promise.all([
-      pb.collection('users').getOne<UserRecord>(userId, { expand: 'unit,department' }),
-      pb.collection('tickets').getFullList<TicketRow>({
-        filter: `requester = '${userId}'`,
+    const email = requesterEmail.replace(/["\\]/g, '')
+    // O perfil em users é um bônus (pode falhar por regra de acesso); o
+    // histórico de chamados por e-mail funciona para os perfis internos.
+    const userFetch = pb
+      .collection('users')
+      .getFirstListItem<UserRecord>(`email = "${email}"`, { expand: 'unit' })
+      .catch(() => null)
+    const ticketsFetch = pb
+      .collection('tickets')
+      .getFullList<TicketRow>({
+        filter: `requester_email = "${email}"`,
         sort: '-created',
-      }),
-    ])
+      })
+      .catch(() => null)
+    Promise.all([userFetch, ticketsFetch])
       .then(([u, list]) => {
         if (cancelled) return
         setUser(u)
-        setTickets(list)
+        if (list) {
+          setTickets(list)
+          setError('')
+        } else {
+          setError('Não foi possível carregar o histórico de chamados do solicitante.')
+        }
       })
-      .catch((e) => {
+      .catch(() => {
         if (cancelled) return
-        console.error('Erro ao carregar perfil/histórico do solicitante', e)
         setError('Não foi possível carregar o perfil e o histórico do solicitante.')
       })
       .finally(() => {
@@ -101,30 +116,24 @@ export function TicketRequesterProfileDialog({
     return () => {
       cancelled = true
     }
-  }, [open, userId])
+  }, [open, requesterEmail])
 
-  const department = user?.expand?.department?.name || user?.department || ''
-  const unit = user?.expand?.unit?.name || user?.unit || ''
+  const unit = user?.expand?.unit?.name || ''
   const displayName = user?.name || fallbackName || 'Solicitante'
 
   const infoRows: { icon: React.ReactNode; label: string; value?: string }[] = [
-    { icon: <Mail className="h-3.5 w-3.5" />, label: 'E-mail', value: user?.email },
     {
-      icon: <Phone className="h-3.5 w-3.5" />,
-      label: 'Telefone',
-      value: (user as any)?.phone || (user as any)?.telephone || '',
+      icon: <Mail className="h-3.5 w-3.5" />,
+      label: 'E-mail',
+      value: user?.email || requesterEmail,
     },
+    { icon: <Phone className="h-3.5 w-3.5" />, label: 'Telefone', value: user?.phone || '' },
+    { icon: <Building2 className="h-3.5 w-3.5" />, label: 'Filial', value: unit },
     {
-      icon: <Users className="h-3.5 w-3.5" />,
-      label: 'Setor',
-      value: department,
+      icon: null,
+      label: 'Cargo',
+      value: user?.position || (user?.role ? String(user.role) : ''),
     },
-    {
-      icon: <Building2 className="h-3.5 w-3.5" />,
-      label: 'Filial',
-      value: unit,
-    },
-    { icon: null, label: 'Cargo', value: user?.position || user?.role || '' },
   ].filter((r) => r.value && String(r.value).trim() !== '')
 
   return (
