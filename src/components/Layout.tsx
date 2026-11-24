@@ -63,6 +63,7 @@ import {
   FolderKanban,
   Send,
   Presentation,
+  Lightbulb,
 } from 'lucide-react'
 import { useAuth } from '@/hooks/use-auth'
 import { useTheme } from '@/hooks/use-theme'
@@ -134,6 +135,7 @@ export default function Layout() {
   const [dashboardMenuOpen, setDashboardMenuOpen] = useState(false)
   const [changesMenuOpen, setChangesMenuOpen] = useState(false)
   const [problemsMenuOpen, setProblemsMenuOpen] = useState(false)
+  const [suggestionsMenuOpen, setSuggestionsMenuOpen] = useState(false)
   const [visitsN2MenuOpen, setVisitsN2MenuOpen] = useState(false)
   const [configuracoesMenuOpen, setConfiguracoesMenuOpen] = useState(false)
   const [relatoriosMenuOpen, setRelatoriosMenuOpen] = useState(false)
@@ -595,6 +597,19 @@ export default function Layout() {
   ]
   const visitsN2GroupVisible =
     !permissions.isModuleHidden('visits') && visitsN2SubmenuItems.some((i) => i.show)
+
+  const suggestionsSubmenuItems = [
+    {
+      label: 'Sugestões',
+      path: '/suggestions',
+      icon: Lightbulb,
+      show:
+        permissions.canAccessItem('suggestions', 'suggestions_enviar') ||
+        permissions.canAccessItem('suggestions', 'suggestions_gerenciar'),
+    },
+  ]
+  const suggestionsGroupVisible =
+    !permissions.isModuleHidden('suggestions') && suggestionsSubmenuItems.some((i) => i.show)
 
   const adminSubmenuItems = [
     {
@@ -1275,6 +1290,16 @@ export default function Layout() {
             items: problemsSubmenuItems,
             isOpen: problemsMenuOpen,
             onToggle: () => setProblemsMenuOpen(!problemsMenuOpen),
+          })}
+
+        {suggestionsGroupVisible &&
+          renderNavGroup({
+            key: 'suggestions-group',
+            label: 'Sugestões',
+            icon: Lightbulb,
+            items: suggestionsSubmenuItems,
+            isOpen: suggestionsMenuOpen,
+            onToggle: () => setSuggestionsMenuOpen(!suggestionsMenuOpen),
           })}
 
         {projectsGroupVisible &&

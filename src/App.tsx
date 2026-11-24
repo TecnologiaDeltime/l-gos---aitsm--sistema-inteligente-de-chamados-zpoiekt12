@@ -113,6 +113,7 @@ import TechnicianAvailabilityPage from '@/pages/visits-n2/TechnicianAvailability
 import KmRatesPage from '@/pages/visits-n2/KmRatesPage'
 import VisitReportsPage from '@/pages/visits-n2/VisitReportsPage'
 import NotificationsPage from '@/pages/notifications/NotificationsPage'
+import SuggestionsPage from '@/pages/SuggestionsPage'
 import { GlobalNotifications } from '@/components/GlobalNotifications'
 import { SlaResponseAlerts } from '@/components/SlaResponseAlerts'
 import { ConsumptionAlerts } from '@/components/ConsumptionAlerts'
@@ -449,6 +450,14 @@ const App = () => (
                   }
                 />
                 <Route path="/notifications" element={<NotificationsPage />} />
+                <Route
+                  path="/suggestions"
+                  element={
+                    <ProtectedRoute requiredModule="suggestions">
+                      <SuggestionsPage />
+                    </ProtectedRoute>
+                  }
+                />
                 <Route path="/contracts/consumption" element={<ContractConsumptionDashboard />} />
                 <Route path="/consumo-contratos" element={<ConsumoContratosPlaceholder />} />
                 <Route path="/dashboard-contratos" element={<DashboardContratosPlaceholder />} />

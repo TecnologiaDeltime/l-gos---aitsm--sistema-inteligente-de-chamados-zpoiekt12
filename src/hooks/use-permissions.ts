@@ -427,6 +427,7 @@ export function usePermissions() {
   const canTestAutomations = isAdmin || isGestor
 
   return {
+    user,
     role,
     profile,
     isAdmin,

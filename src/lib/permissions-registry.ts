@@ -685,6 +685,31 @@ const BASE_SYSTEM_MODULES: GranularModuleDefinition[] = [
     ],
   },
 
+  {
+    key: 'suggestions',
+    label: 'Sugestões',
+    description:
+      'Área colaborativa onde operadores enviam sugestões, acompanham a avaliação da gestão e a janela de implantação',
+    category: 'Operações & Gestão',
+    items: [
+      {
+        key: 'suggestions_gerenciar',
+        label: 'Gerenciar Sugestões',
+        description:
+          'Fila de gestão em modo de chamado: responder ao autor, aceitar/negar com motivo e vincular janela de mudança programada',
+        path: '/suggestions',
+      },
+      {
+        key: 'suggestions_enviar',
+        label: 'Enviar e Visualizar Sugestões',
+        description: 'Enviar sugestões, ver o feed da equipe e acompanhar o status das próprias',
+        path: '/suggestions',
+        defaultGranted: true,
+        defaultLevel: 'edit',
+      },
+    ],
+  },
+
   // Relatórios & Qualidade
   {
     key: 'reports',

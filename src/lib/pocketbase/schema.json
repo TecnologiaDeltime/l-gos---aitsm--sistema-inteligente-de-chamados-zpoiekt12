@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-24T02:12:10.899Z",
+  "generatedAt": "2026-11-24T13:33:00.562Z",
   "collections": [
     {
       "name": "users",
@@ -13622,6 +13622,95 @@
       "indexes": [
         "CREATE INDEX idx_wcp_ticket ON operator_work_cycle_pauses (ticket)",
         "CREATE INDEX idx_wcp_operator ON operator_work_cycle_pauses (operator)"
+      ]
+    },
+    {
+      "name": "suggestions",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != ''",
+        "view": "@request.auth.id != ''",
+        "create": "@request.auth.id != '' && @request.body.author = @request.auth.id",
+        "update": "@request.auth.id != '' && (@request.auth.role = 'admin' || @request.auth.role = 'gestor' || (author = @request.auth.id && status = 'pendente'))",
+        "delete": "@request.auth.id != '' && @request.auth.role = 'admin'"
+      },
+      "fields": [
+        {
+          "name": "title",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "description",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "category",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["processo", "sistema", "automacao", "infraestrutura", "outro"]
+        },
+        {
+          "name": "author",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "status",
+          "type": "select",
+          "required": true,
+          "system": false,
+          "selectValues": ["pendente", "aceita", "negada", "implantada"]
+        },
+        {
+          "name": "admin_reply",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "reject_reason",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "change_window",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "changes"
+        },
+        {
+          "name": "implantation_date",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": [
+        "CREATE INDEX idx_suggestions_author ON suggestions (author)",
+        "CREATE INDEX idx_suggestions_status ON suggestions (status)"
       ]
     }
   ]
