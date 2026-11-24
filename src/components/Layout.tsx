@@ -1292,16 +1292,6 @@ export default function Layout() {
             onToggle: () => setProblemsMenuOpen(!problemsMenuOpen),
           })}
 
-        {suggestionsGroupVisible &&
-          renderNavGroup({
-            key: 'suggestions-group',
-            label: 'Sugestões',
-            icon: Lightbulb,
-            items: suggestionsSubmenuItems,
-            isOpen: suggestionsMenuOpen,
-            onToggle: () => setSuggestionsMenuOpen(!suggestionsMenuOpen),
-          })}
-
         {projectsGroupVisible &&
           renderNavGroup({
             key: 'projects-group',
@@ -1362,6 +1352,16 @@ export default function Layout() {
             items: configuracoesSubmenuItems,
             isOpen: configuracoesMenuOpen,
             onToggle: () => setConfiguracoesMenuOpen(!configuracoesMenuOpen),
+          })}
+
+        {suggestionsGroupVisible &&
+          renderNavGroup({
+            key: 'suggestions-group',
+            label: 'Sugestões',
+            icon: Lightbulb,
+            items: suggestionsSubmenuItems,
+            isOpen: suggestionsMenuOpen,
+            onToggle: () => setSuggestionsMenuOpen(!suggestionsMenuOpen),
           })}
       </nav>
 
