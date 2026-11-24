@@ -6,6 +6,7 @@ import { TicketTriageHistoryCard } from '@/components/tickets/TicketTriageHistor
 import { TicketSheetCard, TicketSheetField } from '@/components/tickets/TicketSheetCard'
 import { TicketHoursAuditCard } from '@/components/tickets/TicketHoursAuditCard'
 import { TicketSlaEvolutionCard } from '@/components/tickets/TicketSlaEvolutionCard'
+import { RequesterTicketHistory } from '@/components/tickets/RequesterTicketHistory'
 import type { TicketRecord, WorkCyclePauseRecord } from '@/services/tickets'
 import {
   startOperatorWorkCycle,
@@ -199,6 +200,13 @@ export function TicketSheetRightColumn({
         <TicketSheetField icon={<Building2 className="h-3 w-3" />} label="Filial">
           {unitExpand?.name || '—'}
         </TicketSheetField>
+        {/* Histórico de chamados — seção expandível lazy (mesma busca por requester_email do diálogo de perfil) */}
+        <div className="pt-1">
+          <RequesterTicketHistory
+            requesterEmail={ticket.requester_email}
+            currentTicketId={ticket.id}
+          />
+        </div>
       </TicketSheetCard>
 
       {/* Apuração de Horas — visual refinado (2 cartões + resumo + lançamento) */}
