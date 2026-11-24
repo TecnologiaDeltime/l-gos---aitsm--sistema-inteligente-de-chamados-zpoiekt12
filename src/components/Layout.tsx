@@ -1646,7 +1646,15 @@ export default function Layout() {
                     notifications.map((n) => (
                       <div
                         key={n.id}
-                        onClick={() => handleMarkRead(n.id)}
+                        onClick={() => {
+                          handleMarkRead(n.id)
+                          if (n.title.startsWith('Nova sugestão: ')) navigate('/suggestions')
+                        }}
+                        title={
+                          n.title.startsWith('Nova sugestão: ')
+                            ? 'Abrir fila de gestão de sugestões'
+                            : undefined
+                        }
                         className={`p-3 text-xs cursor-pointer hover:bg-secondary transition-colors duration-150 ${
                           !n.read ? 'bg-primary/10 font-medium' : ''
                         }`}
