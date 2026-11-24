@@ -56,7 +56,8 @@ migrate(
     )
     rec.set('subject_template', 'Nova sugestão: {{titulo}}')
     rec.set('default_subject_template', 'Nova sugestão: {{titulo}}')
-    var bodyHtml =
+    rec.set(
+      'default_body_template',
       '<p>Olá,</p>' +
         '<p>O operador <strong>{{autor}}</strong> registrou uma nova sugestão na Área de Sugestões:</p>' +
         '<div style="margin: 18px 0; padding: 14px 18px; background-color: #f8fafc; border-left: 3px solid #D97706; border-radius: 6px;">' +
@@ -66,6 +67,7 @@ migrate(
         '</div>' +
         '<p>Acesse a fila de gestão de sugestões para analisar, aceitar ou negar esta sugestão.</p>',
     )
+    rec.set('body_template', '')
     rec.set('show_button', true)
     rec.set('button_label', 'Abrir fila de sugestões')
     rec.set('button_url_template', '{{link}}')
@@ -74,8 +76,7 @@ migrate(
     app.save(rec)
   },
   (app) => {
-    // Down: remove a configuração semeada (e-mail nunca enviado fica registrado
-    // em email_sent_logs apenas se chegou a ser enviado — reversão é limpa).
+    // Down: remove a configuração semeada (reversão limpa).
     try {
       const seeded = app.findFirstRecordByFilter(
         'email_alert_settings',
