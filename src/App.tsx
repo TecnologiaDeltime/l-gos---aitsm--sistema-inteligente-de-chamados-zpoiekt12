@@ -114,6 +114,7 @@ import KmRatesPage from '@/pages/visits-n2/KmRatesPage'
 import VisitReportsPage from '@/pages/visits-n2/VisitReportsPage'
 import NotificationsPage from '@/pages/notifications/NotificationsPage'
 import SuggestionsPage from '@/pages/SuggestionsPage'
+import LaudosPage from '@/pages/laudos/LaudosPage'
 import { GlobalNotifications } from '@/components/GlobalNotifications'
 import { SlaResponseAlerts } from '@/components/SlaResponseAlerts'
 import { ConsumptionAlerts } from '@/components/ConsumptionAlerts'
@@ -450,6 +451,14 @@ const App = () => (
                   }
                 />
                 <Route path="/notifications" element={<NotificationsPage />} />
+                <Route
+                  path="/laudos"
+                  element={
+                    <ProtectedRoute requiredModule="laudos">
+                      <LaudosPage />
+                    </ProtectedRoute>
+                  }
+                />
                 <Route
                   path="/suggestions"
                   element={

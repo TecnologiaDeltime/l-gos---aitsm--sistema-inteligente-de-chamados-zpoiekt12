@@ -64,6 +64,7 @@ import {
   Send,
   Presentation,
   Lightbulb,
+  Camera,
 } from 'lucide-react'
 import { useAuth } from '@/hooks/use-auth'
 import { useTheme } from '@/hooks/use-theme'
@@ -136,6 +137,7 @@ export default function Layout() {
   const [changesMenuOpen, setChangesMenuOpen] = useState(false)
   const [problemsMenuOpen, setProblemsMenuOpen] = useState(false)
   const [suggestionsMenuOpen, setSuggestionsMenuOpen] = useState(false)
+  const [laudosMenuOpen, setLaudosMenuOpen] = useState(false)
   const [visitsN2MenuOpen, setVisitsN2MenuOpen] = useState(false)
   const [configuracoesMenuOpen, setConfiguracoesMenuOpen] = useState(false)
   const [relatoriosMenuOpen, setRelatoriosMenuOpen] = useState(false)
@@ -610,6 +612,19 @@ export default function Layout() {
   ]
   const suggestionsGroupVisible =
     !permissions.isModuleHidden('suggestions') && suggestionsSubmenuItems.some((i) => i.show)
+
+  const laudosSubmenuItems = [
+    {
+      label: 'Laudos Fotográficos',
+      path: '/laudos',
+      icon: Camera,
+      show:
+        permissions.canAccessItem('laudos', 'laudos_enviar') ||
+        permissions.canAccessItem('laudos', 'laudos_gerenciar'),
+    },
+  ]
+  const laudosGroupVisible =
+    !permissions.isModuleHidden('laudos') && laudosSubmenuItems.some((i) => i.show)
 
   const adminSubmenuItems = [
     {
@@ -1362,6 +1377,16 @@ export default function Layout() {
             items: suggestionsSubmenuItems,
             isOpen: suggestionsMenuOpen,
             onToggle: () => setSuggestionsMenuOpen(!suggestionsMenuOpen),
+          })}
+
+        {laudosGroupVisible &&
+          renderNavGroup({
+            key: 'laudos-group',
+            label: 'Laudos',
+            icon: Camera,
+            items: laudosSubmenuItems,
+            isOpen: laudosMenuOpen,
+            onToggle: () => setLaudosMenuOpen(!laudosMenuOpen),
           })}
       </nav>
 

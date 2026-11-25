@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-25T20:02:37.219Z",
+  "generatedAt": "2026-11-25T20:17:06.461Z",
   "collections": [
     {
       "name": "users",
@@ -13758,6 +13758,258 @@
         "CREATE UNIQUE INDEX idx_suggestion_votes_pair_uniq ON suggestion_votes (suggestion, voter)",
         "CREATE INDEX idx_suggestion_votes_voter ON suggestion_votes (voter)"
       ]
+    },
+    {
+      "name": "checklist_templates",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != ''",
+        "view": "@request.auth.id != ''",
+        "create": "@request.auth.id != '' && (@request.auth.role = 'admin' || @request.auth.role = 'gestor' || @request.auth.role = 'tecnico')",
+        "update": "@request.auth.id != '' && (@request.auth.role = 'admin' || @request.auth.role = 'gestor' || @request.auth.role = 'tecnico')",
+        "delete": "@request.auth.id != '' && (@request.auth.role = 'admin' || @request.auth.role = 'gestor')"
+      },
+      "fields": [
+        {
+          "name": "title",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "description",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "company",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "companies"
+        },
+        {
+          "name": "ambients",
+          "type": "json",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "active",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created_by",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": ["CREATE INDEX idx_checklist_templates_company ON checklist_templates (company)"]
+    },
+    {
+      "name": "laudos",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != ''",
+        "view": "@request.auth.id != ''",
+        "create": "@request.auth.id != '' && @request.body.technician = @request.auth.id && (@request.auth.role = 'admin' || @request.auth.role = 'gestor' || @request.auth.role = 'tecnico' || @request.auth.role = 'qualidade')",
+        "update": "@request.auth.id != '' && (technician = @request.auth.id || @request.auth.role = 'admin' || @request.auth.role = 'gestor') && status != 'concluido'",
+        "delete": "@request.auth.id != '' && (@request.auth.role = 'admin' || @request.auth.role = 'gestor')"
+      },
+      "fields": [
+        {
+          "name": "title",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "description",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "company",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "companies"
+        },
+        {
+          "name": "technician",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "template",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "checklist_templates"
+        },
+        {
+          "name": "visit_date",
+          "type": "date",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "status",
+          "type": "select",
+          "required": true,
+          "system": false,
+          "selectValues": ["rascunho", "em_andamento", "concluido"]
+        },
+        {
+          "name": "companion_name",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "companion_role",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "companion_signature",
+          "type": "file",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "signed_at",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "final_notes",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": [
+        "CREATE INDEX idx_laudos_company ON laudos (company)",
+        "CREATE INDEX idx_laudos_technician ON laudos (technician)",
+        "CREATE INDEX idx_laudos_status ON laudos (status)"
+      ]
+    },
+    {
+      "name": "laudo_ambientes",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != ''",
+        "view": "@request.auth.id != ''",
+        "create": "@request.auth.id != '' && (@request.auth.role = 'admin' || @request.auth.role = 'gestor' || @request.auth.role = 'tecnico' || @request.auth.role = 'qualidade')",
+        "update": "@request.auth.id != '' && (@request.auth.role = 'admin' || @request.auth.role = 'gestor' || laudo.technician = @request.auth.id) && laudo.status != 'concluido'",
+        "delete": "@request.auth.id != '' && (@request.auth.role = 'admin' || @request.auth.role = 'gestor' || laudo.technician = @request.auth.id) && laudo.status != 'concluido'"
+      },
+      "fields": [
+        {
+          "name": "laudo",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "laudos"
+        },
+        {
+          "name": "ambient_name",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "sort_order",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "checklist_items",
+          "type": "json",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "observations",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "status",
+          "type": "select",
+          "required": true,
+          "system": false,
+          "selectValues": ["pendente", "em_andamento", "concluido"]
+        },
+        {
+          "name": "photos_before",
+          "type": "file",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "photos_after",
+          "type": "file",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": ["CREATE INDEX idx_laudo_ambientes_laudo ON laudo_ambientes (laudo)"]
     }
   ]
 }

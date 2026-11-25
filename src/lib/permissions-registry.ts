@@ -710,6 +710,32 @@ const BASE_SYSTEM_MODULES: GranularModuleDefinition[] = [
     ],
   },
 
+  {
+    key: 'laudos',
+    label: 'Laudos Fotográficos',
+    description:
+      'Laudo fotográfico de visitas preventivas: checklist por ambiente do cliente, fotos antes/depois e assinatura de quem acompanhou',
+    category: 'Operações & Gestão',
+    items: [
+      {
+        key: 'laudos_gerenciar',
+        label: 'Gerenciar Laudos e Checklists',
+        description:
+          'Criar e editar templates de checklist por cliente/ambiente, ver todos os laudos e finalizar com assinatura',
+        path: '/laudos',
+      },
+      {
+        key: 'laudos_enviar',
+        label: 'Executar Laudos Fotográficos',
+        description:
+          'Criar laudo de visita preventiva, executar checklist por ambiente, anexar fotos antes/depois e coletar assinatura',
+        path: '/laudos',
+        defaultGranted: true,
+        defaultLevel: 'edit',
+      },
+    ],
+  },
+
   // Relatórios & Qualidade
   {
     key: 'reports',
