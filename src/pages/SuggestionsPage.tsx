@@ -1,6 +1,7 @@
 // Área de Sugestões — feed colaborativo dos operadores + fila de gestão (admin/dev).
 // Regra permanente: permissão suggestions_enviar (todos) e suggestions_gerenciar (gestão).
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { toast } from '@/hooks/use-toast'
 import { Lightbulb, Loader2, Plus, RefreshCw, Search } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -34,8 +35,12 @@ import {
   Suggestion,
   SuggestionCategory,
   SuggestionStatus,
+  SuggestionVote,
   createSuggestion,
   listSuggestions,
+  listSuggestionVotes,
+  unvoteSuggestion,
+  voteSuggestion,
 } from '@/services/suggestions'
 import { SuggestionCardView } from '@/components/suggestions/SuggestionCard'
 import { SuggestionManageDialog } from '@/components/suggestions/SuggestionManageDialog'
@@ -53,6 +58,8 @@ export default function SuggestionsPage() {
 
   const [tab, setTab] = useState<'feed' | 'gestao'>('feed')
   const [suggestions, setSuggestions] = useState<Suggestion[]>([])
+  const [votes, setVotes] = useState<SuggestionVote[]>([])
+  const [busyVoteIds, setBusyVoteIds] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('todas')
@@ -73,7 +80,9 @@ export default function SuggestionsPage() {
       if (silent) setRefreshing(true)
       else setLoading(true)
       try {
-        setSuggestions(await listSuggestions())
+        const [list, voteList] = await Promise.all([listSuggestions(), listSuggestionVotes()])
+        setSuggestions(list)
+        setVotes(voteList)
       } catch (e) {
         toast({
           title: 'Erro ao carregar sugestões',
@@ -124,25 +133,87 @@ export default function SuggestionsPage() {
     }
   }
 
+  const currentUserId = user?.id
+  const authorNameOf = (s: Suggestion) => s.expand?.author?.name || 'Operador'
+
+  // Votos: contagem por sugestão + id do voto do usuário atual (estado "votado").
+  const voteCountBySuggestion = useMemo(() => {
+    const map = new Map<string, number>()
+    for (const v of votes) map.set(v.suggestion, (map.get(v.suggestion) || 0) + 1)
+    return map
+  }, [votes])
+
+  const myVoteBySuggestion = useMemo(() => {
+    const map = new Map<string, string>()
+    if (!currentUserId) return map
+    for (const v of votes) if (v.voter === currentUserId) map.set(v.suggestion, v.id)
+    return map
+  }, [votes, currentUserId])
+
   const filtered = useMemo(() => {
     const byStatus =
       statusFilter === 'todas' ? suggestions : suggestions.filter((s) => s.status === statusFilter)
-    if (!search.trim()) return byStatus
-    return byStatus.filter((s) =>
-      matchesAllTokens(
-        [s.title, s.description, s.expand?.author?.name].filter(Boolean).join(' '),
-        search,
-      ),
-    )
-  }, [suggestions, statusFilter, search])
+    const searched = search.trim()
+      ? byStatus.filter((s) =>
+          matchesAllTokens(
+            [s.title, s.description, s.expand?.author?.name].filter(Boolean).join(' '),
+            search,
+          ),
+        )
+      : byStatus
+    // Fila de gestão: mais votadas primeiro (gestão prioriza as mais apoiadas).
+    if (tab === 'gestao') {
+      return [...searched].sort(
+        (a, b) =>
+          (voteCountBySuggestion.get(b.id) || 0) - (voteCountBySuggestion.get(a.id) || 0) ||
+          a.created?.localeCompare(b.created || '') ||
+          0,
+      )
+    }
+    return searched
+  }, [suggestions, statusFilter, search, tab, voteCountBySuggestion])
 
   const pendingCount = useMemo(
     () => suggestions.filter((s) => s.status === 'pendente').length,
     [suggestions],
   )
 
-  const currentUserId = user?.id
-  const authorNameOf = (s: Suggestion) => s.expand?.author?.name || 'Operador'
+  const handleToggleVote = useCallback(
+    async (s: Suggestion) => {
+      if (!currentUserId) return
+      const existingVoteId = myVoteBySuggestion.get(s.id)
+      // Otimista: atualiza a contagem/estado na hora; persiste no banco em seguida.
+      if (existingVoteId) {
+        setVotes((prev) => prev.filter((v) => v.id !== existingVoteId))
+      } else {
+        setVotes((prev) => [
+          ...prev,
+          { id: `optimistic-${s.id}`, suggestion: s.id, voter: currentUserId },
+        ])
+      }
+      setBusyVoteIds((prev) => (prev.includes(s.id) ? prev : [...prev, s.id]))
+      try {
+        if (existingVoteId) {
+          await unvoteSuggestion(existingVoteId)
+        } else {
+          const created = await voteSuggestion(s.id, currentUserId)
+          // Troca o voto otimista pelo real (id do banco, usado para desfazer).
+          setVotes((prev) => prev.map((v) => (v.id === `optimistic-${s.id}` ? created : v)))
+        }
+      } catch (e) {
+        // Reverte a alteração otimista e recarrega a lista real de votos.
+        setVotes(await listSuggestionVotes().catch(() => []))
+        toast({
+          title: existingVoteId ? 'Erro ao remover voto' : 'Erro ao registrar voto',
+          description: e instanceof Error ? e.message : 'Tente novamente.',
+          variant: 'destructive',
+        })
+      } finally {
+        setBusyVoteIds((prev) => prev.filter((id) => id !== s.id))
+      }
+    },
+    [currentUserId, myVoteBySuggestion, toast],
+  )
 
   return (
     <div className="mx-auto w-full max-w-5xl space-y-4 p-4 md:p-6">
@@ -244,6 +315,10 @@ export default function SuggestionsPage() {
               currentUserId={currentUserId}
               manageMode={tab === 'gestao' && canManage}
               onManage={setManageTarget}
+              voteCount={voteCountBySuggestion.get(s.id) || 0}
+              hasVoted={myVoteBySuggestion.has(s.id)}
+              voteBusy={busyVoteIds.includes(s.id)}
+              onToggleVote={handleToggleVote}
             />
           ))}
         </div>

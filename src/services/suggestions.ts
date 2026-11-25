@@ -96,6 +96,34 @@ export async function deleteSuggestion(id: string): Promise<void> {
   await pb.collection('suggestions').delete(id)
 }
 
+/* ----------------------------- Votos (apoios) ----------------------------- */
+
+/** Voto (apoio) de um usuário em uma sugestão — coleção `suggestion_votes` (mig 0557). */
+export interface SuggestionVote {
+  id: string
+  suggestion: string
+  voter: string
+  created?: string
+}
+
+/** Todos os votos (coleção inteira é pequena: 1 voto por usuário por sugestão). */
+export function listSuggestionVotes(): Promise<SuggestionVote[]> {
+  return pb.collection('suggestion_votes').getFullList<SuggestionVote>({ sort: '-created' })
+}
+
+/** Registra o voto do usuário na sugestão. Duplicado é rejeitado pelo índice único. */
+export function voteSuggestion(suggestionId: string, voterId: string): Promise<SuggestionVote> {
+  return pb.collection('suggestion_votes').create<SuggestionVote>({
+    suggestion: suggestionId,
+    voter: voterId,
+  })
+}
+
+/** Remove o voto do usuário (desfazer apoio). */
+export async function unvoteSuggestion(voteId: string): Promise<void> {
+  await pb.collection('suggestion_votes').delete(voteId)
+}
+
 /** Lista de janelas de mudança (coleção `changes`) para vinculação da implantação. */
 export function listChangeWindows(): Promise<
   Array<{

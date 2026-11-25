@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-25T19:51:14.420Z",
+  "generatedAt": "2026-11-25T20:02:37.219Z",
   "collections": [
     {
       "name": "users",
@@ -13711,6 +13711,52 @@
       "indexes": [
         "CREATE INDEX idx_suggestions_author ON suggestions (author)",
         "CREATE INDEX idx_suggestions_status ON suggestions (status)"
+      ]
+    },
+    {
+      "name": "suggestion_votes",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != ''",
+        "view": "@request.auth.id != ''",
+        "create": "@request.auth.id != '' && @request.body.suggestion != '' && @request.body.voter = @request.auth.id",
+        "update": null,
+        "delete": "@request.auth.id != '' && voter = @request.auth.id"
+      },
+      "fields": [
+        {
+          "name": "suggestion",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "suggestions"
+        },
+        {
+          "name": "voter",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": [
+        "CREATE INDEX idx_suggestion_votes_pair ON suggestion_votes (suggestion, voter)",
+        "CREATE UNIQUE INDEX idx_suggestion_votes_pair_uniq ON suggestion_votes (suggestion, voter)",
+        "CREATE INDEX idx_suggestion_votes_voter ON suggestion_votes (voter)"
       ]
     }
   ]

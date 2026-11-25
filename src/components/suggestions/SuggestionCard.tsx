@@ -7,6 +7,8 @@ import {
   CheckCircle2,
   Rocket,
   Clock,
+  ThumbsUp,
+  Loader2,
 } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -38,9 +40,22 @@ interface Props {
   currentUserId?: string
   manageMode?: boolean
   onManage?: (s: Suggestion) => void
+  voteCount: number
+  hasVoted: boolean
+  voteBusy: boolean
+  onToggleVote: (s: Suggestion) => void
 }
 
-export function SuggestionCardView({ suggestion, currentUserId, manageMode, onManage }: Props) {
+export function SuggestionCardView({
+  suggestion,
+  currentUserId,
+  manageMode,
+  onManage,
+  voteCount,
+  hasVoted,
+  voteBusy,
+  onToggleVote,
+}: Props) {
   const StatusIcon = STATUS_ICONS[suggestion.status] ?? Clock
   const isMine = currentUserId && suggestion.author === currentUserId
   const authorName = suggestion.expand?.author?.name || 'Operador'
@@ -81,6 +96,33 @@ export function SuggestionCardView({ suggestion, currentUserId, manageMode, onMa
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
           <span>Por {authorName}</span>
           {suggestion.created && <span>{formatDateTime(suggestion.created)}</span>}
+          <Button
+            type="button"
+            size="sm"
+            variant="ghost"
+            aria-label={
+              hasVoted
+                ? `Remover seu voto — ${voteCount} ${voteCount === 1 ? 'voto' : 'votos'}`
+                : `Apoiar esta sugestão — ${voteCount} ${voteCount === 1 ? 'voto' : 'votos'}`
+            }
+            aria-pressed={hasVoted}
+            title={hasVoted ? 'Remover seu voto' : 'Apoiar esta sugestão'}
+            disabled={voteBusy}
+            onClick={() => onToggleVote(suggestion)}
+            className={`h-7 gap-1.5 px-2 text-xs ${
+              hasVoted
+                ? 'bg-primary/10 text-primary hover:bg-primary/15 hover:text-primary'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            {voteBusy ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <ThumbsUp className={`h-3.5 w-3.5 ${hasVoted ? 'fill-current' : ''}`} />
+            )}
+            <span className="font-medium tabular-nums">{voteCount}</span>
+            <span className="hidden sm:inline">{hasVoted ? 'Apoiada por você' : 'Apoios'}</span>
+          </Button>
         </div>
 
         {suggestion.status === 'negada' && suggestion.reject_reason && (
