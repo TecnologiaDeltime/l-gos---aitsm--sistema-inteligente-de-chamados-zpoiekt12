@@ -1,7 +1,7 @@
 // Área de Sugestões — feed colaborativo dos operadores + fila de gestão (admin/dev).
 // Regra permanente: permissão suggestions_enviar (todos) e suggestions_gerenciar (gestão).
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Lightbulb, Loader2, Plus, RefreshCw } from 'lucide-react'
+import { Lightbulb, Loader2, Plus, RefreshCw, Search } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -27,6 +27,7 @@ import {
 import { useToast } from '@/hooks/use-toast'
 import { usePermissions } from '@/hooks/use-permissions'
 import { formatDateTime } from '@/lib/date-format'
+import { matchesAllTokens } from '@/lib/search-text'
 import {
   SUGGESTION_CATEGORY_LABELS,
   SUGGESTION_STATUS_LABELS,
@@ -55,6 +56,7 @@ export default function SuggestionsPage() {
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('todas')
+  const [search, setSearch] = useState('')
 
   // Nova sugestão
   const [dialogOpen, setDialogOpen] = useState(false)
@@ -123,9 +125,16 @@ export default function SuggestionsPage() {
   }
 
   const filtered = useMemo(() => {
-    if (statusFilter === 'todas') return suggestions
-    return suggestions.filter((s) => s.status === statusFilter)
-  }, [suggestions, statusFilter])
+    const byStatus =
+      statusFilter === 'todas' ? suggestions : suggestions.filter((s) => s.status === statusFilter)
+    if (!search.trim()) return byStatus
+    return byStatus.filter((s) =>
+      matchesAllTokens(
+        [s.title, s.description, s.expand?.author?.name].filter(Boolean).join(' '),
+        search,
+      ),
+    )
+  }, [suggestions, statusFilter, search])
 
   const pendingCount = useMemo(
     () => suggestions.filter((s) => s.status === 'pendente').length,
@@ -181,6 +190,20 @@ export default function SuggestionsPage() {
       )}
 
       <div className="flex flex-wrap items-center gap-2">
+        <div className="relative min-w-[220px] flex-1 sm:max-w-xs">
+          <Search
+            aria-hidden="true"
+            className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+          />
+          <Input
+            type="search"
+            aria-label="Buscar sugestões"
+            placeholder="Buscar por título, descrição ou autor..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-8"
+          />
+        </div>
         {(['todas', 'pendente', 'aceita', 'negada', 'implantada'] as StatusFilter[]).map((s) => (
           <Button
             key={s}
@@ -204,9 +227,11 @@ export default function SuggestionsPage() {
             <Lightbulb className="h-8 w-8 text-muted-foreground/50" />
             <p className="text-sm font-medium">Nenhuma sugestão encontrada</p>
             <p className="text-xs text-muted-foreground">
-              {statusFilter === 'todas'
-                ? 'Seja o primeiro a enviar uma ideia para melhorar o sistema.'
-                : 'Nenhuma sugestão neste filtro.'}
+              {search.trim()
+                ? 'Nenhuma sugestão corresponde à busca.'
+                : statusFilter === 'todas'
+                  ? 'Seja o primeiro a enviar uma ideia para melhorar o sistema.'
+                  : 'Nenhuma sugestão neste filtro.'}
             </p>
           </CardContent>
         </Card>
