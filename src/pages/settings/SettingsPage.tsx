@@ -37,7 +37,8 @@ import { AiTicketSettingsTab } from '@/components/settings/AiTicketSettingsTab'
 import { ClientConsumptionAgentTab } from '@/components/settings/ClientConsumptionAgentTab'
 import { AutoAssignSettingsTab } from '@/components/settings/AutoAssignSettingsTab'
 import { OperatorCompanyTab } from '@/components/settings/OperatorCompanyTab'
-import { Building2 } from 'lucide-react'
+import { CustomFieldsSettingsTab } from '@/components/settings/CustomFieldsSettingsTab'
+import { Building2, ListTree } from 'lucide-react'
 import { ProjectDeadlinesSettingsTab } from '@/components/settings/ProjectDeadlinesSettingsTab'
 import { PrtgSettingsTab } from '@/components/settings/PrtgSettingsTab'
 import { PortalTriageSettingsTab } from '@/components/settings/PortalTriageSettingsTab'
@@ -125,7 +126,9 @@ export default function SettingsPage() {
                               ? 'email_alerts'
                               : searchParams.get('tab') === 'operator_company'
                                 ? 'operator_company'
-                                : 'general'
+                                : searchParams.get('tab') === 'custom_fields'
+                                  ? 'custom_fields'
+                                  : 'general'
   const [mainTab, setMainTab] = useState<
     | 'general'
     | 'portal'
@@ -143,6 +146,7 @@ export default function SettingsPage() {
     | 'prtg'
     | 'project-deadlines'
     | 'operator_company'
+    | 'custom_fields'
   >(initialTab as any)
 
   const handleTabChange = (
@@ -162,7 +166,8 @@ export default function SettingsPage() {
       | 'auto_assign'
       | 'prtg'
       | 'project-deadlines'
-      | 'operator_company',
+      | 'operator_company'
+      | 'custom_fields',
   ) => {
     setMainTab(tab)
     setSearchParams(
@@ -196,7 +201,9 @@ export default function SettingsPage() {
                                   ? { tab: 'project-deadlines' }
                                   : tab === 'operator_company'
                                     ? { tab: 'operator_company' }
-                                    : {},
+                                    : tab === 'custom_fields'
+                                      ? { tab: 'custom_fields' }
+                                      : {},
     )
   }
 
@@ -233,6 +240,8 @@ export default function SettingsPage() {
       setMainTab('project-deadlines')
     } else if (tabFromUrl === 'operator_company' && mainTab !== 'operator_company') {
       setMainTab('operator_company')
+    } else if (tabFromUrl === 'custom_fields' && mainTab !== 'custom_fields') {
+      setMainTab('custom_fields')
     }
   }, [searchParams])
 
@@ -642,6 +651,23 @@ export default function SettingsPage() {
             </Button>
           )}
 
+          {permissions.canAccessItem('tickets', 'campos_customizados_gerenciar') && (
+            <Button
+              type="button"
+              size="sm"
+              variant={mainTab === 'custom_fields' ? 'default' : 'ghost'}
+              onClick={() => handleTabChange('custom_fields')}
+              className={`h-8 text-xs font-semibold rounded-lg transition-all ${
+                mainTab === 'custom_fields'
+                  ? 'bg-amber-500/20 text-amber-500 border border-amber-500/30 shadow-xs shadow-amber-500/10'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              <ListTree className="h-3.5 w-3.5 mr-1.5 text-amber-500" />
+              Campos Customizados
+            </Button>
+          )}
+
           {permissions.canAccessItem('settings', 'settings_auto_assign') && (
             <Button
               type="button"
@@ -834,6 +860,12 @@ export default function SettingsPage() {
             canConfigure={permissions.canConfigure('settings_company_profile')}
             canEdit={permissions.canEdit('settings_company_profile')}
           />
+        )}
+
+      {/* SEÇÃO CAMPOS CUSTOMIZADOS DA FICHA */}
+      {mainTab === 'custom_fields' &&
+        permissions.canAccessItem('tickets', 'campos_customizados_gerenciar') && (
+          <CustomFieldsSettingsTab />
         )}
 
       {/* SEÇÃO DISTRIBUIÇÃO AUTOMÁTICA */}

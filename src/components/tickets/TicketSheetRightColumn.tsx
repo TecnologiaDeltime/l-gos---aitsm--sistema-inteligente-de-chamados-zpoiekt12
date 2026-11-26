@@ -7,6 +7,7 @@ import { TicketSheetCard, TicketSheetField } from '@/components/tickets/TicketSh
 import { TicketHoursAuditCard } from '@/components/tickets/TicketHoursAuditCard'
 import { TicketSlaEvolutionCard } from '@/components/tickets/TicketSlaEvolutionCard'
 import { RequesterTicketHistory } from '@/components/tickets/RequesterTicketHistory'
+import { TicketCustomFieldsCard } from '@/components/tickets/TicketCustomFieldsCard'
 import type { TicketRecord, WorkCyclePauseRecord } from '@/services/tickets'
 import {
   startOperatorWorkCycle,
@@ -39,6 +40,8 @@ interface TicketSheetRightColumnProps {
   onEditHours?: () => void
   /** Corrigir as Horas Trabalhadas — mesma permissão de canEditHours. */
   onEditWorkedHours?: () => void
+  /** Campos customizados: quem edita o chamado preenche (acompanha canEditCategory). */
+  canEditTicket: boolean
   onCategoryUpdated: () => Promise<void> | void
   onReclassified: () => Promise<void> | void
 }
@@ -70,6 +73,7 @@ export function TicketSheetRightColumn({
   onShowAccompaniment,
   onEditHours,
   onEditWorkedHours,
+  canEditTicket,
   onCategoryUpdated,
   onReclassified,
 }: TicketSheetRightColumnProps) {
@@ -244,6 +248,9 @@ export function TicketSheetRightColumn({
           <TicketTriageHistoryCard ticketId={ticket.id} onReclassified={onReclassified} />
         </TicketSheetCard>
       )}
+
+      {/* Campos Customizados — só quando existir ao menos um campo ativo */}
+      <TicketCustomFieldsCard ticketId={ticket.id} canEdit={canEditTicket && !isClosed} />
     </div>
   )
 }

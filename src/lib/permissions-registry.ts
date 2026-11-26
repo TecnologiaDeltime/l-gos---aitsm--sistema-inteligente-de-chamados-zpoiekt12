@@ -214,6 +214,13 @@ const BASE_SYSTEM_MODULES: GranularModuleDefinition[] = [
           'Permite alterar ou excluir horas lançadas como logs de acompanhamento (origem ≠ Cronômetro), estornando ou ajustando a franquia do cliente e registrando a correção no histórico do chamado',
         path: '/tickets',
       },
+      {
+        key: 'campos_customizados_gerenciar',
+        label: 'Gerenciar Campos Customizados da Ficha',
+        description:
+          'Criar, editar, ordenar e ativar/desativar campos personalizados (texto, número, data, seleção, sim/não) exibidos na ficha do chamado; o preenchimento dos valores na ficha acompanha a edição do chamado',
+        path: '/settings',
+      },
     ],
   },
   {

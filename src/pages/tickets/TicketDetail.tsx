@@ -112,6 +112,8 @@ export default function TicketDetail({ variant = 'page', ticketId }: TicketDetai
   const canUseAiReply = canAccessItem('tickets', 'tickets_ai_reply')
   const canViewTriageHistory = canAccessItem('tickets', 'tickets_triage_history')
   const canEditCategory = canAccessItem('tickets', 'tickets_categoria_edit')
+  // Campos customizados: quem edita o chamado preenche (mesma regra de Categoria).
+  const canEditCustomFields = canAccessItem('tickets', 'tickets_edit')
   const canSendManualApproval = canAccessItem('tickets', 'tickets_manual_approval_send')
   // Lançamento de acompanhamento (horas de log) — item do catálogo de permissões.
   const canLaunchAccompaniment = canAccessItem('tickets', 'admin_accompaniment_hours_edit')
@@ -548,6 +550,7 @@ export default function TicketDetail({ variant = 'page', ticketId }: TicketDetai
           }
           onEditWorkedHours={canEditHours ? () => setShowWorkedHoursEdit(true) : undefined}
           canEditHours={canEditHours}
+          canEditTicket={canEditCustomFields}
           onCategoryUpdated={refreshTicket}
           onReclassified={refreshTicket}
         />
