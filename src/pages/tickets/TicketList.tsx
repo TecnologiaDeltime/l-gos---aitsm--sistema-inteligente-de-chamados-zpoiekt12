@@ -40,6 +40,7 @@ import { getTicketsWithLastInteraction, updateTicket, TicketRecord } from '@/ser
 import { getUsers, UserItem } from '@/services/users'
 import { getCompanies, CompanyRecord } from '@/services/companies'
 import { KanbanBoard } from '@/components/KanbanBoard'
+import { TicketSplitView } from '@/components/tickets/TicketSplitView'
 import TicketDetail from '@/pages/tickets/TicketDetail'
 import { BatchDelegateDialog } from '@/components/BatchDelegateDialog'
 import { getHiddenColumns } from '@/lib/kanban-columns'
@@ -310,18 +311,13 @@ export default function TicketList() {
     })
   }
 
-  // TELA DIVIDIDA: o registro do chamado selecionado vem de `tickets` (a base
-  // COMPLETA, não a filtrada). Antes usava filtered.find(...) — quando um filtro
-  // (ou exclusão em lote) escondia o chamado selecionado, o painel lateral
-  // desaparecia. Agora o painel persiste enquanto o chamado existir na base.
-  const selectedTicket =
-    view === 'split' && selectedTicketId
-      ? tickets.find((t) => t.id === selectedTicketId) || null
-      : null
+  // Tela Dividida: a lista própria pode seguir os filtros da Fila ("Filtrada")
+  // ou mostrar a base completa ("Todos") — padrão: seguir os filtros.
+  const [splitListIgnoresFilters, setSplitListIgnoresFilters] = useState(false)
+  const toggleSplitListFilters = () => setSplitListIgnoresFilters((v) => !v)
 
-  // Tela Dividida no celular: ao tocar num cartão, rola suavemente até a ficha abaixo
-  // da lista (ancorada em #ticket-detail-panel). No desktop nada muda (grid lg: 2 colunas).
-  const splitListRef = useRef<HTMLDivElement>(null)
+  // Tela Dividida no celular: ao tocar num item da lista, rola suavemente até a
+  // ficha abaixo (ancorada em #ticket-detail-panel). No desktop nada muda.
   const handleSplitSelectTicket = (id: string) => {
     setSelectedTicketId(id)
     if (window.matchMedia('(max-width: 1023px)').matches && typeof document !== 'undefined') {
@@ -351,8 +347,6 @@ export default function TicketList() {
       canEdit={canEdit('tickets')}
       onStatusChange={handleStatusChange}
       hiddenColumns={getHiddenColumns()}
-      selectedTicketId={view === 'split' ? selectedTicketId : undefined}
-      onSelectTicket={view === 'split' ? handleSplitSelectTicket : undefined}
     />
   )
 
@@ -673,27 +667,14 @@ export default function TicketList() {
           </CardContent>
         </Card>
       ) : view === 'split' ? (
-        <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(420px,2fr)]">
-          {/* Mobile (<lg): lista em cima, ficha embaixo — navegação por âncora ao selecionar */}
-          <div ref={splitListRef} className="min-w-0">
-            {kanbanView}
-          </div>
-          <div
-            id="ticket-detail-panel"
-            className="min-w-0 scroll-mt-20 rounded-xl border bg-card p-4 shadow-sm lg:sticky lg:top-4 lg:max-h-[calc(100vh-2rem)] lg:overflow-y-auto"
-          >
-            {selectedTicket ? (
-              <TicketDetail variant="panel" ticketId={selectedTicket.id} key={selectedTicket.id} />
-            ) : (
-              <div className="flex h-64 flex-col items-center justify-center gap-2 text-center">
-                <Columns2 className="h-8 w-8 text-muted-foreground/50" />
-                <p className="text-sm font-medium text-muted-foreground">
-                  Selecione um chamado no Kanban para ver a ficha completa aqui.
-                </p>
-              </div>
-            )}
-          </div>
-        </div>
+        <TicketSplitView
+          tickets={tickets}
+          filtered={filtered}
+          selectedTicketId={selectedTicketId}
+          onSelectTicket={handleSplitSelectTicket}
+          listIgnoresFilters={splitListIgnoresFilters}
+          onToggleListFilters={toggleSplitListFilters}
+        />
       ) : (
         kanbanView
       )}

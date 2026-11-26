@@ -131,12 +131,13 @@ const HELP_TOPICS: HelpTopic[] = [
     id: 'tela-dividida',
     title: 'Tela Dividida da Fila de Tickets',
     icon: Columns3,
-    summary: 'Kanban e resumo do chamado lado a lado',
-    keywords: 'tela dividida kanban resumo arrastar colunas status fila',
+    summary: 'Lista compacta e ficha completa do chamado lado a lado',
+    keywords: 'tela dividida lista ficha resumo kanban colunas status fila',
     links: [{ label: 'Abrir Fila de Tickets', to: '/tickets' }],
     paragraphs: [
-      'No seletor da Fila de Tickets, escolha Tela Dividida: à esquerda fica o Kanban (arraste cartões entre colunas de status) e à direita o resumo do chamado selecionado, com as mesmas abas de interações, histórico e anexos da ficha completa.',
-      'No celular a tela dividida empilha: Kanban primeiro, resumo depois — navegue entre eles rolando a página.',
+      'No seletor da Fila de Tickets, escolha Tela Dividida: à esquerda fica uma lista compacta de chamados (nº, título, status, criticidade e SLA) e à direita a FICHA COMPLETA do chamado selecionado, com as mesmas abas de interações, histórico, horas e ciclo de trabalho da ficha aberta pela página.',
+      'A lista tem busca, filtro de status e ordenação próprios, e pode seguir os filtros da Fila (modo Filtrada) ou mostrar todos os chamados (modo Todos). Aplicar um filtro que esconde o chamado selecionado não fecha a ficha — ela persiste até você escolher outro chamado.',
+      'No celular a tela dividida empilha: lista em cima, ficha embaixo — ao tocar num chamado, a tela rola até a ficha.',
     ],
   },
   {
