@@ -37,6 +37,8 @@ interface TicketSheetRightColumnProps {
   onShowRequesterProfile: () => void
   onShowAccompaniment: () => void
   onEditHours?: () => void
+  /** Corrigir as Horas Trabalhadas — mesma permissão de canEditHours. */
+  onEditWorkedHours?: () => void
   onCategoryUpdated: () => Promise<void> | void
   onReclassified: () => Promise<void> | void
 }
@@ -67,6 +69,7 @@ export function TicketSheetRightColumn({
   onShowRequesterProfile,
   onShowAccompaniment,
   onEditHours,
+  onEditWorkedHours,
   onCategoryUpdated,
   onReclassified,
 }: TicketSheetRightColumnProps) {
@@ -218,6 +221,7 @@ export function TicketSheetRightColumn({
         isClosed={isClosed}
         onLaunchAccompaniment={onShowAccompaniment}
         onEditHours={onEditHours}
+        onEditWorkedHours={onEditWorkedHours}
       />
 
       {/* Categoria / Atividade */}

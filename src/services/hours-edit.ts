@@ -18,3 +18,25 @@ export const editInteractionWithRecalculation = (id: string, data: EditHoursPayl
       headers: { 'Content-Type': 'application/json' },
     },
   )
+
+export interface EditWorkedHoursPayload {
+  /** Novo total de horas trabalhadas em segundos (acumulado do ciclo). */
+  worked_seconds: number
+  /** Descrição da correção (entra na interação de rastreabilidade). */
+  description?: string
+}
+
+export interface EditWorkedHoursResult {
+  success: boolean
+  operator_worked_seconds: number
+  work_hours?: number
+  unchanged?: boolean
+}
+
+/** Corrige as Horas Trabalhadas (ciclo play/pause) do chamado — admin/qualidade. */
+export const editWorkedHoursWithRecalculation = (id: string, data: EditWorkedHoursPayload) =>
+  pb.send<EditWorkedHoursResult>(`/backend/v1/tickets/${id}/worked-hours/edit`, {
+    method: 'PUT',
+    body: JSON.stringify(data),
+    headers: { 'Content-Type': 'application/json' },
+  })

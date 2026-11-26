@@ -16,6 +16,8 @@ interface TicketHoursAuditCardProps {
   isClosed: boolean
   onLaunchAccompaniment: () => void
   onEditHours?: () => void
+  /** Corrigir as Horas Trabalhadas — mesma permissão de canEditHours. */
+  onEditWorkedHours?: () => void
 }
 
 /**
@@ -33,6 +35,7 @@ export function TicketHoursAuditCard({
   isClosed,
   onLaunchAccompaniment,
   onEditHours,
+  onEditWorkedHours,
 }: TicketHoursAuditCardProps) {
   const hasHours = workedSeconds > 0 || loggedSeconds > 0
   const diffSeconds = workedSeconds - loggedSeconds
@@ -58,6 +61,18 @@ export function TicketHoursAuditCard({
           <p className="mt-1.5 font-mono text-lg font-bold leading-none tabular-nums text-amber-700 dark:text-amber-400">
             {formatSeconds(workedSeconds)}
           </p>
+          {canEditHours && onEditWorkedHours && (
+            <Button
+              size="icon"
+              variant="ghost"
+              className="absolute right-1.5 top-1.5 h-6 w-6 text-muted-foreground opacity-0 transition-opacity hover:text-foreground group-hover:opacity-100"
+              title="Corrigir horas trabalhadas"
+              aria-label="Corrigir horas trabalhadas"
+              onClick={onEditWorkedHours}
+            >
+              <Pencil className="h-3 w-3" />
+            </Button>
+          )}
         </div>
 
         {/* Horas de Log — neutro do tema */}
