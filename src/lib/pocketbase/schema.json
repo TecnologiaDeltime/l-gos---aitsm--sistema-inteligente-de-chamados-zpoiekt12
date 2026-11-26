@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-26T21:23:02.358Z",
+  "generatedAt": "2026-11-26T21:41:10.039Z",
   "collections": [
     {
       "name": "users",
@@ -14010,6 +14010,148 @@
         }
       ],
       "indexes": ["CREATE INDEX idx_laudo_ambientes_laudo ON laudo_ambientes (laudo)"]
+    },
+    {
+      "name": "custom_field_defs",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != ''",
+        "view": "@request.auth.id != ''",
+        "create": "@request.auth.id != '' && (@request.auth.role = 'admin' || @request.auth.role = 'gestor')",
+        "update": "@request.auth.id != '' && (@request.auth.role = 'admin' || @request.auth.role = 'gestor')",
+        "delete": "@request.auth.id != '' && (@request.auth.role = 'admin' || @request.auth.role = 'gestor')"
+      },
+      "fields": [
+        {
+          "name": "name",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "field_type",
+          "type": "select",
+          "required": true,
+          "system": false,
+          "selectValues": ["texto_curto", "texto_longo", "numero", "data", "selecao", "sim_nao"]
+        },
+        {
+          "name": "options",
+          "type": "json",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "sort_order",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "active",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created_by",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": ["CREATE INDEX idx_custom_field_defs_active ON custom_field_defs (active)"]
+    },
+    {
+      "name": "custom_field_values",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != ''",
+        "view": "@request.auth.id != ''",
+        "create": "@request.auth.id != '' && (@request.auth.role = 'admin' || @request.auth.role = 'gestor' || @request.auth.role = 'tecnico' || @request.auth.role = 'qualidade')",
+        "update": "@request.auth.id != '' && (@request.auth.role = 'admin' || @request.auth.role = 'gestor' || @request.auth.role = 'tecnico' || @request.auth.role = 'qualidade')",
+        "delete": "@request.auth.id != '' && (@request.auth.role = 'admin' || @request.auth.role = 'gestor')"
+      },
+      "fields": [
+        {
+          "name": "ticket",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "tickets"
+        },
+        {
+          "name": "field_id",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "value_text",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "value_number",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "value_date",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "value_bool",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created_by",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": [
+        "CREATE UNIQUE INDEX idx_custom_field_values_unique ON custom_field_values (ticket, field_id)",
+        "CREATE INDEX idx_custom_field_values_ticket ON custom_field_values (ticket)",
+        "CREATE INDEX idx_custom_field_values_field ON custom_field_values (field_id)"
+      ]
     }
   ]
 }

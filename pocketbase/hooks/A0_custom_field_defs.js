@@ -371,7 +371,7 @@ routerAdd(
       var rec
       var existing = $app.findRecordsByFilter(
         'custom_field_values',
-        'ticket = "' + ticketId + '" && field = "' + fieldId + '"',
+        'ticket = "' + ticketId + '" && field_id = "' + fieldId + '"',
         '',
         1,
         0,
@@ -403,7 +403,7 @@ routerAdd(
       } else {
         rec = new Record(valuesCol)
         rec.set('ticket', ticketId)
-        rec.set('field', fieldId)
+        rec.set('field_id', fieldId)
       }
       rec.set('value_text', '')
       rec.set('value_number', 0)

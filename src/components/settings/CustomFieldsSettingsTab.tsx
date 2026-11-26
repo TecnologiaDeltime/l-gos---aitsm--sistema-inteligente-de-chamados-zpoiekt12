@@ -27,28 +27,37 @@ import {
 import { useToast } from '@/hooks/use-toast'
 import { getErrorMessage } from '@/lib/pocketbase/errors'
 import {
-  CustomFieldDefinition,
+  CustomFieldDef,
   CustomFieldType,
-  CustomFieldTypeLabels,
-  createCustomFieldDefinition,
-  deleteCustomFieldDefinition,
-  listCustomFieldDefinitions,
-  updateCustomFieldDefinition,
+  createCustomFieldDef,
+  deactivateCustomFieldDef,
+  listCustomFieldDefs,
+  updateCustomFieldDef,
 } from '@/services/custom-fields'
 import { ArrowDown, ArrowUp, Info, ListTree, Pencil, Plus, Trash2 } from 'lucide-react'
 
-const FIELD_TYPES: CustomFieldType[] = ['text', 'textarea', 'number', 'date', 'select', 'boolean']
+// Rótulos pt-BR dos tipos — construídos localmente (o serviço só exporta o union).
+const CustomFieldTypeLabels: Record<CustomFieldType, string> = {
+  texto_curto: 'Texto curto',
+  texto_longo: 'Texto longo',
+  numero: 'Número',
+  data: 'Data',
+  selecao: 'Seleção',
+  sim_nao: 'Sim/Não',
+}
+
+const FIELD_TYPES = Object.keys(CustomFieldTypeLabels) as CustomFieldType[]
 
 const definitionSchema = z
   .object({
     label: z.string().trim().min(2, 'Informe o nome/rótulo do campo (mín. 2 caracteres)'),
-    field_type: z.enum(['text', 'textarea', 'number', 'date', 'select', 'boolean']),
+    field_type: z.enum(['texto_curto', 'texto_longo', 'numero', 'data', 'selecao', 'sim_nao']),
     select_options_raw: z.string().optional(),
     sort_order: z.coerce.number().int().min(0).max(9999),
     is_active: z.boolean(),
   })
   .superRefine((value, ctx) => {
-    if (value.field_type !== 'select') return
+    if (value.field_type !== 'selecao') return
     const options = (value.select_options_raw || '')
       .split('\n')
       .map((line) => line.trim())
@@ -62,11 +71,12 @@ const definitionSchema = z
     }
   })
 
-type DefinitionForm = z.infer<typeof definitionSchema>
+type DefinitionFormInput = z.input<typeof definitionSchema>
+type DefinitionForm = z.output<typeof definitionSchema>
 
 const EMPTY_FORM: DefinitionForm = {
   label: '',
-  field_type: 'text',
+  field_type: 'texto_curto',
   select_options_raw: '',
   sort_order: 0,
   is_active: true,
@@ -74,26 +84,26 @@ const EMPTY_FORM: DefinitionForm = {
 
 export function CustomFieldsSettingsTab() {
   const { toast } = useToast()
-  const [definitions, setDefinitions] = useState<CustomFieldDefinition[]>([])
+  const [definitions, setDefinitions] = useState<CustomFieldDef[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
-  const [deleting, setDeleting] = useState<CustomFieldDefinition | null>(null)
+  const [deleting, setDeleting] = useState<CustomFieldDef | null>(null)
   const [dialogOpen, setDialogOpen] = useState(false)
-  const [editing, setEditing] = useState<CustomFieldDefinition | null>(null)
+  const [editing, setEditing] = useState<CustomFieldDef | null>(null)
   const loadSeq = useRef(0)
 
-  const form = useForm<DefinitionForm>({
+  const form = useForm<DefinitionFormInput, unknown, DefinitionForm>({
     resolver: zodResolver(definitionSchema),
     defaultValues: EMPTY_FORM,
   })
 
   const fieldType = form.watch('field_type')
-  const isSelect = fieldType === 'select'
+  const isSelect = fieldType === 'selecao'
 
   const load = useCallback(async () => {
     const seq = ++loadSeq.current
     try {
-      const rows = await listCustomFieldDefinitions(true)
+      const rows = await listCustomFieldDefs(true)
       if (seq === loadSeq.current) {
         setDefinitions(rows)
       }
@@ -118,14 +128,14 @@ export function CustomFieldsSettingsTab() {
     setDialogOpen(true)
   }
 
-  const openEdit = (definition: CustomFieldDefinition) => {
+  const openEdit = (definition: CustomFieldDef) => {
     setEditing(definition)
     form.reset({
-      label: definition.label,
+      label: definition.name,
       field_type: definition.field_type,
-      select_options_raw: (definition.select_options || []).join('\n'),
+      select_options_raw: (definition.options || []).join('\n'),
       sort_order: definition.sort_order || 0,
-      is_active: definition.is_active !== false,
+      is_active: definition.active !== false,
     })
     setDialogOpen(true)
   }
@@ -134,23 +144,23 @@ export function CustomFieldsSettingsTab() {
     setSaving(true)
     try {
       const payload = {
-        label: values.label.trim(),
+        name: values.label.trim(),
         field_type: values.field_type,
-        select_options:
-          values.field_type === 'select'
+        options:
+          values.field_type === 'selecao'
             ? (values.select_options_raw || '')
                 .split('\n')
                 .map((line) => line.trim())
                 .filter(Boolean)
             : [],
         sort_order: values.sort_order,
-        is_active: values.is_active,
+        active: values.is_active,
       }
       if (editing) {
-        await updateCustomFieldDefinition(editing.id, payload)
+        await updateCustomFieldDef(editing.id, payload)
         toast({ title: 'Campo customizado atualizado' })
       } else {
-        await createCustomFieldDefinition(payload)
+        await createCustomFieldDef(payload)
         toast({ title: 'Campo customizado criado' })
       }
       setDialogOpen(false)
@@ -167,12 +177,12 @@ export function CustomFieldsSettingsTab() {
     }
   })
 
-  const toggleActive = async (definition: CustomFieldDefinition) => {
-    const next = definition.is_active === false
+  const toggleActive = async (definition: CustomFieldDef) => {
+    const next = definition.active === false
     try {
-      await updateCustomFieldDefinition(definition.id, { is_active: next })
+      await updateCustomFieldDef(definition.id, { active: next })
       setDefinitions((rows) =>
-        rows.map((row) => (row.id === definition.id ? { ...row, is_active: next } : row)),
+        rows.map((row) => (row.id === definition.id ? { ...row, active: next } : row)),
       )
     } catch (err) {
       toast({
@@ -183,14 +193,14 @@ export function CustomFieldsSettingsTab() {
     }
   }
 
-  const move = async (definition: CustomFieldDefinition, direction: -1 | 1) => {
+  const move = async (definition: CustomFieldDef, direction: -1 | 1) => {
     const sorted = [...definitions].sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0))
     const index = sorted.findIndex((row) => row.id === definition.id)
     const target = sorted[index + direction]
     if (!target) return
     try {
-      await updateCustomFieldDefinition(definition.id, { sort_order: target.sort_order || 0 })
-      await updateCustomFieldDefinition(target.id, { sort_order: definition.sort_order || 0 })
+      await updateCustomFieldDef(definition.id, { sort_order: target.sort_order || 0 })
+      await updateCustomFieldDef(target.id, { sort_order: definition.sort_order || 0 })
       await load()
     } catch (err) {
       toast({
@@ -201,16 +211,21 @@ export function CustomFieldsSettingsTab() {
     }
   }
 
+  // "Excluir" = desativar: o campo some da ficha e os valores já gravados
+  // nos chamados ficam preservados (o hook nunca apaga a definição).
   const confirmDelete = async () => {
     if (!deleting) return
     try {
-      await deleteCustomFieldDefinition(deleting.id)
-      toast({ title: 'Campo customizado excluído' })
+      await deactivateCustomFieldDef(deleting.id)
+      toast({
+        title: 'Campo desativado, valores preservados',
+        description: `“${deleting.name}” não aparece mais na ficha; os valores já gravados continuam guardados nos chamados.`,
+      })
       setDeleting(null)
       await load()
     } catch (err) {
       toast({
-        title: 'Erro ao excluir campo',
+        title: 'Erro ao desativar campo',
         description: getErrorMessage(err),
         variant: 'destructive',
       })
@@ -229,8 +244,8 @@ export function CustomFieldsSettingsTab() {
               Campos Customizados da Ficha
             </CardTitle>
             <CardDescription>
-              Campos personalizados exibidos na ficha do chamado (texto, texto longo, número, data,
-              seleção e sim/não). O preenchimento dos valores acompanha a edição do chamado.
+              Campos personalizados exibidos na ficha do chamado (texto curto, texto longo, número,
+              data, seleção e sim/não). O preenchimento dos valores acompanha a edição do chamado.
             </CardDescription>
           </div>
           <Button type="button" size="sm" onClick={openCreate} className="min-h-11 lg:min-h-9">
@@ -257,7 +272,7 @@ export function CustomFieldsSettingsTab() {
                   <div className="min-w-0 flex-1 space-y-1">
                     <div className="flex flex-wrap items-center gap-2">
                       <span className="truncate text-sm font-semibold text-foreground">
-                        {definition.label}
+                        {definition.name}
                       </span>
                       <Badge
                         variant="outline"
@@ -265,15 +280,15 @@ export function CustomFieldsSettingsTab() {
                       >
                         {CustomFieldTypeLabels[definition.field_type] || definition.field_type}
                       </Badge>
-                      {definition.is_active === false && (
+                      {definition.active === false && (
                         <Badge variant="outline" className="text-muted-foreground">
                           Inativo
                         </Badge>
                       )}
                     </div>
-                    {definition.field_type === 'select' && (
+                    {definition.field_type === 'selecao' && (
                       <p className="text-xs text-muted-foreground">
-                        Opções: {(definition.select_options || []).join(' · ') || '—'}
+                        Opções: {(definition.options || []).join(' · ') || '—'}
                       </p>
                     )}
                   </div>
@@ -315,16 +330,16 @@ export function CustomFieldsSettingsTab() {
                       variant="ghost"
                       size="sm"
                       className="h-11 w-11 p-0 text-destructive lg:h-8 lg:w-8"
-                      aria-label="Excluir campo"
+                      aria-label="Desativar campo"
                       onClick={() => setDeleting(definition)}
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>
                     <div className="ml-1 flex items-center gap-2">
                       <Switch
-                        checked={definition.is_active !== false}
+                        checked={definition.active !== false}
                         onCheckedChange={() => toggleActive(definition)}
-                        aria-label={`Campo ${definition.label} ativo`}
+                        aria-label={`Campo ${definition.name} ativo`}
                       />
                     </div>
                   </div>
@@ -384,8 +399,13 @@ export function CustomFieldsSettingsTab() {
                   type="number"
                   inputMode="numeric"
                   min={0}
-                  {...form.register('sort_order')}
+                  {...form.register('sort_order', { valueAsNumber: true })}
                 />
+                {form.formState.errors.sort_order && (
+                  <p className="text-xs text-destructive">
+                    {form.formState.errors.sort_order.message}
+                  </p>
+                )}
               </div>
             </div>
             {isSelect && (
@@ -437,10 +457,10 @@ export function CustomFieldsSettingsTab() {
       <Dialog open={!!deleting} onOpenChange={(open) => !open && setDeleting(null)}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Excluir campo customizado?</DialogTitle>
+            <DialogTitle>Desativar campo customizado?</DialogTitle>
             <DialogDescription>
-              O campo “{deleting?.label}” deixará de aparecer na ficha. Os valores já gravados nos
-              chamados também serão excluídos.
+              O campo “{deleting?.name}” deixará de aparecer na ficha. O campo é desativado e os
+              valores já gravados nos chamados ficam preservados — nada é excluído.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="gap-2">
@@ -458,7 +478,7 @@ export function CustomFieldsSettingsTab() {
               className="min-h-11 lg:min-h-9"
               onClick={confirmDelete}
             >
-              Excluir
+              Desativar campo
             </Button>
           </DialogFooter>
         </DialogContent>
