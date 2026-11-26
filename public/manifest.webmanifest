@@ -1,0 +1,24 @@
+{
+  "name": "Lógos AITSM",
+  "short_name": "Lógos",
+  "description": "Lógos AITSM — Sistema de Gestão de Chamados, Ativos e Serviços de TI",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#17181C",
+  "theme_color": "#17181C",
+  "lang": "pt-BR",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ]
+}
