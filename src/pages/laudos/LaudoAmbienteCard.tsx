@@ -149,13 +149,12 @@ function PhotoThumbs({
                 <button
                   type="button"
                   aria-label={`Remover foto ${filename}`}
-                  className="min-h-11 min-w-11 lg:min-h-0 lg:min-w-0"
                   onClick={async () => {
                     setRemoving(filename)
                     await onRemovePhoto(ambiente, kind, filename)
                     setRemoving(null)
                   }}
-                  className="absolute -right-2 -top-2 rounded-full bg-destructive p-2.5 text-destructive-foreground shadow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  className="absolute -right-2 -top-2 min-h-11 min-w-11 rounded-full bg-destructive p-2.5 text-destructive-foreground shadow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring lg:min-h-0 lg:min-w-0"
                 >
                   {removing === filename ? (
                     <Loader2 className="h-3 w-3 animate-spin" />

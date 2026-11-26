@@ -1,11 +1,7 @@
-/* Tailwind config for the frontend react app. This is where the app theme should be defined: https://v2.tailwindcss.com/docs/configuration. */
-import type { Config } from 'tailwindcss'
-import animatePlugin from 'tailwindcss-animate'
-import typographyPlugin from '@tailwindcss/typography'
-import aspectRatioPlugin from '@tailwindcss/aspect-ratio'
-
-/*
- * Padrão oficial de cores LÓGOS AITSM:
+/**
+ * Configuração do Tailwind — LÓGOS AITSM.
+ *
+ * Padrão oficial de cores:
  *  - Escuro "Amber Alert": fundo grafite #17181C, destaque #FCD34D, ativo #D97706
  *  - Claro "Marrom & Branco": fundo off-white/marrom, ativo #D97706
  *
@@ -15,7 +11,27 @@ import aspectRatioPlugin from '@tailwindcss/aspect-ratio'
  * classe blue-* (ex.: bg-blue-600, dark:text-blue-300, dark:bg-blue-950/40)
  * renderiza no padrão oficial em TODAS as telas, sem edição arquivo a arquivo.
  * Cores semânticas (green/rose/red/orange/purple) permanecem intactas.
+ *
+ * Além do tema, este arquivo gera os PNGs do PWA (pwa-icon-192/512[-maskable].png)
+ * em public/ a cada build — o Vite carrega o tailwind.config antes de copiar
+ * public/, então os ícones sempre entram no dist. O gerador é idempotente
+ * (reescreve os mesmos bytes) e não tem dependências externas.
  */
+import { generatePwaIcons } from './scripts/generate-pwa-icons.mjs'
+import type { Config } from 'tailwindcss'
+import animatePlugin from 'tailwindcss-animate'
+import typographyPlugin from '@tailwindcss/typography'
+import aspectRatioPlugin from '@tailwindcss/aspect-ratio'
+
+// Roda uma vez por processo: no `vite build` e no `vite dev`, e também na CLI
+// `node scripts/generate-pwa-icons.mjs` (aquele tem guard próprio).
+try {
+  generatePwaIcons()
+} catch (err) {
+  // Falha ao gerar ícone não pode quebrar o build da aplicação.
+  console.error('[pwa-icons] falha ao gerar ícones PWA:', err)
+}
+
 const escalaAmbar = {
   50: '#FFFBEB',
   100: '#FEF3C7',

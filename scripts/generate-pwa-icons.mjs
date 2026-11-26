@@ -6,11 +6,27 @@
  * Uso: node scripts/generate-pwa-icons.mjs
  */
 import { deflateSync } from 'node:zlib'
-import { writeFileSync, mkdirSync } from 'node:fs'
+import { writeFileSync, mkdirSync, existsSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
+
+/**
+ * Gera os ícones PWA em public/ (idempotente: pula os que já existem).
+ * Chamado pelo vite.config.ts no buildStart e disponível via CLI.
+ */
+export function generatePwaIcons() {
+  if (
+    existsSync(join(root, 'public', 'pwa-icon-192.png')) &&
+    existsSync(join(root, 'public', 'pwa-icon-512.png')) &&
+    existsSync(join(root, 'public', 'pwa-icon-192-maskable.png')) &&
+    existsSync(join(root, 'public', 'pwa-icon-512-maskable.png'))
+  ) {
+    return
+  }
+  renderAll()
+}
 
 // Gradiente diagonal (#FBBF24 → #F59E0B → #C2410C) igual ao favicon.svg
 function gradient(x, y) {
@@ -161,15 +177,23 @@ function renderIcon(size, { maskable = false } = {}) {
   ])
 }
 
-mkdirSync(join(root, 'public'), { recursive: true })
-for (const size of [192, 512]) {
-  const png = renderIcon(size)
-  writeFileSync(join(root, 'public', `pwa-icon-${size}.png`), png)
-  console.log(`gerado public/pwa-icon-${size}.png (${png.length} bytes)`)
+function renderAll() {
+  mkdirSync(join(root, 'public'), { recursive: true })
+  for (const size of [192, 512]) {
+    const png = renderIcon(size)
+    writeFileSync(join(root, 'public', `pwa-icon-${size}.png`), png)
+    console.log(`gerado public/pwa-icon-${size}.png (${png.length} bytes)`)
+  }
+  // Variante maskable: arte com margem de segurança de 10% (safe zone) e fundo opaco.
+  for (const size of [192, 512]) {
+    const png = renderIcon(size, { maskable: true })
+    writeFileSync(join(root, 'public', `pwa-icon-${size}-maskable.png`), png)
+    console.log(`gerado public/pwa-icon-${size}-maskable.png (${png.length} bytes)`)
+  }
 }
-// Variante maskable: arte com margem de segurança de 10% (safe zone) e fundo opaco.
-for (const size of [192, 512]) {
-  const png = renderIcon(size, { maskable: true })
-  writeFileSync(join(root, 'public', `pwa-icon-${size}-maskable.png`), png)
-  console.log(`gerado public/pwa-icon-${size}-maskable.png (${png.length} bytes)`)
+
+// Execução direta via CLI: node scripts/generate-pwa-icons.mjs
+const invokedAsCli = process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]
+if (invokedAsCli) {
+  generatePwaIcons()
 }
