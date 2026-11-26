@@ -14,11 +14,13 @@ routerAdd(
       try {
         var profId = authRecord.getString('profile_id')
         if (profId) {
+          // Item registrado no módulo 'tickets' (registry atual); 'clients' é o
+          // módulo legado já concedido em perfis antigos — aceitamos qualquer um.
           var permRows = $app.findRecordsByFilter(
             'profile_permissions',
             'profile = "' +
               profId +
-              '" && module_key = "clients" && item_key = "admin_accompaniment_hours_edit" && granted = true',
+              '" && item_key = "admin_accompaniment_hours_edit" && granted = true && (module_key = "tickets" || module_key = "clients")',
             '',
             1,
             0,

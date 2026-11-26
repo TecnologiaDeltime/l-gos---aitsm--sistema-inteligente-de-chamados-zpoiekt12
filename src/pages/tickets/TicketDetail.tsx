@@ -51,6 +51,7 @@ import { KbRecommendedBlock } from '@/components/tickets/KbRecommendedBlock'
 import { TicketRequesterProfileDialog } from '@/components/tickets/TicketRequesterProfileDialog'
 import { AccompanimentHoursDialog } from '@/components/tickets/AccompanimentHoursDialog'
 import { AccompanimentEditDialog } from '@/components/tickets/AccompanimentEditDialog'
+import { WorkedHoursEditDialog } from '@/components/tickets/WorkedHoursEditDialog'
 import { TicketSheetTabs, type HistoryRecord } from '@/components/tickets/TicketSheetTabs'
 import { TicketSheetRightColumn } from '@/components/tickets/TicketSheetRightColumn'
 import { TicketSheetHeader } from '@/components/tickets/TicketSheetHeader'
@@ -101,6 +102,7 @@ export default function TicketDetail({ variant = 'page', ticketId }: TicketDetai
   const [showRequesterProfile, setShowRequesterProfile] = useState(false)
   const [showAccompaniment, setShowAccompaniment] = useState(false)
   const [editInteraction, setEditInteraction] = useState<TicketInteractionRecord | null>(null)
+  const [showWorkedHoursEdit, setShowWorkedHoursEdit] = useState(false)
 
   const [newInteraction, setNewInteraction] = useState('')
   const [newInteractionMinutes, setNewInteractionMinutes] = useState('')
@@ -541,8 +543,11 @@ export default function TicketDetail({ variant = 'page', ticketId }: TicketDetai
           onSlaAction={runAction}
           onShowRequesterProfile={() => setShowRequesterProfile(true)}
           onShowAccompaniment={() => setShowAccompaniment(true)}
-          onEditHours={() => setEditInteraction(lastLoggedInteraction)}
-          canEditHours={canEditHours && !!lastLoggedInteraction}
+          onEditHours={
+            lastLoggedInteraction ? () => setEditInteraction(lastLoggedInteraction) : undefined
+          }
+          onEditWorkedHours={canEditHours ? () => setShowWorkedHoursEdit(true) : undefined}
+          canEditHours={canEditHours}
           onCategoryUpdated={refreshTicket}
           onReclassified={refreshTicket}
         />
@@ -616,6 +621,15 @@ export default function TicketDetail({ variant = 'page', ticketId }: TicketDetai
               }
             : null
         }
+        onSaved={refreshTicket}
+      />
+
+      {/* Correção de HORAS TRABALHADAS — recálculo operator_worked_seconds (admin/qualidade) */}
+      <WorkedHoursEditDialog
+        open={showWorkedHoursEdit}
+        onOpenChange={setShowWorkedHoursEdit}
+        ticketId={id!}
+        liveSeconds={liveCycleSeconds}
         onSaved={refreshTicket}
       />
 
