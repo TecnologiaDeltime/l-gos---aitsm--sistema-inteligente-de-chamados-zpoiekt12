@@ -1,6 +1,7 @@
 import { ArrowLeft, Play, Square, Pause } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { ContextTip } from '@/components/ContextTip'
 import { StatusBadge } from '@/components/StatusBadge'
 import { PriorityBadge } from '@/components/PriorityBadge'
 import type { TicketRecord } from '@/services/tickets'
@@ -75,6 +76,11 @@ export function TicketSheetHeader({
 
       {/* CICLO DE TRABALHO — Play/Pause/Stop no topo direito */}
       <div className="flex shrink-0 items-center gap-1 rounded-lg border bg-card p-1 shadow-sm">
+        <ContextTip
+          label="Como funciona o ciclo de trabalho"
+          text="O cronômetro do ciclo conta suas HORAS TRABALHADAS no chamado. Play inicia, Pause interrompe só o cronômetro (o SLA continua correndo) e o quadrado encerra o ciclo e congela o tempo trabalhado. Pausar o SLA é outra coisa: congela o prazo do cliente e é feito no cartão de SLA."
+          align="end"
+        />
         {!cycleStarted && onStartWorkCycle && (
           <Button
             size="icon"

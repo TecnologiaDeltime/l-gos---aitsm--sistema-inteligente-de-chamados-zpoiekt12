@@ -14,7 +14,7 @@ export function TicketSheetCard({
   contentClassName,
   children,
 }: {
-  title: string
+  title: React.ReactNode
   icon?: React.ReactNode
   className?: string
   contentClassName?: string

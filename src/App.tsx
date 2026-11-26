@@ -114,6 +114,7 @@ import KmRatesPage from '@/pages/visits-n2/KmRatesPage'
 import VisitReportsPage from '@/pages/visits-n2/VisitReportsPage'
 import NotificationsPage from '@/pages/notifications/NotificationsPage'
 import SuggestionsPage from '@/pages/SuggestionsPage'
+import HelpCenter from '@/pages/HelpCenter'
 import LaudosPage from '@/pages/laudos/LaudosPage'
 import { GlobalNotifications } from '@/components/GlobalNotifications'
 import { SlaResponseAlerts } from '@/components/SlaResponseAlerts'
@@ -234,6 +235,8 @@ const App = () => (
                 }
               >
                 <Route path="/" element={<RootRedirect />} />
+                {/* Central de Ajuda: manual de utilização — visível a todos os logados */}
+                <Route path="/ajuda" element={<HelpCenter />} />
                 <Route path="/dashboard" element={<Dashboard />} />
                 <Route
                   path="/operator-dashboard"

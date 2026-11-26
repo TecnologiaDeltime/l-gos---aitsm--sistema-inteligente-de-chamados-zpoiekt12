@@ -1,5 +1,6 @@
 import { Clock, History, Pencil, PlusCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { ContextTip } from '@/components/ContextTip'
 import { TicketSheetCard } from '@/components/tickets/TicketSheetCard'
 import { formatSeconds } from '@/lib/duration'
 import { cn } from '@/lib/utils'
@@ -119,9 +120,16 @@ export function TicketHoursAuditCard({
       )}
 
       {canLaunchAccompaniment && !isClosed && (
-        <Button size="sm" variant="outline" className="w-full" onClick={onLaunchAccompaniment}>
-          <PlusCircle className="mr-1 h-3.5 w-3.5" /> Acompanhamento
-        </Button>
+        <div className="flex items-center justify-center gap-1">
+          <Button size="sm" variant="outline" className="flex-1" onClick={onLaunchAccompaniment}>
+            <PlusCircle className="mr-1 h-3.5 w-3.5" /> Acompanhamento
+          </Button>
+          <ContextTip
+            label="O que é o Acompanhamento"
+            text="Registra um apontamento formal no chamado com data, descrição e tempo — é o que alimenta as Horas de Log e o histórico oficial. Admin/qualidade pode informar data de competência (retroativa) e corrigir horas depois pelo lápis."
+            align="end"
+          />
+        </div>
       )}
     </TicketSheetCard>
   )

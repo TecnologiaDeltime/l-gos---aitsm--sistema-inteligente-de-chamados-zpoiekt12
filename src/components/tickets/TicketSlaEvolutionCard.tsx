@@ -1,5 +1,6 @@
 import { Clock } from 'lucide-react'
 import { SlaDetailBlock } from '@/components/SlaDetailBlock'
+import { ContextTip } from '@/components/ContextTip'
 import { TicketSheetCard } from '@/components/tickets/TicketSheetCard'
 import { computeSlaResponseStatus, computeSlaSolutionStatus } from '@/lib/sla-status'
 import type { TicketRecord } from '@/services/tickets'
@@ -17,7 +18,16 @@ interface TicketSlaEvolutionCardProps {
 export function TicketSlaEvolutionCard({ ticket }: TicketSlaEvolutionCardProps) {
   return (
     <TicketSheetCard
-      title="Evolução do SLA"
+      title={
+        <span className="flex items-center gap-1.5">
+          Evolução do SLA
+          <ContextTip
+            label="Como ler o SLA"
+            text="A barra mostra o tempo DECORRIDO contra a META acordada com o cliente: verde dentro do prazo, âmbar/vermelho perto ou estourado. Quando o SLA está pausado, o prazo congela e o tempo pausado não conta — diferentemente do ciclo de trabalho, que é o seu cronômetro pessoal."
+            align="end"
+          />
+        </span>
+      }
       icon={<Clock className="h-3.5 w-3.5" />}
       contentClassName="space-y-3"
     >

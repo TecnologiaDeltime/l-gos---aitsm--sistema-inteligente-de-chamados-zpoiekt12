@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { HHMMInput } from '@/components/ui/HHMMInput'
+import { ContextTip } from '@/components/ContextTip'
 import { getAttachmentFileUrl } from '@/services/attachments'
 import type { TicketAttachmentRecord } from '@/services/attachments'
 import type { TicketInteractionRecord } from '@/services/tickets'
@@ -104,8 +105,13 @@ export function TicketSheetTabs({
               <div className="flex items-center gap-1.5">
                 <Clock className="h-4 w-4 shrink-0 text-muted-foreground" />
                 <span className="whitespace-nowrap text-xs font-medium text-muted-foreground">
-                  Tempo (00:00)
+                  Tempo&nbsp;(00:00)
                 </span>
+                <ContextTip
+                  label="Como lançar o tempo da interação"
+                  text="O tempo lançado aqui soma nas HORAS DE LOG do chamado. Digite só números — os dois-pontos aparecem sozinhos: 90 vira 01:30, 1030 vira 10:30. Deixe vazio para registrar a interação sem tempo."
+                  align="start"
+                />
                 <HHMMInput
                   value={newInteractionMinutes}
                   onChange={onNewInteractionMinutesChange}
