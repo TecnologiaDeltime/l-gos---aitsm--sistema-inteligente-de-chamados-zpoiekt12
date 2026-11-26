@@ -218,7 +218,7 @@ const BASE_SYSTEM_MODULES: GranularModuleDefinition[] = [
         key: 'campos_customizados_gerenciar',
         label: 'Gerenciar Campos Customizados da Ficha',
         description:
-          'Criar, editar, ordenar e ativar/desativar campos personalizados (texto, número, data, seleção, sim/não) exibidos na ficha do chamado; o preenchimento dos valores na ficha acompanha a edição do chamado',
+          'Criar, editar, ordenar e ativar/desativar campos personalizados (texto, número, data, seleção, sim/não) exibidos na ficha do chamado, incluindo suas regras de validação (obrigatório, mínimo/máximo de caracteres ou de valor); o preenchimento dos valores na ficha acompanha a edição do chamado',
         path: '/settings',
       },
     ],

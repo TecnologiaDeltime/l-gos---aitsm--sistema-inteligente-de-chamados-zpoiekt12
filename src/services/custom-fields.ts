@@ -18,6 +18,12 @@ export interface CustomFieldDef {
   options: string[]
   sort_order: number
   active: boolean
+  /** Regras de validação (0 = sem regra; required = preenchimento obrigatório). */
+  required: boolean
+  min_chars: number
+  max_chars: number
+  min_value: number
+  max_value: number
   created?: string
   updated?: string
 }
@@ -44,7 +50,69 @@ function normalizeDef(raw: Record<string, unknown>): CustomFieldDef {
     options,
     sort_order: Number(raw.sort_order ?? 0),
     active: raw.active !== false && raw.active !== undefined ? Boolean(raw.active) : false,
+    required: Boolean(raw.required),
+    min_chars: Number(raw.min_chars ?? 0) || 0,
+    max_chars: Number(raw.max_chars ?? 0) || 0,
+    min_value: Number(raw.min_value ?? 0) || 0,
+    max_value: Number(raw.max_value ?? 0) || 0,
   }
+}
+
+/**
+ * Valida o valor de um campo contra as regras da definição.
+ * Retorna null quando válido, ou a mensagem de erro em português.
+ */
+export function validateCustomFieldValue(
+  def: CustomFieldDef,
+  value: CustomFieldValueMap[string],
+): string | null {
+  const empty = value === null || value === undefined || value === '' || value === false
+  if (empty) {
+    if (def.required) return 'Campo obrigatório'
+    return null
+  }
+
+  if (def.field_type === 'numero') {
+    const num = Number(value)
+    if (!Number.isFinite(num)) return 'Valor deve ser um número válido'
+    if (def.min_value > 0 && num < def.min_value && def.max_value > 0 && num > def.max_value) {
+      return `Valor deve estar entre ${def.min_value} e ${def.max_value}`
+    }
+    if (def.min_value > 0 && num < def.min_value) {
+      return `Valor deve ser maior ou igual a ${def.min_value}`
+    }
+    if (def.max_value > 0 && num > def.max_value) {
+      return `Valor deve ser menor ou igual a ${def.max_value}`
+    }
+  } else if (def.field_type === 'texto_curto' || def.field_type === 'texto_longo') {
+    const txt = String(value)
+    if (def.min_chars > 0 && txt.length < def.min_chars) {
+      return `Mínimo de ${def.min_chars} caracteres`
+    }
+    if (def.max_chars > 0 && txt.length > def.max_chars) {
+      return `Máximo de ${def.max_chars} caracteres`
+    }
+  } else if (def.field_type === 'selecao') {
+    if (def.options.indexOf(String(value)) === -1) {
+      return 'Escolha uma das opções da lista'
+    }
+  }
+
+  return null
+}
+
+/** Valida todos os valores do card; retorna mapa field_id -> mensagem de erro. */
+export function validateCustomFieldValues(
+  defs: CustomFieldDef[],
+  values: CustomFieldValueMap,
+): Record<string, string> {
+  const errors: Record<string, string> = {}
+  for (const def of defs) {
+    if (!def.active) continue
+    const err = validateCustomFieldValue(def, values[def.id] ?? null)
+    if (err) errors[def.id] = err
+  }
+  return errors
 }
 
 /** Lista as definições. Admin/gestor recebem também as inativas (hook decide). */
@@ -65,6 +133,12 @@ export interface CustomFieldDefInput {
   options?: string[]
   sort_order?: number
   active?: boolean
+  /** Regras de validação (opcional; 0/undefined = sem regra). */
+  required?: boolean
+  min_chars?: number
+  max_chars?: number
+  min_value?: number
+  max_value?: number
 }
 
 export async function createCustomFieldDef(input: CustomFieldDefInput): Promise<CustomFieldDef> {

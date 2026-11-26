@@ -12,6 +12,7 @@ import {
   UserRound,
   HelpCircle,
   ExternalLink,
+  Sparkles,
 } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import {
@@ -174,6 +175,35 @@ const HELP_TOPICS: HelpTopic[] = [
     paragraphs: [
       'No card Solicitante da ficha, o botão Perfil abre o histórico completo da pessoa: chamados anteriores, padrões de abertura e contexto do cliente — útil antes de responder ou escalar.',
       'O solicitante é localizado pelo e-mail; se o mesmo e-mail aparece em vários chamados, todos aparecem no perfil. Use isso para identificar chamados recorrentes do mesmo usuário.',
+    ],
+  },
+  {
+    id: 'campos-customizados',
+    title: 'Campos customizados e regras de validação',
+    icon: Sparkles,
+    summary: 'Campos extras na ficha do chamado e como configurar regras de preenchimento',
+    keywords:
+      'campos customizados personalizados regras validacao obrigatorio minimo maximo caracteres valor numero selecao ficha',
+    paragraphs: [
+      'Em Configurações > Campos Customizados o administrador cria campos extras que aparecem na ficha do chamado — texto curto, texto longo, número, data, seleção e sim/não.',
+      'Cada campo pode ter regras de validação, configuradas no editor do campo:',
+    ],
+    bullets: [
+      {
+        strong: 'Obrigatório',
+        text: 'o campo precisa ser preenchido antes de salvar a ficha. Em campos de seleção, exige que uma das opções da lista seja escolhida.',
+      },
+      {
+        strong: 'Mínimo/Máximo de caracteres',
+        text: 'disponível para textos (curto e longo). O valor digitado deve respeitar os dois limites.',
+      },
+      {
+        strong: 'Mínimo/Máximo (valor)',
+        text: 'disponível para campos numéricos. O número digitado deve estar dentro da faixa configurada.',
+      },
+    ],
+    afterBullets: [
+      'Ao salvar a ficha, valores fora das regras são bloqueados com mensagem clara junto ao campo ("Campo obrigatório", "Mínimo de X caracteres", "Valor deve estar entre X e Y"). As mesmas regras são validadas no servidor, não só na tela. Campos sem regra continuam funcionando normalmente.',
     ],
   },
 ]

@@ -11,6 +11,10 @@
 // tickets.campos_customizados_gerenciar (aceita também o módulo legado 'clients'
 // caso um perfil antigo tenha a concessão lá — mesmo padrão de worked_hours_edit.js).
 //
+// Regras de validação dos valores (migração 0560): required, min_chars, max_chars,
+// min_value, max_value — validadas AQUI no PUT de valores (segunda barreira além
+// do card na ficha). 0/ausente = sem regra.
+//
 // Regras do Goja (JSVM): sem helpers globais fora de IIFE publicado em _g —
 // tudo 100% inline dentro de cada handler.
 
@@ -38,6 +42,11 @@ routerAdd(
         options: JSON.parse(r.getString('options') || '[]'),
         sort_order: r.getInt('sort_order') || 0,
         active: r.getBool('active'),
+        required: r.getBool('required'),
+        min_chars: r.getNumber('min_chars') || 0,
+        max_chars: r.getNumber('max_chars') || 0,
+        min_value: r.getNumber('min_value') || 0,
+        max_value: r.getNumber('max_value') || 0,
         created: r.getString('created'),
         updated: r.getString('updated'),
       })
@@ -153,6 +162,46 @@ function validateCustomFieldDefPayload(body, forUpdate) {
     }
   }
 
+  // Regras de validação (0/null = sem regra)
+  var ruleNames = ['min_chars', 'max_chars', 'min_value', 'max_value']
+  for (var ri = 0; ri < ruleNames.length; ri++) {
+    var rn = ruleNames[ri]
+    if (body[rn] !== undefined && body[rn] !== null && body[rn] !== '') {
+      var rv = Number(body[rn])
+      if (!Number.isFinite(rv) || rv < 0) {
+        return { error: 'Regra de validação inválida (' + rn + ')' }
+      }
+    }
+  }
+  if (
+    body.min_chars !== undefined &&
+    body.min_chars !== null &&
+    body.min_chars !== '' &&
+    body.max_chars !== undefined &&
+    body.max_chars !== null &&
+    body.max_chars !== ''
+  ) {
+    var mnC = Number(body.min_chars)
+    var mxC = Number(body.max_chars)
+    if (mnC > mxC) {
+      return { error: 'Mínimo de caracteres não pode ser maior que o máximo' }
+    }
+  }
+  if (
+    body.min_value !== undefined &&
+    body.min_value !== null &&
+    body.min_value !== '' &&
+    body.max_value !== undefined &&
+    body.max_value !== null &&
+    body.max_value !== ''
+  ) {
+    var mnV = Number(body.min_value)
+    var mxV = Number(body.max_value)
+    if (mnV > mxV) {
+      return { error: 'Valor mínimo não pode ser maior que o valor máximo' }
+    }
+  }
+
   return null
 }
 
@@ -167,6 +216,16 @@ function applyCustomFieldDefPayload(record, body, authRecord) {
   }
   if (body.active !== undefined) record.set('active', !!body.active)
   if (authRecord && authRecord.id) record.set('created_by', authRecord.id)
+  // Regras de validação
+  if (body.required !== undefined) record.set('required', !!body.required)
+  var ruleNums = ['min_chars', 'max_chars', 'min_value', 'max_value']
+  for (var ni = 0; ni < ruleNums.length; ni++) {
+    var nn = ruleNums[ni]
+    if (body[nn] !== undefined) {
+      var nv = body[nn] === null || body[nn] === '' ? 0 : Number(body[nn])
+      record.set(nn, Number.isFinite(nv) && nv > 0 ? nv : 0)
+    }
+  }
 }
 
 var createDefHandler = function (e) {
@@ -207,6 +266,11 @@ var createDefHandler = function (e) {
       options: JSON.parse(rec.getString('options') || '[]'),
       sort_order: rec.getInt('sort_order') || 0,
       active: rec.getBool('active'),
+      required: rec.getBool('required'),
+      min_chars: rec.getNumber('min_chars') || 0,
+      max_chars: rec.getNumber('max_chars') || 0,
+      min_value: rec.getNumber('min_value') || 0,
+      max_value: rec.getNumber('max_value') || 0,
     },
   })
 }
@@ -259,6 +323,11 @@ var updateDefHandler = function (e) {
       options: JSON.parse(rec.getString('options') || '[]'),
       sort_order: rec.getInt('sort_order') || 0,
       active: rec.getBool('active'),
+      required: rec.getBool('required'),
+      min_chars: rec.getNumber('min_chars') || 0,
+      max_chars: rec.getNumber('max_chars') || 0,
+      min_value: rec.getNumber('min_value') || 0,
+      max_value: rec.getNumber('max_value') || 0,
     },
   })
 }
@@ -335,12 +404,6 @@ routerAdd(
       return e.badRequestError('Envie "values" como objeto { field_id: valor }')
     }
 
-    var defsCol
-    try {
-      defsCol = $app.findCollectionByNameOrId('custom_field_defs')
-    } catch (_) {
-      return e.json(500, { error: 'Coleção de campos customizados não encontrada' })
-    }
     var valuesCol
     try {
       valuesCol = $app.findCollectionByNameOrId('custom_field_values')
@@ -348,25 +411,92 @@ routerAdd(
       return e.json(500, { error: 'Coleção de valores não encontrada' })
     }
 
-    var savedCount = 0
-    var fieldIds = []
-    for (var key in values) {
-      if (Object.prototype.hasOwnProperty.call(values, key)) fieldIds.push(key)
+    // Definições ativas — mapa por id para as regras de validação.
+    var activeDefs = $app.findRecordsByFilter('custom_field_defs', 'active = true', '', 0, 0)
+    var defsById = {}
+    for (var d = 0; d < activeDefs.length; d++) {
+      defsById[activeDefs[d].id] = activeDefs[d]
     }
+
+    // Segunda barreira: validação das regras ANTES de gravar qualquer valor.
+    // 1) Obrigatórios: todo campo ativo marcado como required precisa de valor.
+    for (var dr = 0; dr < activeDefs.length; dr++) {
+      var defReq = activeDefs[dr]
+      if (!defReq.getBool('required')) continue
+      var rv = values[defReq.id]
+      var hasRv = rv !== null && rv !== undefined && rv !== '' && rv !== false
+      if (!hasRv) {
+        return e.badRequestError('Campo "' + defReq.getString('name') + '" é obrigatório')
+      }
+    }
+    // 2) Regras por campo enviado (caracteres/faixa numérica/opção da lista).
+    var sentIds = []
+    for (var k0 in values) {
+      if (Object.prototype.hasOwnProperty.call(values, k0)) sentIds.push(k0)
+    }
+    for (var s = 0; s < sentIds.length; s++) {
+      var fid = sentIds[s]
+      var def = defsById[fid]
+      if (!def) continue // campo inativo/desconhecido é ignorado abaixo
+      if (!def.getBool('active')) continue
+      var val = values[fid]
+      if (val === null || val === undefined || val === '' || val === false) continue
+      var fType = def.getString('field_type')
+      if (fType === 'numero') {
+        var num = Number(val)
+        if (!Number.isFinite(num)) {
+          return e.badRequestError(
+            'Campo "' + def.getString('name') + '" deve ser um número válido',
+          )
+        }
+        var mnV2 = def.getNumber('min_value') || 0
+        var mxV2 = def.getNumber('max_value') || 0
+        if ((mnV2 > 0 && num < mnV2) || (mxV2 > 0 && num > mxV2)) {
+          var faixa
+          if (mnV2 > 0 && mxV2 > 0) {
+            faixa = 'Valor deve estar entre ' + mnV2 + ' e ' + mxV2
+          } else if (mnV2 > 0) {
+            faixa = 'Valor deve ser maior ou igual a ' + mnV2
+          } else {
+            faixa = 'Valor deve ser menor ou igual a ' + mxV2
+          }
+          return e.badRequestError('Campo "' + def.getString('name') + '": ' + faixa)
+        }
+      } else if (fType === 'texto_curto' || fType === 'texto_longo') {
+        var txtV = String(val)
+        var mnC2 = def.getNumber('min_chars') || 0
+        var mxC2 = def.getNumber('max_chars') || 0
+        if (mnC2 > 0 && txtV.length < mnC2) {
+          return e.badRequestError(
+            'Campo "' + def.getString('name') + '": Mínimo de ' + mnC2 + ' caracteres',
+          )
+        }
+        if (mxC2 > 0 && txtV.length > mxC2) {
+          return e.badRequestError(
+            'Campo "' + def.getString('name') + '": Máximo de ' + mxC2 + ' caracteres',
+          )
+        }
+      } else if (fType === 'selecao') {
+        var optsV = JSON.parse(def.getString('options') || '[]')
+        if (optsV.indexOf(String(val)) === -1) {
+          return e.badRequestError(
+            'Campo "' + def.getString('name') + '": escolha uma das opções da lista',
+          )
+        }
+      }
+    }
+
+    var savedCount = 0
+    var fieldIds = sentIds
 
     for (var f = 0; f < fieldIds.length; f++) {
       var fieldId = fieldIds[f]
       var value = values[fieldId]
 
-      var def
-      try {
-        def = $app.findRecordById('custom_field_defs', fieldId)
-      } catch (_) {
-        continue
-      }
-      if (!def.getBool('active')) continue // campo inativo não aceita novos valores
+      var defSave = defsById[fieldId]
+      if (!defSave) continue // inativo ou inexistente: não aceita novos valores
 
-      var fieldType = def.getString('field_type')
+      var fieldType = defSave.getString('field_type')
 
       var rec
       var existing = $app.findRecordsByFilter(
@@ -411,9 +541,9 @@ routerAdd(
       rec.set('value_bool', false)
 
       if (fieldType === 'numero') {
-        var num = Number(value)
-        if (!Number.isFinite(num)) continue
-        rec.set('value_number', num)
+        var num2 = Number(value)
+        if (!Number.isFinite(num2)) continue
+        rec.set('value_number', num2)
       } else if (fieldType === 'data') {
         var d = String(value)
         if (!/^\d{4}-\d{2}-\d{2}/.test(d)) continue
@@ -423,10 +553,6 @@ routerAdd(
       } else {
         // texto_curto, texto_longo, selecao
         var txt = String(value)
-        if (fieldType === 'selecao') {
-          var opts = JSON.parse(def.getString('options') || '[]')
-          if (opts.indexOf(txt) === -1) continue // valor fora da lista de opções
-        }
         if (txt.length > 8000) txt = txt.substring(0, 8000)
         rec.set('value_text', txt)
       }

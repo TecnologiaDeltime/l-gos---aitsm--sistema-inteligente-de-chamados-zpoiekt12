@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-26T21:41:10.039Z",
+  "generatedAt": "2026-11-26T23:52:59.506Z",
   "collections": [
     {
       "name": "users",
@@ -14073,6 +14073,36 @@
           "required": false,
           "system": false,
           "autodateTriggers": ["onCreate", "onUpdate"]
+        },
+        {
+          "name": "required",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "min_chars",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "max_chars",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "min_value",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "max_value",
+          "type": "number",
+          "required": false,
+          "system": false
         }
       ],
       "indexes": ["CREATE INDEX idx_custom_field_defs_active ON custom_field_defs (active)"]

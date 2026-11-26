@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Loader2, Sparkles, TextCursorInput } from 'lucide-react'
+import { validateCustomFieldValue } from '@/services/custom-fields'
 import { Switch } from '@/components/ui/switch'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -56,6 +57,7 @@ export function TicketCustomFieldsCard({ ticketId, canEdit }: TicketCustomFields
   const [dirty, setDirty] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
 
   const load = useCallback(
     async (silent = false) => {
@@ -91,7 +93,26 @@ export function TicketCustomFieldsCard({ ticketId, canEdit }: TicketCustomFields
   }
 
   const handleSave = async () => {
-    if (!dirty || saving) return
+    if (!dirty || saving || !defs) return
+    // 1ª barreira: valida no frontend com as regras da definição
+    const errors: Record<string, string> = {}
+    for (const def of defs) {
+      const err = validateCustomFieldValue(def, values[def.id] ?? null)
+      if (err) errors[def.id] = err
+    }
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors)
+      const first = defs.find((d) => errors[d.id])
+      toast({
+        title: 'Não foi possível salvar',
+        description: first
+          ? `${first.name}: ${errors[first.id]}`
+          : 'Verifique os campos destacados.',
+        variant: 'destructive',
+      })
+      return
+    }
+    setFieldErrors({})
     setSaving(true)
     try {
       await saveTicketCustomFieldValues(ticketId, values)
@@ -101,12 +122,29 @@ export function TicketCustomFieldsCard({ ticketId, canEdit }: TicketCustomFields
       const savedValues = await getTicketCustomFieldValues(ticketId)
       setValues(savedValues)
     } catch (err: unknown) {
-      const message =
-        typeof err === 'object' && err && 'message' in err
-          ? String((err as { message: unknown }).message)
-          : 'Falha ao salvar os campos customizados.'
-      toast({ title: 'Erro ao salvar', description: message, variant: 'destructive' })
-      setError(message)
+      // 2ª barreira: regras também validadas no hook backend
+      const perField =
+        typeof err === 'object' && err && 'data' in err
+          ? ((err as { data?: { fieldErrors?: Record<string, string> } }).data?.fieldErrors ?? null)
+          : null
+      if (perField && Object.keys(perField).length > 0) {
+        setFieldErrors(perField)
+        const first = defs.find((d) => perField[d.id])
+        toast({
+          title: 'Não foi possível salvar',
+          description: first
+            ? `${first.name}: ${perField[first.id]}`
+            : 'Verifique os campos destacados.',
+          variant: 'destructive',
+        })
+      } else {
+        const message =
+          typeof err === 'object' && err && 'message' in err
+            ? String((err as { message: unknown }).message)
+            : 'Falha ao salvar os campos customizados.'
+        toast({ title: 'Erro ao salvar', description: message, variant: 'destructive' })
+        setError(message)
+      }
     } finally {
       setSaving(false)
     }
@@ -139,11 +177,18 @@ export function TicketCustomFieldsCard({ ticketId, canEdit }: TicketCustomFields
         const value = values[def.id] ?? null
         const id = `custom-field-${def.id}`
         const isFilled = value !== null && value !== undefined && value !== ''
+        const fieldError = canEdit ? fieldErrors[def.id] : undefined
 
         return (
           <div key={def.id} className="space-y-1.5">
             <Label htmlFor={id} className="text-xs text-muted-foreground">
               {def.name}
+              {def.required && (
+                <span className="ml-1 text-destructive" aria-hidden="true">
+                  *
+                </span>
+              )}
+              <span className="sr-only">{def.required ? ' (obrigatório)' : ''}</span>
             </Label>
 
             {!canEdit ? (
@@ -214,7 +259,11 @@ export function TicketCustomFieldsCard({ ticketId, canEdit }: TicketCustomFields
               />
             )}
 
-            {canEdit && isFilled && (
+            {fieldError ? (
+              <p className="text-xs text-destructive" role="alert">
+                {fieldError}
+              </p>
+            ) : canEdit && isFilled ? (
               <button
                 type="button"
                 onClick={() => setValue(def.id, null)}
@@ -222,7 +271,7 @@ export function TicketCustomFieldsCard({ ticketId, canEdit }: TicketCustomFields
               >
                 limpar
               </button>
-            )}
+            ) : null}
           </div>
         )
       })}

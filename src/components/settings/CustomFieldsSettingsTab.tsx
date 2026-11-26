@@ -55,6 +55,11 @@ const definitionSchema = z
     select_options_raw: z.string().optional(),
     sort_order: z.coerce.number().int().min(0).max(9999),
     is_active: z.boolean(),
+    is_required: z.boolean(),
+    min_chars: z.string().optional(),
+    max_chars: z.string().optional(),
+    min_value: z.string().optional(),
+    max_value: z.string().optional(),
   })
   .superRefine((value, ctx) => {
     if (value.field_type !== 'selecao') return
@@ -70,6 +75,49 @@ const definitionSchema = z
       })
     }
   })
+  .superRefine((value, ctx) => {
+    const isText = value.field_type === 'texto_curto' || value.field_type === 'texto_longo'
+    const isNumber = value.field_type === 'numero'
+    const parseOpt = (raw: string | undefined) => {
+      if (raw === undefined || raw.trim() === '') return null
+      const n = Number(raw.trim())
+      return Number.isFinite(n) && n >= 0 ? n : NaN
+    }
+    if (isText) {
+      const mn = parseOpt(value.min_chars)
+      const mx = parseOpt(value.max_chars)
+      if (Number.isNaN(mn) || Number.isNaN(mx)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['min_chars'],
+          message: 'Informe números válidos (0 ou vazio = sem regra)',
+        })
+      } else if (mn !== null && mx !== null && mn > mx) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['min_chars'],
+          message: 'Mínimo de caracteres não pode ser maior que o máximo',
+        })
+      }
+    }
+    if (isNumber) {
+      const mn = parseOpt(value.min_value)
+      const mx = parseOpt(value.max_value)
+      if (Number.isNaN(mn) || Number.isNaN(mx)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['min_value'],
+          message: 'Informe números válidos (0 ou vazio = sem regra)',
+        })
+      } else if (mn !== null && mx !== null && mn > mx) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['min_value'],
+          message: 'Valor mínimo não pode ser maior que o valor máximo',
+        })
+      }
+    }
+  })
 
 type DefinitionFormInput = z.input<typeof definitionSchema>
 type DefinitionForm = z.output<typeof definitionSchema>
@@ -80,6 +128,11 @@ const EMPTY_FORM: DefinitionForm = {
   select_options_raw: '',
   sort_order: 0,
   is_active: true,
+  is_required: false,
+  min_chars: '',
+  max_chars: '',
+  min_value: '',
+  max_value: '',
 }
 
 export function CustomFieldsSettingsTab() {
@@ -99,6 +152,12 @@ export function CustomFieldsSettingsTab() {
 
   const fieldType = form.watch('field_type')
   const isSelect = fieldType === 'selecao'
+  const isText = fieldType === 'texto_curto' || fieldType === 'texto_longo'
+  const isNumber = fieldType === 'numero'
+  // Para seleção, o "obrigatório" cumpre o papel de exigir uma escolha da lista.
+  const requiredHint = isSelect
+    ? 'Se marcado, o campo exige que uma das opções seja escolhida antes de salvar a ficha.'
+    : 'Se marcado, o campo precisa ser preenchido antes de salvar a ficha.'
 
   const load = useCallback(async () => {
     const seq = ++loadSeq.current
@@ -136,6 +195,11 @@ export function CustomFieldsSettingsTab() {
       select_options_raw: (definition.options || []).join('\n'),
       sort_order: definition.sort_order || 0,
       is_active: definition.active !== false,
+      is_required: definition.required === true,
+      min_chars: definition.min_chars > 0 ? String(definition.min_chars) : '',
+      max_chars: definition.max_chars > 0 ? String(definition.max_chars) : '',
+      min_value: definition.min_value > 0 ? String(definition.min_value) : '',
+      max_value: definition.max_value > 0 ? String(definition.max_value) : '',
     })
     setDialogOpen(true)
   }
@@ -155,6 +219,17 @@ export function CustomFieldsSettingsTab() {
             : [],
         sort_order: values.sort_order,
         active: values.is_active,
+        required: values.is_required,
+        min_chars:
+          values.field_type === 'texto_curto' || values.field_type === 'texto_longo'
+            ? Number(values.min_chars || 0) || 0
+            : 0,
+        max_chars:
+          values.field_type === 'texto_curto' || values.field_type === 'texto_longo'
+            ? Number(values.max_chars || 0) || 0
+            : 0,
+        min_value: values.field_type === 'numero' ? Number(values.min_value || 0) || 0 : 0,
+        max_value: values.field_type === 'numero' ? Number(values.max_value || 0) || 0 : 0,
       }
       if (editing) {
         await updateCustomFieldDef(editing.id, payload)
@@ -291,6 +366,42 @@ export function CustomFieldsSettingsTab() {
                         Opções: {(definition.options || []).join(' · ') || '—'}
                       </p>
                     )}
+                    {(definition.required ||
+                      definition.min_chars > 0 ||
+                      definition.max_chars > 0 ||
+                      definition.min_value > 0 ||
+                      definition.max_value > 0) && (
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        {definition.required && (
+                          <Badge
+                            variant="outline"
+                            className="border-amber-500/40 text-amber-600 dark:text-amber-400"
+                          >
+                            Obrigatório
+                          </Badge>
+                        )}
+                        {definition.min_chars > 0 && (
+                          <Badge variant="outline" className="text-muted-foreground">
+                            Mín. {definition.min_chars} caracteres
+                          </Badge>
+                        )}
+                        {definition.max_chars > 0 && (
+                          <Badge variant="outline" className="text-muted-foreground">
+                            Máx. {definition.max_chars} caracteres
+                          </Badge>
+                        )}
+                        {definition.min_value > 0 && (
+                          <Badge variant="outline" className="text-muted-foreground">
+                            Valor mín. {definition.min_value}
+                          </Badge>
+                        )}
+                        {definition.max_value > 0 && (
+                          <Badge variant="outline" className="text-muted-foreground">
+                            Valor máx. {definition.max_value}
+                          </Badge>
+                        )}
+                      </div>
+                    )}
                   </div>
                   <div className="flex shrink-0 items-center gap-1.5">
                     <Button
@@ -408,6 +519,100 @@ export function CustomFieldsSettingsTab() {
                 )}
               </div>
             </div>
+            <div className="flex items-center justify-between rounded-xl border border-amber-500/20 bg-amber-500/[0.04] px-3 py-3">
+              <div className="flex items-center gap-2">
+                <Info className="h-4 w-4 text-amber-500" />
+                <Label htmlFor="cf-required" className="text-sm">
+                  {isSelect ? 'Escolha obrigatória' : 'Preenchimento obrigatório'}
+                </Label>
+              </div>
+              <Switch
+                id="cf-required"
+                checked={form.watch('is_required')}
+                onCheckedChange={(checked) => form.setValue('is_required', checked)}
+              />
+            </div>
+            <p className="-mt-2 text-xs text-muted-foreground">{requiredHint}</p>
+            {isText && (
+              <div className="space-y-2 rounded-xl border border-amber-500/20 bg-amber-500/[0.04] p-3">
+                <p className="text-xs font-semibold text-amber-600 dark:text-amber-400">
+                  Regras de caracteres (0 ou vazio = sem regra)
+                </p>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="cf-min-chars" className="text-xs text-muted-foreground">
+                      Mínimo de caracteres
+                    </Label>
+                    <Input
+                      id="cf-min-chars"
+                      type="number"
+                      inputMode="numeric"
+                      min={0}
+                      placeholder="0"
+                      {...form.register('min_chars')}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="cf-max-chars" className="text-xs text-muted-foreground">
+                      Máximo de caracteres
+                    </Label>
+                    <Input
+                      id="cf-max-chars"
+                      type="number"
+                      inputMode="numeric"
+                      min={0}
+                      placeholder="0"
+                      {...form.register('max_chars')}
+                    />
+                  </div>
+                </div>
+                {(form.formState.errors.min_chars || form.formState.errors.max_chars) && (
+                  <p className="text-xs text-destructive">
+                    {form.formState.errors.min_chars?.message ||
+                      form.formState.errors.max_chars?.message}
+                  </p>
+                )}
+              </div>
+            )}
+            {isNumber && (
+              <div className="space-y-2 rounded-xl border border-amber-500/20 bg-amber-500/[0.04] p-3">
+                <p className="text-xs font-semibold text-amber-600 dark:text-amber-400">
+                  Regras de valor (0 ou vazio = sem regra)
+                </p>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="cf-min-value" className="text-xs text-muted-foreground">
+                      Valor mínimo
+                    </Label>
+                    <Input
+                      id="cf-min-value"
+                      type="number"
+                      step="any"
+                      placeholder="0"
+                      {...form.register('min_value')}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="cf-max-value" className="text-xs text-muted-foreground">
+                      Valor máximo
+                    </Label>
+                    <Input
+                      id="cf-max-value"
+                      type="number"
+                      step="any"
+                      placeholder="0"
+                      {...form.register('max_value')}
+                    />
+                  </div>
+                </div>
+                {(form.formState.errors.min_value || form.formState.errors.max_value) && (
+                  <p className="text-xs text-destructive">
+                    {form.formState.errors.min_value?.message ||
+                      form.formState.errors.max_value?.message}
+                  </p>
+                )}
+              </div>
+            )}
             {isSelect && (
               <div className="space-y-2">
                 <Label htmlFor="cf-options">Opções (uma por linha)</Label>
@@ -437,6 +642,32 @@ export function CustomFieldsSettingsTab() {
                 onCheckedChange={(checked) => form.setValue('is_active', checked)}
               />
             </div>
+            {(() => {
+              const rulesSummary: string[] = []
+              if (form.watch('is_required')) rulesSummary.push('Obrigatório')
+              if (isText && Number(form.watch('min_chars') || 0) > 0)
+                rulesSummary.push('Mín. ' + form.watch('min_chars') + ' caracteres')
+              if (isText && Number(form.watch('max_chars') || 0) > 0)
+                rulesSummary.push('Máx. ' + form.watch('max_chars') + ' caracteres')
+              if (isNumber && Number(form.watch('min_value') || 0) > 0)
+                rulesSummary.push('Valor mín. ' + form.watch('min_value'))
+              if (isNumber && Number(form.watch('max_value') || 0) > 0)
+                rulesSummary.push('Valor máx. ' + form.watch('max_value'))
+              if (rulesSummary.length === 0) return null
+              return (
+                <div className="flex flex-wrap items-center gap-1.5">
+                  {rulesSummary.map((rule) => (
+                    <Badge
+                      key={rule}
+                      variant="outline"
+                      className="border-amber-500/40 text-amber-600 dark:text-amber-400"
+                    >
+                      {rule}
+                    </Badge>
+                  ))}
+                </div>
+              )
+            })()}
             <DialogFooter className="gap-2">
               <Button
                 type="button"
