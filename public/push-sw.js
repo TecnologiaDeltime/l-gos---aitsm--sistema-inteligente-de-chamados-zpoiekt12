@@ -45,6 +45,13 @@ self.addEventListener('push', (event) => {
   event.waitUntil(self.registration.showNotification(title, options))
 })
 
+// Requisito de instalabilidade PWA (Chrome): o service worker registrado precisa
+// tratar o evento fetch. Pass-through puro — nada é cacheado, toda requisição
+// segue para a rede exatamente como sem SW (comportamento do app inalterado).
+self.addEventListener('fetch', (event) => {
+  event.respondWith(fetch(event.request))
+})
+
 self.addEventListener('notificationclick', (event) => {
   event.notification.close()
   const targetUrl = (event.notification.data && event.notification.data.url) || '/'

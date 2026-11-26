@@ -246,7 +246,12 @@ export default function LaudoExecution({
     <div className="mx-auto w-full max-w-5xl space-y-4 p-4 md:p-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="min-w-0">
-          <Button variant="ghost" size="sm" onClick={onBack} className="mb-1 -ml-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onBack}
+            className="mb-1 -ml-2 h-11 px-3 lg:h-8"
+          >
             <ArrowLeft className="mr-1.5 h-4 w-4" /> Voltar para a lista
           </Button>
           <h1 className="truncate text-lg font-bold">{laudo.title}</h1>
@@ -262,7 +267,7 @@ export default function LaudoExecution({
               size="sm"
               onClick={handleDelete}
               disabled={deleting}
-              className="text-destructive hover:text-destructive"
+              className="h-11 px-4 text-xs lg:h-8 lg:px-3 lg:text-sm text-destructive hover:text-destructive"
             >
               <Trash2 className="mr-2 h-4 w-4" /> Excluir
             </Button>
@@ -274,6 +279,7 @@ export default function LaudoExecution({
               size="sm"
               onClick={() => setConfirmOpen(true)}
               disabled={!allAmbientsDone || finalizing}
+              className="h-11 px-4 text-xs lg:h-8 lg:px-3 lg:text-sm"
             >
               <PenTool className="mr-2 h-4 w-4" /> Finalizar laudo
             </Button>
@@ -375,11 +381,11 @@ export default function LaudoExecution({
             {overall.done}/{overall.total} itens marcados em {ambientes.length} ambiente(s). Você
             também pode revisar as observações finais antes de continuar.
           </p>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setConfirmOpen(false)}>
+          <DialogFooter className="flex-col gap-2 sm:flex-col sm:justify-start lg:flex-row lg:justify-end">
+            <Button variant="outline" className="h-11 lg:h-9" onClick={() => setConfirmOpen(false)}>
               Voltar
             </Button>
-            <Button onClick={() => setSignOpen(true)} disabled={finalizing}>
+            <Button className="h-11 lg:h-9" onClick={() => setSignOpen(true)} disabled={finalizing}>
               <PenTool className="mr-2 h-4 w-4" /> Continuar para assinatura
             </Button>
           </DialogFooter>

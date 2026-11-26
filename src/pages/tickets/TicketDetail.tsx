@@ -387,10 +387,16 @@ export default function TicketDetail({ variant = 'page', ticketId }: TicketDetai
             </CardContent>
           </Card>
 
-          {/* Barra de ações — 6 botões lado a lado, logo abaixo da descrição */}
-          <div className="flex flex-wrap items-center gap-2">
+          {/* Barra de ações — grade responsiva: no celular botões grandes de toque
+              (h-11, full width em 2 colunas), no desktop volta ao flex-wrap compacto */}
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:flex lg:flex-wrap lg:items-center">
             {ticket.status === 'Novo' && canAssignTicket && (
-              <Button size="sm" onClick={handleStartService} disabled={actionLoading}>
+              <Button
+                size="sm"
+                className="h-11 lg:h-8"
+                onClick={handleStartService}
+                disabled={actionLoading}
+              >
                 <Play className="mr-1 h-4 w-4" /> Iniciar Atendimento
               </Button>
             )}
@@ -401,6 +407,7 @@ export default function TicketDetail({ variant = 'page', ticketId }: TicketDetai
                       <Button
                         size="sm"
                         variant="outline"
+                        className="h-11 lg:h-8"
                         onClick={handleResumeSla}
                         disabled={actionLoading}
                       >
@@ -411,6 +418,7 @@ export default function TicketDetail({ variant = 'page', ticketId }: TicketDetai
                       <Button
                         size="sm"
                         variant="outline"
+                        className="h-11 lg:h-8"
                         onClick={() => setShowSlaPause(true)}
                         disabled={actionLoading}
                       >
@@ -420,7 +428,7 @@ export default function TicketDetail({ variant = 'page', ticketId }: TicketDetai
                 {canResolveTicket && (
                   <Button
                     size="sm"
-                    className="bg-emerald-600 hover:bg-emerald-700"
+                    className="h-11 bg-emerald-600 hover:bg-emerald-700 lg:h-8"
                     onClick={() => setShowResolve(true)}
                     disabled={actionLoading}
                   >
@@ -430,17 +438,32 @@ export default function TicketDetail({ variant = 'page', ticketId }: TicketDetai
               </>
             )}
             {canAssignTicket && (
-              <Button size="sm" variant="outline" onClick={() => setShowDelegate(true)}>
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-11 lg:h-8"
+                onClick={() => setShowDelegate(true)}
+              >
                 <Users className="mr-1 h-4 w-4" /> Delegar
               </Button>
             )}
             {canAssignTicket && (
-              <Button size="sm" variant="outline" onClick={() => setShowChildTicket(true)}>
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-11 lg:h-8"
+                onClick={() => setShowChildTicket(true)}
+              >
                 <GitBranch className="mr-1 h-4 w-4" /> Abrir Ticket Filho
               </Button>
             )}
             {canAssignTicket && (
-              <Button size="sm" variant="outline" onClick={() => setShowAssociate(true)}>
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-11 lg:h-8"
+                onClick={() => setShowAssociate(true)}
+              >
                 <Link2 className="mr-1 h-4 w-4" /> Associar Chamados
               </Button>
             )}
@@ -448,6 +471,7 @@ export default function TicketDetail({ variant = 'page', ticketId }: TicketDetai
               <Button
                 size="sm"
                 variant="outline"
+                className="h-11 lg:h-8"
                 onClick={handleSendApproval}
                 disabled={sendingApproval || actionLoading}
               >

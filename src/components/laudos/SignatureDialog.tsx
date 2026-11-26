@@ -118,7 +118,7 @@ export function SignatureDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-xl">
+      <DialogContent className="sm:max-w-xl max-h-[92dvh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Assinatura de quem acompanhou</DialogTitle>
           <DialogDescription>
@@ -135,6 +135,7 @@ export function SignatureDialog({
               onChange={(e) => setName(e.target.value)}
               autoComplete="off"
               placeholder="Ex.: Maria Souza"
+              className="h-11 lg:h-9"
             />
           </div>
           <div className="grid gap-2">
@@ -145,6 +146,7 @@ export function SignatureDialog({
               onChange={(e) => setRole(e.target.value)}
               autoComplete="off"
               placeholder="Ex.: Coordenação de TI"
+              className="h-11 lg:h-9"
             />
           </div>
           <div className="grid gap-2">
@@ -163,7 +165,13 @@ export function SignatureDialog({
               onPointerLeave={endDraw}
             />
             <div className="flex items-center justify-between">
-              <Button type="button" variant="outline" size="sm" onClick={clearCanvas}>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={clearCanvas}
+                className="h-11 px-4 text-xs lg:h-8 lg:px-3 lg:text-sm"
+              >
                 <Eraser className="mr-2 h-4 w-4" aria-hidden="true" />
                 Limpar
               </Button>
@@ -177,11 +185,21 @@ export function SignatureDialog({
           ) : null}
         </div>
 
-        <DialogFooter>
-          <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+        <DialogFooter className="flex-col gap-2 sm:flex-col sm:justify-start lg:flex-row lg:justify-end">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+            className="h-11 lg:h-9"
+          >
             Cancelar
           </Button>
-          <Button type="button" onClick={handleConfirm} disabled={!hasInk || !name.trim()}>
+          <Button
+            type="button"
+            onClick={handleConfirm}
+            disabled={!hasInk || !name.trim()}
+            className="h-11 lg:h-9"
+          >
             <PenTool className="mr-2 h-4 w-4" aria-hidden="true" />
             Confirmar assinatura
           </Button>

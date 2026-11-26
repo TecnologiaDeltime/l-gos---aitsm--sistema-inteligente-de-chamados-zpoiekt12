@@ -1,6 +1,6 @@
 // Card de um ambiente do laudo: itens do checklist, fotos antes/depois e observações.
 import { useRef, useState } from 'react'
-import { ImagePlus, Loader2, Trash2 } from 'lucide-react'
+import { Camera, ImagePlus, Loader2, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -61,43 +61,74 @@ function PhotoThumbs({
   photos: string[]
   label: string
 }) {
-  const inputRef = useRef<HTMLInputElement>(null)
+  const cameraInputRef = useRef<HTMLInputElement>(null)
+  const galleryInputRef = useRef<HTMLInputElement>(null)
   const [removing, setRemoving] = useState<string | null>(null)
   const field = kind === 'before' ? 'Fotos antes' : 'Fotos depois'
   const label = kind === 'before' ? 'Fotos antes' : 'Fotos depois'
   return (
     <div className="space-y-2">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-2">
         <Label className="text-xs">{label}</Label>
         {!readOnly && (
           <>
+            {/* Câmera (mobile): capture="environment" abre a câmera traseira direto. */}
             <input
-              ref={inputRef}
+              ref={cameraInputRef}
               type="file"
               accept="image/*"
+              capture="environment"
               multiple
               className="sr-only"
-              aria-label={`Enviar ${field.toLowerCase()}`}
+              aria-label={`Tirar foto para ${field.toLowerCase()}`}
               onChange={(e) => {
                 onUpload(ambiente, kind, e.target.files)
                 e.target.value = ''
               }}
             />
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="h-7 px-2 text-xs"
-              onClick={() => inputRef.current?.click()}
-              disabled={saving}
-            >
-              {saving ? (
-                <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
-              ) : (
+            {/* Galeria/arquivos: sem capture, abre o seletor comum (desktop e mobile). */}
+            <input
+              ref={galleryInputRef}
+              type="file"
+              accept="image/*"
+              multiple
+              className="sr-only"
+              aria-label={`Enviar ${field.toLowerCase()} da galeria`}
+              onChange={(e) => {
+                onUpload(ambiente, kind, e.target.files)
+                e.target.value = ''
+              }}
+            />
+            <div className="flex items-center gap-1.5">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-11 px-3 text-xs lg:h-7 lg:px-2"
+                onClick={() => cameraInputRef.current?.click()}
+                disabled={saving}
+                aria-label={`Tirar foto para ${field.toLowerCase()}`}
+              >
+                {saving ? (
+                  <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <Camera className="mr-1.5 h-3.5 w-3.5" />
+                )}
+                Câmera
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-11 px-3 text-xs lg:h-7 lg:px-2"
+                onClick={() => galleryInputRef.current?.click()}
+                disabled={saving}
+                aria-label={`Anexar ${field.toLowerCase()} da galeria`}
+              >
                 <ImagePlus className="mr-1.5 h-3.5 w-3.5" />
-              )}
-              Adicionar
-            </Button>
+                Galeria
+              </Button>
+            </div>
           </>
         )}
       </div>
@@ -118,12 +149,13 @@ function PhotoThumbs({
                 <button
                   type="button"
                   aria-label={`Remover foto ${filename}`}
+                  className="min-h-11 min-w-11 lg:min-h-0 lg:min-w-0"
                   onClick={async () => {
                     setRemoving(filename)
                     await onRemovePhoto(ambiente, kind, filename)
                     setRemoving(null)
                   }}
-                  className="absolute -right-1.5 -top-1.5 rounded-full bg-destructive p-1 text-destructive-foreground shadow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  className="absolute -right-2 -top-2 rounded-full bg-destructive p-2.5 text-destructive-foreground shadow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 >
                   {removing === filename ? (
                     <Loader2 className="h-3 w-3 animate-spin" />
@@ -196,11 +228,16 @@ export default function AmbienteCard({
           <div className="mt-3 space-y-4">
             <ul className="space-y-2">
               {(ambiente.checklist_items || []).map((item, idx) => (
-                <li key={idx} className="flex flex-wrap items-start gap-2 rounded-md border p-2.5">
+                <li
+                  key={idx}
+                  className="flex flex-wrap items-start gap-2.5 rounded-md border p-3 lg:p-2.5"
+                >
+                  {/* Alvo de toque grande no celular: a linha toda vira o rótulo clicável. */}
                   <Checkbox
                     id={`item-${ambiente.id}-${idx}`}
                     checked={item.status === 'realizado'}
                     disabled={readOnly || saving}
+                    className="h-6 w-6 lg:h-4 lg:w-4 shrink-0"
                     onCheckedChange={(checked) =>
                       onUpdateItem(ambiente, idx, {
                         status: checked ? 'realizado' : 'pendente',
@@ -210,7 +247,7 @@ export default function AmbienteCard({
                   <div className="min-w-0 flex-1">
                     <Label
                       htmlFor={`item-${ambiente.id}-${idx}`}
-                      className={`text-sm ${item.status !== 'pendente' ? 'text-muted-foreground' : ''}`}
+                      className={`py-1 text-sm lg:py-0 ${item.status !== 'pendente' ? 'text-muted-foreground' : ''}`}
                     >
                       {item.description}
                     </Label>
@@ -223,7 +260,7 @@ export default function AmbienteCard({
                             onUpdateItem(ambiente, idx, { status: v as LaudoItemStatus })
                           }
                         >
-                          <SelectTrigger className="h-7 w-[130px] text-xs">
+                          <SelectTrigger className="h-11 w-[150px] text-xs lg:h-7 lg:w-[130px]">
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>

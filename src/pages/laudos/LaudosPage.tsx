@@ -134,7 +134,7 @@ function NewLaudoDialog({
           <div className="space-y-1.5">
             <Label>Cliente *</Label>
             <Select value={companyId} onValueChange={setCompanyId}>
-              <SelectTrigger>
+              <SelectTrigger className="h-11 lg:h-9">
                 <SelectValue placeholder="Selecione o cliente" />
               </SelectTrigger>
               <SelectContent>
@@ -149,7 +149,7 @@ function NewLaudoDialog({
           <div className="space-y-1.5">
             <Label>Checklist *</Label>
             <Select value={templateId} onValueChange={setTemplateId} disabled={!companyId}>
-              <SelectTrigger>
+              <SelectTrigger className="h-11 lg:h-9">
                 <SelectValue
                   placeholder={companyId ? 'Selecione o checklist' : 'Escolha o cliente primeiro'}
                 />
@@ -175,14 +175,20 @@ function NewLaudoDialog({
               type="date"
               value={visitDate}
               onChange={(e) => setVisitDate(e.target.value)}
+              className="h-11 lg:h-9"
             />
           </div>
         </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
+        <DialogFooter className="flex-col gap-2 sm:flex-col sm:justify-start lg:flex-row lg:justify-end">
+          <Button
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+            disabled={saving}
+            className="h-11 lg:h-9"
+          >
             Cancelar
           </Button>
-          <Button onClick={handleCreate} disabled={saving}>
+          <Button onClick={handleCreate} disabled={saving} className="h-11 lg:h-9">
             {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Criar laudo
           </Button>
@@ -299,7 +305,11 @@ export default function LaudosPage() {
             <p className="text-xs text-muted-foreground">
               {stats.total} laudo(s) · {stats.done} concluído(s)
             </p>
-            <Button size="sm" onClick={() => setNewOpen(true)}>
+            <Button
+              size="sm"
+              onClick={() => setNewOpen(true)}
+              className="h-11 px-4 text-xs lg:h-8 lg:px-3 lg:text-sm"
+            >
               <Plus className="mr-2 h-4 w-4" /> Novo laudo
             </Button>
           </div>
@@ -350,14 +360,19 @@ export default function LaudosPage() {
                           </div>
                         </div>
                         <div className="flex items-center gap-1.5">
-                          <Button size="sm" variant="outline" onClick={() => setOpenId(l.id)}>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => setOpenId(l.id)}
+                            className="h-11 px-4 text-xs lg:h-8 lg:px-3 lg:text-sm"
+                          >
                             Abrir
                           </Button>
                           {l.status !== 'concluido' && (
                             <Button
                               size="sm"
                               variant="outline"
-                              className="text-destructive hover:text-destructive"
+                              className="h-11 w-11 p-0 lg:h-8 lg:w-8 lg:p-0 text-destructive hover:text-destructive"
                               onClick={() => handleDelete(l.id)}
                               disabled={deletingId === l.id}
                               aria-label={`Excluir laudo ${l.title}`}

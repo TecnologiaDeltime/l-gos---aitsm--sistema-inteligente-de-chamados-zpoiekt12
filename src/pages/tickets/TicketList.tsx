@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useMemo } from 'react'
+import { useEffect, useRef, useState, useCallback, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   Search,
@@ -319,6 +319,21 @@ export default function TicketList() {
       ? tickets.find((t) => t.id === selectedTicketId) || null
       : null
 
+  // Tela Dividida no celular: ao tocar num cartão, rola suavemente até a ficha abaixo
+  // da lista (ancorada em #ticket-detail-panel). No desktop nada muda (grid lg: 2 colunas).
+  const splitListRef = useRef<HTMLDivElement>(null)
+  const handleSplitSelectTicket = (id: string) => {
+    setSelectedTicketId(id)
+    if (window.matchMedia('(max-width: 1023px)').matches && typeof document !== 'undefined') {
+      window.requestAnimationFrame(() => {
+        document.getElementById('ticket-detail-panel')?.scrollIntoView({
+          behavior: 'smooth',
+          block: 'start',
+        })
+      })
+    }
+  }
+
   const highlight = (text: string) =>
     splitTextWithHighlight(text, search).map((seg, i) =>
       seg.isMatch ? (
@@ -337,7 +352,7 @@ export default function TicketList() {
       onStatusChange={handleStatusChange}
       hiddenColumns={getHiddenColumns()}
       selectedTicketId={view === 'split' ? selectedTicketId : undefined}
-      onSelectTicket={view === 'split' ? setSelectedTicketId : undefined}
+      onSelectTicket={view === 'split' ? handleSplitSelectTicket : undefined}
     />
   )
 
@@ -402,17 +417,17 @@ export default function TicketList() {
 
       {/* Barra de filtros + seletor de visualização */}
       <div className="flex flex-wrap items-center gap-2">
-        <div className="relative min-w-[220px] flex-1 sm:max-w-xs">
+        <div className="relative min-w-[180px] flex-1 sm:max-w-xs">
           <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             placeholder="Buscar por nº, título ou solicitante..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="pl-8"
+            className="h-11 pl-8 lg:h-9"
           />
         </div>
         <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-[150px]">
+          <SelectTrigger className="h-11 w-[150px] lg:h-9">
             <SelectValue placeholder="Status" />
           </SelectTrigger>
           <SelectContent>
@@ -425,7 +440,7 @@ export default function TicketList() {
           </SelectContent>
         </Select>
         <Select value={priorityFilter} onValueChange={setPriorityFilter}>
-          <SelectTrigger className="w-[140px]">
+          <SelectTrigger className="h-11 w-[140px] lg:h-9">
             <SelectValue placeholder="Prioridade" />
           </SelectTrigger>
           <SelectContent>
@@ -438,7 +453,7 @@ export default function TicketList() {
           </SelectContent>
         </Select>
         <Select value={analystFilter} onValueChange={setAnalystFilter}>
-          <SelectTrigger className="w-[150px]">
+          <SelectTrigger className="h-11 w-[150px] lg:h-9">
             <SelectValue placeholder="Analista" />
           </SelectTrigger>
           <SelectContent>
@@ -451,7 +466,7 @@ export default function TicketList() {
           </SelectContent>
         </Select>
         <Select value={clientFilter} onValueChange={setClientFilter}>
-          <SelectTrigger className="w-[150px]">
+          <SelectTrigger className="h-11 w-[150px] lg:h-9">
             <SelectValue placeholder="Cliente" />
           </SelectTrigger>
           <SelectContent>
@@ -468,6 +483,7 @@ export default function TicketList() {
           <Button
             variant="ghost"
             size="icon"
+            className="h-11 w-11 lg:h-9 lg:w-9"
             title={isMuted ? 'Reativar alertas sonoros' : 'Silenciar alertas sonoros'}
             onClick={toggleMute}
           >
@@ -481,7 +497,7 @@ export default function TicketList() {
             <Button
               size="sm"
               variant={view === 'split' ? 'default' : 'ghost'}
-              className="h-7 px-2"
+              className="h-8 px-2 lg:h-7"
               onClick={() => setView('split')}
             >
               <Columns2 className="mr-1 h-3.5 w-3.5" />
@@ -490,7 +506,7 @@ export default function TicketList() {
             <Button
               size="sm"
               variant={view === 'kanban' ? 'default' : 'ghost'}
-              className="h-7 px-2"
+              className="h-8 px-2 lg:h-7"
               onClick={() => setView('kanban')}
             >
               <LayoutGrid className="mr-1 h-3.5 w-3.5" />
@@ -499,7 +515,7 @@ export default function TicketList() {
             <Button
               size="sm"
               variant={view === 'table' ? 'default' : 'ghost'}
-              className="h-7 px-2"
+              className="h-8 px-2 lg:h-7"
               onClick={() => setView('table')}
             >
               <List className="mr-1 h-3.5 w-3.5" />
@@ -508,7 +524,7 @@ export default function TicketList() {
           </div>
           <Button
             size="icon"
-            className="rounded-full shadow-md shadow-primary/20"
+            className="h-11 w-11 rounded-full shadow-md shadow-primary/20 lg:h-9 lg:w-9"
             title="Abrir Tickets"
             onClick={() => navigate('/tickets/new')}
           >
@@ -658,8 +674,14 @@ export default function TicketList() {
         </Card>
       ) : view === 'split' ? (
         <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(420px,2fr)]">
-          <div className="min-w-0">{kanbanView}</div>
-          <div className="sticky top-4 max-h-[calc(100vh-2rem)] min-w-0 overflow-y-auto rounded-xl border bg-card p-4 shadow-sm">
+          {/* Mobile (<lg): lista em cima, ficha embaixo — navegação por âncora ao selecionar */}
+          <div ref={splitListRef} className="min-w-0">
+            {kanbanView}
+          </div>
+          <div
+            id="ticket-detail-panel"
+            className="min-w-0 scroll-mt-20 rounded-xl border bg-card p-4 shadow-sm lg:sticky lg:top-4 lg:max-h-[calc(100vh-2rem)] lg:overflow-y-auto"
+          >
             {selectedTicket ? (
               <TicketDetail variant="panel" ticketId={selectedTicket.id} key={selectedTicket.id} />
             ) : (
