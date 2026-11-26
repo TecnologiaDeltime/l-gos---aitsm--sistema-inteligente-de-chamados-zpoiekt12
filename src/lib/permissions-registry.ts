@@ -736,6 +736,24 @@ const BASE_SYSTEM_MODULES: GranularModuleDefinition[] = [
     ],
   },
 
+  {
+    key: 'help',
+    label: 'Ajuda',
+    description: 'Central de Ajuda com manual de utilização por módulo e busca',
+    category: 'Operações & Gestão',
+    items: [
+      {
+        key: 'help_central',
+        label: 'Central de Ajuda',
+        description:
+          'Manual de utilização do sistema por módulo (chamados, laudos, sugestões, horas, SLA) com busca',
+        path: '/ajuda',
+        defaultGranted: true,
+        defaultLevel: 'view',
+      },
+    ],
+  },
+
   // Relatórios & Qualidade
   {
     key: 'reports',

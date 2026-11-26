@@ -30,6 +30,7 @@ export type ModuleKey =
   | 'admin'
   | 'suggestions'
   | 'laudos'
+  | 'help'
 
 export interface GranularPermissionItem {
   key: string

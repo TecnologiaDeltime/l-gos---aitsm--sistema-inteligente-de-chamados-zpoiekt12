@@ -65,6 +65,7 @@ import {
   Presentation,
   Lightbulb,
   Camera,
+  HelpCircle,
 } from 'lucide-react'
 import { useAuth } from '@/hooks/use-auth'
 import { useTheme } from '@/hooks/use-theme'
@@ -145,6 +146,7 @@ export default function Layout() {
   const [adminMenuOpen, setAdminMenuOpen] = useState(false)
   const [knowledgeMenuOpen, setKnowledgeMenuOpen] = useState(false)
   const [projectsMenuOpen, setProjectsMenuOpen] = useState(false)
+  const [helpMenuOpen, setHelpMenuOpen] = useState(false)
 
   useEffect(() => {
     if (user) {
@@ -626,6 +628,18 @@ export default function Layout() {
   const laudosGroupVisible =
     !permissions.isModuleHidden('laudos') && laudosSubmenuItems.some((i) => i.show)
 
+  // Central de Ajuda: grupo próprio, visível a todos os logados (permissão 'help' nasce concedida)
+  const helpSubmenuItems = [
+    {
+      label: 'Central de Ajuda',
+      path: '/ajuda',
+      icon: HelpCircle,
+      show: permissions.canAccessItem('help', 'help_central'),
+    },
+  ]
+  const helpGroupVisible =
+    !permissions.isModuleHidden('help') && helpSubmenuItems.some((i) => i.show)
+
   const adminSubmenuItems = [
     {
       label: 'Operadores',
@@ -868,6 +882,7 @@ export default function Layout() {
   autoRegisterMenuItems('reports', 'Relatórios & Qualidade', relatoriosSubmenuItems)
   autoRegisterMenuItems('admin', 'Administração', adminSubmenuItems)
   autoRegisterMenuItems('settings', 'Administração', configuracoesSubmenuItems)
+  autoRegisterMenuItems('help', 'Operações & Gestão', helpSubmenuItems)
 
   const configuracoesGroupVisible =
     !permissions.isModuleHidden('settings') && configuracoesSubmenuItems.some((i) => i.show)
@@ -1387,6 +1402,16 @@ export default function Layout() {
             items: laudosSubmenuItems,
             isOpen: laudosMenuOpen,
             onToggle: () => setLaudosMenuOpen(!laudosMenuOpen),
+          })}
+
+        {helpGroupVisible &&
+          renderNavGroup({
+            key: 'help-group',
+            label: 'Ajuda',
+            icon: HelpCircle,
+            items: helpSubmenuItems,
+            isOpen: helpMenuOpen,
+            onToggle: () => setHelpMenuOpen(!helpMenuOpen),
           })}
       </nav>
 
