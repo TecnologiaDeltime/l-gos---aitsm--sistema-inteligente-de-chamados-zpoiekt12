@@ -70,6 +70,14 @@
   // são neutralizados ou removidos; vínculos operacionais essenciais são bloqueados
   // antes (ver checagens na rota DELETE).
   var _cleanupOperatorRefs = function (id) {
+    // Limpa as entradas de autenticação internas do PocketBase (login OAuth, MFA,
+    // senhas de uso único e origens de sessão). Sem isso o DELETE do usuário falha
+    // por constraint mesmo sem nenhum vínculo de aplicação.
+    _delAll('_externalAuths', 'recordRef = "' + id + '"')
+    _delAll('_mfas', 'recordRef = "' + id + '"')
+    _delAll('_otps', 'recordRef = "' + id + '"')
+    _delAll('_authOrigins', 'recordRef = "' + id + '"')
+
     // Listas multivaloradas: só remove o id do usuário
     _removeFromList('queues', 'members ~ "' + id + '"', 'members', id)
     _removeFromList('change_committee', 'members ~ "' + id + '"', 'members', id)
@@ -87,12 +95,12 @@
       ['service_orders', 'technician = "' + id + '"', ['technician']],
       // Aprovações já decididas (pendentes são bloqueadas antes)
       ['approvals', 'approver = "' + id + '" && status != "Pendente"', ['approver']],
+      ['approvals', 'requester = "' + id + '" && status != "Pendente"', ['requester']],
       // Chamados agendados não ativos
       ['scheduled_tickets', 'assigned_to = "' + id + '" && status != "agendado"', ['assigned_to']],
       // Base de conhecimento
       ['knowledge_articles', 'author = "' + id + '"', ['author']],
-      ['knowledge_drafts', 'reviewed_by = "' + id + '"', ['reviewed_by']],
-      ['kb_sources', 'created_by = "' + id + '"', ['created_by']],
+      ['kb_sources', 'uploaded_by = "' + id + '"', ['uploaded_by']],
       // Mudanças
       ['changes', 'implemented_by = "' + id + '"', ['implemented_by']],
       ['changes', 'created_by = "' + id + '"', ['created_by']],
@@ -103,27 +111,29 @@
       ['time_entries', 'approved_by = "' + id + '"', ['approved_by']],
       // Cofre de credenciais
       ['vault_credentials', 'created_by = "' + id + '"', ['created_by']],
+      ['vault_credentials', 'updated_by = "' + id + '"', ['updated_by']],
       // Relatórios mensais
       ['client_monthly_reports', 'generated_by = "' + id + '"', ['generated_by']],
-      ['monthly_report_schedules', 'recipient = "' + id + '"', ['recipient']],
-      ['monthly_report_schedules', 'user = "' + id + '"', ['user']],
-      ['consumption_alert_configs', 'user = "' + id + '"', ['user']],
+      ['client_monthly_reports', 'released_by = "' + id + '"', ['released_by']],
+      [
+        'client_monthly_reports',
+        'satisfaction_responded_by = "' + id + '"',
+        ['satisfaction_responded_by'],
+      ],
+      ['monthly_report_schedules', 'created_by = "' + id + '"', ['created_by']],
+      // Chamados retidos revisados
+      ['retained_tickets', 'reviewed_by = "' + id + '"', ['reviewed_by']],
       // Atendimento (chat interno) — histórico do cliente permanece
       ['atendimento_mensagens', 'operador = "' + id + '"', ['operador']],
       ['atendimento_conversas', 'operador = "' + id + '"', ['operador']],
       ['atendimento_dossies', 'operator = "' + id + '"', ['operator']],
-      // Inventário de aparelhos
-      ['inventory_devices', 'responsible = "' + id + '"', ['responsible']],
-      ['inventory_devices', 'responsible_user = "' + id + '"', ['responsible_user']],
-      ['inventory_movements', 'technician = "' + id + '"', ['technician']],
-      // Laudos fotográficos e ambientes
+      // Inventário de aparelhos: aparelho em uso pelo operador volta a ficar disponível
+      ['inventory_devices', 'assigned_to = "' + id + '"', ['assigned_to']],
+      ['inventory_devices', 'created_by = "' + id + '"', ['created_by']],
+      // Laudos fotográficos: autor atributivo (technician é bloqueado antes)
       ['laudos', 'created_by = "' + id + '"', ['created_by']],
-      ['laudo_ambientes', 'technician = "' + id + '"', ['technician']],
-      // Sugestões (autor) e checklists
-      ['suggestions', 'author = "' + id + '"', ['author']],
+      // Checklists de visita e campos personalizados
       ['visit_checklists', 'completed_by = "' + id + '"', ['completed_by']],
-      ['visits', 'technician = "' + id + '"', ['technician']],
-      // Campos personalizados (definição/valores criados pelo usuário)
       ['custom_field_defs', 'created_by = "' + id + '"', ['created_by']],
       // Contatos de cliente vinculados a login
       ['client_contacts', 'user = "' + id + '"', ['user']],
@@ -134,25 +144,19 @@
 
     // Registros auxiliares/atributivos do próprio usuário: apaga
     var dels = [
-      // 2FA
+      // 2FA e notificações
       ['user_totp', 'user = "' + id + '"'],
-      // Notificações
       ['notifications', 'user = "' + id + '"'],
-      // Votos em sugestões
+      // Votos em sugestões (author das sugestões é tratado nas checagens de bloqueio)
       ['suggestion_votes', 'voter = "' + id + '"'],
-      ['suggestion_votes', 'user = "' + id + '"'],
       // Movimentações de inventário registradas pelo operador
-      ['inventory_movements', 'operator = "' + id + '"'],
-      ['inventory_movements', 'user = "' + id + '"'],
       ['inventory_movements', 'performed_by = "' + id + '"'],
-      ['inventory_movements', 'technician = "' + id + '"'],
+      // Rascunhos de conhecimento revisados
+      ['knowledge_drafts', 'reviewed_by = "' + id + '"'],
       // Ciclo de trabalho, alocações e disponibilidade
       ['operator_work_cycle_pauses', 'operator = "' + id + '"'],
-      ['operator_work_cycle_pauses', 'user = "' + id + '"'],
       ['operator_allocations', 'operator = "' + id + '"'],
-      ['operator_allocations', 'user = "' + id + '"'],
       ['supervisor_team_links', 'supervisor = "' + id + '"'],
-      ['supervisor_team_links', 'user = "' + id + '"'],
       ['technician_availability', 'technician = "' + id + '"'],
       ['technician_locations', 'technician = "' + id + '"'],
       // Metas e snapshots diários
@@ -161,21 +165,15 @@
       ['operator_daily_snapshots', 'operator = "' + id + '"'],
       // Visualizações de chamados
       ['ticket_views', 'user = "' + id + '"'],
-      // Mensagens de chat entre operadores
+      // Mensagens de chat entre operadores (sender e recipient são required)
       ['operator_chat_messages', 'sender = "' + id + '"'],
-      ['operator_chat_messages', 'author = "' + id + '"'],
-      ['operator_chat_messages', 'user = "' + id + '"'],
+      ['operator_chat_messages', 'recipient = "' + id + '"'],
       // Logs de auditoria e histórico de chamados do usuário
       // (attributivos: o chamado preserva seus dados; apenas o registro "quem fez" é removido)
       ['audit_logs', 'user = "' + id + '"'],
       ['ticket_history', 'user = "' + id + '"'],
-      // Logs de automação de ativos e concessões de perfil
-      ['asset_automation_logs', 'triggered_by = "' + id + '"'],
-      ['asset_automation_logs', 'user = "' + id + '"'],
-      ['profile_permissions', 'user = "' + id + '"'],
-      // Ordens de serviço e apontamentos aprovados (duplicados como clear acima)
-      ['service_orders', 'technician = "' + id + '"'],
-      ['time_entries', 'approved_by = "' + id + '"'],
+      // Logs de automação de ativos (operador é attributivo)
+      ['asset_automation_logs', 'operator = "' + id + '"'],
     ]
     for (var di = 0; di < dels.length; di++) {
       _delAll(dels[di][0], dels[di][1])
@@ -507,17 +505,21 @@
         }
       } catch (_) {}
 
-      // 7. Aprovações atribuídas como aprovador pendente
+      // 7. Aprovações pendentes (como aprovador ou solicitante — vínculo obrigatório)
       try {
         var pendingApprovals = $app.findRecordsByFilter(
           'approvals',
-          'approver = "' + id + '" && status = "Pendente"',
+          '(approver = "' + id + '" || requester = "' + id + '") && status = "Pendente"',
           '',
           10,
           0,
         )
         if (pendingApprovals && pendingApprovals.length > 0) {
-          blockingReasons.push('possui aprovações pendentes atribuídas aguardando decisão')
+          blockingReasons.push(
+            'possui aprovações pendentes aguardando decisão ou solicitação (' +
+              pendingApprovals.length +
+              ' ou mais)',
+          )
         }
       } catch (_) {}
 
@@ -535,17 +537,15 @@
         }
       } catch (_) {}
 
-      // 9. Laudos fotográficos
+      // 9. Laudos fotográficos como técnico responsável
       try {
         var laudosTec = $app.findRecordsByFilter('laudos', 'technician = "' + id + '"', '', 10, 0)
         if (laudosTec && laudosTec.length > 0) {
-          blockingReasons.push('possui laudos fotográficos registrados')
-        }
-      } catch (_) {}
-      try {
-        var laudosAutor = $app.findRecordsByFilter('laudos', 'created_by = "' + id + '"', '', 10, 0)
-        if (laudosAutor && laudosAutor.length > 0) {
-          blockingReasons.push('possui laudos fotográficos registrados')
+          blockingReasons.push(
+            'possui laudos fotográficos como técnico responsável (' +
+              laudosTec.length +
+              ' ou mais laudos)',
+          )
         }
       } catch (_) {}
 
@@ -560,6 +560,16 @@
         )
         if (surveys && surveys.length > 0) {
           blockingReasons.push('possui pesquisas de satisfação respondidas')
+        }
+      } catch (_) {}
+
+      // 11. Sugestões próprias (author é vínculo obrigatório e significativo)
+      try {
+        var sugestoes = $app.findRecordsByFilter('suggestions', 'author = "' + id + '"', '', 10, 0)
+        if (sugestoes && sugestoes.length > 0) {
+          blockingReasons.push(
+            'possui sugestões registradas (' + sugestoes.length + ' ou mais sugestões)',
+          )
         }
       } catch (_) {}
 
