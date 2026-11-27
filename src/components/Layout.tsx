@@ -355,6 +355,9 @@ export default function Layout() {
   const chamadosGroupVisible =
     !permissions.isModuleHidden('tickets') && chamadosSubmenuItems.some((i) => i.show)
 
+  // Grupo CMDB: ativos, itens de configuração, cofre e inventário de aparelhos.
+  // O inventário entra aqui por decisão do usuário (antes era item próprio no menu);
+  // a permissão continua a do módulo 'inventory' (inventario_consultar/gerenciar).
   const cmdbSubmenuItems = [
     {
       label: 'Ativos',
@@ -373,6 +376,14 @@ export default function Layout() {
       path: '/vault',
       icon: Lock,
       show: permissions.canAccessVault,
+    },
+    {
+      label: 'Inventário de Aparelhos',
+      path: '/inventario',
+      icon: Smartphone,
+      show:
+        permissions.canAccessItem('inventory', 'inventario_consultar') ||
+        permissions.canAccessItem('inventory', 'inventario_gerenciar'),
     },
   ]
   const cmdbGroupVisible =
@@ -628,13 +639,6 @@ export default function Layout() {
   ]
   const laudosGroupVisible =
     !permissions.isModuleHidden('laudos') && laudosSubmenuItems.some((i) => i.show)
-
-  // Inventário de Aparelhos: consulta para qualquer logado com acesso ao módulo
-  // (item inventario_consultar nasce concedido); gerenciar só com inventario_gerenciar.
-  const inventoryGroupVisible =
-    !permissions.isModuleHidden('inventory') &&
-    (permissions.canAccessItem('inventory', 'inventario_consultar') ||
-      permissions.canAccessItem('inventory', 'inventario_gerenciar'))
 
   // Central de Ajuda: grupo próprio, visível a todos os logados (permissão 'help' nasce concedida)
   const helpSubmenuItems = [
@@ -1306,7 +1310,7 @@ export default function Layout() {
             label: 'CMDB',
             icon: Server,
             items: cmdbSubmenuItems,
-            isOpen: cmdbMenuOpen,
+            isOpen: cmdbMenuOpen || location.pathname === '/inventario',
             onToggle: () => setCmdbMenuOpen(!cmdbMenuOpen),
           })}
 
@@ -1400,14 +1404,6 @@ export default function Layout() {
             items: suggestionsSubmenuItems,
             isOpen: suggestionsMenuOpen,
             onToggle: () => setSuggestionsMenuOpen(!suggestionsMenuOpen),
-          })}
-
-        {inventoryGroupVisible &&
-          renderNavItem({
-            path: '/inventario',
-            icon: Smartphone,
-            label: 'Inventário de Aparelhos',
-            show: true,
           })}
 
         {laudosGroupVisible &&
