@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-27T06:15:54.469Z",
+  "generatedAt": "2026-11-27T12:32:06.841Z",
   "collections": [
     {
       "name": "users",
@@ -14278,6 +14278,88 @@
         "CREATE INDEX idx_inventory_devices_type ON inventory_devices (device_type)",
         "CREATE INDEX idx_inventory_devices_status ON inventory_devices (status)",
         "CREATE INDEX idx_inventory_devices_serial ON inventory_devices (serial_number)"
+      ]
+    },
+    {
+      "name": "inventory_movements",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != ''",
+        "view": "@request.auth.id != ''",
+        "create": null,
+        "update": null,
+        "delete": null
+      },
+      "fields": [
+        {
+          "name": "device",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "inventory_devices"
+        },
+        {
+          "name": "movement_type",
+          "type": "select",
+          "required": true,
+          "system": false,
+          "selectValues": [
+            "cadastrado",
+            "atribuido",
+            "devolvido",
+            "manutencao",
+            "editado",
+            "desativado",
+            "reativado",
+            "manual"
+          ]
+        },
+        {
+          "name": "description",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "previous_owner",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "new_owner",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "performed_by",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": [
+        "CREATE INDEX idx_inventory_movements_device ON inventory_movements (device)",
+        "CREATE INDEX idx_inventory_movements_type ON inventory_movements (movement_type)",
+        "CREATE INDEX idx_inventory_movements_created ON inventory_movements (created)"
       ]
     }
   ]

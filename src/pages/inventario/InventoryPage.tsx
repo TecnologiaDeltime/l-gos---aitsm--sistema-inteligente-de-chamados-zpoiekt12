@@ -4,6 +4,7 @@ import {
   CheckCircle2,
   Eye,
   EyeOff,
+  History,
   Loader2,
   Pencil,
   Plus,
@@ -56,6 +57,7 @@ import {
   updateInventoryDevice,
 } from '@/services/inventory'
 import { extractSearchTokens } from '@/lib/search-text'
+import InventoryHistoryDialog from '@/components/inventario/InventoryHistoryDialog'
 
 const DEVICE_TYPES: Array<{ value: InventoryDeviceType; label: string }> = [
   { value: 'celular', label: 'Celular' },
@@ -152,6 +154,8 @@ export default function InventoryPage() {
   const [saving, setSaving] = useState(false)
   const [deactivateTarget, setDeactivateTarget] = useState<InventoryDevice | null>(null)
   const [activatingId, setActivatingId] = useState<string | null>(null)
+  const [historyDevice, setHistoryDevice] = useState<InventoryDevice | null>(null)
+  const [historyOpen, setHistoryOpen] = useState(false)
 
   const loadDevices = useCallback(async () => {
     setLoading(true)
@@ -389,7 +393,7 @@ export default function InventoryPage() {
                     <TableHead>Estado</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Responsável</TableHead>
-                    {canManage && <TableHead className="text-right">Ações</TableHead>}
+                    <TableHead className="text-right">Ações</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -426,10 +430,23 @@ export default function InventoryPage() {
                           </Badge>
                         </TableCell>
                         <TableCell>{device.assigned_to_name || '—'}</TableCell>
-                        {canManage && (
-                          <TableCell className="text-right">
-                            <div className="flex justify-end gap-2">
-                              {isInactive ? (
+                        <TableCell className="text-right">
+                          <div className="flex justify-end gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="min-h-[44px]"
+                              onClick={() => {
+                                setHistoryDevice(device)
+                                setHistoryOpen(true)
+                              }}
+                              aria-label={`Histórico de ${device.brand} ${device.model}`}
+                            >
+                              <History className="h-4 w-4" />
+                              <span className="hidden lg:inline">Histórico</span>
+                            </Button>
+                            {canManage &&
+                              (isInactive ? (
                                 <Button
                                   variant="outline"
                                   size="sm"
@@ -465,10 +482,9 @@ export default function InventoryPage() {
                                     <Power className="h-4 w-4" />
                                   </Button>
                                 </>
-                              )}
-                            </div>
-                          </TableCell>
-                        )}
+                              ))}
+                          </div>
+                        </TableCell>
                       </TableRow>
                     )
                   })}
@@ -677,6 +693,14 @@ export default function InventoryPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <InventoryHistoryDialog
+        open={historyOpen}
+        onOpenChange={setHistoryOpen}
+        device={historyDevice}
+        canManage={canManage}
+        operators={operators}
+      />
     </div>
   )
 }

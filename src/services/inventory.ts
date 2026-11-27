@@ -118,3 +118,50 @@ export async function deactivateInventoryDevice(id: string): Promise<void> {
   })
   if (!res?.success) throw new Error(res?.error || 'Erro ao desativar aparelho')
 }
+
+// ---- Histórico de movimentação ----
+
+export type InventoryMovementType =
+  | 'cadastrado'
+  | 'atribuido'
+  | 'devolvido'
+  | 'manutencao'
+  | 'editado'
+  | 'desativado'
+  | 'reativado'
+  | 'manual'
+
+export interface InventoryMovement {
+  id: string
+  movement_type: InventoryMovementType
+  description: string
+  performed_by_name: string
+  previous_owner_name: string
+  new_owner_name: string
+  created: string
+}
+
+interface MovementsResponse {
+  movements: InventoryMovement[]
+}
+
+// Linha do tempo do aparelho (mais recente primeiro) — inventario_consultar.
+export async function listInventoryMovements(id: string): Promise<InventoryMovement[]> {
+  const res = await pb.send<MovementsResponse>(`/backend/v1/inventory/devices/${id}/movements`, {
+    method: 'GET',
+  })
+  return res?.movements || []
+}
+
+// Tipos de movimentação manual com efeito no aparelho:
+// atribuido (troca responsável), devolvido (limpa), manutencao (status), editado/manual (só registro).
+export async function addInventoryMovement(
+  id: string,
+  payload: { movement_type: InventoryMovementType; description: string; new_owner?: string },
+): Promise<void> {
+  const res = await pb.send<MutationResponse>(`/backend/v1/inventory/devices/${id}/movements`, {
+    method: 'POST',
+    body: payload,
+  })
+  if (!res?.success) throw new Error(res?.error || 'Erro ao registrar movimentação')
+}
