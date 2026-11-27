@@ -1,0 +1,112 @@
+// Serviço do Inventário de Aparelhos — via pb.send no hook backend A0_inventory.js.
+// Padrão do projeto: NUNCA fetch relativo '/backend/...', sempre pb.send('/backend/v1/...').
+import { pb } from '@/lib/pocketbase/client'
+
+export type InventoryDeviceType = 'celular' | 'camera'
+export type InventoryDeviceStatus = 'disponivel' | 'em_uso' | 'manutencao' | 'desativado'
+export type InventoryDeviceCondition = 'novo' | 'uso' | ''
+
+export interface InventoryDevice {
+  id: string
+  device_type: InventoryDeviceType
+  brand: string
+  model: string
+  serial_number: string
+  phone_number: string
+  condition: InventoryDeviceCondition
+  status: InventoryDeviceStatus
+  assigned_to: string
+  assigned_to_name: string
+  notes: string
+  created: string
+  updated: string
+}
+
+export interface InventoryDevicePayload {
+  device_type: InventoryDeviceType
+  brand: string
+  model: string
+  serial_number?: string
+  phone_number?: string
+  condition?: InventoryDeviceCondition
+  status?: InventoryDeviceStatus
+  assigned_to?: string
+  notes?: string
+}
+
+interface ListResponse {
+  devices: InventoryDevice[]
+}
+
+interface MutationResponse {
+  success: boolean
+  id?: string
+  status?: string
+  error?: string
+}
+
+export async function listInventoryDevices(
+  params: {
+    type?: InventoryDeviceType | ''
+    status?: InventoryDeviceStatus | ''
+    includeInactive?: boolean
+  } = {},
+): Promise<InventoryDevice[]> {
+  const query: Record<string, string> = {}
+  if (params.type) query.type = params.type
+  if (params.status) {
+    query.status = params.status
+  } else if (params.includeInactive) {
+    // Consulta explícita: sem filtro de status e sem ocultar desativados
+    query.all = '1'
+  }
+  const res = await pb.send<ListResponse>('/backend/v1/inventory/devices', {
+    method: 'GET',
+    query,
+  })
+  return res?.devices || []
+}
+
+export async function createInventoryDevice(
+  payload: InventoryDevicePayload,
+): Promise<InventoryDevice> {
+  const res = await pb.send<MutationResponse>('/backend/v1/inventory/devices', {
+    method: 'POST',
+    body: payload,
+  })
+  if (!res?.success) throw new Error(res?.error || 'Erro ao cadastrar aparelho')
+  return {
+    id: res.id || '',
+    device_type: payload.device_type,
+    brand: payload.brand,
+    model: payload.model,
+    serial_number: payload.serial_number || '',
+    phone_number: payload.phone_number || '',
+    condition: payload.condition || 'uso',
+    status: payload.status || 'disponivel',
+    assigned_to: payload.assigned_to || '',
+    assigned_to_name: '',
+    notes: payload.notes || '',
+    created: '',
+    updated: '',
+  }
+}
+
+export async function updateInventoryDevice(
+  id: string,
+  payload: Partial<InventoryDevicePayload>,
+): Promise<void> {
+  const res = await pb.send<MutationResponse>(`/backend/v1/inventory/devices/${id}`, {
+    method: 'PUT',
+    body: payload,
+  })
+  if (!res?.success) throw new Error(res?.error || 'Erro ao atualizar aparelho')
+}
+
+export async function deactivateInventoryDevice(id: string): Promise<void> {
+  const res = await pb.send<MutationResponse>(`/backend/v1/inventory/devices/${id}/deactivate`, {
+    method: 'PUT',
+    body: {},
+  })
+  if (!res?.success) throw new Error(res?.error || 'Erro ao desativar aparelho')
+}

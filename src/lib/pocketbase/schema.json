@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-26T23:52:59.506Z",
+  "generatedAt": "2026-11-27T00:21:53.332Z",
   "collections": [
     {
       "name": "users",
@@ -14181,6 +14181,103 @@
         "CREATE UNIQUE INDEX idx_custom_field_values_unique ON custom_field_values (ticket, field_id)",
         "CREATE INDEX idx_custom_field_values_ticket ON custom_field_values (ticket)",
         "CREATE INDEX idx_custom_field_values_field ON custom_field_values (field_id)"
+      ]
+    },
+    {
+      "name": "inventory_devices",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != ''",
+        "view": "@request.auth.id != ''",
+        "create": "@request.auth.id != '' && (@request.auth.role = 'admin' || @request.auth.role = 'gestor')",
+        "update": "@request.auth.id != '' && (@request.auth.role = 'admin' || @request.auth.role = 'gestor')",
+        "delete": null
+      },
+      "fields": [
+        {
+          "name": "device_type",
+          "type": "select",
+          "required": true,
+          "system": false,
+          "selectValues": ["celular", "camera"]
+        },
+        {
+          "name": "brand",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "model",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "serial_number",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "phone_number",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "condition",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["novo", "uso"]
+        },
+        {
+          "name": "status",
+          "type": "select",
+          "required": true,
+          "system": false,
+          "selectValues": ["disponivel", "em_uso", "manutencao", "desativado"]
+        },
+        {
+          "name": "assigned_to",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "notes",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created_by",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": [
+        "CREATE INDEX idx_inventory_devices_type ON inventory_devices (device_type)",
+        "CREATE INDEX idx_inventory_devices_status ON inventory_devices (status)",
+        "CREATE INDEX idx_inventory_devices_serial ON inventory_devices (serial_number)"
       ]
     }
   ]
