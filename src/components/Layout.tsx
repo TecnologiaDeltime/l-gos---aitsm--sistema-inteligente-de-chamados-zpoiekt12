@@ -139,7 +139,7 @@ export default function Layout() {
   const [changesMenuOpen, setChangesMenuOpen] = useState(false)
   const [problemsMenuOpen, setProblemsMenuOpen] = useState(false)
   const [suggestionsMenuOpen, setSuggestionsMenuOpen] = useState(false)
-  const [laudosMenuOpen, setLaudosMenuOpen] = useState(false)
+
   const [visitsN2MenuOpen, setVisitsN2MenuOpen] = useState(false)
   const [configuracoesMenuOpen, setConfiguracoesMenuOpen] = useState(false)
   const [relatoriosMenuOpen, setRelatoriosMenuOpen] = useState(false)
@@ -355,9 +355,9 @@ export default function Layout() {
   const chamadosGroupVisible =
     !permissions.isModuleHidden('tickets') && chamadosSubmenuItems.some((i) => i.show)
 
-  // Grupo CMDB: ativos, itens de configuração, cofre e inventário de aparelhos.
-  // O inventário entra aqui por decisão do usuário (antes era item próprio no menu);
-  // a permissão continua a do módulo 'inventory' (inventario_consultar/gerenciar).
+  // Grupo CMDB: ativos, itens de configuração, cofre, inventário de aparelhos e laudos.
+  // Inventário e Laudos entram aqui por decisão do usuário (antes eram grupos próprios);
+  // as permissões continuam a dos módulos de origem (inventory e laudos).
   const cmdbSubmenuItems = [
     {
       label: 'Ativos',
@@ -384,6 +384,14 @@ export default function Layout() {
       show:
         permissions.canAccessItem('inventory', 'inventario_consultar') ||
         permissions.canAccessItem('inventory', 'inventario_gerenciar'),
+    },
+    {
+      label: 'Laudos Fotográficos',
+      path: '/laudos',
+      icon: Camera,
+      show:
+        permissions.canAccessItem('laudos', 'laudos_enviar') ||
+        permissions.canAccessItem('laudos', 'laudos_gerenciar'),
     },
   ]
   const cmdbGroupVisible =
@@ -626,19 +634,6 @@ export default function Layout() {
   ]
   const suggestionsGroupVisible =
     !permissions.isModuleHidden('suggestions') && suggestionsSubmenuItems.some((i) => i.show)
-
-  const laudosSubmenuItems = [
-    {
-      label: 'Laudos Fotográficos',
-      path: '/laudos',
-      icon: Camera,
-      show:
-        permissions.canAccessItem('laudos', 'laudos_enviar') ||
-        permissions.canAccessItem('laudos', 'laudos_gerenciar'),
-    },
-  ]
-  const laudosGroupVisible =
-    !permissions.isModuleHidden('laudos') && laudosSubmenuItems.some((i) => i.show)
 
   // Central de Ajuda: grupo próprio, visível a todos os logados (permissão 'help' nasce concedida)
   const helpSubmenuItems = [
@@ -1310,7 +1305,10 @@ export default function Layout() {
             label: 'CMDB',
             icon: Server,
             items: cmdbSubmenuItems,
-            isOpen: cmdbMenuOpen || location.pathname === '/inventario',
+            isOpen:
+              cmdbMenuOpen ||
+              location.pathname === '/inventario' ||
+              location.pathname === '/laudos',
             onToggle: () => setCmdbMenuOpen(!cmdbMenuOpen),
           })}
 
@@ -1404,16 +1402,6 @@ export default function Layout() {
             items: suggestionsSubmenuItems,
             isOpen: suggestionsMenuOpen,
             onToggle: () => setSuggestionsMenuOpen(!suggestionsMenuOpen),
-          })}
-
-        {laudosGroupVisible &&
-          renderNavGroup({
-            key: 'laudos-group',
-            label: 'Laudos',
-            icon: Camera,
-            items: laudosSubmenuItems,
-            isOpen: laudosMenuOpen,
-            onToggle: () => setLaudosMenuOpen(!laudosMenuOpen),
           })}
 
         {helpGroupVisible &&
