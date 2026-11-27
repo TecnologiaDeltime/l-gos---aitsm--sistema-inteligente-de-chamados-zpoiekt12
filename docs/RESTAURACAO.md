@@ -25,7 +25,33 @@ Este documento registra oficialmente os **Pontos de Restauração (Restore Point
 
 ---
 
-## 1. Ponto de Restauração Atual — `restore-point-0.0.353` / `restore-point-0.0.352` (Vigente)
+## 1. Ponto de Restauração Atual — `restore-point-0.0.567` (Vigente)
+
+- **Identificador de Referência:** `restore-point-0.0.567`
+- **Versão Base Homologada:** `0.0.567` (commit base `539fec5` — "Correção da exclusão de operador", 27/11/2026; SHA completo verificável no histórico de Versões da plataforma Skip e no GitHub)
+- **Data de Registro:** 27 de Novembro de 2026
+- **Status de Qualidade:** Testes estáticos (oxlint), verificação de tipos (TypeScript tsc) e build Vite 100% aprovados sem erros nem advertências.
+- **Estado do Banco de Dados PocketBase:**
+  - Migrações aplicadas no Skip Cloud até a migração **`0562_inventory_movements.js`** (migrações ativas, incluindo os blocos 055x de sugestões/votos, laudos fotográficos, campos customizados com regras de validação e inventário de aparelhos com histórico de movimentação).
+- **Estado do Sistema neste Ponto (Evoluções Consolidadas):**
+  - Todos os módulos e evoluções consolidadas até o ponto `restore-point-0.0.353` (Seção 1.1 abaixo), além de:
+  - **Exclusão de Operador corrigida e validada:** neutralização de vínculos atributivos e bloqueio operacional com mensagem nomeada (chamados, interações, anexos, visitas, horas, aprovações, agendados, laudos técnicos, sugestões, chat, projetos, inventário) e limpeza dos vínculos de autenticação interna do PocketBase.
+  - **Laudos Fotográficos (`/laudos`):** módulo completo com templates, execução em campo, ambientes, assinatura por toque e câmera; item no grupo CMDB do menu; permissões `laudos_enviar`/`laudos_gerenciar`.
+  - **Inventário de Aparelhos (`/inventario`):** cadastro de aparelhos com histórico de movimentação gravado por hook (atribuição, devolução, manutenção); item no grupo CMDB do menu.
+  - **Área de Sugestões:** sugestões de operadores com votos e busca, alerta de e-mail `suggestion_created_notify` (nasce desligado no Centro de Alertas).
+  - **Campos Customizados de Chamados:** configuração por categoria com regras de validação e valores por chamado.
+  - **Fila de Tickets refrita:** 4 cards de criticidade, seletor de Tela Dividida (Kanban + resumo do chamado) e ciclo Play/Pause de horas no detalhe.
+  - **Central de Ajuda (`/ajuda`)** e edição de horas trabalhadas com auditoria (permissão `admin_accompaniment_hours_edit`).
+  - **Adaptação Mobile/PWA:** alvos de toque ≥44px, câmera, assinatura por toque, ícones PWA gerados no build; breakpoint mobile 1024.
+- **Tag Git de Referência (clones exportados):**
+  ```bash
+  git tag -a restore-point-0.0.567 539fec5 -m "Ponto de Restauracao Logos AITSM v0.0.567 (Correcao exclusao de operador; Laudos, Inventario, Sugestoes, Campos customizados, Tela Dividida, Central de Ajuda, Mobile/PWA)"
+  git checkout restore-point-0.0.567
+  ```
+
+---
+
+## 1.1 Ponto de Restauração Anterior — `restore-point-0.0.353` / `restore-point-0.0.352`
 
 - **Identificador de Referência:** `restore-point-0.0.353` (equivalente ao snapshot estável homologado da v0.0.352)
 - **Versão Base Homologada:** `0.0.352` / `0.0.353` (consolidada com QA 100% aprovado)
@@ -95,7 +121,7 @@ O projeto é hospedado e versionado nativamente na plataforma Skip Cloud (React 
 Na plataforma Skip, o versionamento é atômico por commit e dispensa ferramentas externas:
 
 1. Acesse o painel do projeto no Skip Cloud / Histórico de Versões (**Versions / Deployments**).
-2. Localize a versão marcada como **`0.0.352`** (ou **`0.0.353`**, ambas cobrindo a consolidação estável pós-migração 0131 e chat/TV), ou a versão histórica **`0.0.291`**.
+2. Localize a versão marcada como **`0.0.567`** (ponto vigente — "Correção da exclusão de operador"), ou versões anteriores **`0.0.352`/`0.0.353`** (consolidação estável pós-migração 0131 e chat/TV) ou a versão histórica **`0.0.291`**.
 3. Clique em **"Rollback to this version"** / **"Restaurar esta versão"**.
 4. A plataforma restaura imediatamente o snapshot do código-fonte daquele commit, executa o build limpo do frontend e atualiza o servidor de Preview em tempo real.
 
@@ -104,7 +130,8 @@ Na plataforma Skip, o versionamento é atômico por commit e dispensa ferramenta
 Para desenvolvedores que trabalham com uma cópia exportada/clonada do repositório Git:
 
 - **Tags Recomendadas de Restauração:**
-  - `restore-point-0.0.353` (ou `restore-point-0.0.352`) para o ponto vigente estável.
+  - `restore-point-0.0.567` (commit base `539fec5`) para o ponto vigente estável.
+  - `restore-point-0.0.353` (ou `restore-point-0.0.352`) para o ponto estável anterior.
   - `restore-point-0.0.291` (commit base `22a8d58`) para o marco histórico legado.
 
 - **Comandos Git para criação da tag (caso não tenha sido exportada no clone):**
@@ -123,7 +150,8 @@ Para desenvolvedores que trabalham com uma cópia exportada/clonada do repositó
 - **Para inspecionar o estado do ponto de restauração vigente sem alterar o branch atual:**
 
   ```bash
-  git checkout restore-point-0.0.353
+  git checkout restore-point-0.0.567
+  # ou navegando pelo commit registrado 539fec5
   ```
 
 - **Para inspecionar o ponto de restauração legado (0.0.291):**
@@ -136,18 +164,18 @@ Para desenvolvedores que trabalham com uma cópia exportada/clonada do repositó
 - **Para criar uma nova branch a partir do ponto vigente:**
 
   ```bash
-  git checkout -b recuperacao-v353 restore-point-0.0.353
+  git checkout -b recuperacao-v567 restore-point-0.0.567
   ```
 
 - **Para desfazer commits defeituosos preservando o histórico (Revert seguro):**
 
   ```bash
-  git revert HEAD~..restore-point-0.0.353
+  git revert HEAD~..restore-point-0.0.567
   ```
 
 - **Para forçar o branch principal ao estado exato do ponto de restauração (Reset):**
   ```bash
-  git reset --hard restore-point-0.0.353
+  git reset --hard restore-point-0.0.567
   ```
 
 ### 3.3 Comportamento do Preview da Plataforma após o Rollback
