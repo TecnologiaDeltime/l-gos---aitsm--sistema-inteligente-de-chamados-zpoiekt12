@@ -66,6 +66,7 @@ import {
   Lightbulb,
   Camera,
   HelpCircle,
+  Smartphone,
 } from 'lucide-react'
 import { useAuth } from '@/hooks/use-auth'
 import { useTheme } from '@/hooks/use-theme'
@@ -627,6 +628,13 @@ export default function Layout() {
   ]
   const laudosGroupVisible =
     !permissions.isModuleHidden('laudos') && laudosSubmenuItems.some((i) => i.show)
+
+  // Inventário de Aparelhos: consulta para qualquer logado com acesso ao módulo
+  // (item inventario_consultar nasce concedido); gerenciar só com inventario_gerenciar.
+  const inventoryGroupVisible =
+    !permissions.isModuleHidden('inventory') &&
+    (permissions.canAccessItem('inventory', 'inventario_consultar') ||
+      permissions.canAccessItem('inventory', 'inventario_gerenciar'))
 
   // Central de Ajuda: grupo próprio, visível a todos os logados (permissão 'help' nasce concedida)
   const helpSubmenuItems = [
@@ -1392,6 +1400,14 @@ export default function Layout() {
             items: suggestionsSubmenuItems,
             isOpen: suggestionsMenuOpen,
             onToggle: () => setSuggestionsMenuOpen(!suggestionsMenuOpen),
+          })}
+
+        {inventoryGroupVisible &&
+          renderNavItem({
+            path: '/inventario',
+            icon: Smartphone,
+            label: 'Inventário de Aparelhos',
+            show: true,
           })}
 
         {laudosGroupVisible &&

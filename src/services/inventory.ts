@@ -1,6 +1,6 @@
 // Serviço do Inventário de Aparelhos — via pb.send no hook backend A0_inventory.js.
 // Padrão do projeto: NUNCA fetch relativo '/backend/...', sempre pb.send('/backend/v1/...').
-import { pb } from '@/lib/pocketbase/client'
+import pb from '@/lib/pocketbase/client'
 
 export type InventoryDeviceType = 'celular' | 'camera'
 export type InventoryDeviceStatus = 'disponivel' | 'em_uso' | 'manutencao' | 'desativado'

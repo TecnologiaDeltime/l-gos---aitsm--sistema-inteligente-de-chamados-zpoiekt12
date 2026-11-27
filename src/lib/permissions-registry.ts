@@ -757,6 +757,15 @@ const BASE_SYSTEM_MODULES: GranularModuleDefinition[] = [
           'Cadastrar, editar e desativar aparelhos de celular e câmera do inventário de campo',
         path: '/inventario',
       },
+      {
+        key: 'inventario_consultar',
+        label: 'Consultar Inventário de Aparelhos',
+        description:
+          'Visualizar a lista de aparelhos de celular e câmera do inventário de campo (sem gerenciar)',
+        path: '/inventario',
+        defaultGranted: true,
+        defaultLevel: 'view',
+      },
     ],
   },
 

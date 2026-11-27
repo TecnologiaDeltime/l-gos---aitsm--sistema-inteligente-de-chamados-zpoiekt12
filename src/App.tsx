@@ -116,6 +116,7 @@ import NotificationsPage from '@/pages/notifications/NotificationsPage'
 import SuggestionsPage from '@/pages/SuggestionsPage'
 import HelpCenter from '@/pages/HelpCenter'
 import LaudosPage from '@/pages/laudos/LaudosPage'
+import InventoryPage from '@/pages/inventario/InventoryPage'
 import { GlobalNotifications } from '@/components/GlobalNotifications'
 import { SlaResponseAlerts } from '@/components/SlaResponseAlerts'
 import { ConsumptionAlerts } from '@/components/ConsumptionAlerts'
@@ -459,6 +460,14 @@ const App = () => (
                   element={
                     <ProtectedRoute requiredModule="laudos">
                       <LaudosPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/inventario"
+                  element={
+                    <ProtectedRoute requiredModule="inventory">
+                      <InventoryPage />
                     </ProtectedRoute>
                   }
                 />

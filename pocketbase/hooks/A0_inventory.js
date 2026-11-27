@@ -42,9 +42,10 @@ routerAdd(
       filters.push('status = "' + status + '"')
     }
 
+    var all = String(body.all || '') === '1'
     var includeInactive = status === 'desativado'
-    if (!includeInactive && !status) {
-      // Padrão: listagem ativa oculta os desativados (consulta explicita quando quiser vê-los)
+    if (!includeInactive && !status && !all) {
+      // Padrão: listagem ativa oculta os desativados (all=1 quando quiser vê-los)
       filters.push("status != 'desativado'")
     }
 
