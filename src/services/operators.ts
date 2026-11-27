@@ -194,7 +194,11 @@ export const updateOperator = async (
 }
 
 export const deleteOperator = async (id: string): Promise<boolean> => {
-  // 1. Tenta a rota dedicada backend (com verificação de vínculos operacionais e permissão de admin)
+  // Exclusão SEMPRE pela rota dedicada do backend (pb.send), que verifica vínculos
+  // operacionais bloqueantes e limpa/neutraliza referências antes do DELETE.
+  // NUNCA fazer fallback de DELETE físico direto na coleção users: além de burlar
+  // as regras de bloqueio, colide com FKs e devolve o erro genérico
+  // "Something went wrong while processing your request." (causa relatada em 0.0.566).
   try {
     const res = await pb.send<{
       success: boolean
@@ -205,23 +209,20 @@ export const deleteOperator = async (id: string): Promise<boolean> => {
     if (res && res.success) {
       return true
     }
-  } catch (backendErr: any) {
-    if (backendErr?.status && backendErr.status < 500) {
-      const serverMessage =
-        backendErr?.response?.error ||
-        backendErr?.data?.error ||
-        backendErr?.message ||
-        'Erro ao excluir operador'
-      throw new Error(serverMessage)
-    }
-    console.warn(
-      'Rota /backend/v1/operators/:id falhou ou indisponível, tentando fallback na coleção users:',
-      backendErr,
-    )
+    throw new Error(res?.message || 'Erro ao excluir operador')
+  } catch (err: any) {
+    // Repassa a mensagem de detalhe do backend (vínculo + contagem), nunca um texto genérico
+    const serverMessage =
+      err?.response?.error ||
+      err?.data?.error ||
+      (typeof err?.message === 'string' &&
+      err.message &&
+      !/failed to fetch|network/i.test(err.message)
+        ? err.message
+        : '') ||
+      'Não foi possível excluir o operador. Verifique sua conexão e tente novamente; se persistir, contate o suporte.'
+    throw new Error(serverMessage)
   }
-
-  // 2. Fallback direto na coleção users
-  return await pb.collection('users').delete(id)
 }
 
 export const resetOperatorPassword = async (id: string): Promise<string> => {
