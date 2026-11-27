@@ -744,6 +744,23 @@ const BASE_SYSTEM_MODULES: GranularModuleDefinition[] = [
   },
 
   {
+    key: 'inventory',
+    label: 'Inventário de Aparelhos',
+    description:
+      'Aparelhos de celular e câmera utilizados pela equipe de campo na execução de laudos fotográficos',
+    category: 'Operações & Gestão',
+    items: [
+      {
+        key: 'inventario_gerenciar',
+        label: 'Gerenciar Inventário de Aparelhos',
+        description:
+          'Cadastrar, editar e desativar aparelhos de celular e câmera do inventário de campo',
+        path: '/inventario',
+      },
+    ],
+  },
+
+  {
     key: 'help',
     label: 'Ajuda',
     description: 'Central de Ajuda com manual de utilização por módulo e busca',

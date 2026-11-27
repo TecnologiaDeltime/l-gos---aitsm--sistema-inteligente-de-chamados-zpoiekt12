@@ -103,6 +103,14 @@ export async function updateInventoryDevice(
   if (!res?.success) throw new Error(res?.error || 'Erro ao atualizar aparelho')
 }
 
+// Reativar = voltar ao status informado (padrão 'disponivel') via update normal.
+export async function activateInventoryDevice(
+  id: string,
+  payload: { status?: InventoryDeviceStatus } = {},
+): Promise<void> {
+  await updateInventoryDevice(id, { status: payload.status || 'disponivel' })
+}
+
 export async function deactivateInventoryDevice(id: string): Promise<void> {
   const res = await pb.send<MutationResponse>(`/backend/v1/inventory/devices/${id}/deactivate`, {
     method: 'PUT',
