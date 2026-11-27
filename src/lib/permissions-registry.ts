@@ -1170,3 +1170,18 @@ export function autoRegisterMenuItems(
 export function getGranularSystemModules(): GranularModuleDefinition[] {
   return GRANULAR_SYSTEM_MODULES
 }
+
+/**
+ * ACESSO POR MÓDULO:
+ * Chave de item reservada usada em profile_permissions para ligar/desligar o
+ * acesso INTEIRO a um módulo do sistema. Ex.: "tickets.__module" com granted=false
+ * esconde o módulo Chamados no menu (desktop e mobile), nega a rota no guard e
+ * bloqueia todos os itens granulares daquele módulo.
+ * Ausência do registro = módulo liberado (comportamento padrão, não tranca ninguém).
+ * Perfis admin ignoram esta camada (acesso total sempre).
+ */
+export const MODULE_ACCESS_ITEM_KEY = '__module'
+
+export function moduleAccessFullKey(moduleKey: string): string {
+  return `${moduleKey}.${MODULE_ACCESS_ITEM_KEY}`
+}
