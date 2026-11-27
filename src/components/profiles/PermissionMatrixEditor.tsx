@@ -8,10 +8,13 @@ import {
   GranularPermissionValue,
   ProfilePermissionMap,
 } from '@/types/profiles'
+import { moduleAccessFullKey } from '@/lib/permissions-registry'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent } from '@/components/ui/card'
+import { Switch } from '@/components/ui/switch'
+import { Label } from '@/components/ui/label'
 import {
   Search,
   ShieldCheck,
@@ -22,7 +25,10 @@ import {
   Sliders,
   Ban,
   Layers,
+  Lock,
+  LockOpen,
 } from 'lucide-react'
+import { cn } from '@/lib/utils'
 
 interface PermissionMatrixEditorProps {
   granularPermissions: ProfilePermissionMap
@@ -199,6 +205,23 @@ export function PermissionMatrixEditor({
       }
     })
 
+    onChange(next)
+  }
+
+  // Toggle de acesso ao módulo INTEIRO (chave reservada __module)
+  const isModuleAccessGranted = (moduleKey: ModuleKey): boolean => {
+    const val = granularPermissions[moduleAccessFullKey(moduleKey)]
+    return val ? val.granted : true
+  }
+
+  const handleToggleModuleAccess = (moduleKey: ModuleKey, granted: boolean) => {
+    if (disabled || isAdminProfile) return
+    const fullKey = moduleAccessFullKey(moduleKey)
+    const next: ProfilePermissionMap = { ...granularPermissions }
+    next[fullKey] = {
+      granted,
+      level: granularPermissions[fullKey]?.level || 'edit',
+    }
     onChange(next)
   }
 
@@ -447,6 +470,41 @@ export function PermissionMatrixEditor({
                   </button>
 
                   <div className="flex flex-wrap items-center gap-2 shrink-0 sm:ml-3">
+                    {/* Toggle de acesso ao módulo inteiro (permissões por módulo) */}
+                    {!isAdminProfile && (
+                      <div
+                        className={`flex items-center gap-2 rounded-md border px-2.5 py-1.5 min-h-[44px] ${
+                          isModuleAccessGranted(mod.key)
+                            ? 'border-emerald-500/30 bg-emerald-500/5'
+                            : 'border-red-500/30 bg-red-500/5'
+                        }`}
+                      >
+                        {isModuleAccessGranted(mod.key) ? (
+                          <LockOpen className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                        ) : (
+                          <Lock className="h-3.5 w-3.5 text-red-600 dark:text-red-400 shrink-0" />
+                        )}
+                        <Switch
+                          id={`module-access-${mod.key}`}
+                          checked={isModuleAccessGranted(mod.key)}
+                          disabled={disabled || isAdminProfile}
+                          onCheckedChange={(checked) => handleToggleModuleAccess(mod.key, checked)}
+                          className="data-[state=checked]:bg-emerald-600 data-[state=unchecked]:bg-red-600"
+                          aria-label={`Acesso ao módulo ${mod.label}`}
+                        />
+                        <Label
+                          htmlFor={`module-access-${mod.key}`}
+                          className={`text-[10px] font-semibold uppercase tracking-wide cursor-pointer ${
+                            isModuleAccessGranted(mod.key)
+                              ? 'text-emerald-600 dark:text-emerald-400'
+                              : 'text-red-600 dark:text-red-400'
+                          }`}
+                        >
+                          {isModuleAccessGranted(mod.key) ? 'Liberado' : 'Bloqueado'}
+                        </Label>
+                      </div>
+                    )}
+
                     <div className="flex items-center gap-1 text-[10px] font-mono">
                       {modConfigure > 0 && (
                         <span className="px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-semibold">

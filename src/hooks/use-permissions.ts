@@ -9,6 +9,7 @@ import {
   ProfilePermissionMap,
 } from '@/types/profiles'
 import { getProfilePermissions, normalizePermissionLevel } from '@/services/profiles'
+import { moduleAccessFullKey } from '@/lib/permissions-registry'
 import pb from '@/lib/pocketbase/client'
 
 export function usePermissions() {
@@ -89,6 +90,14 @@ export function usePermissions() {
   ): { read: boolean; write: boolean; hidden: boolean } => {
     if (isAdmin) {
       return { read: true, write: true, hidden: false }
+    }
+
+    // Camada nova: acesso ao módulo INTEIRO (toggle __module em profile_permissions).
+    // granted=false esconde/nega o módulo completo no menu e nas rotas.
+    // Ausência do registro = módulo liberado (ninguém é trancado ao migrar).
+    const modAccess = granularPermissions[moduleAccessFullKey(moduleKey)]
+    if (modAccess && modAccess.granted === false) {
+      return { read: false, write: false, hidden: true }
     }
 
     if (profile?.permissions?.[moduleKey]) {
@@ -340,6 +349,21 @@ export function usePermissions() {
 
     // 1. Procurar item do catálogo que casa com esta rota exata ou início de path
     for (const mod of GRANULAR_SYSTEM_MODULES) {
+      // Módulo inteiro bloqueado pelo toggle __module: nega qualquer rota dele
+      const modAccess = granularPermissions[moduleAccessFullKey(mod.key)]
+      if (modAccess && modAccess.granted === false) {
+        for (const item of mod.items) {
+          if (!item.path) continue
+          const itemBasePath = item.path.split('?')[0]
+          if (
+            itemBasePath === pathname ||
+            (itemBasePath !== '/' && pathname.startsWith(itemBasePath + '/'))
+          ) {
+            return false
+          }
+        }
+        continue
+      }
       for (const item of mod.items) {
         if (!item.path) continue
 

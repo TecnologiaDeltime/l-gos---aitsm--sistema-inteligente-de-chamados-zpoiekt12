@@ -8,6 +8,7 @@ import {
   GranularPermissionValue,
   ProfilePermissionMap,
 } from '@/types/profiles'
+import { moduleAccessFullKey } from '@/lib/permissions-registry'
 
 /**
  * Erros 429 (Too Many Requests) do backend: o seed/salvamento da matriz
@@ -141,6 +142,16 @@ export const initializeProfilePermissions = async (
   // Criar registros faltantes em lotes (evita 429 Too Many Requests)
   const ops: Array<() => Promise<any>> = []
   for (const mod of GRANULAR_SYSTEM_MODULES) {
+    // Toggle implícito de acesso ao módulo inteiro (chave reservada __module):
+    // semeado liberado por padrão — só persiste explicitamente quando o admin
+    // bloquear/liberar, e a ausência do registro mantém o módulo liberado.
+    const modAccessFullKey = moduleAccessFullKey(mod.key)
+    if (!existingKeys.has(modAccessFullKey)) {
+      map[modAccessFullKey] = {
+        granted: true,
+        level: defaultLevel,
+      }
+    }
     for (const item of mod.items) {
       const fullKey = `${mod.key}.${item.key}`
       if (!existingKeys.has(fullKey)) {
@@ -184,6 +195,41 @@ export const saveProfileGranularPermissions = async (
   const ops: Array<() => Promise<any>> = []
 
   for (const mod of GRANULAR_SYSTEM_MODULES) {
+    // Persistir o toggle de acesso ao módulo inteiro (chave reservada __module)
+    const modAccessFullKey = moduleAccessFullKey(mod.key)
+    const modAccessVal = granularMap[modAccessFullKey]
+    let modAccessGranted = true
+    let modAccessLevel: PermissionLevel = 'edit'
+    if (typeof modAccessVal === 'boolean') {
+      modAccessGranted = modAccessVal
+      modAccessLevel = modAccessVal ? 'edit' : 'view'
+    } else if (modAccessVal && typeof modAccessVal === 'object') {
+      modAccessGranted = !!modAccessVal.granted
+      modAccessLevel = normalizePermissionLevel(modAccessVal.level, modAccessGranted)
+    }
+
+    const modAccessRec = existingByKey[modAccessFullKey]
+    if (modAccessRec) {
+      if (modAccessRec.granted !== modAccessGranted || modAccessRec.level !== modAccessLevel) {
+        ops.push(() =>
+          pb.collection('profile_permissions').update(modAccessRec.id, {
+            granted: modAccessGranted,
+            level: modAccessLevel,
+          }),
+        )
+      }
+    } else {
+      ops.push(() =>
+        pb.collection('profile_permissions').create({
+          profile: profileId,
+          module_key: mod.key,
+          item_key: '__module',
+          granted: modAccessGranted,
+          level: modAccessLevel,
+        }),
+      )
+    }
+
     for (const item of mod.items) {
       const fullKey = `${mod.key}.${item.key}`
       const val = granularMap[fullKey]
