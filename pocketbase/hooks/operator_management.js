@@ -2,6 +2,186 @@
 // Criação e exclusão de operadores restritas exclusivamente ao perfil administrador,
 // envio de e-mail de primeiro acesso e troca obrigatória de senha
 ;(function () {
+  // ---------------------------------------------------------------------------
+  // Auxiliares de limpeza de referências (escopo local do hook — não usar globais)
+  // ---------------------------------------------------------------------------
+
+  // Apaga todos os registros de uma coleção que casem com o filtro (em lotes)
+  var _delAll = function (col, filter) {
+    try {
+      for (var round = 0; round < 8; round++) {
+        var rows = $app.findRecordsByFilter(col, filter, '', 250, 0)
+        if (!rows || rows.length === 0) break
+        var removed = 0
+        for (var i = 0; i < rows.length; i++) {
+          try {
+            $app.delete(rows[i])
+            removed++
+          } catch (_) {}
+        }
+        if (removed === 0) break
+      }
+    } catch (_) {}
+  }
+
+  // Neutraliza a referência ao usuário em campos relation simples (define '')
+  var _clearRefs = function (col, filter, fields) {
+    try {
+      for (var round = 0; round < 8; round++) {
+        var rows = $app.findRecordsByFilter(col, filter, '', 250, 0)
+        if (!rows || rows.length === 0) break
+        var changed = 0
+        for (var i = 0; i < rows.length; i++) {
+          try {
+            var rec = rows[i]
+            for (var f = 0; f < fields.length; f++) {
+              rec.set(fields[f], '')
+            }
+            $app.save(rec)
+            changed++
+          } catch (_) {}
+        }
+        if (changed === 0) break
+      }
+    } catch (_) {}
+  }
+
+  // Remove o id do usuário de campos relation multivalorados (listas)
+  var _removeFromList = function (col, filter, field, userId) {
+    try {
+      var rows = $app.findRecordsByFilter(col, filter, '', 500, 0)
+      for (var i = 0; i < rows.length; i++) {
+        try {
+          var rec = rows[i]
+          var cur = rec.getStringSlice(field) || []
+          var next = []
+          for (var j = 0; j < cur.length; j++) {
+            if (cur[j] !== userId) next.push(cur[j])
+          }
+          rec.set(field, next)
+          $app.save(rec)
+        } catch (_) {}
+      }
+    } catch (_) {}
+  }
+
+  // Limpeza ampla: cobre TODAS as coleções que referenciam users.
+  // Vínculos meramente atributivos/históricos (votos, movimentações, logs, notificações)
+  // são neutralizados ou removidos; vínculos operacionais essenciais são bloqueados
+  // antes (ver checagens na rota DELETE).
+  var _cleanupOperatorRefs = function (id) {
+    // Listas multivaloradas: só remove o id do usuário
+    _removeFromList('queues', 'members ~ "' + id + '"', 'members', id)
+    _removeFromList('change_committee', 'members ~ "' + id + '"', 'members', id)
+    _removeFromList('tickets', 'participants ~ "' + id + '"', 'participants', id)
+
+    // Relations simples que podem ficar vazios: neutraliza a referência
+    var clears = [
+      // Chamados: quem encerrou / ciclo do operador (histórico do chamado permanece)
+      ['tickets', 'closed_by = "' + id + '"', ['closed_by']],
+      ['tickets', 'operator_cycle_user = "' + id + '"', ['operator_cycle_user']],
+      // Visitas técnicas: responsáveis atributivos
+      ['technical_visits', 'scheduling_responsible = "' + id + '"', ['scheduling_responsible']],
+      ['technical_visits', 'cancellation_responsible = "' + id + '"', ['cancellation_responsible']],
+      // Ordens de serviço geradas por visitas
+      ['service_orders', 'technician = "' + id + '"', ['technician']],
+      // Aprovações já decididas (pendentes são bloqueadas antes)
+      ['approvals', 'approver = "' + id + '" && status != "Pendente"', ['approver']],
+      // Chamados agendados não ativos
+      ['scheduled_tickets', 'assigned_to = "' + id + '" && status != "agendado"', ['assigned_to']],
+      // Base de conhecimento
+      ['knowledge_articles', 'author = "' + id + '"', ['author']],
+      ['knowledge_drafts', 'reviewed_by = "' + id + '"', ['reviewed_by']],
+      ['kb_sources', 'created_by = "' + id + '"', ['created_by']],
+      // Mudanças
+      ['changes', 'implemented_by = "' + id + '"', ['implemented_by']],
+      ['changes', 'created_by = "' + id + '"', ['created_by']],
+      ['change_approvals', 'approver = "' + id + '"', ['approver']],
+      // Despesas e deslocamentos
+      ['expenses', 'technician = "' + id + '"', ['technician']],
+      ['travel_entries', 'technician = "' + id + '"', ['technician']],
+      ['time_entries', 'approved_by = "' + id + '"', ['approved_by']],
+      // Cofre de credenciais
+      ['vault_credentials', 'created_by = "' + id + '"', ['created_by']],
+      // Relatórios mensais
+      ['client_monthly_reports', 'generated_by = "' + id + '"', ['generated_by']],
+      ['monthly_report_schedules', 'recipient = "' + id + '"', ['recipient']],
+      ['monthly_report_schedules', 'user = "' + id + '"', ['user']],
+      ['consumption_alert_configs', 'user = "' + id + '"', ['user']],
+      // Atendimento (chat interno) — histórico do cliente permanece
+      ['atendimento_mensagens', 'operador = "' + id + '"', ['operador']],
+      ['atendimento_conversas', 'operador = "' + id + '"', ['operador']],
+      ['atendimento_dossies', 'operator = "' + id + '"', ['operator']],
+      // Inventário de aparelhos
+      ['inventory_devices', 'responsible = "' + id + '"', ['responsible']],
+      ['inventory_devices', 'responsible_user = "' + id + '"', ['responsible_user']],
+      ['inventory_movements', 'technician = "' + id + '"', ['technician']],
+      // Laudos fotográficos e ambientes
+      ['laudos', 'created_by = "' + id + '"', ['created_by']],
+      ['laudo_ambientes', 'technician = "' + id + '"', ['technician']],
+      // Sugestões (autor) e checklists
+      ['suggestions', 'author = "' + id + '"', ['author']],
+      ['visit_checklists', 'completed_by = "' + id + '"', ['completed_by']],
+      ['visits', 'technician = "' + id + '"', ['technician']],
+      // Campos personalizados (definição/valores criados pelo usuário)
+      ['custom_field_defs', 'created_by = "' + id + '"', ['created_by']],
+      // Contatos de cliente vinculados a login
+      ['client_contacts', 'user = "' + id + '"', ['user']],
+    ]
+    for (var ci = 0; ci < clears.length; ci++) {
+      _clearRefs(clears[ci][0], clears[ci][1], clears[ci][2])
+    }
+
+    // Registros auxiliares/atributivos do próprio usuário: apaga
+    var dels = [
+      // 2FA
+      ['user_totp', 'user = "' + id + '"'],
+      // Notificações
+      ['notifications', 'user = "' + id + '"'],
+      // Votos em sugestões
+      ['suggestion_votes', 'voter = "' + id + '"'],
+      ['suggestion_votes', 'user = "' + id + '"'],
+      // Movimentações de inventário registradas pelo operador
+      ['inventory_movements', 'operator = "' + id + '"'],
+      ['inventory_movements', 'user = "' + id + '"'],
+      ['inventory_movements', 'performed_by = "' + id + '"'],
+      ['inventory_movements', 'technician = "' + id + '"'],
+      // Ciclo de trabalho, alocações e disponibilidade
+      ['operator_work_cycle_pauses', 'operator = "' + id + '"'],
+      ['operator_work_cycle_pauses', 'user = "' + id + '"'],
+      ['operator_allocations', 'operator = "' + id + '"'],
+      ['operator_allocations', 'user = "' + id + '"'],
+      ['supervisor_team_links', 'supervisor = "' + id + '"'],
+      ['supervisor_team_links', 'user = "' + id + '"'],
+      ['technician_availability', 'technician = "' + id + '"'],
+      ['technician_locations', 'technician = "' + id + '"'],
+      // Metas e snapshots diários
+      ['technician_goals', 'technician = "' + id + '"'],
+      ['sla_goals', 'technician = "' + id + '"'],
+      ['operator_daily_snapshots', 'operator = "' + id + '"'],
+      // Visualizações de chamados
+      ['ticket_views', 'user = "' + id + '"'],
+      // Mensagens de chat entre operadores
+      ['operator_chat_messages', 'sender = "' + id + '"'],
+      ['operator_chat_messages', 'author = "' + id + '"'],
+      ['operator_chat_messages', 'user = "' + id + '"'],
+      // Logs de auditoria e histórico de chamados do usuário
+      // (attributivos: o chamado preserva seus dados; apenas o registro "quem fez" é removido)
+      ['audit_logs', 'user = "' + id + '"'],
+      ['ticket_history', 'user = "' + id + '"'],
+      // Logs de automação de ativos e concessões de perfil
+      ['asset_automation_logs', 'triggered_by = "' + id + '"'],
+      ['asset_automation_logs', 'user = "' + id + '"'],
+      ['profile_permissions', 'user = "' + id + '"'],
+      // Ordens de serviço e apontamentos aprovados (duplicados como clear acima)
+      ['service_orders', 'technician = "' + id + '"'],
+      ['time_entries', 'approved_by = "' + id + '"'],
+    ]
+    for (var di = 0; di < dels.length; di++) {
+      _delAll(dels[di][0], dels[di][1])
+    }
+  }
+
   // Rota para criação de operador com envio de e-mail de primeiro acesso (Apenas Admin)
   // POST /backend/v1/operators/create
   routerAdd(
@@ -313,7 +493,21 @@
         }
       } catch (_) {}
 
-      // 6. Aprovações atribuídas como aprovador pendente
+      // 6. Apontamentos de tempo de visitas técnicas
+      try {
+        var vEntries = $app.findRecordsByFilter(
+          'visit_time_entries',
+          'technician = "' + id + '"',
+          '',
+          10,
+          0,
+        )
+        if (vEntries && vEntries.length > 0) {
+          blockingReasons.push('possui registros de tempo de visitas técnicas')
+        }
+      } catch (_) {}
+
+      // 7. Aprovações atribuídas como aprovador pendente
       try {
         var pendingApprovals = $app.findRecordsByFilter(
           'approvals',
@@ -327,7 +521,7 @@
         }
       } catch (_) {}
 
-      // 7. Chamados agendados
+      // 8. Chamados agendados ativos
       try {
         var schedTkts = $app.findRecordsByFilter(
           'scheduled_tickets',
@@ -341,6 +535,34 @@
         }
       } catch (_) {}
 
+      // 9. Laudos fotográficos
+      try {
+        var laudosTec = $app.findRecordsByFilter('laudos', 'technician = "' + id + '"', '', 10, 0)
+        if (laudosTec && laudosTec.length > 0) {
+          blockingReasons.push('possui laudos fotográficos registrados')
+        }
+      } catch (_) {}
+      try {
+        var laudosAutor = $app.findRecordsByFilter('laudos', 'created_by = "' + id + '"', '', 10, 0)
+        if (laudosAutor && laudosAutor.length > 0) {
+          blockingReasons.push('possui laudos fotográficos registrados')
+        }
+      } catch (_) {}
+
+      // 10. Pesquisas de satisfação respondidas
+      try {
+        var surveys = $app.findRecordsByFilter(
+          'satisfaction_surveys',
+          'respondent = "' + id + '"',
+          '',
+          10,
+          0,
+        )
+        if (surveys && surveys.length > 0) {
+          blockingReasons.push('possui pesquisas de satisfação respondidas')
+        }
+      } catch (_) {}
+
       if (blockingReasons.length > 0) {
         var msg =
           'Não é possível excluir este operador porque ele possui registros operacionais vinculados: ' +
@@ -349,123 +571,9 @@
         return c.json(400, { error: msg })
       }
 
-      // Se não há vínculos impeditivos (ou após limpeza das referências transitórias):
-      // Remover de filas de atendimento (members relation)
-      try {
-        var queues = $app.findRecordsByFilter('queues', 'members ~ "' + id + '"', '', 100, 0)
-        for (var q = 0; q < queues.length; q++) {
-          try {
-            var queueRec = queues[q]
-            var currentMembers = queueRec.getStringSlice('members') || []
-            var newMembers = []
-            for (var m = 0; m < currentMembers.length; m++) {
-              if (currentMembers[m] !== id) {
-                newMembers.push(currentMembers[m])
-              }
-            }
-            queueRec.set('members', newMembers)
-            $app.save(queueRec)
-          } catch (_) {}
-        }
-      } catch (_) {}
-
-      // Remover comitê de mudanças se membro
-      try {
-        var committees = $app.findRecordsByFilter(
-          'change_committee',
-          'members ~ "' + id + '"',
-          '',
-          100,
-          0,
-        )
-        for (var cm = 0; cm < committees.length; cm++) {
-          try {
-            var cRec = committees[cm]
-            var cmMembers = cRec.getStringSlice('members') || []
-            var newCmMembers = []
-            for (var cmi = 0; cmi < cmMembers.length; cmi++) {
-              if (cmMembers[cmi] !== id) {
-                newCmMembers.push(cmMembers[cmi])
-              }
-            }
-            cRec.set('members', newCmMembers)
-            $app.save(cRec)
-          } catch (_) {}
-        }
-      } catch (_) {}
-
-      // Remover registros auxiliares não essenciais do operador (totp, snapshots diários, metas, notificações)
-      try {
-        var totpRecords = $app.findRecordsByFilter('user_totp', 'user = "' + id + '"', '', 10, 0)
-        for (var t = 0; t < totpRecords.length; t++) {
-          try {
-            $app.delete(totpRecords[t])
-          } catch (_) {}
-        }
-      } catch (_) {}
-
-      try {
-        var notifs = $app.findRecordsByFilter('notifications', 'user = "' + id + '"', '', 500, 0)
-        for (var n = 0; n < notifs.length; n++) {
-          try {
-            $app.delete(notifs[n])
-          } catch (_) {}
-        }
-      } catch (_) {}
-
-      try {
-        var snapshots = $app.findRecordsByFilter(
-          'operator_daily_snapshots',
-          'operator = "' + id + '"',
-          '',
-          100,
-          0,
-        )
-        for (var s = 0; s < snapshots.length; s++) {
-          try {
-            $app.delete(snapshots[s])
-          } catch (_) {}
-        }
-      } catch (_) {}
-
-      try {
-        var goals = $app.findRecordsByFilter(
-          'technician_goals',
-          'technician = "' + id + '"',
-          '',
-          100,
-          0,
-        )
-        for (var g = 0; g < goals.length; g++) {
-          try {
-            $app.delete(goals[g])
-          } catch (_) {}
-        }
-      } catch (_) {}
-
-      try {
-        var slaGoals = $app.findRecordsByFilter(
-          'sla_goals',
-          'technician = "' + id + '"',
-          '',
-          100,
-          0,
-        )
-        for (var sg = 0; sg < slaGoals.length; sg++) {
-          try {
-            $app.delete(slaGoals[sg])
-          } catch (_) {}
-        }
-      } catch (_) {}
-
-      try {
-        var tviews = $app.findRecordsByFilter('ticket_views', 'user = "' + id + '"', '', 500, 0)
-        for (var tv = 0; tv < tviews.length; tv++) {
-          try {
-            $app.delete(tviews[tv])
-          } catch (_) {}
-        }
-      } catch (_) {}
+      // Se não há vínculos impeditivos, limpar/neutralizar TODAS as referências restantes
+      // (auxiliares, atributivas e de log) para que a exclusão não falhe por FK.
+      _cleanupOperatorRefs(id)
 
       // Tentar a exclusão do registro do usuário
       try {
@@ -475,14 +583,15 @@
           message: 'Operador excluído com sucesso.',
         })
       } catch (delErr) {
+        // Nunca expor o texto cru do constraint do banco ao usuário.
         $app
           .logger()
           .error('operator_management: erro ao deletar usuario', 'id', id, 'err', delErr.message)
         return c.json(400, {
           error:
-            'Não foi possível excluir o operador: ' +
-            (delErr.message ||
-              'Existem registros vinculados que impedem a exclusão. Tente desativar o operador.'),
+            'Não foi possível excluir este operador porque ainda existem registros vinculados a ele no sistema. ' +
+            'Revise os vínculos do operador (chamados, interações, visitas, laudos e aprovações) ou, ' +
+            'para revogar o acesso mantendo o histórico, desative a conta na tela de Operadores.',
         })
       }
     },
@@ -512,7 +621,9 @@
         return c.json(400, { error: 'A nova senha deve ter no mínimo 8 caracteres.' })
       }
       if (newPassword !== newPasswordConfirm) {
-        return c.json(400, { error: 'A confirmação da nova senha não confere.' })
+        return c.json(400, {
+          error: 'A confirmação da nova senha não confere.',
+        })
       }
 
       // Validar senha atual se fornecida
